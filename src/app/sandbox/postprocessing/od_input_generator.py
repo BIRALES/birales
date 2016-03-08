@@ -93,24 +93,30 @@ class TableMakerHelper:
         plot(table, filename = self.output_dir + name + '.html')
 
 
-class BeamDataMockUp:
-    def generate(self):
-        go.Heatmap(
-            z = z,
-            x = date_list,
-            y = programmers,
-            colorscale = 'Viridis',
+class BeamData:
+    noise_lvl = 0.2  # The standard deviation of the normal distribution noise
+    output_dir = 'output/'
+
+    def visualise(self, intensity, time, frequency, name):
+        data = [
+            go.Heatmap(
+                z = intensity,
+                x = time,
+                y = frequency,
+                colorscale = 'Viridis',
+                colorbar = {'title': 'SNR'}, )
+        ]
+
+        layout = go.Layout(
+            title = 'Beam Data',
+            xaxis = dict(ticks = '', nticks = 36, title = 'Time'),
+            yaxis = dict(ticks = '', title = 'Frequency'),
+
         )
 
-    def create_heatmap(self):
+        fig = go.Figure(data = data, layout = layout)
 
-
-class OrbitDeterminationInputGenerator:
-    noise_lvl = 0.2  # The standard deviation of the normal distribution noise
-    mock_data_dir = 'data/'
-
-    def __init__(self):
-        return
+        plot(fig, filename = self.output_dir + name + '.html')
 
     def add_noise(self, noiseless_data):
         """
@@ -118,8 +124,29 @@ class OrbitDeterminationInputGenerator:
         :param noiseless_data:
         :return: noisy data
         """
-        noise = abs(np.random.normal(0, self.noise_lvl, len(data)))
+        noise = abs(np.random.normal(0, self.noise_lvl, len(noiseless_data)))
         return noiseless_data + noise
+
+    def mock_up(self):
+        count = 0
+        time = 600
+        frequencies = np.linspace(100, 200, 200)
+        power = []
+        for f in frequencies:
+            count += 1
+            intensity = self.add_noise(np.zeros(time))
+            if 150 < f < 180:
+                intensity[count] = 1.0
+            power.append(intensity)
+
+        self.visualise(power, time, frequencies, 'Mock_BeamData')
+
+
+class OrbitDeterminationInputGenerator:
+    mock_data_dir = 'data/'
+
+    def __init__(self):
+        return
 
     def mock_data(self, file_name):
         with open(self.mock_data_dir + file_name) as csv_file:
@@ -129,8 +156,6 @@ class OrbitDeterminationInputGenerator:
         return mock_data
 
     def output(self):
-        # get data
-        # create output table
         table = TableMakerHelper()
         table.set_headers([
             'Epoch',
@@ -146,6 +171,10 @@ class OrbitDeterminationInputGenerator:
         table.visualise_with_graph('Beam_4')
 
 
-data = np.zeros(100)
+# data = np.zeros(100)
+# od = OrbitDeterminationInputGenerator()
+# od.output()
+
 od = OrbitDeterminationInputGenerator()
-od.output()
+bd = BeamData()
+bd.mock_up()
