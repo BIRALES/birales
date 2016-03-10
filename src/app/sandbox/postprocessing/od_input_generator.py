@@ -18,8 +18,11 @@ import matplotlib.pyplot as plt
 class OrbitDeterminationInputGenerator:
     mock_data_dir = 'data/'
     output_dir = 'output/'
+    max_detections = 3
 
     def __init__(self):
+        self.max_time = 600
+        self.min_time = 0
         return
 
     def mock_data(self, file_name):
@@ -64,21 +67,20 @@ class OrbitDeterminationInputGenerator:
 
         table.visualise_with_graph('Beam_4')
 
-    def visualise_line(self, name, intensity, time, frequency, xs, ys):
+    def visualise_line(self, name, image, lines_xs = None, lines_ys = None):
         traces = []
-        for x, y in zip(xs, ys):
-            traces.append(go.Scatter(
-                x = x,
-                y = y,
-                name = 'Line',
-                connectgaps = True
-            ))
+        if lines_xs and lines_ys:
+            for x, y in zip(lines_xs, lines_ys):
+                traces.append(go.Scatter(
+                    x = x,
+                    y = y,
+                    name = 'Line',
+                    connectgaps = True
+                ))
 
         traces.append(
             go.Heatmap(
-                x = time,
-                y = frequency,
-                z = intensity,
+                z = image,
                 colorscale = 'Viridis',
             )
         )
@@ -97,22 +99,25 @@ class OrbitDeterminationInputGenerator:
     def hough_transform(self, image, visualise = False):
         h, theta, d = hough_line(image)
 
-        # hough_transform_data = np.log(1 + h)
-        # self.visualise_hough_transform('Hough Tansform', hough_transform_data)
+        if visualise:
+            hough_transform_data = np.log(1 + h)
+            self.visualise_hough_transform('Hough Tansform', hough_transform_data)
 
-        x0 = 0
-        x1 = 600
+        x0 = self.min_time
+        x1 = self.max_time
         x = []
         y = []
 
-        hspace, angles, dists = hough_line_peaks(h, theta, d)
+        h_space, angles, dists = hough_line_peaks(h, theta, d, num_peaks = self.max_detections)
 
-        for _, angle, dist in zip(hspace, angles, dists):
+        for _, angle, dist in zip(h_space, angles, dists):
             y0 = (dist - x0 * np.cos(angle)) / np.sin(angle)
             y1 = (dist - x1 * np.cos(angle)) / np.sin(angle)
 
             x.append([x0, x1])
             y.append([y0, y1])
+            # m = np.gradient(y, x)
+            # print 'y=', m, 'x +', y0
 
         print 'There were', len(angles), 'detections'
 
@@ -120,7 +125,7 @@ class OrbitDeterminationInputGenerator:
 
     def remove_noise(self, noisy_data):
         # Remove instaces that are 3 stds away from the mean
-        noisy_data[noisy_data < np.mean(noisy_data) + 3. * np.std(noisy_data)] = 0.
+        noisy_data[noisy_data < np.mean(noisy_data) + 5. * np.std(noisy_data)] = 0.
 
         print 'Mean', np.mean(noisy_data)
         print 'STD', np.std(noisy_data)
@@ -128,21 +133,24 @@ class OrbitDeterminationInputGenerator:
         return noisy_data
 
     def line_detection(self, beam_data, visualise = False):
-
-        freq = beam_data.frequencies
-        time = beam_data.time
         power = beam_data.power
 
         image = np.array(power)
         image = self.remove_noise(image)
 
-        x, y = self.hough_transform(image = image)
+        lines_x, lines_y = self.hough_transform(image = image)
 
-        # self.visualise_line('Line', power, time, freq, x, y)
-        self.visualise_line('Line', image, time, freq, x, y)
+        self.visualise_line('Line', power)
+        self.visualise_line('Line Detection', image, lines_x, lines_y)
 
-        return  # data = np.zeros(100)
+        return
 
+    def get_line_coordinates(self, line_x, line_y, image):
+
+        m = np.gradient(line_y, line_x)
+        for x in range(self.min_time, self.max_time):
+            y = m * x + line_y
+            print x, y
 
 od = OrbitDeterminationInputGenerator()
 bd = BeamData()
