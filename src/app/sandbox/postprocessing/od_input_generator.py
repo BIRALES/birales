@@ -1,110 +1,47 @@
-import ephem
 import numpy as np
 import csv
 from plotly.offline import plot
-from plotly.tools import FigureFactory
 import plotly.graph_objs as go
+from skimage.transform import hough_line
+from skimage.transform import hough_line_peaks
+from scipy import signal
+from helpers import TableMakerHelper
+from helpers import DateTimeHelper
+from BeamData import BeamData
+
+from skimage.morphology import disk
+from skimage.filters.rank import median
+from scipy import ndimage
+import matplotlib.pyplot as plt
 
 
-class DateTimeHelper:
+class OrbitDeterminationInputGenerator:
+    mock_data_dir = 'data/'
+    output_dir = 'output/'
+
     def __init__(self):
         return
 
-    @staticmethod
-    def juldate2ephem(date):
-        """Convert Julian date to ephem date, measured from noon, Dec. 31, 1899."""
-        return ephem.date(date - 2415020.)
+    def remove_noise(self, noisy_data):
+        length = len(noisy_data)
+        corr = signal.correlate(noisy_data, np.ones(length), mode = 'same') / length
 
-    @staticmethod
-    def ephem2juldate(date):
-        """Convert ephem date (measured from noon, Dec. 31, 1899) to Julian date."""
-        return float(date + 2415020.)
+        return corr
 
+    def mock_data(self, file_name):
+        with open(self.mock_data_dir + file_name) as csv_file:
+            row = csv.reader(csv_file)
+            mock_data = list(row)
 
-class TableMakerHelper:
-    output_dir = 'output/'
+        return mock_data
 
-    def __init__(self):
-        self.headers = [
-            'Epoch',
-            'MJD2000',
-            'Time Delay',
-            'Doppler',
-            'SNR'
-        ]
-
-        self.rows = []
-
-    def create(self, headers, rows):
-        self.set_headers(headers)
-        self.set_rows(rows)
-
-    def set_headers(self, headers):
-        self.headers = headers
-
-    def set_rows(self, rows):
-        self.rows = rows
-
-    def create_table(self):
-        data_matrix = [self.headers]
-        for row in self.rows:
-            data_matrix.append(row)
-        table = FigureFactory.create_table(data_matrix)
-
-        return table
-
-    def visualise(self, name):
-        table = self.create_table()
-        plot(table, filename = self.output_dir + name)
-
-    def visualise_with_graph(self, name):
-        table = self.create_table()
-        time = []
-        snr = []
-        for row in self.rows:
-            time.append(row[1])
-            snr.append(row[4])
-
-        # Make traces for graph
-        trace1 = go.Scatter(x = time, y = snr,
-                            marker = dict(color = '#0099ff'),
-                            name = 'SNR v. Time',
-                            xaxis = 'x2', yaxis = 'y2')
-
-        table['data'].extend(go.Data([trace1]))
-
-        # Edit layout for subplots
-        table.layout.xaxis.update({'domain': [0, .65]})
-        table.layout.xaxis2.update({'domain': [0.7, 1.]})
-
-        # The graph's yaxis MUST BE anchored to the graph's xaxis
-        table.layout.yaxis2.update({'anchor': 'x2'})
-        table.layout.yaxis2.update({'title': 'SNR'})
-
-        # Fix ranges
-        table.layout.yaxis2.update({'range': [0, 8]})
-        table.layout.xaxis2.update({'range': [min(time), max(time)]})
-        table.layout.xaxis2.update({'title': 'Time'})
-
-        # Update the margins to add a title and see graph x-labels.
-        table.layout.margin.update({'t': 50, 'b': 120})
-        table.layout.update({'title': 'SNR v. Time'})
-
-        plot(table, filename = self.output_dir + name + '.html')
-
-
-class BeamData:
-    noise_lvl = 0.2  # The standard deviation of the normal distribution noise
-    output_dir = 'output/'
-
-    def visualise(self, intensity, time, frequency, name):
+    def visualise_hough_transform(self, name, hough_transform_data):
         data = [
             go.Heatmap(
-                z = intensity,
-                x = time,
-                y = frequency,
+                z = hough_transform_data,
                 colorscale = 'Viridis',
-                colorbar = {'title': 'SNR'}, )
+                # colorbar = {'title': 'Hough Transform'},
+            )
         ]
 
         layout = go.Layout(
@@ -118,44 +55,7 @@ class BeamData:
 
         plot(fig, filename = self.output_dir + name + '.html')
 
-    def add_noise(self, noiseless_data):
-        """
-        Add noise to the passed numpy array
-        :param noiseless_data:
-        :return: noisy data
-        """
-        noise = abs(np.random.normal(0, self.noise_lvl, len(noiseless_data)))
-        return noiseless_data + noise
-
-    def mock_up(self):
-        count = 0
-        time = 600
-        frequencies = np.linspace(100, 200, 200)
-        power = []
-        for f in frequencies:
-            count += 1
-            intensity = self.add_noise(np.zeros(time))
-            if 150 < f < 180:
-                intensity[count] = 1.0
-            power.append(intensity)
-
-        self.visualise(power, time, frequencies, 'Mock_BeamData')
-
-
-class OrbitDeterminationInputGenerator:
-    mock_data_dir = 'data/'
-
-    def __init__(self):
-        return
-
-    def mock_data(self, file_name):
-        with open(self.mock_data_dir + file_name) as csv_file:
-            row = csv.reader(csv_file)
-            mock_data = list(row)
-
-        return mock_data
-
-    def output(self):
+    def visualise_mock_data(self):
         table = TableMakerHelper()
         table.set_headers([
             'Epoch',
@@ -170,11 +70,95 @@ class OrbitDeterminationInputGenerator:
 
         table.visualise_with_graph('Beam_4')
 
+    def visualise_line(self, name, intensity, time, frequency, xs, ys):
+        traces = []
+        for x, y in zip(xs, ys):
+            traces.append(go.Scatter(
+                x = x,
+                y = y,
+                name = 'Line',
+                connectgaps = True
+            ))
 
-# data = np.zeros(100)
-# od = OrbitDeterminationInputGenerator()
-# od.output()
+        traces.append(
+            go.Heatmap(
+                x = time,
+                y = frequency,
+                z = intensity,
+                colorscale = 'Viridis',
+            )
+        )
+
+        layout = go.Layout(
+            title = 'Beam Data',
+            xaxis = dict(ticks = '', nticks = 36, title = 'Time'),
+            yaxis = dict(ticks = '', title = 'Frequency'),
+
+        )
+
+        fig = go.Figure(data = traces, layout = layout)
+
+        plot(fig, filename = self.output_dir + name + '.html')
+
+    def line_detection(self, power, time, freq):
+        filtered_power = power
+        # for i, p in enumerate(power):
+        #     filtered_power.append(self.remove_noise(p))
+
+
+        image = np.array(filtered_power)
+        # filtered_power = median(image, disk(1))
+
+        # open_square = ndimage.binary_opening(image)
+        #
+        # eroded_square = ndimage.binary_erosion(image)
+        # reconstruction = ndimage.binary_propagation(eroded_square, mask=image)
+        # square = image
+        # plt.figure(figsize=(9.5, 3))
+        # plt.subplot(131)
+        # plt.imshow(square, cmap=plt.cm.gray, interpolation='nearest')
+        # plt.axis('off')
+        # plt.subplot(132)
+        # plt.imshow(open_square, cmap=plt.cm.gray, interpolation='nearest')
+        # plt.axis('off')
+        # plt.subplot(133)
+        # plt.imshow(reconstruction, cmap=plt.cm.gray, interpolation='nearest')
+        # plt.axis('off')
+        #
+        # plt.subplots_adjust(wspace=0, hspace=0.02, top=0.99, bottom=0.01, left=0.01, right=0.99)
+        # plt.show()
+
+
+
+        h, theta, d = hough_line(image)
+
+        hough_transform_data = np.log(1 + h)
+        # self.visualise_hough_transform('Hough Tansform', hough_transform_data)
+
+        x0 = 0
+        x1 = 600
+        x = []
+        y = []
+
+        hspace, angles, dists = hough_line_peaks(h, theta, d)
+
+        for _, angle, dist in zip(hspace, angles, dists):
+            y0 = (dist - x0 * np.cos(angle)) / np.sin(angle)
+            y1 = (dist - x1 * np.cos(angle)) / np.sin(angle)
+
+            x.append([x0, x1])
+            y.append([y0, y1])
+            print x0, y0, x1, y1
+
+        # self.visualise_line('Line', power, time, freq, x, y)
+        self.visualise_line('Line', filtered_power, time, freq, x, y)
+
+        return  # data = np.zeros(100)
+
 
 od = OrbitDeterminationInputGenerator()
 bd = BeamData()
-bd.mock_up()
+power, time, freq = bd.mock_up()
+# bd.visualise(power, time, freq, 'Mock_BeamData')
+
+hough = od.line_detection(power, time, freq)
