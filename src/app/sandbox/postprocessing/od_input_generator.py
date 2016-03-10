@@ -22,12 +22,6 @@ class OrbitDeterminationInputGenerator:
     def __init__(self):
         return
 
-    def remove_noise(self, noisy_data):
-        length = len(noisy_data)
-        corr = signal.correlate(noisy_data, np.ones(length), mode = 'same') / length
-
-        return corr
-
     def mock_data(self, file_name):
         with open(self.mock_data_dir + file_name) as csv_file:
             row = csv.reader(csv_file)
@@ -100,39 +94,10 @@ class OrbitDeterminationInputGenerator:
 
         plot(fig, filename = self.output_dir + name + '.html')
 
-    def line_detection(self, power, time, freq):
-        filtered_power = power
-        # for i, p in enumerate(power):
-        #     filtered_power.append(self.remove_noise(p))
-
-
-        image = np.array(filtered_power)
-        # filtered_power = median(image, disk(1))
-
-        # open_square = ndimage.binary_opening(image)
-        #
-        # eroded_square = ndimage.binary_erosion(image)
-        # reconstruction = ndimage.binary_propagation(eroded_square, mask=image)
-        # square = image
-        # plt.figure(figsize=(9.5, 3))
-        # plt.subplot(131)
-        # plt.imshow(square, cmap=plt.cm.gray, interpolation='nearest')
-        # plt.axis('off')
-        # plt.subplot(132)
-        # plt.imshow(open_square, cmap=plt.cm.gray, interpolation='nearest')
-        # plt.axis('off')
-        # plt.subplot(133)
-        # plt.imshow(reconstruction, cmap=plt.cm.gray, interpolation='nearest')
-        # plt.axis('off')
-        #
-        # plt.subplots_adjust(wspace=0, hspace=0.02, top=0.99, bottom=0.01, left=0.01, right=0.99)
-        # plt.show()
-
-
-
+    def hough_transform(self, image, visualise = False):
         h, theta, d = hough_line(image)
 
-        hough_transform_data = np.log(1 + h)
+        # hough_transform_data = np.log(1 + h)
         # self.visualise_hough_transform('Hough Tansform', hough_transform_data)
 
         x0 = 0
@@ -148,17 +113,40 @@ class OrbitDeterminationInputGenerator:
 
             x.append([x0, x1])
             y.append([y0, y1])
-            print x0, y0, x1, y1
+
+        print 'There were', len(angles), 'detections'
+
+        return x, y
+
+    def remove_noise(self, noisy_data):
+        # Remove instaces that are 3 stds away from the mean
+        noisy_data[noisy_data < np.mean(noisy_data) + 3. * np.std(noisy_data)] = 0.
+
+        print 'Mean', np.mean(noisy_data)
+        print 'STD', np.std(noisy_data)
+
+        return noisy_data
+
+    def line_detection(self, beam_data, visualise = False):
+
+        freq = beam_data.frequencies
+        time = beam_data.time
+        power = beam_data.power
+
+        image = np.array(power)
+        image = self.remove_noise(image)
+
+        x, y = self.hough_transform(image = image)
 
         # self.visualise_line('Line', power, time, freq, x, y)
-        self.visualise_line('Line', filtered_power, time, freq, x, y)
+        self.visualise_line('Line', image, time, freq, x, y)
 
         return  # data = np.zeros(100)
 
 
 od = OrbitDeterminationInputGenerator()
 bd = BeamData()
-power, time, freq = bd.mock_up()
+
 # bd.visualise(power, time, freq, 'Mock_BeamData')
 
-hough = od.line_detection(power, time, freq)
+hough = od.line_detection(bd)

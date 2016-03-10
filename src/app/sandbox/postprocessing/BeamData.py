@@ -8,6 +8,13 @@ class BeamData:
     noise_lvl = 0.2  # The standard deviation of the normal distribution noise
     output_dir = 'output/'
 
+    def __init__(self):
+        self.frequencies = np.linspace(0, 200, 200)
+        self.time = 600
+        self.power = []
+
+        self.mock_up()  # use mock up data for now
+
     def visualise(self, intensity, time, frequency, name):
         data = [
             go.Heatmap(
@@ -42,12 +49,11 @@ class BeamData:
 
     def mock_up(self):
         count = 0
-        time = 600
-        frequencies = np.linspace(0, 200, 200)
+
         power = []
-        for f in frequencies:
+        for f in self.frequencies:
             count += 1
-            intensity = np.zeros(time)
+            intensity = np.zeros(self.time)
             intensity = self.add_noise(intensity)
 
             if 150 < f < 180:
@@ -55,4 +61,4 @@ class BeamData:
 
             power.append(intensity)
 
-        return power, time, frequencies
+        self.power = power
