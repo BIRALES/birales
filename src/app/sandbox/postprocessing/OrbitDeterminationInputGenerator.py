@@ -161,11 +161,3 @@ class OrbitDeterminationInputGenerator:
                     image[y][x] = 0.0  # paint line
         print 'There were', hits, 'hits'
         return image
-
-
-od = OrbitDeterminationInputGenerator()
-bd = BeamData()
-
-# bd.visualise(power, time, freq, 'Mock_BeamData')
-
-hough = od.line_detection(bd)

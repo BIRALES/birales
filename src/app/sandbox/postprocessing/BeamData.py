@@ -1,76 +1,100 @@
-from plotly.offline import plot
-import plotly.graph_objs as go
 import numpy as np
 from helpers import LineGeneratorHelper
+from abc import abstractmethod
+from helpers.visualisation.BeamDataVisualisation import BeamDataVisualisation
+from helpers.LineGeneratorHelper import LineGeneratorHelper
 
 
 class BeamData:
-    noise_lvl = 0.2  # The standard deviation of the normal distribution noise
-    output_dir = 'output/'
-
-    def __init__(self):
+    def __init__(self, frequencies = None, time = None, snr = None):
         self.frequencies = np.linspace(0, 200, 200)
         self.time = 600
-        self.power = self.mock_up()  # use mock up data for now
+        self.snr = snr
+        self.name = None
+        self.id = None
+        self.position = None  # todo change to degrees
 
-    def read_data(self, file_name):
+    def view(self):
+        view = BeamDataVisualisation(self.name)
+        view.set_layout(figure_title = self.name,
+                        x_axis_title = 'Frequency (Hz)',
+                        y_axis_title = 'Time (s)')
+
+        view.set_data(data = self.snr,
+                      x_axis = self.time,
+                      y_axis = self.frequencies)
+
+        view.show()
+
+    @abstractmethod
+    def set_data(self):
+        pass
+
+
+class BeamDataMedicina(BeamData):
+    def __init__(self):
+        BeamData.__init__(self)
+
+        self.name = 'Beam Data from Medicina'
+        self.set_data()
+
+    def set_data(self):
         return
 
-    def visualise(self, name):
+
+class BeamDataMock(BeamData):
+    def __init__(self):
+        BeamData.__init__(self)
+
+        self.noise_lvl = 0.2  # The standard deviation of the normal distribution noise
+        self.name = 'Mock up of a Beam Data'
+        self.set_data()
+
+    def set_data(self):
         """
-        Visualise the Beam Data as a Heatmap
+        Build sample / mock up data to be used for testing
 
-        :param name: Name of the file
-        :return: Void
+        :return: snr
         """
-        data = [
-            go.Heatmap(
-                z = self.power,
-                x = self.time,
-                y = self.frequencies,
-                colorscale = 'Viridis',
-                colorbar = {'title': 'SNR'}, )
-        ]
+        snr = np.zeros((max(self.frequencies), self.time))
+        snr = self.add_mock_noise(noiseless_data = snr)
+        snr = self.add_mock_track(snr)
 
-        layout = go.Layout(
-            title = 'Beam Data',
-            xaxis = dict(ticks = '', nticks = 36, title = 'Time'),
-            yaxis = dict(ticks = '', title = 'Frequency'),
+        self.snr = snr
 
-        )
-
-        fig = go.Figure(data = data, layout = layout)
-
-        plot(fig, filename = self.output_dir + name + '.html')
-
-    def add_noise(self, noiseless_data):
+    def add_mock_noise(self, noiseless_data):
         """
         Add noise to the passed numpy array
         :param noiseless_data:
         :return: noisy data
         """
-        noise = abs(np.random.normal(0, self.noise_lvl, len(noiseless_data)))
-        # noise = np.random.random(noiseless_data.shape) > 0.99
+
+        noise = abs(np.random.normal(0, self.noise_lvl, size = noiseless_data.shape))
 
         return noiseless_data + noise
 
-    def mock_up(self, visualise = False):
-        """
-        Build sample / mock up data to be used for testing
-        :param visualise: Plot the mock data
-        :return: power
-        """
-        power = np.zeros((max(self.frequencies), self.time))
-        line_coor = LineGeneratorHelper.get_line((90, 120), (400, 180))  # (x0, y0), (x1, y1)
+    def add_mock_track(self, snr):
+        track_points = LineGeneratorHelper.get_line((90, 120), (400, 180))  # (x0, y0), (x1, y1)
 
-        for coordinate in line_coor:
-            x = coordinate[0]
-            y = coordinate[1]
-            power[y][x] = 1.0
+        for (time, frequency) in track_points:
+            snr[frequency][time] = 1.0
 
-        if visualise:
-            self.visualise('Mockup of Beam Data')
+        return snr
 
-        print 'Detection has', len(line_coor),
 
-        return power
+class Filters:
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def remove_background_noise(beam_data):
+        # Remove instaces that are 5 stds away from the mean
+        data = beam_data.snr
+        data[data < np.mean(data) + 5. * np.std(data)] = 0.
+
+        return beam_data
+
+    @staticmethod
+    def remove_transmitter_frequency(beam_data):
+        # todo remove transmitter frequency
+        return beam_data

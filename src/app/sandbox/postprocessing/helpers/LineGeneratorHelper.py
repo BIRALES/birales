@@ -1,4 +1,4 @@
-class LineGenerator:
+class LineGeneratorHelper:
     def __init__(self):
         return
 
@@ -38,7 +38,7 @@ class LineGenerator:
 
         # Calculate error
         error = int(dx / 2.0)
-        ystep = 1 if y1 < y2 else -1
+        y_step = 1 if y1 < y2 else -1
 
         # Iterate over bounding box generating points between start and end
         y = y1
@@ -48,7 +48,7 @@ class LineGenerator:
             points.append(coord)
             error -= abs(dy)
             if error < 0:
-                y += ystep
+                y += y_step
                 error += dx
 
         # Reverse the list if the coordinates were swapped
