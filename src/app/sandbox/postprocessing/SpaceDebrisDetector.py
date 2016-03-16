@@ -60,16 +60,23 @@ class SpaceDebrisCandidate:
         self.beam_id = beam_id
         self.tx = tx
 
-        self.data = {}
+        self.data = {
+            'time': [],
+            'mdj2000': [],
+            'time_elapsed': [],
+            'doppler_shift': [],
+            'snr': [],
+        }
+
         self.populate(detection_data)
 
     def populate(self, detection_data):
         for frequency, time, snr in detection_data:
-            self.data['time'] = time
-            self.data['mdj2000'] = SpaceDebrisCandidate.get_mdj2000(time)
-            self.data['time_elapsed'] = SpaceDebrisCandidate.time_elapsed(time)
-            self.data['doppler_shift'] = SpaceDebrisCandidate.get_doppler_shift(self.tx, frequency),
-            self.data['snr'] = snr
+            self.data['time'].append(time)
+            self.data['mdj2000'].append(SpaceDebrisCandidate.get_mdj2000(time))
+            self.data['time_elapsed'].append(SpaceDebrisCandidate.time_elapsed(time))
+            self.data['doppler_shift'].append(SpaceDebrisCandidate.get_doppler_shift(self.tx, frequency))
+            self.data['snr'].append(snr)
 
     @staticmethod
     def get_doppler_shift(tf, frequency):
