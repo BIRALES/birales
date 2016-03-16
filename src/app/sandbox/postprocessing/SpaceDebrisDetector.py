@@ -30,11 +30,9 @@ class SpaceDebrisDetector:
             coordinate = ((t0, f0), (tn, fn))
             hough_line_coordinates.append(coordinate)
 
-        print 'There were', len(angles), 'detections'
-
         return hough_line_coordinates
 
-    def get_detections(self, beam_data):
+    def get_detections(self, beam_id, beam_data):
         # todo - this can be handled better; consider refactoring using a strategy design pattern
         hough_lines_coordinates = self.hough_transform(beam_data)
 
@@ -52,7 +50,7 @@ class SpaceDebrisDetector:
                     if snr == 1.:  # todo - replace with and value greater than threshold
                         detection_data.append([frequency, time, snr])
 
-            candidate = SpaceDebrisCandidate(100, beam_data.id, detection_data)
+            candidate = SpaceDebrisCandidate(100, beam_id, detection_data)
             candidates.append(candidate)
         return candidates
 
@@ -62,10 +60,7 @@ class SpaceDebrisCandidate:
         self.beam_id = beam_id
         self.tx = tx
 
-        self.data = {
-            'time': [],
-        }
-
+        self.data = {}
         self.populate(detection_data)
 
     def populate(self, detection_data):

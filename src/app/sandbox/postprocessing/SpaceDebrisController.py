@@ -9,18 +9,19 @@ class SpaceDebrisController:
 
     def run(self):
         # todo repeat for each beam
-        # get input data to consume (beam data)
-        beam_data = BeamDataMock()
+        # get input data to consume
+        beam = Beam(beam_id = 1, d_delta = 1.0, dha = 1.25)
+
         sdd = SpaceDebrisDetector(max_detections = 3)
 
         # remove background noise from beam data
-        filtered_beam_data = Filters.remove_background_noise(beam_data)
+        filtered_beam_data = Filters.remove_background_noise(beam.data)
 
         # remove transmitter frequency from beam data
         filtered_beam_data = Filters.remove_transmitter_frequency(filtered_beam_data)
 
         # detect debris track using hough transform
-        detections = sdd.get_detections(beam_data = filtered_beam_data)
+        detections = sdd.get_detections(beam_id = beam.id, beam_data = filtered_beam_data)
 
         print detections
 
