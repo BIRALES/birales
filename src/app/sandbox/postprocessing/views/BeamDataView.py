@@ -2,7 +2,7 @@ from plotly.offline import plot
 import plotly.graph_objs as go
 
 
-class BeamDataVisualisation:
+class BeamDataView:
     def __init__(self, name):
         self.layout = []
         self.data = []
@@ -12,7 +12,7 @@ class BeamDataVisualisation:
 
     def set_layout(self, figure_title = 'Beam Data', x_axis_title = 'X Axis', y_axis_title = 'Y Axis'):
         """
-        Set the layout configruation for the plotly figure
+        Set the layout configuration for the plotly figure
 
         :param figure_title: The title of the figure
         :param x_axis_title: The title of the x axis

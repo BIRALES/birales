@@ -1,6 +1,8 @@
-import numpy as np
 from abc import abstractmethod
-from helpers.visualisation.BeamDataVisualisation import BeamDataVisualisation
+
+import numpy as np
+
+from app.sandbox.postprocessing.views.BeamDataView import BeamDataView
 from helpers.LineGeneratorHelper import LineGeneratorHelper
 
 
@@ -25,7 +27,7 @@ class BeamData:
     def view(self, name = None):
         if not name:
             name = self.name
-        view = BeamDataVisualisation(name)
+        view = BeamDataView(name)
         view.set_layout(figure_title = name,
                         x_axis_title = 'Frequency (Hz)',
                         y_axis_title = 'Time (s)')

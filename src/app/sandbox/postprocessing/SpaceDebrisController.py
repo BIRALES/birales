@@ -23,19 +23,20 @@ class SpaceDebrisController:
         # detect debris track using hough transform
         detections = sdd.get_detections(beam_id = beam.id, beam_data = filtered_beam_data)
 
-        print detections
-
         # extract needed parameters and dump to file / web service
         # todo encapsulate this logic in a separate class
         od_input = self.get_orbit_determination_input_file(detections)
 
-        # visualise track detected incl. extracted parameters
+        # generate dashboard with collected data
         # visualise multi-pixel plot
 
         return
 
     def get_orbit_determination_input_file(self, detections):
         print 'There were', len(detections), 'detections'
+
+        for detection in detections:
+            detection.table_view('input')
         parameters = {}
         return parameters
 

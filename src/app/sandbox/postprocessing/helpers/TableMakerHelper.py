@@ -2,6 +2,7 @@ from plotly.offline import plot
 from plotly.tools import FigureFactory
 import plotly.graph_objs as go
 import numpy as np
+from app.sandbox.postprocessing.lib import markup
 
 
 class TableMakerHelper:
@@ -16,7 +17,7 @@ class TableMakerHelper:
             'SNR'
         ]
 
-        self.rows = []
+        self.rows = {}
 
     def create(self, headers, rows):
         self.set_headers(headers)
@@ -30,15 +31,49 @@ class TableMakerHelper:
 
     def create_table(self):
         data_matrix = [self.headers]
-        for row in self.rows:
+        for i in range(0, 100):
+            row = []
+            for key in self.rows.keys():
+                value = np.round(self.rows[key][i], 3)
+                row.append(value)
             data_matrix.append(row)
         table = FigureFactory.create_table(data_matrix)
 
         return table
 
+    def build_table(self, name):
+        data_matrix = []
+        for i in range(0, 100):
+            row = []
+            for key in self.rows.keys():
+                value = np.round(self.rows[key][i], 3)
+                row.append(value)
+            data_matrix.append(row)
+
+        page = markup.page()
+        page.init(title = name,
+                  header = "Beam: 1",
+                  css = 'https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css',
+                  )
+
+        page.table(class_ = 'table')
+        page.tr()
+        page.th(self.rows.keys())
+        page.tr.close()
+        for row in data_matrix:
+            page.tr()
+            page.td(row)
+            page.tr.close()
+        page.table.close()
+
+        with open(self.output_dir + name + '.html', 'w') as table:
+            table.write(str(page))
+
+
     def visualise(self, name):
-        table = self.create_table()
-        plot(table, filename = self.output_dir + name)
+        self.build_table(name)
+        # table = self.create_table()
+        # plot(table, filename = self.output_dir + name, auto_open = False)
 
     def visualise_with_graph(self, name):
         table = self.create_table()
