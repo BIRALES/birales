@@ -1,14 +1,4 @@
-from OrbitDeterminationInputGenerator import OrbitDeterminationInputGenerator
-from BeamData import BeamData
-from SpaceDebrisController import SpaceDebrisController
-
-# od = OrbitDeterminationInputGenerator()
-# bd = BeamData()
-#
-# # bd.visualise(power, time, freq, 'Mock_BeamData')
-#
-# hough = od.line_detection(bd)
-
+from app.sandbox.postprocessing.controllers.SpaceDebrisController import SpaceDebrisController
 
 odc = SpaceDebrisController()
 odc.run()

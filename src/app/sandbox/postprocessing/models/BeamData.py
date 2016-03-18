@@ -3,7 +3,7 @@ from abc import abstractmethod
 import numpy as np
 
 from app.sandbox.postprocessing.views.BeamDataView import BeamDataView
-from helpers.LineGeneratorHelper import LineGeneratorHelper
+from app.sandbox.postprocessing.helpers.LineGeneratorHelper import LineGeneratorHelper
 
 
 class Beam:
@@ -43,7 +43,7 @@ class BeamData:
         pass
 
 
-class BeamDataMedicina(BeamData):
+class BeamDataObservation(BeamData):
     def __init__(self):
         BeamData.__init__(self)
 
@@ -96,21 +96,3 @@ class BeamDataMock(BeamData):
             snr[frequency][time] = 1.0
 
         return snr
-
-
-class Filters:
-    def __init__(self):
-        pass
-
-    @staticmethod
-    def remove_background_noise(beam_data):
-        # Remove instaces that are 5 stds away from the mean
-        data = beam_data.snr
-        data[data < np.mean(data) + 5. * np.std(data)] = 0.
-
-        return beam_data
-
-    @staticmethod
-    def remove_transmitter_frequency(beam_data):
-        # todo remove transmitter frequency
-        return beam_data

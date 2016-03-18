@@ -7,7 +7,7 @@ class BeamDataView:
         self.layout = []
         self.data = []
         self.name = name
-        self.output_dir = 'output/'
+        self.output_dir = 'public/results/'
         self.file_name = self.output_dir + name + '.html'
 
     def set_layout(self, figure_title = 'Beam Data', x_axis_title = 'X Axis', y_axis_title = 'Y Axis'):
@@ -53,4 +53,4 @@ class BeamDataView:
 
         fig = go.Figure(data = self.data, layout = self.layout)
 
-        plot(fig, filename = self.file_name)
+        plot(fig, filename = self.file_name, auto_open = False)

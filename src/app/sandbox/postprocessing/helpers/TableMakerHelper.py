@@ -2,11 +2,11 @@ from plotly.offline import plot
 from plotly.tools import FigureFactory
 import plotly.graph_objs as go
 import numpy as np
-from app.sandbox.postprocessing.lib import markup
+from app.sandbox.postprocessing.vendor import markup
 
 
 class TableMakerHelper:
-    output_dir = 'output/'
+    output_dir = 'public/results/'
 
     def __init__(self):
         self.headers = [
