@@ -36,12 +36,12 @@ class SpaceDebrisCandidate:
 
         for time, frequency in zip(self.data['time'], self.data['frequency']):
             snr = beam_data.snr[frequency][time]
-            if snr == 1.:
-                beam_data.snr[frequency][time] = 2.0
+            # if snr == 1.:
+            beam_data.snr[frequency][time] = 2.0
 
-        view.set_data(data = beam_data.snr,
-                      x_axis = beam_data.time,
-                      y_axis = beam_data.frequencies
+        view.set_data(data = beam_data.snr.transpose(),
+                      x_axis = beam_data.frequencies,
+                      y_axis = beam_data.time
                       )
         view.show()
 

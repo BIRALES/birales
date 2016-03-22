@@ -28,7 +28,7 @@ class SpaceDebrisController:
         # todo encapsulate this logic in a separate class
         od_input = self.save_candidates_data(beam_data = filtered_beam_data, detections = detections)
 
-        return od_input
+        # return od_input
 
     @staticmethod
     def save_candidates_data(beam_data, detections):

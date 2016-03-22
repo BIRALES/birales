@@ -32,9 +32,9 @@ class BeamData:
                         x_axis_title = 'Frequency (Hz)',
                         y_axis_title = 'Time (s)')
 
-        view.set_data(data = self.snr,
-                      x_axis = self.time,
-                      y_axis = self.frequencies)
+        view.set_data(data = self.snr.transpose(),
+                      x_axis = self.frequencies,
+                      y_axis = self.time)
 
         view.show()
 
@@ -72,8 +72,9 @@ class BeamDataMock(BeamData):
         Build sample / mock up data to be used for testing
         """
         snr = np.zeros((max(self.frequencies), self.time))
+
         snr = self.add_mock_noise(noiseless_data = snr)
-        snr = self.add_mock_track(snr, (90, 120), (400, 180))
+        snr = self.add_mock_track(snr, (50, 100), (100, 200))
         snr = self.add_mock_track(snr, (20, 20), (70, 60))
         # snr = self.add_mock_track(snr, (450, 20), (500, 190))
 
@@ -91,10 +92,11 @@ class BeamDataMock(BeamData):
         return noiseless_data + noise
 
     @staticmethod
-    def add_mock_track(snr, start_coordinate = (90, 120), end_coordinate = (400, 180)):
+    def add_mock_track(snr, start_coordinate = (120, 90), end_coordinate = (180, 120)):
+        # todo set limits and throw exception is needed
         track_points = LineGeneratorHelper.get_line(start_coordinate, end_coordinate)  # (x0, y0), (x1, y1)
 
-        for (time, frequency) in track_points:
+        for (frequency, time) in track_points:
             snr[frequency][time] = 1.0
 
         return snr

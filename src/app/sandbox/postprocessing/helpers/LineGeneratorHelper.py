@@ -1,3 +1,5 @@
+import numpy as np
+
 class LineGeneratorHelper:
     def __init__(self):
         return
@@ -17,8 +19,10 @@ class LineGeneratorHelper:
         dx = x2 - x1
         dy = y2 - y1
 
+        print 'angle of line', np.rad2deg(np.arctan(dy / dx))
         # Determine how steep the line is
         is_steep = abs(dy) > abs(dx)
+        # print '->', dx, dy, is_steep
 
         # Rotate line
         if is_steep:
@@ -43,7 +47,8 @@ class LineGeneratorHelper:
         # Iterate over bounding box generating points between start and end
         y = y1
         points = []
-
+        x1 = int(x1)
+        x2 = int(x2)
         for x in range(x1, x2 + 1):
             coord = (y, x) if is_steep else (x, y)
             points.append(coord)

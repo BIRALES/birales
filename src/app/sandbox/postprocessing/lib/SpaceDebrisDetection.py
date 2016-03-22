@@ -37,19 +37,20 @@ class LineSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
         candidates = []
         max_frequency = beam_data.frequencies[-1]
-        for detection_index, ((t0, f0), (tn, fn)) in enumerate(hough_lines_coordinates):
-            print 'Draw Hough Line at', (t0, f0), (tn, fn)
-            discrete_h_line = LineGeneratorHelper.get_line((t0, f0), (tn, fn))
+        min_frequency = beam_data.frequencies[0]
+        for detection_index, ((f0, t0), (fn, tn)) in enumerate(hough_lines_coordinates):
+            print 'Draw Hough Line at', (f0, t0), (fn, tn)
+            discrete_h_line = LineGeneratorHelper.get_line((f0, t0), (fn, tn))
 
             detection_data = []
             for coordinate in discrete_h_line:
-                time = coordinate[0] + 1.  # not sure why this works
-                frequency = coordinate[1] + 1.  # not sure why this works
+                frequency = coordinate[0] + 1.  # not sure why this works
+                time = coordinate[1] + 1.  # not sure why this works
 
-                if frequency < max_frequency and time < beam_data.time:
+                if min_frequency < frequency < max_frequency and 0 < time < beam_data.time:
                     snr = beam_data.snr[frequency][time]
-                    if snr == self.snr_threshold:
-                        detection_data.append([frequency, time, snr])
+                    # if snr == self.snr_threshold:
+                    detection_data.append([frequency, time, snr])
 
             candidate = SpaceDebrisCandidate(100, beam_id, detection_data)
             candidates.append(candidate)
@@ -57,22 +58,16 @@ class LineSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
     def hough_transform(self, beam_data):
         h, theta, d = hough_line(beam_data.snr)
-
+        # self.visualise_hough_space(h,theta,d)
         t0 = 0
         tn = beam_data.time
-        time = []
-        freq = []
         hough_line_coordinates = []
         h_space, angles, dists = hough_line_peaks(h, theta, d, self.hough_threshold)
-
         for _, angle, dist in zip(h_space, angles, dists):
             f0 = (dist - t0 * np.cos(angle)) / np.sin(angle)
             fn = (dist - tn * np.cos(angle)) / np.sin(angle)
 
-            freq.append((f0, fn))
-            time.append((t0, tn))
-
-            coordinate = ((t0, f0), (tn, fn))
+            coordinate = ((f0, t0), (fn, tn))
             hough_line_coordinates.append(coordinate)
         return hough_line_coordinates
 
