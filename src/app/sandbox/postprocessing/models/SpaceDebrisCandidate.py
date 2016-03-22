@@ -28,7 +28,7 @@ class SpaceDebrisCandidate:
             self.data['doppler_shift'].append(SpaceDebrisCandidate.get_doppler_shift(self.tx, frequency))
             self.data['snr'].append(snr)
 
-    def view(self, beam_data, name = 'Superimposed candidate'):
+    def view(self, beam_data, name = 'detection'):
         view = BeamDataView(name)
         view.set_layout(figure_title = name,
                         x_axis_title = 'Frequency (Hz)',
@@ -45,7 +45,7 @@ class SpaceDebrisCandidate:
                       )
         view.show()
 
-    def display_parameters(self, name):
+    def display_parameters(self, name = 'orbit_determination_input'):
         """
         Create table view
         :param name:
@@ -62,7 +62,7 @@ class SpaceDebrisCandidate:
         ])
 
         table.set_rows(self.data)
-        table.visualise(name)
+        table.build_table(name)
 
     @staticmethod
     def get_doppler_shift(tf, frequency):

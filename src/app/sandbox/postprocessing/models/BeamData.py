@@ -24,7 +24,7 @@ class BeamData:
         self.snr = None
         self.name = None
 
-    def view(self, name = None):
+    def view(self, name = 'beam_data'):
         if not name:
             name = self.name
         view = BeamDataView(name)
@@ -73,7 +73,9 @@ class BeamDataMock(BeamData):
         """
         snr = np.zeros((max(self.frequencies), self.time))
         snr = self.add_mock_noise(noiseless_data = snr)
-        snr = self.add_mock_track(snr)
+        snr = self.add_mock_track(snr, (90, 120), (400, 180))
+        snr = self.add_mock_track(snr, (20, 20), (70, 60))
+        # snr = self.add_mock_track(snr, (450, 20), (500, 190))
 
         self.snr = snr
 

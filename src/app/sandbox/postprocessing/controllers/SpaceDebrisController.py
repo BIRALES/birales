@@ -12,7 +12,7 @@ class SpaceDebrisController:
         # todo repeat for each beam
         # get input data to consume
         beam = Beam(beam_id = 1, d_delta = 1.0, dha = 1.25)
-
+        beam.data.view()
         sdd = SpaceDebrisDetection(LineSpaceDebrisDetectionStrategy(max_detections = 3))
 
         # remove background noise from beam data
@@ -20,25 +20,23 @@ class SpaceDebrisController:
 
         # remove transmitter frequency from beam data
         filtered_beam_data = Filters.remove_transmitter_frequency(filtered_beam_data)
-
+        filtered_beam_data.view()
         # detect debris track using hough transform
         detections = sdd.detect(beam_id = beam.id, beam_data = filtered_beam_data)
 
         # extract needed parameters and dump to file / web service
         # todo encapsulate this logic in a separate class
-        od_input = self.get_orbit_determination_input_file(beam_data = filtered_beam_data, detections = detections)
+        od_input = self.save_candidates_data(beam_data = filtered_beam_data, detections = detections)
 
-        # generate dashboard with collected data
-        # visualise multi-pixel plot
-
-        return
+        return od_input
 
     @staticmethod
-    def get_orbit_determination_input_file(beam_data, detections):
+    def save_candidates_data(beam_data, detections):
         print 'There were', len(detections), 'detections'
 
-        for detection in detections:
-            detection.view(beam_data, 'input')
+        for i, detection in enumerate(detections):
+            detection.view(beam_data, name = str(i))
+            detection.display_parameters()
         parameters = {}
         return parameters
 

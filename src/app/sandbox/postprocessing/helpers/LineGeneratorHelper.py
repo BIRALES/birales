@@ -43,6 +43,7 @@ class LineGeneratorHelper:
         # Iterate over bounding box generating points between start and end
         y = y1
         points = []
+
         for x in range(x1, x2 + 1):
             coord = (y, x) if is_steep else (x, y)
             points.append(coord)

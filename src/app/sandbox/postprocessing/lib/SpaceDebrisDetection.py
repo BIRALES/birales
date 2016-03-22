@@ -30,6 +30,7 @@ class LineSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
     def __init__(self, max_detections):
         SpaceDebrisDetectionStrategy.__init__(self, max_detections)
         self.snr_threshold = 1.0  # the snr power at which a detection is determined
+        self.hough_threshold = 10
 
     def detect(self, beam_id, beam_data):
         hough_lines_coordinates = self.hough_transform(beam_data)
@@ -37,13 +38,15 @@ class LineSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         candidates = []
         max_frequency = beam_data.frequencies[-1]
         for detection_index, ((t0, f0), (tn, fn)) in enumerate(hough_lines_coordinates):
+            print 'Draw Hough Line at', (t0, f0), (tn, fn)
             discrete_h_line = LineGeneratorHelper.get_line((t0, f0), (tn, fn))
+
             detection_data = []
             for coordinate in discrete_h_line:
                 time = coordinate[0] + 1.  # not sure why this works
                 frequency = coordinate[1] + 1.  # not sure why this works
 
-                if frequency < max_frequency:
+                if frequency < max_frequency and time < beam_data.time:
                     snr = beam_data.snr[frequency][time]
                     if snr == self.snr_threshold:
                         detection_data.append([frequency, time, snr])
@@ -60,7 +63,7 @@ class LineSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         time = []
         freq = []
         hough_line_coordinates = []
-        h_space, angles, dists = hough_line_peaks(h, theta, d, num_peaks = self.max_detections)
+        h_space, angles, dists = hough_line_peaks(h, theta, d, self.hough_threshold)
 
         for _, angle, dist in zip(h_space, angles, dists):
             f0 = (dist - t0 * np.cos(angle)) / np.sin(angle)
@@ -71,5 +74,15 @@ class LineSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
             coordinate = ((t0, f0), (tn, fn))
             hough_line_coordinates.append(coordinate)
-
         return hough_line_coordinates
+
+    @staticmethod
+    def visualise_hough_space(h, theta, d):
+        import matplotlib.pyplot as plt
+        plt.imshow(np.log(1 + h),
+                   extent = [np.rad2deg(theta[-1]), np.rad2deg(theta[0]),
+                             d[-1], d[0]],
+                   cmap = plt.cm.gray, aspect = 1 / 1.5)
+
+        plt.plot(h)
+        plt.show()

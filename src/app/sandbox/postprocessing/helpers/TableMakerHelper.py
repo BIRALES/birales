@@ -43,7 +43,7 @@ class TableMakerHelper:
 
     def build_table(self, name):
         data_matrix = []
-        for i in range(0, 100):
+        for i in range(0, len(self.rows[self.rows.keys()[0]])):
             row = []
             for key in self.rows.keys():
                 value = np.round(self.rows[key][i], 3)
@@ -68,7 +68,6 @@ class TableMakerHelper:
 
         with open(self.output_dir + name + '.html', 'w') as table:
             table.write(str(page))
-
 
     def visualise(self, name):
         self.build_table(name)
