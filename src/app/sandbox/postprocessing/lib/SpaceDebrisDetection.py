@@ -36,21 +36,20 @@ class LineSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         hough_lines_coordinates = self.hough_transform(beam_data)
 
         candidates = []
-        max_frequency = beam_data.frequencies[-1]
-        min_frequency = beam_data.frequencies[0]
+        max_channel = beam_data.channels[-1]
+        min_channel = beam_data.channels[0]
         for detection_index, ((f0, t0), (fn, tn)) in enumerate(hough_lines_coordinates):
-            print 'Draw Hough Line at', (f0, t0), (fn, tn)
             discrete_h_line = LineGeneratorHelper.get_line((f0, t0), (fn, tn))
 
             detection_data = []
             for coordinate in discrete_h_line:
-                frequency = coordinate[0] + 1.  # not sure why this works
+                channel = coordinate[0] + 1.  # not sure why this works
                 time = coordinate[1] + 1.  # not sure why this works
 
-                if min_frequency < frequency < max_frequency and 0 < time < beam_data.time:
-                    snr = beam_data.snr[frequency][time]
+                if min_channel < channel < max_channel and 0 < time < beam_data.time:
+                    snr = beam_data.snr[channel][time]
                     # if snr == self.snr_threshold:
-                    detection_data.append([frequency, time, snr])
+                    detection_data.append([channel, time, snr])
 
             candidate = SpaceDebrisCandidate(100, beam_id, detection_data)
             candidates.append(candidate)

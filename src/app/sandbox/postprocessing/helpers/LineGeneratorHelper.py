@@ -19,7 +19,7 @@ class LineGeneratorHelper:
         dx = x2 - x1
         dy = y2 - y1
 
-        print 'angle of line', np.rad2deg(np.arctan(dy / dx))
+        # print 'angle of line', np.rad2deg(np.arctan(dy / dx))
         # Determine how steep the line is
         is_steep = abs(dy) > abs(dx)
         # print '->', dx, dy, is_steep

@@ -14,6 +14,6 @@ class Filters:
         return beam_data
 
     @staticmethod
-    def remove_transmitter_frequency(beam_data):
-        # todo remove transmitter frequency
+    def remove_transmitter_channel(beam_data):
+        # todo remove transmitter channel
         return beam_data

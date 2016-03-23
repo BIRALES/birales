@@ -18,8 +18,8 @@ class SpaceDebrisController:
         # remove background noise from beam data
         filtered_beam_data = Filters.remove_background_noise(beam.data)
 
-        # remove transmitter frequency from beam data
-        filtered_beam_data = Filters.remove_transmitter_frequency(filtered_beam_data)
+        # remove transmitter channel from beam data
+        filtered_beam_data = Filters.remove_transmitter_channel(filtered_beam_data)
         filtered_beam_data.view()
         # detect debris track using hough transform
         detections = sdd.detect(beam_id = beam.id, beam_data = filtered_beam_data)

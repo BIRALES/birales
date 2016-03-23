@@ -19,7 +19,7 @@ class Beam:
 
 class BeamData:
     def __init__(self):
-        self.frequencies = None
+        self.channels = None
         self.time = None
         self.snr = None
         self.name = None
@@ -33,7 +33,7 @@ class BeamData:
                         y_axis_title = 'Time (s)')
 
         view.set_data(data = self.snr.transpose(),
-                      x_axis = self.frequencies,
+                      x_axis = self.channels,
                       y_axis = self.time)
 
         view.show()
@@ -59,7 +59,7 @@ class BeamDataMock(BeamData):
         BeamData.__init__(self)
 
         # Mock beam data parameters
-        self.frequencies = np.linspace(f0, fn, fn)
+        self.channels = np.linspace(f0, fn, fn)
         self.time = time
         self.snr = None
 
@@ -71,7 +71,7 @@ class BeamDataMock(BeamData):
         """
         Build sample / mock up data to be used for testing
         """
-        snr = np.zeros((max(self.frequencies), self.time))
+        snr = np.zeros((max(self.channels), self.time))
 
         snr = self.add_mock_noise(noiseless_data = snr)
         snr = self.add_mock_track(snr, (50, 100), (100, 200))
@@ -96,7 +96,7 @@ class BeamDataMock(BeamData):
         # todo set limits and throw exception is needed
         track_points = LineGeneratorHelper.get_line(start_coordinate, end_coordinate)  # (x0, y0), (x1, y1)
 
-        for (frequency, time) in track_points:
-            snr[frequency][time] = 1.0
+        for (channel, time) in track_points:
+            snr[channel][time] = 1.0
 
         return snr

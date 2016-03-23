@@ -12,7 +12,7 @@ class SpaceDebrisCandidate:
             'time': [],
             'mdj2000': [],
             'time_elapsed': [],
-            'frequency': [],
+            'channel': [],
             'doppler_shift': [],
             'snr': [],
         }
@@ -20,12 +20,12 @@ class SpaceDebrisCandidate:
         self.set_data(detection_data)
 
     def set_data(self, detection_data):
-        for frequency, time, snr in detection_data:
+        for channel, time, snr in detection_data:
             self.data['time'].append(time)
             self.data['mdj2000'].append(SpaceDebrisCandidate.get_mdj2000(time))
             self.data['time_elapsed'].append(SpaceDebrisCandidate.time_elapsed(time))
-            self.data['frequency'].append(frequency)
-            self.data['doppler_shift'].append(SpaceDebrisCandidate.get_doppler_shift(self.tx, frequency))
+            self.data['channel'].append(channel)
+            self.data['doppler_shift'].append(SpaceDebrisCandidate.get_doppler_shift(self.tx, channel))
             self.data['snr'].append(snr)
 
     def view(self, beam_data, name = 'detection'):
@@ -34,13 +34,13 @@ class SpaceDebrisCandidate:
                         x_axis_title = 'Frequency (Hz)',
                         y_axis_title = 'Time (s)')
 
-        for time, frequency in zip(self.data['time'], self.data['frequency']):
-            snr = beam_data.snr[frequency][time]
+        for time, channel in zip(self.data['time'], self.data['channel']):
+            snr = beam_data.snr[channel][time]
             # if snr == 1.:
-            beam_data.snr[frequency][time] = 2.0
+            beam_data.snr[channel][time] = 2.0
 
         view.set_data(data = beam_data.snr.transpose(),
-                      x_axis = beam_data.frequencies,
+                      x_axis = beam_data.channels,
                       y_axis = beam_data.time
                       )
         view.show()
@@ -65,8 +65,8 @@ class SpaceDebrisCandidate:
         table.build_table(name)
 
     @staticmethod
-    def get_doppler_shift(tf, frequency):
-        return frequency - tf
+    def get_doppler_shift(tf, channel):
+        return channel - tf
 
     @staticmethod
     def time_elapsed(time):
