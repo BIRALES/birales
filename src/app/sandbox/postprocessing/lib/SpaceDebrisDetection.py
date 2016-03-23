@@ -12,8 +12,8 @@ class SpaceDebrisDetection(object):
     def __init__(self, detection_strategy):
         self.detection_strategy = detection_strategy
 
-    def detect(self, beam_id, beam_data):
-        detections = self.detection_strategy.detect(beam_id, beam_data)
+    def detect(self, beam):
+        detections = self.detection_strategy.detect(beam)
         return detections
 
 
@@ -22,7 +22,7 @@ class SpaceDebrisDetectionStrategy(object):
         self.max_detections = max_detections  # maximum detections per beam
 
     @abstractmethod
-    def detect(self, beam_id, beam_data):
+    def detect(self, beam):
         pass
 
 
@@ -32,12 +32,12 @@ class LineSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         self.snr_threshold = 1.0  # the snr power at which a detection is determined
         self.hough_threshold = 10
 
-    def detect(self, beam_id, beam_data):
-        hough_lines_coordinates = self.hough_transform(beam_data)
+    def detect(self, beam):
+        hough_lines_coordinates = self.hough_transform(beam.data)
 
         candidates = []
-        max_channel = beam_data.channels[-1]
-        min_channel = beam_data.channels[0]
+        max_channel = beam.data.get_last_channel()
+        min_channel = beam.data.get_first_channel()
         for detection_index, ((f0, t0), (fn, tn)) in enumerate(hough_lines_coordinates):
             discrete_h_line = LineGeneratorHelper.get_line((f0, t0), (fn, tn))
 
@@ -46,18 +46,18 @@ class LineSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
                 channel = coordinate[0] + 1.  # not sure why this works
                 time = coordinate[1] + 1.  # not sure why this works
 
-                if min_channel < channel < max_channel and 0 < time < beam_data.time:
-                    snr = beam_data.snr[channel][time]
-                    # if snr == self.snr_threshold:
-                    detection_data.append([channel, time, snr])
+                if min_channel < channel < max_channel and 0 < time < beam.data.time:
+                    snr = beam.data.snr[channel][time]
+                    if snr == self.snr_threshold:  # add points which intersect with track
+                        detection_data.append([channel, time, snr])
 
-            candidate = SpaceDebrisCandidate(100, beam_id, detection_data)
+            candidate = SpaceDebrisCandidate(tx = 100, beam = beam, detection_data = detection_data)
             candidates.append(candidate)
         return candidates
 
     def hough_transform(self, beam_data):
         h, theta, d = hough_line(beam_data.snr)
-        # self.visualise_hough_space(h,theta,d)
+        # self.visualise_hough_space(h, theta, d)
         t0 = 0
         tn = beam_data.time
         hough_line_coordinates = []

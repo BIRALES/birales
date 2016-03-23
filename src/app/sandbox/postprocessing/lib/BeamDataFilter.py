@@ -6,12 +6,11 @@ class Filters:
         pass
 
     @staticmethod
-    def remove_background_noise(beam_data):
+    def remove_background_noise(beam):
         # Remove instaces that are 5 stds away from the mean
-        data = beam_data.snr
-        data[data < np.mean(data) + 5. * np.std(data)] = 0.
+        beam.data.snr[beam.data.snr < np.mean(beam.data.snr) + 5. * np.std(beam.data.snr)] = 0.
 
-        return beam_data
+        return beam
 
     @staticmethod
     def remove_transmitter_channel(beam_data):

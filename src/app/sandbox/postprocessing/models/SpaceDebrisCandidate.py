@@ -1,11 +1,12 @@
 from app.sandbox.postprocessing.helpers.TableMakerHelper import TableMakerHelper
-from app.sandbox.postprocessing.views.BeamDataView import BeamDataView
 from app.sandbox.postprocessing.helpers.DateTimeHelper import DateTimeHelper
+
+import inflection as inf
 
 
 class SpaceDebrisCandidate:
-    def __init__(self, tx, beam_id, detection_data):
-        self.beam_id = beam_id
+    def __init__(self, tx, beam, detection_data):
+        self.beam = beam
         self.tx = tx
 
         self.data = {
@@ -28,30 +29,35 @@ class SpaceDebrisCandidate:
             self.data['doppler_shift'].append(SpaceDebrisCandidate.get_doppler_shift(self.tx, channel))
             self.data['snr'].append(snr)
 
-    def view(self, beam_data, name = 'detection'):
-        view = BeamDataView(name)
-        view.set_layout(figure_title = name,
+    def view(self, file_path, name = 'Candidate'):
+        view = self.beam.data.get_view()
+        view.set_layout(figure_title = inf.humanize(name),
                         x_axis_title = 'Frequency (Hz)',
                         y_axis_title = 'Time (s)')
 
+        # todo superimpose detection line as a scatter
         for time, channel in zip(self.data['time'], self.data['channel']):
-            snr = beam_data.snr[channel][time]
-            # if snr == 1.:
-            beam_data.snr[channel][time] = 2.0
+            snr = self.beam.data.snr[channel][time]
+            if snr == 1.:
+                self.beam.data.snr[channel][time] = 2.0
 
-        view.set_data(data = beam_data.snr.transpose(),
-                      x_axis = beam_data.channels,
-                      y_axis = beam_data.time
+        view.set_data(data = self.beam.data.snr.transpose(),
+                      x_axis = self.beam.data.channels,
+                      y_axis = self.beam.data.time
                       )
-        view.show()
+        view.show(file_path = file_path)
 
-    def display_parameters(self, name = 'orbit_determination_input'):
+    def save(self, file_path, name):
         """
         Create table view
         :param name:
+        :param file_path:
         :return:
         """
         table = TableMakerHelper()
+
+        table.set_caption(inf.humanize(name))
+
         table.set_headers([
             'Epoch',
             'MJD2000',
@@ -62,7 +68,10 @@ class SpaceDebrisCandidate:
         ])
 
         table.set_rows(self.data)
-        table.build_table(name)
+        page = table.build_html_table(file_path)
+
+        with open(file_path + '.html', 'w') as table:
+            table.write(str(page))
 
     @staticmethod
     def get_doppler_shift(tf, channel):

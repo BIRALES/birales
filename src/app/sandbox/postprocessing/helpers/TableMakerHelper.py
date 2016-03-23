@@ -6,7 +6,6 @@ from app.sandbox.postprocessing.vendor import markup
 
 
 class TableMakerHelper:
-    output_dir = 'public/results/'
 
     def __init__(self):
         self.headers = [
@@ -19,9 +18,14 @@ class TableMakerHelper:
 
         self.rows = {}
 
+        self.caption = None
+
     def create(self, headers, rows):
         self.set_headers(headers)
         self.set_rows(rows)
+
+    def set_caption(self, caption):
+        self.caption = caption
 
     def set_headers(self, headers):
         self.headers = headers
@@ -41,7 +45,7 @@ class TableMakerHelper:
 
         return table
 
-    def build_table(self, name):
+    def build_html_table(self, name):
         data_matrix = []
         for i in range(0, len(self.rows[self.rows.keys()[0]])):
             row = []
@@ -57,6 +61,9 @@ class TableMakerHelper:
                   )
 
         page.table(class_ = 'table')
+
+        page.caption(self.caption)
+
         page.tr()
         page.th(self.rows.keys())
         page.tr.close()
@@ -66,8 +73,7 @@ class TableMakerHelper:
             page.tr.close()
         page.table.close()
 
-        with open(self.output_dir + name + '.html', 'w') as table:
-            table.write(str(page))
+        return str(page)
 
     def visualise(self, name):
         self.build_table(name)

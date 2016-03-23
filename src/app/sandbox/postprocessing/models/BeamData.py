@@ -24,23 +24,34 @@ class BeamData:
         self.snr = None
         self.name = None
 
-    def view(self, name = 'beam_data'):
-        if not name:
-            name = self.name
-        view = BeamDataView(name)
-        view.set_layout(figure_title = name,
-                        x_axis_title = 'Frequency (Hz)',
-                        y_axis_title = 'Time (s)')
+        self._view = BeamDataView()
 
-        view.set_data(data = self.snr.transpose(),
-                      x_axis = self.channels,
-                      y_axis = self.time)
+    def get_view(self):
+        return self._view
 
-        view.show()
+    def view(self, file_path, name = 'Beam Data'):
+        if name:
+            self._view.name = name
+
+        self._view.set_layout(figure_title = name,
+                              x_axis_title = 'Frequency (Hz)',
+                              y_axis_title = 'Time (s)')
+
+        self._view.set_data(data = self.snr.transpose(),
+                            x_axis = self.channels,
+                            y_axis = self.time)
+
+        self._view.show(file_path)
 
     @abstractmethod
     def set_data(self):
         pass
+
+    def get_last_channel(self):
+        return self.channels[-1]
+
+    def get_first_channel(self):
+        return self.channels[0]
 
 
 class BeamDataObservation(BeamData):

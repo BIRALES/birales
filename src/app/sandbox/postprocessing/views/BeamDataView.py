@@ -3,12 +3,10 @@ import plotly.graph_objs as go
 
 
 class BeamDataView:
-    def __init__(self, name):
+    def __init__(self, name = 'Beam Data View'):
         self.layout = []
         self.data = []
         self.name = name
-        self.output_dir = 'public/results/'
-        self.file_name = self.output_dir + name + '.html'
 
     def set_layout(self, figure_title = 'Beam Data', x_axis_title = 'X Axis', y_axis_title = 'Y Axis'):
         """
@@ -44,13 +42,14 @@ class BeamDataView:
                 colorbar = {'title': 'SNR'}, )
         ]
 
-    def show(self):
+    def show(self, file_path):
         """
         Visualise the Beam Data as a Heatmap using plot.ly
 
+        :param file_path: Where to save the view file
         :return: Void
         """
 
         fig = go.Figure(data = self.data, layout = self.layout)
 
-        plot(fig, filename = self.file_name, auto_open = False)
+        plot(fig, filename = file_path + '.html', auto_open = False)
