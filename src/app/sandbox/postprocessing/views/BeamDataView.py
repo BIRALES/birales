@@ -1,6 +1,6 @@
 from plotly.offline import plot
 import plotly.graph_objs as go
-
+import os
 
 class BeamDataView:
     def __init__(self, name = 'Beam Data View'):
@@ -51,5 +51,8 @@ class BeamDataView:
         """
 
         fig = go.Figure(data = self.data, layout = self.layout)
+        parent = os.path.abspath(os.path.join(file_path + '.html', os.pardir))
+        if not os.path.exists(parent):
+                os.makedirs(parent)
 
         plot(fig, filename = file_path + '.html', auto_open = False)
