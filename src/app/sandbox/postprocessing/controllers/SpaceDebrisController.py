@@ -16,10 +16,10 @@ class SpaceDebrisController:
     def run(self):
         # todo repeat for each beam
         # get input data to consume
-        beam = Beam(beam_id = 1, d_delta = 1.0, dha = 1.25)
+        beam = Beam(beam_id = 1, d_delta = 1.0, dha = 1.25, observation = self.observation_name)
 
         if self.persist_results:
-            self.save_beam_data(beam, 'input_beam')
+            beam.save(file_name = 'input_beam')
 
         sdd = SpaceDebrisDetection(LineSpaceDebrisDetectionStrategy(max_detections = 3))
 
@@ -35,7 +35,7 @@ class SpaceDebrisController:
         # extract needed parameters and dump to file / web service
         # todo encapsulate this logic in a separate class (model?)
         if self.persist_results:
-            self.save_beam_data(filtered_beam, 'filtered_beam')
+            filtered_beam.save(file_name = 'filtered_beam')
             self.save_candidates_data(detections = detections)
 
     # todo save to database instead of FS (inside a model)
