@@ -2,6 +2,7 @@ from plotly.offline import plot
 import plotly.graph_objs as go
 import os
 
+
 class BeamDataView:
     def __init__(self, name = 'Beam Data View'):
         self.layout = []

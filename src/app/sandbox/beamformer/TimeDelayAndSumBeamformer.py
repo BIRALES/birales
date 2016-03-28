@@ -77,7 +77,7 @@ class TimeDelayAndSumBeamformer:
         corrections = []
         for antenna_id, antenna in enumerate(self.ANTENNAS):
             corrections.append(
-                self.get_antenna_delay(antenna_id) / self.SAMPLING_RATE)
+                self.get_antenna_delay(antenna_id) / gejself.SAMPLING_RATE)
 
         for angle in angles:
             distances = self.ANTENNAS * np.sin(angle)

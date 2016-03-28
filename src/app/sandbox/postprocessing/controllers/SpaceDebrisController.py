@@ -1,6 +1,6 @@
 from app.sandbox.postprocessing.lib.BeamDataFilter import Filters
 from app.sandbox.postprocessing.lib.SpaceDebrisDetection import *
-from app.sandbox.postprocessing.models.BeamData import *
+from app.sandbox.postprocessing.models.Beam import Beam
 
 import os
 
@@ -17,8 +17,10 @@ class SpaceDebrisController:
         # todo repeat for each beam
         # get input data to consume
         beam = Beam(beam_id = 1, d_delta = 1.0, dha = 1.25)
+
         if self.persist_results:
             self.save_beam_data(beam, 'input_beam')
+
         sdd = SpaceDebrisDetection(LineSpaceDebrisDetectionStrategy(max_detections = 3))
 
         # remove background noise from beam data
@@ -59,3 +61,4 @@ class SpaceDebrisController:
         beam_id = 'beam_' + str(beam.id)
         file_path = os.path.join(self.beams_output_dir, beam_id, file_name)
         beam.data.view(file_path)
+        exit(0)
