@@ -61,4 +61,3 @@ class SpaceDebrisController:
         beam_id = 'beam_' + str(beam.id)
         file_path = os.path.join(self.beams_output_dir, beam_id, file_name)
         beam.data.view(file_path)
-        exit(0)
