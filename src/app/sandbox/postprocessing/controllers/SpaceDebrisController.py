@@ -10,7 +10,7 @@ class SpaceDebrisController:
     def __init__(self):
         # todo parameters should be taken from a separate configuration file
         self.output_dir = os.path.join('public', 'results')
-        self.observation_name = 'medicina_observation'
+        self.observation_name = '7434'
         self.beams_output_dir = os.path.join(self.output_dir, self.observation_name, 'beams')
         self.persist_results = True
 
@@ -39,22 +39,3 @@ class SpaceDebrisController:
             filtered_beam.save(file_name = 'filtered_beam')
             candidates.view_candidates(output_dir = self.beams_output_dir, beam=beam)
             candidates.save_candidates(output_dir = self.beams_output_dir)
-            # self.save_candidates_data(detections = detections)
-
-    # todo save to database instead of FS (inside a model)
-    def save_candidates_data(self, detections):
-        for i, detection in enumerate(detections):
-            beam_id = 'beam_' + str(detection.beam.id)
-            candidate_id = 'candidate_' + str(i)
-            file_path = os.path.join(self.beams_output_dir, beam_id, 'candidates', candidate_id)
-
-            if not os.path.exists(file_path):
-                os.makedirs(file_path)
-
-            detection.save(file_path = os.path.join(file_path, 'orbit_determination_data'),
-                           name = candidate_id)  # generate table
-
-            detection.view(file_path = os.path.join(file_path, 'detection_profile'),
-                           name = candidate_id)  # generate heat map
-
-        print 'There were', len(detections), 'detections'

@@ -51,10 +51,10 @@ class BeamDataObservation(BeamData):
     @staticmethod
     def read_data_file(file_path, n_beams, n_channels):
         f = open(file_path, 'rb')
-        data = f.read()
-        f.close()
 
+        data = f.read()
         data = np.array(struct.unpack('f' * (len(data) / 4), data), dtype = float)
+        f.close()
         n_samples = len(data) / (n_beams * n_channels)
         data = np.reshape(data, (n_samples, n_channels, n_beams))
 
@@ -75,6 +75,6 @@ class BeamDataObservation(BeamData):
 
     def get_data_set(self, data_set_name):
         file_path = os.path.join(self.repository, self.observation, data_set_name)
-        data_sets = os.listdir(file_path)
+        data_sets = [each for each in os.listdir(file_path) if each.endswith('.dat')]
 
         return os.path.join(data_set_name, data_sets[0])

@@ -57,6 +57,7 @@ def realtime(opts):
         f.close()
 
         # Format data properly and grab data from required beam
+        # Format data properly and grab data from required beam
         data = np.array(struct.unpack('f' * (len(data) / 4), data), dtype=float)
         currsamp = len(data) / (nbeams * nchans)
         data = np.reshape(data, (currsamp, nchans, nbeams))

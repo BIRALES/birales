@@ -21,7 +21,7 @@ class Beam:
                                         f_ch1 = 418,
                                         f_off = -19531.25,
                                         sampling_rate = 0.0000512,
-                                        data_set = '40058')
+                                        data_set = observation)
 
     def save(self, file_name):
         beams_output_dir = os.path.join(self.output_dir, self.observation, 'beams')

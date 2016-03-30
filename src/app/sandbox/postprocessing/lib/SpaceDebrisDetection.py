@@ -76,7 +76,6 @@ class LineSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         tn = beam_data.get_max_time()
         hough_line_coordinates = []
         h_space, angles, dists = hough_line_peaks(h, theta, d, self.hough_threshold)
-        print np.rad2deg(angles)
         for _, angle, dist in zip(h_space, angles, dists):
             f0 = (dist - t0 * np.cos(angle)) / np.sin(angle)
             fn = (dist - tn * np.cos(angle)) / np.sin(angle)
