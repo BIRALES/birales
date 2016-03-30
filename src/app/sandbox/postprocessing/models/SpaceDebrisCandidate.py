@@ -5,6 +5,7 @@ import inflection as inf
 
 
 class SpaceDebrisCandidate:
+    # todo remove dependency on beam data
     def __init__(self, tx, beam, detection_data):
         self.beam = beam
         self.tx = tx

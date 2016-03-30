@@ -32,13 +32,21 @@ class BeamData:
     def set_data(self):
         pass
 
-    def get_last_channel(self):
-        return self.channels[-1]
+    def get_min_channel(self):
+        # return self.channels[-1]
+        return 0
 
-    def get_first_channel(self):
+    def get_max_channel(self):
+        return len(self.channels)
         return self.channels[0]
 
+    def get_max_time(self):
+        # return self.time[-1]
+        return len(self.time)
 
+    def get_min_time(self):
+        return 0
+        return self.time[0]
 
 
 

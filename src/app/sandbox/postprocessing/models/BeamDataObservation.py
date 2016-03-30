@@ -33,7 +33,7 @@ class BeamDataObservation(BeamData):
 
         self.set_data()
 
-        self.im_view()
+        # self.im_view()
 
     def set_data(self):
         data = self.read_data_file(
@@ -42,10 +42,11 @@ class BeamDataObservation(BeamData):
                 n_channels = self.n_channels)
 
         self.time = np.arange(0, self.sampling_rate * data.shape[0], self.sampling_rate)
-        self.channels = (
-                            np.arange(self.f_ch1 * 1e6, self.f_ch1 * 1e6 + self.f_off * (data.shape[1]),
-                                      self.f_off)) * 1e-6
+        self.channels = (np.arange(self.f_ch1 * 1e6, self.f_ch1 * 1e6 + self.f_off * (data.shape[1]),
+                                   self.f_off)) * 1e-6
         self.snr = np.log10(data[:, :, self.beam]).transpose()
+
+        # self.snr = (data[:, :, self.beam]).transpose()
 
     @staticmethod
     def read_data_file(file_path, n_beams, n_channels):
@@ -62,7 +63,7 @@ class BeamDataObservation(BeamData):
     def im_view(self):
         fig = plt.figure(figsize = (8, 8))
 
-        ax = fig.add_subplot(1, 2, 1)
+        ax = fig.add_subplot(1, 1, 1)
         ax.set_title("Beam %d" % self.beam)
         ax.imshow(self.snr.transpose(), aspect = 'auto',
                   origin = 'lower', extent = [self.channels[0], self.channels[-1], 0, self.time[-1]])

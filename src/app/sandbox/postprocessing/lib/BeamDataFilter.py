@@ -7,8 +7,8 @@ class Filters:
 
     @staticmethod
     def remove_background_noise(beam):
-        # Remove instaces that are 5 stds away from the mean
-        beam.data.snr[beam.data.snr < np.mean(beam.data.snr) + 5. * np.std(beam.data.snr)] = 0.
+        # Remove instaces that are n stds away from the mean
+        beam.data.snr[beam.data.snr < np.mean(beam.data.snr) + 3. * np.std(beam.data.snr)] = 0.
 
         return beam
 

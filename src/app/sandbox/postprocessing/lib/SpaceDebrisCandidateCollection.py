@@ -23,8 +23,8 @@ class SpaceDebrisCandidateCollection:
             detection_boxes.append(candidate.get_detection_box())
 
         beam.data.get_view().shapes = detection_boxes
-
-        file_path = os.path.join(output_dir, 'detection_profile')
+        beam_id = 'beam_' + str(beam.id)
+        file_path = os.path.join(output_dir, beam_id, 'detection_profile')
 
         beam.data.view(file_path, name = 'detections')
 
