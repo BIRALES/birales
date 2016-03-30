@@ -12,7 +12,7 @@ class BeamDataMock(BeamData):
         self.time = np.linspace(0, time, time)
         self.snr = None
 
-        self.noise_lvl = 0.2  # The standard deviation of the normal distribution noise
+        self.noise_lvl = 0.1  # The standard deviation of the normal distribution noise
         self.name = 'Mock up of a Beam Data'
         self.set_data()
 
