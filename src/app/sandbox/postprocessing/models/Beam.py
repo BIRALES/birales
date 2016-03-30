@@ -13,9 +13,15 @@ class Beam:
         self.observation = observation
         self.output_dir = os.path.join('public', 'results')
 
-        self.data = BeamDataMock(f0 = 0, fn = 200, time = 600)
+        # self.data = BeamDataMock(f0 = 0, fn = 200, time = 600)
 
-        # self.data = BeamDataObservation(n_beams = 32, n_channels = 8192, beam = 15)
+        self.data = BeamDataObservation(n_beams = 32,
+                                        n_channels = 8192,
+                                        beam = 15,
+                                        f_ch1 = 418,
+                                        f_off = -19531.25,
+                                        sampling_rate = 0.0000512,
+                                        data_set = '40058')
 
     def save(self, file_name):
         beams_output_dir = os.path.join(self.output_dir, self.observation, 'beams')

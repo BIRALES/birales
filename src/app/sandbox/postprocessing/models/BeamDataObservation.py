@@ -9,13 +9,13 @@ from app.sandbox.postprocessing.models.BeamData import BeamData
 
 class BeamDataObservation(BeamData):
     def __init__(self, n_beams = 32, n_channels = 8192, beam = 15, f_ch1 = 418, f_off = -19531.25,
-                 sampling_rate = 0.0000512):
+                 sampling_rate = 0.0000512, data_set = '40058'):
         BeamData.__init__(self)
 
         self.name = 'Beam Data from Medicina'
         self.repository = '../postprocessing/data/'
         self.observation = 'medicina_07_03_2016/'
-        self.data_set = self.get_data_set('40058')
+        self.data_set = self.get_data_set(data_set)
 
         self.n_beams = n_beams
         self.n_channels = n_channels
@@ -73,7 +73,7 @@ class BeamDataObservation(BeamData):
         plt.show()
 
     def get_data_set(self, data_set_name):
-        file_path = os.path.join(self.repository, self.observation, self.data_set, data_set_name)
+        file_path = os.path.join(self.repository, self.observation, data_set_name)
         data_sets = os.listdir(file_path)
 
-        return data_sets[0]
+        return os.path.join(data_set_name, data_sets[0])
