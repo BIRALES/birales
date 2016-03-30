@@ -9,7 +9,7 @@ class BeamDataMock(BeamData):
 
         # Mock beam data parameters
         self.channels = np.linspace(f0, fn, fn)
-        self.time = time
+        self.time = np.linspace(0, time, time)
         self.snr = None
 
         self.noise_lvl = 0.2  # The standard deviation of the normal distribution noise
@@ -20,7 +20,7 @@ class BeamDataMock(BeamData):
         """
         Build sample / mock up data to be used for testing
         """
-        snr = np.zeros((max(self.channels), self.time))
+        snr = np.zeros((max(self.channels), self.time[-1]))
 
         snr = self.add_mock_noise(noiseless_data = snr)
         snr = self.add_mock_track(snr, (50, 100), (100, 200))

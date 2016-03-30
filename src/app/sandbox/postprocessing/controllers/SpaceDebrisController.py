@@ -10,7 +10,7 @@ class SpaceDebrisController:
     def __init__(self):
         # todo parameters should be taken from a separate configuration file
         self.output_dir = os.path.join('public', 'results')
-        self.observation_name = '7434'
+        self.observation_name = '25484'
         self.beams_output_dir = os.path.join(self.output_dir, self.observation_name, 'beams')
         self.persist_results = True
 

@@ -13,7 +13,7 @@ class Beam:
         self.observation = observation
         self.output_dir = os.path.join('public', 'results')
 
-        # self.data = BeamDataMock(f0 = 0, fn = 200, time = [0,600])
+        # self.data = BeamDataMock(f0 = 0, fn = 200, time = 600)
 
         self.data = BeamDataObservation(n_beams = 32,
                                         n_channels = 8192,
