@@ -47,6 +47,26 @@ class SpaceDebrisCandidate:
                       )
         view.show(file_path = file_path)
 
+    def get_detection_box(self):
+        x0 = self.data['channel'][0]
+        y0 = self.data['time'][0]
+
+        x1 = self.data['channel'][-1]
+        y1 = self.data['time'][-1]
+
+        shape = {
+            'type': 'rect',
+            'x0': x0,
+            'y0': y0,
+            'x1': x1,
+            'y1': y1,
+            'line': {
+                'color': 'rgba(128, 0, 128, 1)',
+            },
+        }
+
+        return shape
+
     def save(self, file_path, name):
         """
         Create table view

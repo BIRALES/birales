@@ -6,6 +6,7 @@ from skimage.transform import hough_line_peaks
 
 from app.sandbox.postprocessing.models.SpaceDebrisCandidate import SpaceDebrisCandidate
 from app.sandbox.postprocessing.helpers.LineGeneratorHelper import LineGeneratorHelper
+from app.sandbox.postprocessing.lib.SpaceDebrisCandidateCollection import SpaceDebrisCandidateCollection
 
 
 class SpaceDebrisDetection(object):
@@ -14,7 +15,8 @@ class SpaceDebrisDetection(object):
 
     def detect(self, beam):
         detections = self.detection_strategy.detect(beam)
-        return detections
+        candidates = SpaceDebrisCandidateCollection(candidates = detections)
+        return candidates
 
 
 class SpaceDebrisDetectionStrategy(object):

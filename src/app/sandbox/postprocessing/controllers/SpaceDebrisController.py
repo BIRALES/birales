@@ -2,6 +2,7 @@ from app.sandbox.postprocessing.lib.BeamDataFilter import Filters
 from app.sandbox.postprocessing.lib.SpaceDebrisDetection import *
 from app.sandbox.postprocessing.models.Beam import Beam
 
+
 import os
 
 
@@ -30,13 +31,15 @@ class SpaceDebrisController:
         filtered_beam = Filters.remove_transmitter_channel(filtered_beam)
 
         # detect debris track using hough transform
-        detections = sdd.detect(beam = filtered_beam)
+        candidates = sdd.detect(beam = filtered_beam)
 
         # extract needed parameters and dump to file / web service
         # todo encapsulate this logic in a separate class (model?)
         if self.persist_results:
             filtered_beam.save(file_name = 'filtered_beam')
-            self.save_candidates_data(detections = detections)
+            candidates.view_candidates(output_dir = self.beams_output_dir, beam=beam)
+            candidates.save_candidates(output_dir = self.beams_output_dir)
+            # self.save_candidates_data(detections = detections)
 
     # todo save to database instead of FS (inside a model)
     def save_candidates_data(self, detections):
@@ -55,9 +58,3 @@ class SpaceDebrisController:
                            name = candidate_id)  # generate heat map
 
         print 'There were', len(detections), 'detections'
-
-    # todo save to database instead of FS (inside a model)
-    def save_beam_data(self, beam, file_name):
-        beam_id = 'beam_' + str(beam.id)
-        file_path = os.path.join(self.beams_output_dir, beam_id, file_name)
-        beam.data.view(file_path)

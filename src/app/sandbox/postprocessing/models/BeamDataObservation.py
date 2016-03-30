@@ -13,9 +13,9 @@ class BeamDataObservation(BeamData):
         BeamData.__init__(self)
 
         self.name = 'Beam Data from Medicina'
-        self.repository = '/home/denis/dev/birales/src/app/sandbox/postprocessing/data/'
+        self.repository = '../postprocessing/data/'
         self.observation = 'medicina_07_03_2016/'
-        self.data_file = '40058/40058_2016-03-08_15:09:40.dat'
+        self.data_set = self.get_data_set('40058')
 
         self.n_beams = n_beams
         self.n_channels = n_channels
@@ -25,7 +25,7 @@ class BeamDataObservation(BeamData):
         self.sampling_rate = sampling_rate
 
         self.name = 'Observation ' + inf.humanize(self.observation) + ' - ' + inf.humanize(
-                os.path.basename(self.data_file))
+                os.path.basename(self.data_set))
 
         self.channels = None
         self.time = None
@@ -37,13 +37,14 @@ class BeamDataObservation(BeamData):
 
     def set_data(self):
         data = self.read_data_file(
-                file_path = os.path.join(self.repository, self.observation, self.data_file),
+                file_path = os.path.join(self.repository, self.observation, self.data_set),
                 n_beams = self.n_beams,
                 n_channels = self.n_channels)
 
         self.time = np.arange(0, self.sampling_rate * data.shape[0], self.sampling_rate)
         self.channels = (
-                        np.arange(self.f_ch1 * 1e6, self.f_ch1 * 1e6 + self.f_off * (data.shape[1]), self.f_off)) * 1e-6
+                            np.arange(self.f_ch1 * 1e6, self.f_ch1 * 1e6 + self.f_off * (data.shape[1]),
+                                      self.f_off)) * 1e-6
         self.snr = np.log10(data[:, :, self.beam]).transpose()
 
     @staticmethod
@@ -70,3 +71,9 @@ class BeamDataObservation(BeamData):
         ax.set_ylabel("Time (s)")
 
         plt.show()
+
+    def get_data_set(self, data_set_name):
+        file_path = os.path.join(self.repository, self.observation, self.data_set, data_set_name)
+        data_sets = os.listdir(file_path)
+
+        return data_sets[0]

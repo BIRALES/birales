@@ -9,6 +9,8 @@ class BeamDataView:
         self.data = []
         self.name = name
 
+        self.shapes = []
+
     def set_layout(self, figure_title = 'Beam Data', x_axis_title = 'X Axis', y_axis_title = 'Y Axis'):
         """
         Set the layout configuration for the plotly figure
@@ -18,12 +20,16 @@ class BeamDataView:
         :param y_axis_title: The title of the y axis
         :return:
         """
-        self.layout = go.Layout(
-            title = figure_title,
-            xaxis = dict(ticks = '', nticks = 36, title = x_axis_title),
-            yaxis = dict(ticks = '', title = y_axis_title),
 
+        self.layout = go.Layout(
+                title = figure_title,
+                xaxis = dict(ticks = '', nticks = 36, title = x_axis_title),
+                yaxis = dict(ticks = '', title = y_axis_title),
+                shapes = self.shapes
         )
+
+    def set_shapes(self, shapes):
+        self.shapes = shapes
 
     def set_data(self, data, x_axis, y_axis):
         """
@@ -36,11 +42,11 @@ class BeamDataView:
         """
         self.data = [
             go.Heatmap(
-                z = data,
-                x = x_axis,
-                y = y_axis,
-                colorscale = 'Viridis',
-                colorbar = {'title': 'SNR'}, )
+                    z = data,
+                    x = x_axis,
+                    y = y_axis,
+                    colorscale = 'Viridis',
+                    colorbar = {'title': 'SNR'}, )
         ]
 
     def show(self, file_path):
@@ -54,6 +60,6 @@ class BeamDataView:
         fig = go.Figure(data = self.data, layout = self.layout)
         parent = os.path.abspath(os.path.join(file_path + '.html', os.pardir))
         if not os.path.exists(parent):
-                os.makedirs(parent)
+            os.makedirs(parent)
 
         plot(fig, filename = file_path + '.html', auto_open = False)
