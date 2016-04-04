@@ -26,7 +26,7 @@ class BeamData:
                             x_axis = self.channels,
                             y_axis = self.time)
 
-        self._view.show(file_path)
+        self._view.save(file_path)
 
     @abstractmethod
     def set_data(self):
@@ -37,7 +37,3 @@ class BeamData:
 
     def get_max_time(self):
         return len(self.time)
-
-
-
-

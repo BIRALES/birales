@@ -4,11 +4,10 @@ import os
 
 
 class BeamDataView:
-    def __init__(self, name = 'Beam Data View'):
+    def __init__(self, name = 'beam'):
         self.layout = []
         self.data = []
         self.name = name
-
         self.shapes = []
 
     def set_layout(self, figure_title = 'Beam Data', x_axis_title = 'X Axis', y_axis_title = 'Y Axis'):
@@ -49,7 +48,7 @@ class BeamDataView:
                     colorbar = {'title': 'SNR'}, )
         ]
 
-    def show(self, file_path):
+    def save(self, file_path):
         """
         Visualise the Beam Data as a Heatmap using plot.ly
 

@@ -1,4 +1,5 @@
 import os.path
+import app.sandbox.postprocessing.config.application as config
 
 
 class SpaceDebrisCandidateCollection:
@@ -24,7 +25,7 @@ class SpaceDebrisCandidateCollection:
 
         beam.data.get_view().shapes = detection_boxes
         beam_id = 'beam_' + str(beam.id)
-        file_path = os.path.join(output_dir, beam_id, 'detection_profile')
+        file_path = os.path.join(output_dir, beam_id, config.DETECTIONS_BEAM_FILE_NAME)
 
         beam.data.view(file_path, name = 'detections')
 
@@ -38,4 +39,4 @@ class SpaceDebrisCandidateCollection:
                 os.makedirs(file_path)
 
             # generate table
-            candidate.save(file_path = os.path.join(file_path, 'orbit_determination_data'), name = candidate_id)
+            candidate.create_table(file_path = os.path.join(file_path, config.OD_FILE_NAME), name = candidate_id)

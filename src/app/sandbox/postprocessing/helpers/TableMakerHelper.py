@@ -75,11 +75,6 @@ class TableMakerHelper:
 
         return str(page)
 
-    def visualise(self, name):
-        self.build_table(name)
-        # table = self.create_table()
-        # plot(table, filename = self.output_dir + name, auto_open = False)
-
     def visualise_with_graph(self, name):
         table = self.create_table()
         time = []

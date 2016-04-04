@@ -68,7 +68,7 @@ class SpaceDebrisCandidate:
 
         return shape
 
-    def save(self, file_path, name):
+    def create_table(self, file_path, name):
         """
         Create table view
         :param name:

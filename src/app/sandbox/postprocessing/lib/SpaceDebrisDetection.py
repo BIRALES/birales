@@ -8,6 +8,8 @@ from app.sandbox.postprocessing.models.SpaceDebrisCandidate import SpaceDebrisCa
 from app.sandbox.postprocessing.helpers.LineGeneratorHelper import LineGeneratorHelper
 from app.sandbox.postprocessing.lib.SpaceDebrisCandidateCollection import SpaceDebrisCandidateCollection
 
+import app.sandbox.postprocessing.config.application as app_config
+
 
 class SpaceDebrisDetection(object):
     def __init__(self, detection_strategy):
@@ -31,8 +33,7 @@ class SpaceDebrisDetectionStrategy(object):
 class LineSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
     def __init__(self, max_detections):
         SpaceDebrisDetectionStrategy.__init__(self, max_detections)
-        # todo replace these from configuration
-        self.snr_threshold = 1.0  # the snr power at which a detection is determined
+        self.snr_threshold = app_config.SNR_DETECTION_THRESHOLD
         self.hough_threshold = 10
 
     # todo refactor this function
@@ -49,8 +50,8 @@ class LineSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
             detection_data = []
             for coordinate in discrete_h_line:
-                channel = coordinate[0]   + 1.  # not sure why this works
-                time = coordinate[1]   + 1.  # not sure why this works
+                channel = coordinate[0] + 1.  # not sure why this works
+                time = coordinate[1] + 1.  # not sure why this works
 
                 if min_channel < channel < max_channel and min_time < time < max_time:
                     snr = beam.data.snr[channel][time]
@@ -63,6 +64,7 @@ class LineSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
                 candidate = SpaceDebrisCandidate(tx = 100, beam = beam, detection_data = detection_data)
                 candidates.append(candidate)
 
+        # todo replace with log
         print len(candidates), 'candidates were detected'
 
         return candidates
