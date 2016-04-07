@@ -8,9 +8,10 @@ class Observation:
     def __init__(self, name, data_set):
         self.name = name
         self.data_set = data_set
-        # self.beam = 15  # todo make configurable
+        self.data_dir = os.path.join(config.DATA_FILE_PATH, name, data_set)
+        self.beam_output_data = os.path.join(config.RESULTS_FILE_PATH, name, data_set, 'beams')
 
-        self.observation_config = Observation.read_xml_config()
+        self.observation_config = self.read_xml_config()
 
         # Read from data_set's xml configuration file
         self.n_beams = self.get_n_beams()
@@ -18,12 +19,14 @@ class Observation:
         self.tx = 150
 
         self.f_ch1 = self.get_stop_channel()
-        self.f_off = -19531.25  # todo check from where to get this
+        # self.f_off = self.get_start_channel()  # todo check from where to get this
+        self.f_off = -19531.25  # 20Mhz / 1024
         self.sampling_rate = self.get_sampling_rate()
 
-    @staticmethod
-    def read_xml_config():
-        file_path = config.OBSERVATION_DATA_DIR
+        self.sub_channels = self.get_sub_channels()
+
+    def read_xml_config(self):
+        file_path = self.data_dir
         files = [each for each in os.listdir(file_path) if each.endswith('.xml')]
         xml_config = minidom.parse(os.path.join(file_path, files[0]))
 
@@ -44,3 +47,11 @@ class Observation:
     def get_stop_channel(self):
         antenna = self.observation_config.getElementsByTagName('channels')
         return int(antenna[0].attributes['stopChannel'].value)
+
+    def get_start_channel(self):
+        antenna = self.observation_config.getElementsByTagName('channels')
+        return int(antenna[0].attributes['startChannel'].value)
+
+    def get_sub_channels(self):
+        data = self.observation_config.getElementsByTagName('channels')
+        return int(data[0].attributes['subchannels'].value)

@@ -7,7 +7,6 @@ import os.path
 
 class Beam:
     def __init__(self, beam_id, d_delta, dha, observation):
-
         self.id = beam_id
         self.name = 'Beam ' + str(beam_id)
         self.position = None  # todo change to degrees
@@ -16,14 +15,13 @@ class Beam:
 
         self.observation = observation
 
-        if config.DATA_SET is 'mock':
+        if observation.data_set is 'mock':
             self.data = BeamDataMock(f0 = 0, fn = 200, time = 600)
-
         else:
             self.data = BeamDataObservation(beam_id = beam_id, observation = observation)
 
     def save(self, file_name):
         beam_id = 'beam_' + str(self.id)
 
-        file_path = os.path.join(config.BEAM_OUTPUT_DATA, beam_id, file_name)
+        file_path = os.path.join(self.observation.beam_output_data, beam_id, file_name)
         self.data.view(file_path)

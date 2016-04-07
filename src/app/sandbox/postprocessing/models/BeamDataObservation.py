@@ -1,11 +1,11 @@
 import numpy as np
-
 import struct
 from matplotlib import pyplot as plt
 import inflection as inf
 import os.path
+
 from app.sandbox.postprocessing.models.BeamData import BeamData
-import app.sandbox.postprocessing.config.application as config
+from app.sandbox.postprocessing.helpers.LineGeneratorHelper import LineGeneratorHelper
 
 
 class BeamDataObservation(BeamData):
@@ -16,7 +16,7 @@ class BeamDataObservation(BeamData):
 
         self.beam = beam_id
         self.observation_name = observation.name
-        self.data_set = BeamDataObservation.get_data_set(config.OBSERVATION_DATA_DIR)
+        self.data_set = BeamDataObservation.get_data_set(observation.data_dir)
 
         self.n_beams = observation.n_beams
         self.n_channels = observation.n_channels
@@ -24,6 +24,7 @@ class BeamDataObservation(BeamData):
         self.f_ch1 = observation.f_ch1
         self.f_off = observation.f_off
         self.sampling_rate = observation.sampling_rate
+        self.sub_channels = observation.sub_channels
 
         self.name = self.get_human_name()
 
@@ -32,7 +33,6 @@ class BeamDataObservation(BeamData):
         self.snr = None
 
         self.set_data()
-
         # self.im_view()
 
     def get_human_name(self):
@@ -45,10 +45,31 @@ class BeamDataObservation(BeamData):
                 n_beams = self.n_beams,
                 n_channels = self.n_channels)
 
+        data = self.de_mirror(data)
+
         self.time = np.arange(0, self.sampling_rate * data.shape[0], self.sampling_rate)
         self.channels = (np.arange(self.f_ch1 * 1e6, self.f_ch1 * 1e6 + self.f_off * (data.shape[1]),
                                    self.f_off)) * 1e-6
-        self.snr = np.log10(data[:, :, self.beam]).transpose()
+
+        self.snr = np.log10(data).transpose()
+
+        self.snr = self.add_mock_tracks(self.snr)
+
+    @staticmethod
+    def add_mock_tracks(snr):
+        snr = BeamDataObservation.add_mock_track(snr, (3090, 150), (3500, 200))
+        snr = BeamDataObservation.add_mock_track(snr, (2500, 90), (3000, 110))
+        snr = BeamDataObservation.add_mock_track(snr, (950, 100), (1100, 50))
+
+        return snr
+
+    def de_mirror(self, data):
+        data1 = data[:, (self.sub_channels * 0.5):(self.sub_channels - 1), self.beam]
+        data2 = data[:, (self.sub_channels * 1.5):, self.beam]
+
+        data = np.hstack((data1, data2))
+
+        return data
 
     @staticmethod
     def read_data_file(file_path, n_beams, n_channels):
@@ -58,7 +79,7 @@ class BeamDataObservation(BeamData):
         # data = np.array(struct.unpack('f' * (len(data) / 4), data), dtype = float)
         # f.close()
 
-        fd = open(file_path,'rb')
+        fd = open(file_path, 'rb')
         position = 0
         no_of_doubles = 1000
         # move to position in file
@@ -69,6 +90,8 @@ class BeamDataObservation(BeamData):
 
         n_samples = len(data) / (n_beams * n_channels)
         data = np.reshape(data, (n_samples, n_channels, n_beams))
+
+        print data.shape
 
         return data
 
@@ -89,3 +112,12 @@ class BeamDataObservation(BeamData):
     def get_data_set(file_path):
         data_sets = [each for each in os.listdir(file_path) if each.endswith('.dat')]
         return os.path.join(file_path, data_sets[0])
+
+    @staticmethod
+    def add_mock_track(snr, start_coordinate = (120, 90), end_coordinate = (180, 140)):
+        track_points = LineGeneratorHelper.get_line(start_coordinate, end_coordinate)  # (x0, y0), (x1, y1)
+        mean = np.mean(snr)
+        for (channel, time) in track_points:
+            snr[channel][time] = 1.5 * mean
+
+        return snr

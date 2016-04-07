@@ -62,7 +62,7 @@ class SpaceDebrisCandidate:
             'x1': x1,
             'y1': y1,
             'line': {
-                'color': 'rgba(255,255,102, 1)',
+                'color': 'rgba(255,255,255, 1)',
             },
         }
 

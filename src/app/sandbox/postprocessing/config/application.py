@@ -1,5 +1,3 @@
-import os.path
-
 # Directory where observation data is stored
 DATA_FILE_PATH = 'data/'
 
@@ -21,14 +19,14 @@ ENVIRONMENT = 'development'
 # How verbose the logging is [0, 1, 2]
 LOG_LEVEL = 0
 
-# Persist results
-PERSIST_RESULTS = True
+# Visualise input data (Heat map)
+SAVE_INPUT_DATA = True
 
-# Observation name
-OBSERVATION_NAME = 'medicina_07_03_2016'
+# Save candidates parameters to disk (Html Table)
+SAVE_CANDIDATES = True
 
-# Data-set to analyse
-DATA_SET = '24773'
+# Visualise candidates on beam data (Html Table)
+VIEW_CANDIDATES = True
 
 # File name to give to the unprocessed input beam
 INPUT_BEAM_FILE_NAME = 'input_beam'
@@ -41,9 +39,3 @@ DETECTIONS_BEAM_FILE_NAME = 'detection_profile'
 
 # File name to give to the detections in the input beam
 OD_FILE_NAME = 'orbit_determination_data'
-
-# Inferred config variables
-OBSERVATION_DATA_DIR = os.path.join(DATA_FILE_PATH, OBSERVATION_NAME, DATA_SET)
-
-# Output directory for beams
-BEAM_OUTPUT_DATA = os.path.join(RESULTS_FILE_PATH, OBSERVATION_NAME, DATA_SET, 'beams')

@@ -50,8 +50,8 @@ class LineSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
             detection_data = []
             for coordinate in discrete_h_line:
-                channel = coordinate[0] + 1.  # not sure why this works
-                time = coordinate[1] + 1.  # not sure why this works
+                channel = coordinate[0] - 1.  # not sure why this works
+                time = coordinate[1] - 1.  # not sure why this works
 
                 if min_channel < channel < max_channel and min_time < time < max_time:
                     snr = beam.data.snr[channel][time]
@@ -84,6 +84,7 @@ class LineSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
             coordinate = ((f0, t0), (fn, tn))
             hough_line_coordinates.append(coordinate)
+
         return hough_line_coordinates
 
     @staticmethod
