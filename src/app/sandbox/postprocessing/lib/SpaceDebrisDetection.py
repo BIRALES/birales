@@ -9,6 +9,7 @@ from app.sandbox.postprocessing.helpers.LineGeneratorHelper import LineGenerator
 from app.sandbox.postprocessing.lib.SpaceDebrisCandidateCollection import SpaceDebrisCandidateCollection
 
 import app.sandbox.postprocessing.config.application as app_config
+from sklearn.cluster import KMeans
 
 
 class SpaceDebrisDetection(object):
@@ -22,12 +23,68 @@ class SpaceDebrisDetection(object):
 
 
 class SpaceDebrisDetectionStrategy(object):
-    def __init__(self, max_detections):
+    def __init__(self, max_detections = 10):
         self.max_detections = max_detections  # maximum detections per beam
 
     @abstractmethod
     def detect(self, beam):
         pass
+
+
+class KMeansSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
+    def __init__(self, max_detections):
+        SpaceDebrisDetectionStrategy.__init__(self, max_detections)
+        pass
+
+    def detect(self, beam):
+        random_state = 170
+        data = beam.data.snr
+        data = np.transpose(np.nonzero(data > 2.))
+        h, theta, d = hough_line(beam.data.snr)
+        h_space, angles, dists = hough_line_peaks(h, theta, d, 10)
+        print np.rad2deg(angles)
+        n_clusters = len(angles)
+        k_means = KMeans(n_clusters = n_clusters, random_state = random_state)
+        y_pred = k_means.fit_predict(data)
+        # print len(y_pred)
+        # import matplotlib.pyplot as plt
+        # plt.scatter(data[:, 0], data[:, 1], c = y_pred)
+        # plt.show()
+        # exit(0)
+        # print data.shape
+        # print np.unique(y_pred)
+        # for i, (x, y) in enumerate(data):
+        #     print i, x, y, beam.data.snr[x, y]
+        # exit(0)
+
+        # Populate cluster with coordinates
+        clusters = dict.fromkeys(np.unique(y_pred))
+        for i, y in enumerate(y_pred):
+            if not clusters[y]:
+                clusters[y] = []
+            clusters[y].append(data[i])
+
+
+        candidates = []
+        for cluster in clusters.iterkeys():
+            detection_data = []
+            for detection_index, (channel, time) in enumerate(clusters[cluster]):
+                time = beam.data.time[time]
+                channel = beam.data.channels[channel]
+                snr = beam.data.snr[channel][time]
+                detection_data.append([channel, time, snr])
+            if detection_data:
+                candidate = SpaceDebrisCandidate(tx = 100, beam = beam, detection_data = np.array(detection_data))
+                candidates.append(candidate)
+
+        print len(candidates), 'candidates were detected'
+        return candidates
+
+    def get_number_of_clusters(self):
+        pass
+
+    def get_cluster_center(self, coordinates):
+        return int(len(coordinates) / 2)
 
 
 class LineSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
@@ -50,8 +107,8 @@ class LineSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
             detection_data = []
             for coordinate in discrete_h_line:
-                channel = coordinate[0] - 1.  # not sure why this works
-                time = coordinate[1] - 1.  # not sure why this works
+                channel = coordinate[0]  # not sure why this works
+                time = coordinate[1]  # not sure why this works
 
                 if min_channel < channel < max_channel and min_time < time < max_time:
                     snr = beam.data.snr[channel][time]

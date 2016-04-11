@@ -9,6 +9,7 @@ class SpaceDebrisCandidate:
     def __init__(self, tx, beam, detection_data):
         self.beam = beam
         self.tx = tx
+        self.detection_data = detection_data
 
         self.data = {
             'time': [],
@@ -56,7 +57,7 @@ class SpaceDebrisCandidate:
         y1 = self.data['time'][-1]
 
         shape = {
-            'type': 'rect',
+            'type': 'line',
             'x0': x0,
             'y0': y0,
             'x1': x1,

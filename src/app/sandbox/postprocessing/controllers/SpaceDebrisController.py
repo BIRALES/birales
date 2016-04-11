@@ -25,7 +25,7 @@ class SpaceDebrisController:
         filtered_beam = Filters.remove_transmitter_channel(filtered_beam)
 
         # Post-processing: Select algorithm to use for space debris detection
-        sdd = SpaceDebrisDetection(LineSpaceDebrisDetectionStrategy(max_detections = config.MAX_DETECTIONS))
+        sdd = SpaceDebrisDetection(KMeansSpaceDebrisDetectionStrategy(max_detections = config.MAX_DETECTIONS))
 
         # Post-processing: Detect debris track using chosen algorithm
         candidates = sdd.detect(beam = filtered_beam)
