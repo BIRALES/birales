@@ -8,7 +8,7 @@ import app.sandbox.postprocessing.config.application as config
 
 class SpaceDebrisController:
     def __init__(self):
-        self.observation = Observation('medicina_07_03_2016', 'mock_1358')
+        self.observation = Observation('medicina_07_03_2016', '1358')
 
     def run(self):
         # todo repeat for each beam

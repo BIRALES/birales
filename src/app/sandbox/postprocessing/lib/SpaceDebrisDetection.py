@@ -152,9 +152,18 @@ class KMeansSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
         return clusters
 
+    @staticmethod
+    def delete_dirty_clusters(clusters, threshold = 0.85):
+        good_clusters = {}
+        for i, c in enumerate(clusters.iterkeys()):
+            if abs(clusters[c]['r']) > threshold:
+                good_clusters[i] = clusters[c]
+        return good_clusters
+
     def detect(self, beam):
         db_scan_clusters = self.db_scan_cluster(beam.data.snr)
         clusters = self.interpolate_clusters(db_scan_clusters)
+        clusters = self.delete_dirty_clusters(clusters, threshold = 0.85)
         clusters = self.merge_clusters(clusters)
 
         # Visualise clusters
@@ -164,7 +173,7 @@ class KMeansSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
                 x = d[:, 0]
                 y = d[:, 1]
                 eq = 'y = ' + str(round(clusters[cluster]['m'], 3)) + 'x + ' + str(round(clusters[cluster]['c'], 3))
-                eq += str(round(clusters[cluster]['r'], 2))
+                eq += ' (' + str(round(clusters[cluster]['r'], 2)) + ')'
                 plt.plot(x, y, 'o', label = eq)
         plt.legend()
         plt.show()

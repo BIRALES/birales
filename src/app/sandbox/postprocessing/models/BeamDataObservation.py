@@ -53,7 +53,7 @@ class BeamDataObservation(BeamData):
 
         self.snr = np.log10(data).transpose()
 
-        self.snr = self.add_mock_tracks(self.snr)
+        # self.snr = self.add_mock_tracks(self.snr)
 
     @staticmethod
     def add_mock_tracks(snr):
