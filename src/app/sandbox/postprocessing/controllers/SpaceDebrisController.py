@@ -19,10 +19,13 @@ class SpaceDebrisController:
             beam.save(file_name = config.INPUT_BEAM_FILE_NAME)
 
         # Pre-processing: Remove background noise from beam data
-        filtered_beam = Filters.remove_background_noise(beam)
+        filtered_beam = Filters.remove_background_noise(beam,3.)
 
         # Pre-processing: Remove transmitter channel from beam data
         filtered_beam = Filters.remove_transmitter_channel(filtered_beam)
+
+        filtered_beam.save(file_name = config.FILTERED_BEAM_FILE_NAME)
+
 
         # Post-processing: Select algorithm to use for space debris detection
         sdd = SpaceDebrisDetection(KMeansSpaceDebrisDetectionStrategy(max_detections = config.MAX_DETECTIONS))

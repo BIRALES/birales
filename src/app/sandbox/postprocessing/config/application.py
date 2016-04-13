@@ -20,7 +20,7 @@ ENVIRONMENT = 'development'
 LOG_LEVEL = 0
 
 # Visualise input data (Heat map)
-SAVE_INPUT_DATA = False
+SAVE_INPUT_DATA = True
 
 # Save candidates parameters to disk (Html Table)
 SAVE_CANDIDATES = False

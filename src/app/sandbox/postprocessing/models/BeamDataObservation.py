@@ -69,6 +69,8 @@ class BeamDataObservation(BeamData):
 
         data = np.hstack((data1, data2))
 
+
+
         return data
 
     @staticmethod
@@ -90,8 +92,6 @@ class BeamDataObservation(BeamData):
 
         n_samples = len(data) / (n_beams * n_channels)
         data = np.reshape(data, (n_samples, n_channels, n_beams))
-
-        print data.shape
 
         return data
 
@@ -118,6 +118,6 @@ class BeamDataObservation(BeamData):
         track_points = LineGeneratorHelper.get_line(start_coordinate, end_coordinate)  # (x0, y0), (x1, y1)
         mean = np.mean(snr)
         for (channel, time) in track_points:
-            snr[channel][time] = 1.5 * mean
+            snr[channel][time] += 1.0
 
         return snr
