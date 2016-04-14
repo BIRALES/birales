@@ -20,6 +20,7 @@ class BeamDataObservation(BeamData):
 
         self.n_beams = observation.n_beams
         self.n_channels = observation.n_channels
+        self.n_sub_channels = observation.n_sub_channels
 
         self.f_ch1 = observation.f_ch1
         self.f_off = observation.f_off
@@ -43,14 +44,18 @@ class BeamDataObservation(BeamData):
         data = self.read_data_file(
                 file_path = self.data_set,
                 n_beams = self.n_beams,
-                n_channels = self.n_channels)
+                n_channels = self.n_sub_channels * 2)
 
         data = self.de_mirror(data)
 
         self.time = np.arange(0, self.sampling_rate * data.shape[0], self.sampling_rate)
-        self.channels = (np.arange(self.f_ch1 * 1e6, self.f_ch1 * 1e6 + self.f_off * (data.shape[1]),
-                                   self.f_off)) * 1e-6
+        # self.channels = (np.arange(self.f_ch1 * 1e6, self.f_ch1 * 1e6 + self.f_off * (data.shape[1]),
+        #                            self.f_off)) * 1e-6
 
+        start = self.f_ch1 - ((20. / self.n_channels) * self.f_off)
+        rate = ((20. / self.n_channels) / self.n_sub_channels) * 2
+
+        self.channels = np.arange(start, start + rate * self.n_sub_channels * 2, rate)
         self.snr = np.log10(data).transpose()
 
         # self.snr = self.add_mock_tracks(self.snr)
@@ -68,8 +73,6 @@ class BeamDataObservation(BeamData):
         data2 = data[:, (self.sub_channels * 1.5):, self.beam]
 
         data = np.hstack((data1, data2))
-
-
 
         return data
 

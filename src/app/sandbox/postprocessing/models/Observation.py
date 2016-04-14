@@ -16,11 +16,12 @@ class Observation:
         # Read from data_set's xml configuration file
         self.n_beams = self.get_n_beams()
         self.n_channels = self.get_n_channels()
+        self.n_sub_channels = self.get_n_sub_channels()
         self.tx = 150
 
         self.f_ch1 = self.get_stop_channel()
-        # self.f_off = self.get_start_channel()  # todo check from where to get this
         self.f_off = -19531.25  # 20Mhz / 1024
+        self.f_off = self.get_start_channel()
         self.sampling_rate = self.get_sampling_rate()
 
         self.sub_channels = self.get_sub_channels()
@@ -37,8 +38,12 @@ class Observation:
         return len(beams)
 
     def get_n_channels(self):
-        antenna = self.observation_config.getElementsByTagName('samples')
-        return int(antenna[0].attributes['nsamp'].value)
+        antenna = self.observation_config.getElementsByTagName('channels')
+        return int(antenna[0].attributes['nchans'].value)
+
+    def get_n_sub_channels(self):
+        antenna = self.observation_config.getElementsByTagName('channels')
+        return int(antenna[0].attributes['subchannels'].value)
 
     def get_sampling_rate(self):
         antenna = self.observation_config.getElementsByTagName('timing')
