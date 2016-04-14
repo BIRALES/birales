@@ -233,8 +233,22 @@ class KMeansSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
                 eq += ' (' + str(round(clusters[cluster]['r'], 2)) + ')'
                 plt.plot(x, y, 'o', label = eq)
         plt.legend()
-        plt.show()
-        exit(0)
+        # plt.show()
+        # exit(0)
+
+        detection_data = []
+        candidates = []
+
+        for cluster_id in clusters.iterkeys():
+            cluster_data = clusters[cluster_id]['data']
+
+            detection_data = np.array([[c, t, beam.data.snr[c][t]] for (c, t) in cluster_data])
+            candidate = SpaceDebrisCandidate(tx = 100, beam = beam, detection_data = detection_data)
+            candidates.append(candidate)
+
+        # exit(0)
+
+        return candidates
 
     def detect_km(self, beam):
         random_state = 170

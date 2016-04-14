@@ -23,7 +23,7 @@ LOG_LEVEL = 0
 SAVE_INPUT_DATA = True
 
 # Save candidates parameters to disk (Html Table)
-SAVE_CANDIDATES = False
+SAVE_CANDIDATES = True
 
 # Visualise candidates on beam data (Heat map)
 VIEW_CANDIDATES = True
