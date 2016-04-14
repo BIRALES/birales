@@ -26,7 +26,6 @@ class SpaceDebrisController:
 
         filtered_beam.save(file_name = config.FILTERED_BEAM_FILE_NAME)
 
-
         # Post-processing: Select algorithm to use for space debris detection
         sdd = SpaceDebrisDetection(KMeansSpaceDebrisDetectionStrategy(max_detections = config.MAX_DETECTIONS))
 

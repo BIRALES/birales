@@ -45,8 +45,15 @@ class KMeansSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         return cluster1['data'] + cluster2['data']
 
     def clusters_are_similar(self, cluster1, cluster2):
+        """
+        Determine whether two clusters are considered to be similar. In this case gradient and c-intercept similarity
+        is used.
+        :param cluster1:
+        :param cluster2:
+        :return:
+        """
         # gradient
-        m = self.is_similar(cluster1['m'], cluster2['m'], threshold = 0.10)
+        m = self.is_similar(cluster1['m'], cluster2['m'], threshold = 0.20)
 
         # intercept
         c = self.is_similar(cluster1['c'], cluster2['c'], threshold = 0.20)
@@ -54,6 +61,13 @@ class KMeansSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         return m and c
 
     def is_similar(self, a, b, threshold = 0.10):
+        """
+        Determine if two values are similar if they are within a certain threshold
+        :param a:
+        :param b:
+        :param threshold:
+        :return:
+        """
         if a is None or b is None:
             return False
 
@@ -66,6 +80,12 @@ class KMeansSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
     @staticmethod
     def percentage_difference(a, b):
+        """
+        Calculate the difference between two values
+        :param a:
+        :param b:
+        :return:
+        """
         diff = a - b
         mean = np.mean([a, b])
         percentage_difference = abs(diff / mean)
@@ -74,6 +94,11 @@ class KMeansSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
     @staticmethod
     def db_scan_cluster(data):
+        """
+        Use the DBScan algorithm to create a set of clusters from the given beam data
+        :param data:
+        :return:
+        """
         data = np.transpose(np.nonzero(data > 0.))
         y_pred = DBSCAN(eps = 10.0, min_samples = 5, algorithm = 'kd_tree').fit_predict(data)
         clusters = dict.fromkeys(np.unique(y_pred))
@@ -88,27 +113,49 @@ class KMeansSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
         return clusters
 
-    @staticmethod
-    def interpolate_clusters(clusters):
+    def interpolate_clusters(self, clusters):
         """
-        Fit a line
+        Fit a line equation onto each cluster
         :param clusters:
         :return:
         """
         for cluster in clusters.iterkeys():
-            d = np.array(clusters[cluster]['data'])
-            x = d[:, 0]
-            y = d[:, 1]
-            A = np.vstack([x, np.ones(len(x))]).T
-
-            m, c = np.linalg.lstsq(A, y)[0]  # determine gradient and y-intercept of data
-            r = np.corrcoef(x, y)[0, 1]  # determine correlation coefficient
-
-            clusters[cluster]['m'] = m
-            clusters[cluster]['c'] = c
-            clusters[cluster]['r'] = r
+            m, c, r = self.get_line_equation(clusters[cluster]['data'])
+            clusters[cluster] = self.set_cluster_eq(clusters[cluster], m, c, r)
 
         return clusters
+
+    @staticmethod
+    def set_cluster_eq(cluster, m, c, r):
+        """
+        Update the line equation of the cluster based on the passed parameters
+        :param cluster:
+        :param m:
+        :param c:
+        :param r:
+        :return:
+        """
+        cluster['m'] = m
+        cluster['c'] = c
+        cluster['r'] = r
+
+        return cluster
+
+    @staticmethod
+    def get_line_equation(data):
+        """
+        Return the gradient, correlation coefficient, and intercept from a give set of points
+        :param data:
+        :return:
+        """
+        d = np.array(data)
+        x = d[:, 0]
+        y = d[:, 1]
+        A = np.vstack([x, np.ones(len(x))]).T
+
+        m, c = np.linalg.lstsq(A, y)[0]  # determine gradient and y-intercept of data
+        r = np.corrcoef(x, y)[0, 1]  # determine correlation coefficient
+        return m, c, r
 
     @staticmethod
     def delete_clusters(clusters, clusters_to_delete):
@@ -140,6 +187,10 @@ class KMeansSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
                     cluster2 = clusters[cluster_id2]
                     if self.clusters_are_similar(cluster1, cluster2):
                         cluster1['data'] = self.merge_clusters_data(cluster1, cluster2)
+                        # recalculate equation of cluster
+                        m, c, r = self.get_line_equation(cluster1['data'])
+                        cluster1 = self.set_cluster_eq(cluster1, m, c, r)
+
                         cluster2['m'] = None  # mark cluster for deletion
                         clusters_to_delete.append(cluster_id2)
                     else:
@@ -154,6 +205,12 @@ class KMeansSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
     @staticmethod
     def delete_dirty_clusters(clusters, threshold = 0.85):
+        """
+        Delete clusters that have a low (< threshold) correlation coefficient
+        :param clusters:
+        :param threshold:
+        :return:
+        """
         good_clusters = {}
         for i, c in enumerate(clusters.iterkeys()):
             if abs(clusters[c]['r']) > threshold:
