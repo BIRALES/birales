@@ -1,5 +1,6 @@
 from app.sandbox.postprocessing.lib.BeamDataFilter import Filters
 from app.sandbox.postprocessing.lib.SpaceDebrisDetection import *
+from app.sandbox.postprocessing.lib.DBScanSpaceDebrisDetectionStrategy import DBScanSpaceDebrisDetectionStrategy
 from app.sandbox.postprocessing.models.Beam import Beam
 from app.sandbox.postprocessing.models.Observation import Observation
 
@@ -19,7 +20,7 @@ class SpaceDebrisController:
             beam.save(file_name = config.INPUT_BEAM_FILE_NAME)
 
         # Pre-processing: Remove background noise from beam data
-        filtered_beam = Filters.remove_background_noise(beam,3.)
+        filtered_beam = Filters.remove_background_noise(beam, 3.)
 
         # Pre-processing: Remove transmitter channel from beam data
         filtered_beam = Filters.remove_transmitter_channel(filtered_beam)
@@ -27,7 +28,7 @@ class SpaceDebrisController:
         filtered_beam.save(file_name = config.FILTERED_BEAM_FILE_NAME)
 
         # Post-processing: Select algorithm to use for space debris detection
-        sdd = SpaceDebrisDetection(KMeansSpaceDebrisDetectionStrategy(max_detections = config.MAX_DETECTIONS))
+        sdd = SpaceDebrisDetection(DBScanSpaceDebrisDetectionStrategy(max_detections = config.MAX_DETECTIONS))
 
         # Post-processing: Detect debris track using chosen algorithm
         candidates = sdd.detect(beam = filtered_beam)
