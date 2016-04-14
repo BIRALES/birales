@@ -20,13 +20,13 @@ ENVIRONMENT = 'development'
 LOG_LEVEL = 0
 
 # Visualise input data (Heat map)
-SAVE_INPUT_DATA = False
+SAVE_INPUT_DATA = True
 
 # Save candidates parameters to disk (Html Table)
 SAVE_CANDIDATES = False
 
 # Visualise candidates on beam data (Heat map)
-VIEW_CANDIDATES = False
+VIEW_CANDIDATES = True
 
 # File name to give to the unprocessed input beam
 INPUT_BEAM_FILE_NAME = 'input_beam'
@@ -39,3 +39,6 @@ DETECTIONS_BEAM_FILE_NAME = 'detection_profile'
 
 # File name to give to the detections in the input beam
 OD_FILE_NAME = 'orbit_determination_data'
+
+# Output format for visualisations [HTML, PNG]
+VIEW_OUTPUT_FORMAT = 'HTML'

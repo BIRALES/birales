@@ -24,13 +24,23 @@ class SpaceDebrisCandidateCollection:
             detection_boxes.append(candidate.get_detection_box())
             detection_data.append(candidate.detection_data)
 
-        # beam.data.get_view().set_shapes(detection_boxes)
-        beam.data.get_view().set_detections(detection_data)
-
         beam_id = 'beam_' + str(beam.id)
         file_path = os.path.join(output_dir, beam_id, config.DETECTIONS_BEAM_FILE_NAME)
 
-        beam.data.view(file_path, name = 'detections')
+        beam.data.get_view().set_layout(figure_title = 'detections',
+                                        x_axis_title = 'Frequency (Hz)',
+                                        y_axis_title = 'Time (s)')
+
+        beam.data.get_view().set_data(data = beam.data.snr.transpose(),
+                                      x_axis = beam.data.channels,
+                                      y_axis = beam.data.time)
+
+        # beam.data.get_view().set_shapes(detection_boxes)
+        beam.data.get_view().set_detections(detection_data)
+
+        beam.data.get_view().save(file_path)
+
+        # beam.data.view(file_path, name = 'detections')
 
     def save_candidates(self, output_dir):
         for i, (candidate_id, candidate) in enumerate(self.candidates.iteritems()):

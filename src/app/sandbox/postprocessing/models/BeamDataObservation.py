@@ -56,6 +56,8 @@ class BeamDataObservation(BeamData):
         rate = ((20. / self.n_channels) / self.n_sub_channels) * 2
 
         self.channels = np.arange(start, start + rate * self.n_sub_channels * 2, rate)
+        self.time = np.arange(0, data.shape[0],1)
+        self.channels = np.arange(0, data.shape[1], 1)
         self.snr = np.log10(data).transpose()
 
         # self.snr = self.add_mock_tracks(self.snr)
