@@ -24,8 +24,6 @@ class Observation:
         self.f_off = self.get_start_channel()
         self.sampling_rate = self.get_sampling_rate()
 
-        self.sub_channels = self.get_sub_channels()
-
     def read_xml_config(self):
         file_path = self.data_dir
         files = [each for each in os.listdir(file_path) if each.endswith('.xml')]
@@ -56,7 +54,3 @@ class Observation:
     def get_start_channel(self):
         antenna = self.observation_config.getElementsByTagName('channels')
         return int(antenna[0].attributes['startChannel'].value)
-
-    def get_sub_channels(self):
-        data = self.observation_config.getElementsByTagName('channels')
-        return int(data[0].attributes['subchannels'].value)

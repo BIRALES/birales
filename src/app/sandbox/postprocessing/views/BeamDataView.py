@@ -2,6 +2,7 @@ from plotly.offline import plot
 import plotly.graph_objs as go
 import os
 import app.sandbox.postprocessing.config.application as config
+import itertools
 
 
 class BeamDataView:
@@ -36,7 +37,7 @@ class BeamDataView:
         self.shapes = shapes
 
     def set_detections(self, detections):
-        random_colors = iter(['blue', 'pink', 'yellow', 'green', 'cyan', 'red'])
+        random_colors = itertools.cycle(['blue', 'pink', 'yellow', 'green', 'cyan', 'red'])
         for i, detection in enumerate(detections):
             self.data.append(go.Scatter(
                     x = detection[:, 0],

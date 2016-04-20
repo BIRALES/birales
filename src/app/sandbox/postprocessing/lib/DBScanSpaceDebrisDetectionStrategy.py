@@ -6,7 +6,6 @@ from skimage.transform import hough_line_peaks
 from app.sandbox.postprocessing.lib.SpaceDebrisDetection import SpaceDebrisDetectionStrategy
 from app.sandbox.postprocessing.models.SpaceDebrisCandidate import SpaceDebrisCandidate
 
-import app.sandbox.postprocessing.config.application as app_config
 from sklearn.cluster import KMeans
 from sklearn.cluster import DBSCAN
 import matplotlib.pyplot as plt
@@ -152,6 +151,7 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         :param clusters:
         :return:
         """
+
         while True:
             clusters_to_delete = []
             clusters_not_merged = 0
@@ -197,8 +197,8 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
     def detect(self, beam):
         db_scan_clusters = self.db_scan_cluster(beam.data.snr)
         clusters = self.interpolate_clusters(db_scan_clusters)
-        clusters = self.delete_dirty_clusters(clusters, threshold = 0.85)
-        clusters = self.merge_clusters(clusters)
+        # clusters = self.delete_dirty_clusters(clusters, threshold = 0.85)
+        # clusters = self.merge_clusters(clusters)
 
         # Visualise clusters
         for i, cluster in enumerate(clusters.iterkeys()):
@@ -209,17 +209,15 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
                 eq = 'y = ' + str(round(clusters[cluster]['m'], 3)) + 'x + ' + str(round(clusters[cluster]['c'], 3))
                 eq += ' (' + str(round(clusters[cluster]['r'], 2)) + ')'
                 plt.plot(x, y, 'o', label = eq)
-        plt.legend()
+        # plt.legend()
         # plt.show()
         # exit(0)
 
-        detection_data = []
         candidates = []
-
         for cluster_id in clusters.iterkeys():
             cluster_data = clusters[cluster_id]['data']
 
-            detection_data = np.array([[c, t, beam.data.snr[c][t]] for (c, t) in cluster_data])
+            detection_data = np.array([[beam.data.channels[c], beam.data.time[t], beam.data.snr[c][t]] for (c, t) in cluster_data])
             candidate = SpaceDebrisCandidate(tx = 100, beam = beam, detection_data = detection_data)
             candidates.append(candidate)
 
@@ -231,19 +229,14 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         data = np.transpose(np.nonzero(data > 2.))
         h, theta, d = hough_line(beam.data.snr)
         h_space, angles, dists = hough_line_peaks(h, theta, d, 10)
-        print np.rad2deg(angles)
+
         n_clusters = len(angles)
         k_means = KMeans(n_clusters = n_clusters, random_state = random_state)
         y_pred = k_means.fit_predict(data)
-        # print len(y_pred)
+
         # import matplotlib.pyplot as plt
         # plt.scatter(data[:, 0], data[:, 1], c = y_pred)
         # plt.show()
-        # exit(0)
-        # print data.shape
-        # print np.unique(y_pred)
-        # for i, (x, y) in enumerate(data):
-        #     print i, x, y, beam.data.snr[x, y]
         # exit(0)
 
         # Populate cluster with coordinates
