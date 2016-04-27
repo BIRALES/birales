@@ -9,6 +9,7 @@ from app.sandbox.postprocessing.models.SpaceDebrisCandidate import SpaceDebrisCa
 from sklearn.cluster import KMeans
 from sklearn.cluster import DBSCAN
 import matplotlib.pyplot as plt
+import app.sandbox.postprocessing.config.application as config
 
 
 class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
@@ -197,8 +198,8 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
     def detect(self, beam):
         db_scan_clusters = self.db_scan_cluster(beam.data.snr)
         clusters = self.interpolate_clusters(db_scan_clusters)
-        # clusters = self.delete_dirty_clusters(clusters, threshold = 0.85)
-        # clusters = self.merge_clusters(clusters)
+        clusters = self.delete_dirty_clusters(clusters, threshold = 0.85)
+        clusters = self.merge_clusters(clusters)
 
         # Visualise clusters
         for i, cluster in enumerate(clusters.iterkeys()):
@@ -208,16 +209,27 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
                 y = d[:, 1]
                 eq = 'y = ' + str(round(clusters[cluster]['m'], 3)) + 'x + ' + str(round(clusters[cluster]['c'], 3))
                 eq += ' (' + str(round(clusters[cluster]['r'], 2)) + ')'
-                plt.plot(x, y, 'o', label = eq)
-        # plt.legend()
-        # plt.show()
-        # exit(0)
+                if config.DEBUG_CANDIDATES:
+                    plt.plot(x, y, 'o', label = eq)
+
+        if config.DEBUG_CANDIDATES:
+            plt.style.use('ggplot')
+            plt.legend(loc = 'best', fancybox = True, framealpha = 0.5)
+            plt.xlabel('Channel')
+            plt.ylabel('Time')
+            plt.tight_layout()
+            plt.grid()
+            manager = plt.get_current_fig_manager()
+            manager.resize(*manager.window.maxsize())
+            plt.show()
+            exit(0)
 
         candidates = []
         for cluster_id in clusters.iterkeys():
             cluster_data = clusters[cluster_id]['data']
 
-            detection_data = np.array([[beam.data.channels[c], beam.data.time[t], beam.data.snr[c][t]] for (c, t) in cluster_data])
+            detection_data = np.array(
+                    [[beam.data.channels[c], beam.data.time[t], beam.data.snr[c][t]] for (c, t) in cluster_data])
             candidate = SpaceDebrisCandidate(tx = 100, beam = beam, detection_data = detection_data)
             candidates.append(candidate)
 

@@ -1,10 +1,10 @@
 import os
 from xml.dom import minidom
 import app.sandbox.postprocessing.config.application as config
+from app.sandbox.postprocessing.models.Beam import Beam
 
 
 class Observation:
-
     def __init__(self, name, data_set):
         self.name = name
         self.data_set = data_set
@@ -23,6 +23,27 @@ class Observation:
         self.f_off = -19531.25  # 20Mhz / 1024
         self.f_off = self.get_start_channel()
         self.sampling_rate = self.get_sampling_rate()
+
+        # init beams in observation
+        self.beams = self.create_beams()
+
+    def create_beams(self):
+        beams = self.observation_config.getElementsByTagName('beam')
+
+        def attr(key):
+            return beam.attributes[key].value
+
+        beam_collection = []
+        for beam in beams:
+            beam_collection.append(Beam(beam_id = attr('beamId'),
+                                        dec = attr('dec'),
+                                        ra = attr('ra'),
+                                        ha = attr('ha'),
+                                        top_frequency = attr('topFrequency'),
+                                        frequency_offset = attr('frequencyOffset'),
+                                        observation = self))
+
+        return beam_collection
 
     def read_xml_config(self):
         file_path = self.data_dir

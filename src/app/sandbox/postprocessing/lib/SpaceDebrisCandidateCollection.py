@@ -1,11 +1,18 @@
 import os.path
 import app.sandbox.postprocessing.config.application as config
+import app.sandbox.postprocessing.config.database as DB
+import pymongo as mongo
 
 
 class SpaceDebrisCandidateCollection:
+    DB_FLAG = 'DB'
+
     def __init__(self, candidates):
         self.candidates = {}
         self.add(candidates)
+
+    def __len__(self):
+        return len(self.candidates)
 
     def add(self, candidates):
         for candidate in candidates:
@@ -40,16 +47,38 @@ class SpaceDebrisCandidateCollection:
 
         beam.data.get_view().save(file_path)
 
-        # beam.data.view(file_path, name = 'detections')
+    def save_candidates(self, observation):
+        if config.CANDIDATES_SAVE is self.DB_FLAG:
+            self.save_candidates_db(observation)
+        else:
+            self.save_candidates_html(observation)
 
-    def save_candidates(self, output_dir):
+    def save_candidates_html(self, observation):
         for i, (candidate_id, candidate) in enumerate(self.candidates.iteritems()):
             beam_id = 'beam_' + str(candidate.beam.id)
             candidate_id = 'candidate_' + str(i)
-            file_path = os.path.join(output_dir, beam_id, 'candidates', candidate_id)
+            file_path = os.path.join(observation.beam_output_data, beam_id, 'candidates', candidate_id)
 
             if not os.path.exists(file_path):
                 os.makedirs(file_path)
 
             # generate table
             candidate.create_table(file_path = os.path.join(file_path, config.OD_FILE_NAME), name = candidate_id)
+
+    def save_candidates_db(self, observation):
+        client = mongo.MongoClient(DB.HOST, DB.PORT)
+        db = client['birales']
+        for i, (c_id, candidate) in enumerate(self.candidates.iteritems()):
+            data = {
+                '_id'        : observation.data_set + '.' + str(candidate.beam.id) + '.' + str(i),
+                'data'       : candidate.data,
+                'beam'       : candidate.beam.id,
+                'observation': observation.name,
+                'data_set'   : observation.data_set,
+
+            }
+            try:
+                db.candidates.insert(data, continue_on_error = True)
+            except mongo.errors.DuplicateKeyError:
+                pass
+

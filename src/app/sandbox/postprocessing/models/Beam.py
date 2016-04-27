@@ -6,12 +6,15 @@ import os.path
 
 
 class Beam:
-    def __init__(self, beam_id, d_delta, dha, observation):
+    def __init__(self, beam_id, dec, ra, ha, top_frequency, frequency_offset, observation):
         self.id = beam_id
         self.name = 'Beam ' + str(beam_id)
-        self.position = None  # todo change to degrees
-        self.d_delta = d_delta
-        self.dha = dha
+
+        self.dec = dec
+        self.ra = ra
+        self.ha = ha
+        self.top_frequency = top_frequency
+        self.frequency_offset = frequency_offset
 
         self.observation = observation
 

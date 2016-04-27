@@ -50,7 +50,7 @@ class TableMakerHelper:
         for i in range(0, len(self.rows[self.rows.keys()[0]])):
             row = []
             for key in self.rows.keys():
-                value = np.round(self.rows[key][i], 3)
+                value = np.round(self.rows[key][i], 20)
                 row.append(value)
             data_matrix.append(row)
 

@@ -3,6 +3,7 @@ import plotly.graph_objs as go
 import os
 import app.sandbox.postprocessing.config.application as config
 import itertools
+import matplotlib.pyplot as plt
 
 
 class BeamDataView:
@@ -21,17 +22,21 @@ class BeamDataView:
         :param y_axis_title: The title of the y axis
         :return:
         """
-
-        self.layout = go.Layout(
-                title = figure_title,
-                xaxis = dict(ticks = '', nticks = 36, title = x_axis_title),
-                yaxis = dict(ticks = '', title = y_axis_title),
-                shapes = self.shapes,
-                # legend = dict(
-                #         x = 0,
-                #         y = 1,
-                # )
-        )
+        if config.VIEW_OUTPUT_FORMAT is 'HTML':
+            self.layout = go.Layout(
+                    title = figure_title,
+                    xaxis = dict(ticks = '', nticks = 36, title = x_axis_title),
+                    yaxis = dict(ticks = '', title = y_axis_title),
+                    shapes = self.shapes,
+                    # legend = dict(
+                    #         x = 0,
+                    #         y = 1,
+                    # )
+            )
+        else:
+            plt.title(figure_title)
+            plt.xlabel(x_axis_title)
+            plt.ylabel(y_axis_title)
 
     def set_shapes(self, shapes):
         self.shapes = shapes
@@ -39,14 +44,17 @@ class BeamDataView:
     def set_detections(self, detections):
         random_colors = itertools.cycle(['blue', 'pink', 'yellow', 'green', 'cyan', 'red'])
         for i, detection in enumerate(detections):
-            self.data.append(go.Scatter(
-                    x = detection[:, 0],
-                    y = detection[:, 1],
-                    mode = 'markers',
-                    marker = dict(
-                            color = next(random_colors),
-                            # size = detection[:, 2]*5.  # size of particles is proportional to SNR
-                    )))
+            if config.VIEW_OUTPUT_FORMAT is 'HTML':
+                self.data.append(go.Scatter(
+                        x = detection[:, 0],
+                        y = detection[:, 1],
+                        mode = 'markers',
+                        marker = dict(
+                                color = next(random_colors),
+                                # size = detection[:, 2]*5.  # size of particles is proportional to SNR
+                        )))
+            else:
+                plt.plot(detection[:, 0], detection[:, 1])
 
     def set_data(self, data, x_axis, y_axis):
         """
@@ -57,15 +65,17 @@ class BeamDataView:
         :param y_axis: The scale data in the y-xis
         :return:
         """
-
-        self.data.append(
-                go.Heatmap(
-                        z = data,
-                        x = x_axis,
-                        y = y_axis,
-                        colorscale = 'Viridis',
-                        colorbar = {'title': 'SNR'}, )
-        )
+        if config.VIEW_OUTPUT_FORMAT is 'HTML':
+            self.data.append(
+                    go.Heatmap(
+                            z = data,
+                            x = x_axis,
+                            y = y_axis,
+                            colorscale = 'Viridis',
+                            colorbar = {'title': 'SNR'}, )
+            )
+        else:
+            plt.imshow(data, interpolation = "none", aspect = 'auto')
 
     def save(self, file_path):
         """
@@ -75,14 +85,13 @@ class BeamDataView:
         :return: Void
         """
 
-        fig = go.Figure(data = self.data, layout = self.layout)
         parent = os.path.abspath(os.path.join(file_path + '.html', os.pardir))
         if not os.path.exists(parent):
             os.makedirs(parent)
 
         if config.VIEW_OUTPUT_FORMAT is 'HTML':
-            ext = '.html'
+            fig = go.Figure(data = self.data, layout = self.layout)
+            plot(fig, filename = file_path + '.html', auto_open = False)
         else:
-            ext = '.png'
-
-        plot(fig, filename = file_path + ext, auto_open = False)
+            plt.colorbar()
+            plt.savefig(file_path + '.png')

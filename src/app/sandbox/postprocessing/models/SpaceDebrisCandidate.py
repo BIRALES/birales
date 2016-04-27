@@ -15,7 +15,7 @@ class SpaceDebrisCandidate:
             'time': [],
             'mdj2000': [],
             'time_elapsed': [],
-            'channel': [],
+            'frequency': [],
             'doppler_shift': [],
             'snr': [],
         }
@@ -27,7 +27,7 @@ class SpaceDebrisCandidate:
             self.data['time'].append(time)
             self.data['mdj2000'].append(SpaceDebrisCandidate.get_mdj2000(time))
             self.data['time_elapsed'].append(SpaceDebrisCandidate.time_elapsed(time))
-            self.data['channel'].append(channel)
+            self.data['frequency'].append(channel)
             self.data['doppler_shift'].append(SpaceDebrisCandidate.get_doppler_shift(self.tx, channel))
             self.data['snr'].append(snr)
 
@@ -50,10 +50,10 @@ class SpaceDebrisCandidate:
         view.show(file_path = file_path)
 
     def get_detection_box(self):
-        x0 = self.data['channel'][0]
+        x0 = self.data['frequency'][0]
         y0 = self.data['time'][0]
 
-        x1 = self.data['channel'][-1]
+        x1 = self.data['frequency'][-1]
         y1 = self.data['time'][-1]
 
         shape = {
