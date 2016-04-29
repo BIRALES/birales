@@ -48,3 +48,9 @@ CANDIDATES_SAVE = 'DB'
 
 # View candidates (use for debug purposes)
 DEBUG_CANDIDATES = False
+
+# Profile application
+PROFILE = True
+
+# Profile log file
+PROFILE_LOG_FILE = 'log/profile.log'

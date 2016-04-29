@@ -1,5 +1,5 @@
 import app.sandbox.postprocessing.config.application as config
-import app.sandbox.postprocessing.config.log as log_config
+
 from app.sandbox.postprocessing.lib.BeamDataFilter import Filters
 from app.sandbox.postprocessing.lib.SpaceDebrisDetection import *
 from app.sandbox.postprocessing.lib.DBScanSpaceDebrisDetectionStrategy import DBScanSpaceDebrisDetectionStrategy
@@ -9,20 +9,15 @@ import logging as log
 
 
 class SpaceDebrisController:
-    def __init__(self):
-        observation = 'medicina_07_03_2016'
-        data_sets = ['mock_1358', '1358', '24773', '25484', '40058', '5438', '7434']
-        data_set = data_sets[0]
-
-        log.basicConfig(format = log_config.FORMAT, level = log.DEBUG)
+    def __init__(self, observation = 'medicina_07_03_2016', data_set = 'mock_1358'):
         self.observation = Observation(observation, data_set)
 
     def run(self):
         log.info('Processing data set %s in %s', self.observation.data_set, self.observation.name)
         for beam in self.observation.beams:
-            log.info('Analysing beam data from beam %s ', beam.id)
+            log.info('Analysing beam data from beam %s', beam.id)
             if config.SAVE_INPUT_DATA:
-                log.info('Input beam data saved in %s ', config.INPUT_BEAM_FILE_NAME)
+                log.info('Input beam data saved in %s', config.INPUT_BEAM_FILE_NAME)
                 beam.save(file_name = config.INPUT_BEAM_FILE_NAME)
 
             # Pre-processing: Remove background noise from beam data

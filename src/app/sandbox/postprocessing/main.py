@@ -1,24 +1,38 @@
 from app.sandbox.postprocessing.controllers.SpaceDebrisController import SpaceDebrisController
-
+import app.sandbox.postprocessing.config.log as log_config
+import app.sandbox.postprocessing.config.application as config
 import cProfile
 import pstats
 import StringIO
-import logging
-import logstash
+import logging as log
 
-test_logger = logging.getLogger('python-logstash-logger')
-test_logger.setLevel(logging.INFO)
-test_logger.addHandler(logstash.LogstashHandler('localhost', 5959, version=1))
+log.basicConfig(format = log_config.FORMAT, level = log.DEBUG)
 
-pr = cProfile.Profile()
-pr.enable()
+def run():
+    observations = {
+        'medicina_07_03_2016': [
+            'mock_1358',
+            '1358',
+            '24773',
+            '25484',
+            '40058',
+            '5438',
+            '7434'
+        ]
+    }
 
-# test_logger.info('python-logstash: Space Debris Controller Started')
-odc = SpaceDebrisController()
-odc.run()
+    for observation, data_sets in observations.iteritems():
+        for data_set in data_sets:
+            odc = SpaceDebrisController(observation = observation, data_set = data_set)
+            odc.run()
 
-pr.disable()
-s = StringIO.StringIO()
-ps = pstats.Stats(pr, stream = s).sort_stats('cumulative')
-ps.print_stats()
-# print s.getvalue()
+
+if not config.PROFILE:
+    run()
+else:
+    cProfile.run('run()', config.PROFILE_LOG_FILE)
+    stream = StringIO.StringIO()
+    pr = cProfile.Profile()
+    stats = pstats.Stats(config.PROFILE_LOG_FILE, stream = stream).sort_stats('cumulative')
+    stats.print_stats()
+    print stream.getvalue()

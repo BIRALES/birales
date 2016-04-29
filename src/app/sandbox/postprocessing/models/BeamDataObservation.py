@@ -6,6 +6,7 @@ import os.path
 
 from app.sandbox.postprocessing.models.BeamData import BeamData
 from app.sandbox.postprocessing.helpers.LineGeneratorHelper import LineGeneratorHelper
+import logging as log
 
 
 class BeamDataObservation(BeamData):
@@ -40,12 +41,14 @@ class BeamDataObservation(BeamData):
                 os.path.basename(self.data_set))
 
     def set_data(self):
+        log.info('Reading data file %s', self.data_set)
         data = self.read_data_file(
                 file_path = self.data_set,
                 n_beams = self.n_beams,
                 n_channels = self.n_sub_channels * 2)
 
         data = self.de_mirror(data)
+
 
         self.time = np.arange(0, self.sampling_rate * data.shape[0], self.sampling_rate)
         # self.channels = (np.arange(self.f_ch1 * 1e6, self.f_ch1 * 1e6 + self.f_off * (data.shape[1]),
@@ -74,7 +77,8 @@ class BeamDataObservation(BeamData):
         data2 = data[:, (self.n_sub_channels * 1.5):, self.beam]
 
         data = np.hstack((data1, data2))
-
+        print data.shape
+        exit(0)
         return data
 
     @staticmethod

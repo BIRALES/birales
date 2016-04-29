@@ -86,7 +86,8 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
                 clusters[y] = {'data': []}
             clusters[y]['data'].append(data[i])
 
-        del clusters[-1]  # delete clusters classified as noise
+        if -1 in clusters:
+            del clusters[-1]  # delete clusters classified as noise
 
         return clusters
 
@@ -196,7 +197,7 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         return good_clusters
 
     def detect(self, beam):
-        db_scan_clusters = self.db_scan_cluster(beam.data.snr)
+        db_scan_clusters = self.db_scan_cluster(beam.snr)
         clusters = self.interpolate_clusters(db_scan_clusters)
         clusters = self.delete_dirty_clusters(clusters, threshold = 0.85)
         clusters = self.merge_clusters(clusters)
@@ -229,7 +230,7 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
             cluster_data = clusters[cluster_id]['data']
 
             detection_data = np.array(
-                    [[beam.data.channels[c], beam.data.time[t], beam.data.snr[c][t]] for (c, t) in cluster_data])
+                    [[beam.channels[c], beam.time[t], beam.snr[c][t]] for (c, t) in cluster_data])
             candidate = SpaceDebrisCandidate(tx = 100, beam = beam, detection_data = detection_data)
             candidates.append(candidate)
 
@@ -237,7 +238,7 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
     def detect_km(self, beam):
         random_state = 170
-        data = beam.data.snr
+        data = beam.snr
         data = np.transpose(np.nonzero(data > 2.))
         h, theta, d = hough_line(beam.data.snr)
         h_space, angles, dists = hough_line_peaks(h, theta, d, 10)

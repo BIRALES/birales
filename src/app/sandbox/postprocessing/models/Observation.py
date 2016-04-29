@@ -2,6 +2,7 @@ import os
 from xml.dom import minidom
 import app.sandbox.postprocessing.config.application as config
 from app.sandbox.postprocessing.models.Beam import Beam
+import numpy as np
 
 
 class Observation:
@@ -24,10 +25,15 @@ class Observation:
         self.f_off = self.get_start_channel()
         self.sampling_rate = self.get_sampling_rate()
 
-        # init beams in observation
-        self.beams = self.create_beams()
+        beam_data = self.read_data_file(
 
-    def create_beams(self):
+                n_beams = self.n_beams,
+                n_channels = self.n_sub_channels * 2)
+
+        # init beams in observation
+        self.beams = self.create_beams(beam_data)
+
+    def create_beams(self, beam_data):
         beams = self.observation_config.getElementsByTagName('beam')
 
         def attr(key):
@@ -41,9 +47,36 @@ class Observation:
                                         ha = attr('ha'),
                                         top_frequency = attr('topFrequency'),
                                         frequency_offset = attr('frequencyOffset'),
-                                        observation = self))
+                                        observation = self, beam_data = beam_data))
 
         return beam_collection
+
+    def read_data_file(self, n_beams, n_channels):
+        file_path = self.get_data_set_file_path()
+
+        fd = open(file_path, 'rb')
+        position = 0
+        no_of_doubles = 1000
+        # move to position in file
+        fd.seek(position, 0)
+
+        data = np.fromfile(fd, dtype = np.dtype('f'))
+        n_samples = len(data) / (n_beams * n_channels)
+        data = np.reshape(data, (n_samples, n_channels, n_beams))
+
+        data = self.de_mirror(data)
+
+        return data
+
+    def de_mirror(self, data):
+        data1 = data[:, (self.n_sub_channels * 0.5):(self.n_sub_channels - 1), :]
+        data2 = data[:, (self.n_sub_channels * 1.5):, :]
+
+        return np.hstack((data1, data2))
+
+    def get_data_set_file_path(self):
+        data_sets = [each for each in os.listdir(self.data_dir) if each.endswith('.dat')]
+        return os.path.join(self.data_dir, data_sets[0])
 
     def read_xml_config(self):
         file_path = self.data_dir
