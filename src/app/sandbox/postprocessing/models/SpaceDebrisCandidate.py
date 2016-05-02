@@ -97,7 +97,7 @@ class SpaceDebrisCandidate:
 
     @staticmethod
     def get_doppler_shift(tf, channel):
-        return channel - tf
+        return tf - channel
 
     @staticmethod
     def time_elapsed(time):

@@ -9,8 +9,8 @@ import logging as log
 
 
 class SpaceDebrisController:
-    def __init__(self, observation = 'medicina_07_03_2016', data_set = 'mock_1358'):
-        self.observation = Observation(observation, data_set)
+    def __init__(self, observation = 'medicina_07_03_2016', data_set = 'mock_1358', tx = 150):
+        self.observation = Observation(observation, data_set, tx)
 
     def run(self):
         log.info('Processing data set %s in %s', self.observation.data_set, self.observation.name)

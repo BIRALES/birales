@@ -6,7 +6,7 @@ import numpy as np
 
 
 class Observation:
-    def __init__(self, name, data_set):
+    def __init__(self, name, data_set, tx):
         self.name = name
         self.data_set = data_set
         self.data_dir = os.path.join(config.DATA_FILE_PATH, name, data_set)
@@ -18,7 +18,7 @@ class Observation:
         self.n_beams = self.get_n_beams()
         self.n_channels = self.get_n_channels()
         self.n_sub_channels = self.get_n_sub_channels()
-        self.tx = 150
+        self.tx = tx
 
         self.f_ch1 = self.get_stop_channel()
         self.f_off = -19531.25  # 20Mhz / 1024

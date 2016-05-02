@@ -69,16 +69,18 @@ class SpaceDebrisCandidateCollection:
         client = mongo.MongoClient(DB.HOST, DB.PORT)
         db = client['birales']
         for i, (c_id, candidate) in enumerate(self.candidates.iteritems()):
+            candidate_id = observation.data_set + '.' + str(candidate.beam.id) + '.' + str(i)
             data = {
-                '_id'        : observation.data_set + '.' + str(candidate.beam.id) + '.' + str(i),
+                '_id'        : candidate_id,
                 'data'       : candidate.data,
                 'beam'       : candidate.beam.id,
                 'observation': observation.name,
                 'data_set'   : observation.data_set,
+                'tx'         : observation.tx,
 
             }
             try:
-                db.candidates.insert(data, continue_on_error = True)
+                key = {'_id': candidate_id}
+                db.candidates.update(key, data, upsert= True)
             except mongo.errors.DuplicateKeyError:
                 pass
-
