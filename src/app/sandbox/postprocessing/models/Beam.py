@@ -115,3 +115,6 @@ class Beam:
                             y_axis = self.time)
 
         self._view.save(file_path)
+
+    def get_view(self):
+        return self._view

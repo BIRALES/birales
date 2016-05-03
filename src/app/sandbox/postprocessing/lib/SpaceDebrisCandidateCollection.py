@@ -34,18 +34,18 @@ class SpaceDebrisCandidateCollection:
         beam_id = 'beam_' + str(beam.id)
         file_path = os.path.join(output_dir, beam_id, config.DETECTIONS_BEAM_FILE_NAME)
 
-        beam.data.get_view().set_layout(figure_title = 'detections',
+        beam.get_view().set_layout(figure_title = 'detections',
                                         x_axis_title = 'Frequency (Hz)',
                                         y_axis_title = 'Time (s)')
 
-        beam.data.get_view().set_data(data = beam.data.snr.transpose(),
-                                      x_axis = beam.data.channels,
-                                      y_axis = beam.data.time)
+        beam.get_view().set_data(data = beam.snr.transpose(),
+                                      x_axis = beam.channels,
+                                      y_axis = beam.time)
 
         # beam.data.get_view().set_shapes(detection_boxes)
-        beam.data.get_view().set_detections(detection_data)
+        beam.get_view().set_detections(detection_data)
 
-        beam.data.get_view().save(file_path)
+        beam.get_view().save(file_path)
 
     def save_candidates(self, observation):
         if config.CANDIDATES_SAVE is self.DB_FLAG:
@@ -71,12 +71,12 @@ class SpaceDebrisCandidateCollection:
         for i, (c_id, candidate) in enumerate(self.candidates.iteritems()):
             candidate_id = observation.data_set + '.' + str(candidate.beam.id) + '.' + str(i)
             data = {
-                '_id'        : candidate_id,
-                'data'       : candidate.data,
-                'beam'       : candidate.beam.id,
+                '_id': candidate_id,
+                'data': candidate.data,
+                'beam': candidate.beam.id,
                 'observation': observation.name,
-                'data_set'   : observation.data_set,
-                'tx'         : observation.tx,
+                'data_set': observation.data_set,
+                'tx': observation.tx,
 
             }
             try:

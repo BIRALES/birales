@@ -26,7 +26,6 @@ class Observation:
         self.sampling_rate = self.get_sampling_rate()
 
         beam_data = self.read_data_file(
-
                 n_beams = self.n_beams,
                 n_channels = self.n_sub_channels * 2)
 

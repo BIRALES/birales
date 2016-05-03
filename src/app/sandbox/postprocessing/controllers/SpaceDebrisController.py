@@ -47,7 +47,7 @@ class SpaceDebrisController:
 
         if config.VIEW_CANDIDATES:
             # Visualise detected candidates (detection profile)
-            log.info('Space debris candidates were saved in %s', filtered_beam.id, self.observation.beam_output_data)
+            log.info('Space debris candidates were saved as %s in %s', filtered_beam.id, self.observation.beam_output_data)
             candidates.view_candidates(output_dir = self.observation.beam_output_data, beam = filtered_beam)
 
         if config.SAVE_CANDIDATES:

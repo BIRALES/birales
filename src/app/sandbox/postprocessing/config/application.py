@@ -22,11 +22,11 @@ LOG_LEVEL = 0
 # Visualise input data (Heat map)
 SAVE_INPUT_DATA = False
 
-# Save candidates parameters to disk (Html Table)
+# Save candidates parameters to disk (Html Table or Database)
 SAVE_CANDIDATES = True
 
 # Visualise candidates on beam data (Heat map)
-VIEW_CANDIDATES = False
+VIEW_CANDIDATES = True
 
 # File name to give to the unprocessed input beam
 INPUT_BEAM_FILE_NAME = 'input_beam'
@@ -41,7 +41,7 @@ DETECTIONS_BEAM_FILE_NAME = 'detection_profile'
 OD_FILE_NAME = 'orbit_determination_data'
 
 # Output format for visualisations [HTML, PNG]
-VIEW_OUTPUT_FORMAT = 'HTML'
+VIEW_OUTPUT_FORMAT = 'PNG'
 
 # Location where to save the database [HTML, DB]
 CANDIDATES_SAVE = 'DB'
@@ -50,7 +50,7 @@ CANDIDATES_SAVE = 'DB'
 DEBUG_CANDIDATES = False
 
 # Profile application
-PROFILE = True
+PROFILE = False
 
 # Profile log file
 PROFILE_LOG_FILE = 'log/profile.log'

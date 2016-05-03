@@ -93,5 +93,5 @@ class BeamDataView:
             fig = go.Figure(data = self.data, layout = self.layout)
             plot(fig, filename = file_path + '.html', auto_open = False)
         else:
-            plt.colorbar()
+            # plt.colorbar()
             plt.savefig(file_path + '.png')
