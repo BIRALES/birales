@@ -1,3 +1,4 @@
+import numpy as np
 import time
 
 from pybirales.base.definitions import PipelineError
@@ -30,11 +31,13 @@ class PPF(ProcessingModule):
     def generate_output_blob(self):
         """ Generate output data blob """
         input_shape = dict(self._input.shape)
-
+        datatype = self._input.datatype
         return ChannelisedBlob(self._config, [('nbeams', input_shape['nbeams']),
                                               ('nsamp', input_shape['nsamp'] / self._nchans),
-                                              ('nchans', self._nchans)])
+                                              ('nchans', self._nchans)],
+                               datatype=datatype)
 
     def process(self, obs_info, input_data, output_data):
         time.sleep(0.01)
+        output_data[:] = np.reshape(input_data, (32, 524288 / self._nchans, self._nchans))
         atomic_print("Channelised data")

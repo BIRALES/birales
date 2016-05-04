@@ -11,7 +11,7 @@ if __name__ == "__main__":
     manager = PipelineManager()
 
     # Processing modules configuration
-    generator_config = {'nants': 32, 'nsamp': 131072, 'nchans': 1}
+    generator_config = {'nants': 32, 'nsamp': 131072*4, 'nchans': 1, 'complex': True, 'nbits': 64}
     ppf_config = {'nchans': 512}
     beamformer_config = {'nbeams': 32}
 

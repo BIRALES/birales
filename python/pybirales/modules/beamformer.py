@@ -1,3 +1,4 @@
+import numpy as np
 import time
 
 from pybirales.base.definitions import PipelineError
@@ -30,10 +31,13 @@ class Beamformer(ProcessingModule):
     def generate_output_blob(self):
         """ Generate output data blob """
         input_shape = dict(self._input.shape)
+        datatype = self._input.datatype
         return BeamformedBlob(self._config, [('nbeams', self._nbeams),
-                                              ('nchans', input_shape['nchans']),
-                                              ('nsamp', input_shape['nsamp'])])
+                                             ('nchans', input_shape['nchans']),
+                                             ('nsamp', input_shape['nsamp'])],
+                              datatype=datatype)
 
     def process(self, obs_info, input_data, output_data):
         time.sleep(0.01)
+        output_data[:] = np.reshape(np.sum(input_data, axis=2), (1, 1, 524288)).repeat(32, 0)
         atomic_print("Beamformed data")

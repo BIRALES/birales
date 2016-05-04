@@ -1,7 +1,7 @@
-import copy
-import numpy as np
-import time
 from multiprocessing import Lock
+import numpy as np
+import copy
+import time
 
 from pybirales.base.definitions import ObservationInfo
 
@@ -9,20 +9,23 @@ from pybirales.base.definitions import ObservationInfo
 class DataBlob(object):
     """ Data blob super class """
 
-    def __init__(self, config, shape, nof_blocks=4):
+    def __init__(self, config, shape, datatype, nof_blocks=4):
         """ Class constructor
+        :param config: Blob configuration
         :param shape: The shape of the underlying data type
+        :param datatype: Data type of blob data
         :param nof_blocks: Number of data blocks in DataBlob
         """
 
-        # Shape of the data
+        # Shape and datatype of the data
         self._shape = shape
+        self._data_type = datatype
 
         # The data blob as a numpy array
         data_shape = []
         for item in self._shape:
             data_shape.append(item[1])
-        self._data = np.zeros((nof_blocks,) + tuple(data_shape))
+        self._data = np.zeros((nof_blocks,) + tuple(data_shape), dtype=datatype)
 
         # Create observation info object for every data block
         self._obs_info = []
@@ -119,3 +122,8 @@ class DataBlob(object):
     def shape(self):
         """ Return shape of underlying data """
         return self._shape
+
+    @property
+    def datatype(self):
+        """ Return the datatype of underlying data """
+        return self._data_type
