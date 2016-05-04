@@ -10,14 +10,13 @@ nof_fine_channels  = 16384   # To get 4.7 Hz resolution
 bits_per_sample    = 32
 
 # Test parameters
-nof_iterations = 1000
+nof_iterations = 100
 
 def benchmark_fft():
     """ Benchmark FFT performance """
     global data, output
     for i in xrange(nof_antennas):
         output[i, :] = np.fft.fft(data[i, :])
-
 
 def benchmark_beamformer():
     """ Benchmark beamformer performance """
@@ -33,6 +32,7 @@ if __name__ == "__main__":
     data = np.ones((nof_antennas, nof_fine_channels), dtype=complex)
     output = np.zeros((nof_antennas, nof_fine_channels), dtype=complex)
     exec_time = timeit.timeit("benchmark_fft()", 'from __main__ import benchmark_fft', number=nof_iterations)
+    print exec_time
     seconds_of_data = (nof_iterations * nof_fine_channels / channel_bandwidth)
     print "FFT executes at %.4f%% real time (equivalent to ~%.2f MB/s)" % \
           (exec_time / seconds_of_data, seconds_of_data * nof_antennas * channel_bandwidth * bits_per_sample / (1024 * 8192.0))
