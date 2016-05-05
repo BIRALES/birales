@@ -1,3 +1,4 @@
 .idea/
-postprocessing/public/
-postprocessing/data/
+sandbox/postprocessing/public/
+sandbox/postprocessing/data/
+sandbox/postprocessing/log/
