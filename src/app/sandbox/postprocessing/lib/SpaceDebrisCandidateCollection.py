@@ -77,7 +77,6 @@ class SpaceDebrisCandidateCollection:
                 'observation': observation.name,
                 'data_set': observation.data_set,
                 'tx': observation.tx,
-
             }
             try:
                 key = {'_id': candidate_id}
