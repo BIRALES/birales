@@ -1,3 +1,5 @@
+import logging
+import threading
 from abc import abstractmethod
 from threading import Thread
 
@@ -18,9 +20,18 @@ class ProcessingModule(Thread):
         # Set module configuration
         self._config = config
 
+        # Check if module will output a data blob
+        self._no_output = False
+        if "no_output" in config.settings():
+            self._no_output = config.no_output
+
         # Set module input and output blobs
         self._input = input_blob
-        self._output = self.generate_output_blob()
+
+        if self._no_output:
+            self._output = None
+        else:
+            self._output = self.generate_output_blob()
 
         # Stopping clause
         self._stop = False
@@ -49,10 +60,8 @@ class ProcessingModule(Thread):
             # Get pointer to input data if required
             input_data, obs_info = None, None
             if self._input is not None:
-                input_data, obs_info = self._input.request_read()
-
                 # This can be released immediately since, data has already been deep copied
-                self._input.release_read()
+                input_data, obs_info = self._input.request_read()
 
             # Get pointer to output data if required
             output_data = None
@@ -60,15 +69,20 @@ class ProcessingModule(Thread):
                 output_data = self._output.request_write()
 
             # Perform required processing
-            self.process(obs_info, input_data, output_data)
+            res = self.process(obs_info, input_data, output_data)
+            if res is not None:
+                obs_info = res
 
             # Release writer lock and update observation info if required
             if self._output is not None:
                 self._output.release_write(obs_info)
 
+            # Release reader lock
+            if self._input is not None:
+                self._input.release_read()
+
             # A short sleep tp force a context switch (since locks do not force one)
             time.sleep(0.001)
-
 
         self._is_stopped = True
 

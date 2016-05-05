@@ -1,24 +1,24 @@
+import logging
 import time
+from sys import stdout
 
+from pybirales.base import settings
 from pybirales.modules.beamformer import Beamformer
-from pybirales.modules.channeliser import PPF
+from pybirales.modules.channeliser import PFB
 from pybirales.modules.dummy import DummyDataGenerator
 from pybirales.pipeline_manager import PipelineManager
 
 if __name__ == "__main__":
 
     # Create pipeline manager
-    manager = PipelineManager()
+    manager = PipelineManager("birales.ini")
 
-    # Processing modules configuration
-    generator_config = {'nants': 32, 'nsamp': 131072*4, 'nchans': 1, 'complex': True, 'nbits': 64}
-    ppf_config = {'nchans': 512}
-    beamformer_config = {'nbeams': 32}
+    logging.info("Started")
 
     # Generate processing modules and data blobs
-    dummy_generator = DummyDataGenerator(generator_config)
-    beamformer = Beamformer(beamformer_config, dummy_generator.output_blob)
-    ppf = PPF(ppf_config, beamformer.output_blob)
+    dummy_generator = DummyDataGenerator(settings.generator)
+    beamformer = Beamformer(settings.beamformer, dummy_generator.output_blob)
+    ppf = PFB(settings.channeliser, beamformer.output_blob)
 
     # Add modules to pipeline manager
     manager.add_module("dummy_generator", dummy_generator)
@@ -27,5 +27,4 @@ if __name__ == "__main__":
 
     # Start pipeline
     manager.start_pipeline()
-    time.sleep(100)
-    manager.stop_pipeline()
+    manager.wait_pipeline()

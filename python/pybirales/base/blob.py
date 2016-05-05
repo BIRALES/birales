@@ -1,7 +1,9 @@
-from multiprocessing import Lock
-import numpy as np
 import copy
+import logging
+import numpy as np
+import threading
 import time
+from multiprocessing import Lock
 
 from pybirales.base.definitions import ObservationInfo
 
@@ -49,9 +51,9 @@ class DataBlob(object):
         self._writer_index = 0
 
         # Add items in config to instance
-        if config is not None:
-            for x, y in config.iteritems():
-                self.__dict__[x] = y
+      #  if config is not None:
+      #      for x, y in config.iteritems():
+      #          self.__dict__[x] = y
 
     def request_read(self):
         """ Wait while reader and writer are not pointing to the same block, then return read block
@@ -94,6 +96,10 @@ class DataBlob(object):
             time.sleep(0.001)
             self._writer_lock.acquire()
 
+        # Test to see whether data is being overwritten
+        if self._block_has_data[self._writer_index]:
+           logging.warning("Warning: Overwriting data [%s] %d %d" % (threading.current_thread().name, self._writer_index, self._reader_index))
+
         # Return data splice
         return self._data[self._writer_index, :]
 
@@ -102,7 +108,8 @@ class DataBlob(object):
         :param obs_info: Updated observation information """
 
         # Copy updated observation information to placeholder associated with written block
-        self._obs_info[self._writer_index] = copy.copy(obs_info)
+        if obs_info is not None:
+            self._obs_info[self._writer_index] = copy.copy(obs_info)
 
         # Set block as written
         self._block_has_data[self._writer_index] = True

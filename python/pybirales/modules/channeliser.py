@@ -1,14 +1,14 @@
 import numpy as np
-import time
+import logging
+
+import math
 
 from pybirales.base.definitions import PipelineError
 from pybirales.base.processing_module import ProcessingModule
-from pybirales.base.util import atomic_print
 from pybirales.blobs.beamformed_data import BeamformedBlob
 from pybirales.blobs.channelised_data import ChannelisedBlob
 
-
-class PPF(ProcessingModule):
+class PFB(ProcessingModule):
     """ PPF processing module """
 
     def __init__(self, config, input_blob=None):
@@ -18,12 +18,13 @@ class PPF(ProcessingModule):
             raise PipelineError("PPF: Invalid input data type, should be BeamformedBlob")
 
         # Sanity checks on configuration
-        if 'nchans' not in config.keys():
-            raise PipelineError("PPF: Missing keys on configuration. Number of channels required")
-        self._nchans = config['nchans']
+        if {'nchans', 'ntaps'} - set(config.settings()) != set():
+            raise PipelineError("PPF: Missing keys on configuration. (nchans, ntaps)")
+        self._nchans = config.nchans
+        self._ntaps = config.ntaps
 
         # Call superclass initialiser
-        super(PPF, self).__init__(config, input_blob)
+        super(PFB, self).__init__(config, input_blob)
 
         # Processing module name
         self.name = "Channeliser"
@@ -38,6 +39,20 @@ class PPF(ProcessingModule):
                                datatype=datatype)
 
     def process(self, obs_info, input_data, output_data):
-        time.sleep(0.01)
-        output_data[:] = np.reshape(input_data, (32, 524288 / self._nchans, self._nchans))
-        atomic_print("Channelised data")
+        # Perform channelisation
+        if self._no_output:
+            output = np.reshape(input_data, (obs_info['nbeams'], obs_info['nsamp']/ self._nchans, self._nchans))
+        else:
+            output_data[:] = np.reshape(input_data, (obs_info['nbeams'], obs_info['nsamp'] / self._nchans, self._nchans))
+
+        # Update observation information
+        obs_info['nchans'] = self._nchans * obs_info['nchans']
+        obs_info['channeliser'] = "Done"
+        print obs_info
+        logging.info("Channelised data")
+
+    def _generate_filter(self):
+        """ Generate FIR filter (Hanning window) for PFB """
+        dx = math.pi / self._nchans
+        X = np.array([n * dx - self._ntaps * math.pi / 2 for n in xrange(self._ntaps * self._nchans)])
+        self._filter = np.sinc(self._bin_width_scale * X / math.pi) * np.hanning(self._ntaps * self._nchans)
