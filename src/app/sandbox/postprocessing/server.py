@@ -17,7 +17,7 @@ def orbit_determination(observation = 'medicina_07_03_2016', data_set = 'mock_13
     od = OrbitDeterminationController()
     candidates = od.get_candidates(observation, data_set, beam_id)
 
-    return render_template('test.html', candidates = list(candidates), observation = observation, data_set = data_set,
+    return render_template('orbit_determination.html', candidates = list(candidates), observation = observation, data_set = data_set,
                            beam_id = beam_id)
 
 

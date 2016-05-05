@@ -26,7 +26,7 @@ SAVE_INPUT_DATA = False
 SAVE_CANDIDATES = True
 
 # Visualise candidates on beam data (Heat map)
-VIEW_CANDIDATES = True
+VIEW_CANDIDATES = False
 
 # File name to give to the unprocessed input beam
 INPUT_BEAM_FILE_NAME = 'input_beam'

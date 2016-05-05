@@ -12,13 +12,13 @@ log.basicConfig(format = log_config.FORMAT, level = log.DEBUG)
 def run():
     observations = {
         'medicina_07_03_2016': [
-            'mock_1358',
+            # 'mock_1358',
             # '1358',
-            # '24773',
-            # '25484',
-            # '40058',
-            # '5438',
-            # '7434'
+            '24773',
+            '25484',
+            '40058',
+            '5438',
+            '7434'
         ]
     }
 

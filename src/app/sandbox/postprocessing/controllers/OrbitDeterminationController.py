@@ -44,7 +44,8 @@ class OrbitDeterminationController:
         color = itertools.cycle(colors)
         for i, candidate in enumerate(list(candidates)):
             c = next(color)
-            ax.plot(candidate['data']['frequency'], candidate['data']['time'], 'o', color = c, label="Candidate " + str(i+1))
+            ax.plot(candidate['data']['frequency'], candidate['data']['time'], 'o', color = c,
+                    label = "Candidate " + str(i + 1))
 
         # plt.show()
         ax.legend()

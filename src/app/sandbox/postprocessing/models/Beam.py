@@ -1,4 +1,3 @@
-from app.sandbox.postprocessing.models.BeamDataObservation import BeamDataObservation
 from app.sandbox.postprocessing.helpers.LineGeneratorHelper import LineGeneratorHelper
 import os.path
 import numpy as np
@@ -22,7 +21,7 @@ class Beam:
         self.observation = observation
 
         self.observation_name = observation.name
-        self.data_set = BeamDataObservation.get_data_set(observation.data_dir)
+        self.data_set = Beam.get_data_set(observation.data_dir)
 
         self.n_beams = observation.n_beams
         self.n_channels = observation.n_channels
@@ -51,27 +50,23 @@ class Beam:
                 os.path.basename(self.data_set))
 
     def set_data(self, beam_data, beam_id):
-
         data = beam_data[:, :, beam_id]
         self.time = np.arange(0, self.sampling_rate * data.shape[0], self.sampling_rate)
 
         start = self.f_ch1 - ((20. / self.n_channels) * self.f_off)
         rate = ((20. / self.n_channels) / self.n_sub_channels) * 2
         self.channels = np.arange(start, start + rate * self.n_sub_channels * 2, rate)
-
         # self.time = np.arange(0, data.shape[0], 1)
         # self.channels = np.arange(0, data.shape[1], 1)
-        self.snr = np.log10(data).transpose()
 
+        self.snr = np.log10(data).transpose()
         # self.snr = self.add_mock_tracks(self.snr)
-        # self.im_view()
-        # exit(0)
 
     @staticmethod
     def add_mock_tracks(snr):
-        snr = BeamDataObservation.add_mock_track(snr, (3090, 150), (3500, 200))
-        snr = BeamDataObservation.add_mock_track(snr, (2500, 90), (3000, 110))
-        snr = BeamDataObservation.add_mock_track(snr, (950, 100), (1100, 50))
+        snr = Beam.add_mock_track(snr, (3090, 150), (3500, 200))
+        snr = Beam.add_mock_track(snr, (2500, 90), (3000, 110))
+        snr = Beam.add_mock_track(snr, (950, 100), (1100, 50))
 
         return snr
 
