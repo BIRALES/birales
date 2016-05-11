@@ -18,11 +18,14 @@ def apply_fir_filter(input, fir_filter, output, ntaps, nchans):
                                                     coeff_sub).sum()
 
 
-#@numba.jit(nopython=True, nogil=True)
-def apply_fir_filter_fast(input, fir_filter, output, ntaps, nchans):
-    nof_spectra = (len(input) - ntaps * nchans) / nchans
+@numba.jit(nopython=True, nogil=True)
+def apply_fir_filter_fast(data, fir_filter, output, ntaps, nchans):
+    nof_spectra = (len(data) - ntaps * nchans) / nchans
     for n in xrange(nof_spectra):
-        output[:, n] = (input[n * nchans: n * nchans + nchans * ntaps] * fir_filter).reshape((ntaps, nchans)).sum(0)
+        temp = data[n * nchans: n * nchans + nchans * ntaps] * fir_filter
+        for j in xrange(1, ntaps):
+            temp[:nchans] += temp[j * nchans: (j + 1) * nchans]
+        output[:, n] = temp[:nchans]
 
 
 class PFB(object):
@@ -87,34 +90,34 @@ class PFB(object):
 
 if __name__ == "__main__":
 
-    nsamp = 1024*128
+    nsamp = 1024*1024*4
     nbeams = 32
     ntimes = 1
 
     a = np.zeros((nbeams, nsamp), dtype=np.complex64)
-    for i in xrange(nsamp):
-        a[0, i] = np.sin(i * 0.1) + 5 * np.sin(i * 0.5) + random.random() * 10
+    # for i in xrange(nsamp):
+    #     a[0, i] = np.sin(i * 0.1) + 5 * np.sin(i * 0.5) + random.random() * 10
 
     pfb = PFB(512, 4, nsamp, nbeams, nthreads=4)
 
-    # tstart = time.time()
-    # pfb.set_input(a)
-    # for x in range(ntimes):
-    #     spectra1 = pfb.channelise().copy()
-    # tend = time.time()
-    #
+    tstart = time.time()
+    pfb.set_input(a)
+    for x in range(ntimes):
+        spectra1 = pfb.channelise().copy()
+    tend = time.time()
+
     tstart_p = time.time()
     pfb.set_input(a)
     for x in range(ntimes):
         spectra2 = pfb.channelise_parallel()
     tend_p = time.time()
 
-    # print "Average Run time (serial):\t\t %f" % ((tend - tstart) / ntimes)
+    print "Average Run time (serial):\t\t %f" % ((tend - tstart) / ntimes)
     print "Average Run time (parallel):\t %f" % ((tend_p - tstart_p) / ntimes)
-    # print "Improvement: %.2f %%" % (100.0 - (((tend_p - tstart_p) / (tend - tstart)) * 100.0))
+    print "Improvement: %.2f %%" % (100.0 - (((tend_p - tstart_p) / (tend - tstart)) * 100.0))
 
     #for b in xrange(nbeams):
-    plt.imshow(np.abs(spectra2[0, :]), aspect='auto')
-    plt.colorbar()
-    plt.show()
+    # plt.imshow(np.abs(spectra2[0, :]), aspect='auto')
+    # plt.colorbar()
+    # plt.show()
 

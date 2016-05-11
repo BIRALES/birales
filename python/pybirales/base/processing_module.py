@@ -1,9 +1,6 @@
-import logging
-import threading
+import time
 from abc import abstractmethod
 from threading import Thread
-
-import time
 
 
 class ProcessingModule(Thread):
@@ -22,7 +19,7 @@ class ProcessingModule(Thread):
 
         # Check if module will output a data blob
         self._no_output = False
-        if "no_output" in config.settings():
+        if self._config is not None and "no_output" in config.settings():
             self._no_output = config.no_output
 
         # Set module input and output blobs

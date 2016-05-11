@@ -2,6 +2,7 @@ import logging
 import time
 from sys import stdout
 
+from modules.terminator import Terminator
 from pybirales.base import settings
 from pybirales.modules.beamformer import Beamformer
 from pybirales.modules.channeliser import PFB
@@ -19,11 +20,13 @@ if __name__ == "__main__":
     dummy_generator = DummyDataGenerator(settings.generator)
     beamformer = Beamformer(settings.beamformer, dummy_generator.output_blob)
     ppf = PFB(settings.channeliser, beamformer.output_blob)
+    terminator = Terminator(None, ppf.output_blob)
 
     # Add modules to pipeline manager
     manager.add_module("dummy_generator", dummy_generator)
     manager.add_module("beamformer", beamformer)
     manager.add_module("ppf", ppf)
+    manager.add_module("terminator", terminator)
 
     # Start pipeline
     manager.start_pipeline()

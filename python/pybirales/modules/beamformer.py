@@ -3,6 +3,8 @@ import os
 
 import datetime
 import logging
+from threading import Thread, Lock
+import time
 
 from astropy.coordinates import Angle, EarthLocation, SkyCoord, AltAz
 from astropy.units import Quantity
@@ -15,6 +17,11 @@ from pybirales.base.processing_module import ProcessingModule
 from pybirales.blobs.beamformed_data import BeamformedBlob
 from pybirales.blobs.dummy_data import DummyBlob
 
+# Mute astropy warning
+import warnings
+from astropy.utils.exceptions import AstropyWarning
+warnings.simplefilter('ignore', category=AstropyWarning)
+
 
 class Beamformer(ProcessingModule):
     """ Beamformer processing module """
@@ -25,26 +32,19 @@ class Beamformer(ProcessingModule):
             raise PipelineError("Baeamformer: Invalid input data type, should be DummyBlob")
 
         # Sanity checks on configuration
-        if {'nbeams', 'nants', 'antenna_locations', 'pointings'} - set(config.settings()) != set():
+        if {'nbeams', 'nants', 'antenna_locations', 'pointings', 'reference_pointing',
+                'start_center_frequency', 'bandwidth'} - set(config.settings()) != set():
             raise PipelineError("Beamformer: Missing keys on configuration "
                                 "(nbeams, nants, antenna_locations, pointings)")
-
-        array = config.antenna_locations
-        self._pointing = config.pointings
         self._nbeams = config.nbeams
         self._nants = config.nants
 
-        # Make sure that antenna locations has the correct number of antennas and each locations has 3 dimensions
-        if type(config.antenna_locations) is not list or len(array) != self._nants:
+        # Make sure that antenna locations is a list
+        if type(config.antenna_locations) is not list:
             raise PipelineError("Beamformer: Expected list of antennas with long/lat/height as antenna locations")
 
-        # Create AntennaArray object
-        self._array = AntennaArray(array)
-
-        # Calculate displacement vectors to each antenna from reference antenna
-        self._baseline_vectors_ecef = self._calculate_ecef_baseline_vectors()
-        self._baseline_vectors_enu = self._rotate_ecef_to_enu(self._baseline_vectors_ecef, self._array.lat,
-                                                              self._array.lon)
+        # Create placeholder for pointing class instance
+        self._pointing = None
 
         # Call superclass initialiser
         super(Beamformer, self).__init__(config, input_blob)
@@ -56,70 +56,156 @@ class Beamformer(ProcessingModule):
         """ Generate output data blob """
         input_shape = dict(self._input.shape)
         datatype = self._input.datatype
+
+        # Initialise pointing
+        self._initialise(input_shape['nsubs'])
+
+        # Create output blob
         return BeamformedBlob(self._config, [('nbeams', self._nbeams),
-                                             ('nchans', input_shape['nchans']),
+                                             ('nsubs', input_shape['nsubs']),
                                              ('nsamp', input_shape['nsamp'])],
                               datatype=datatype)
+
+    def _initialise(self, nsubs):
+        """ Initialise pointing """
+
+        # Create pointing instance
+        if self._pointing is None:
+            self._pointing = Pointing(self._config, nsubs)
+            self._pointing.start()
 
     def process(self, obs_info, input_data, output_data):
         # Get data information
         nsamp = obs_info['nsamp']
-        nchans = obs_info['nchans']
+        nsubs = obs_info['nsubs']
+
+        # If pointing is not initialise, initialise
+        self._initialise(nsubs)
 
         # Perform operation
-        output_data[:] = np.reshape(np.sum(input_data, axis=2), (1, nchans, nsamp)).repeat(self._nbeams, 0)
+        output_data[:] = np.reshape(np.sum(input_data, axis=2), (1, nsubs, nsamp)).repeat(self._nbeams, 0)
 
         # Update observation information
         obs_info['beamformer'] = "Done"
         obs_info['nbeams'] = self._nbeams
         logging.info("Beamformed data")
 
-    # -------------------------------- POINTING FUNCTIONS -------------------------------------
 
-    def point_array_static(self, altitude, azimuth):
+# ------------------------------------------------------------------------------------------------
+
+
+class Pointing(Thread):
+    """ Pointing class which periodically updates pointing weights """
+
+    def __init__(self, config, nsubs):
+
+        # Call superclass initialiser
+        super(Pointing, self).__init__()
+
+        # Make sure that antenna locations is a list
+        if len(config.antenna_locations) != config.nants:
+            raise PipelineError("Pointing: Mismatch between number of antennas and number of antenna locations")
+
+        # Initialise Pointing
+        array = config.antenna_locations
+        self._start_center_frequency = config.start_center_frequency
+        self._reference_pointing = config.reference_pointing
+        self._pointings = config.pointings
+        self._bandwidth = config.bandwidth
+        self._nbeams = config.nbeams
+        self._nants = config.nants
+        self._nsubs = nsubs
+
+        self._pointing_period = 5
+        if 'pointing_period' in config.settings():
+            self._pointing_period = config.pointing_period
+
+        # Create AntennaArray object
+        self._array = AntennaArray(array)
+
+        # Calculate displacement vectors to each antenna from reference antenna
+        self._reference_antenna_loc = EarthLocation.from_geodetic(self._array.lon, self._array.lat,
+                                                                  height=self._array.height)
+        self._baseline_vectors_ecef = self._calculate_ecef_baseline_vectors()
+        self._baseline_vectors_enu = self._rotate_ecef_to_enu(self._baseline_vectors_ecef, self._array.lat,
+                                                              self._array.lon)
+
+        # Lock to be used for synchronised access
+        self._lock = Lock()
+
+        # Create initial weights
+        self._weights = np.zeros((self._nsubs, self._nants, self._nbeams), dtype=np.complex64)
+
+    def run(self):
+        """ Run thread """
+        while True:
+            self._lock.acquire()
+            for beam in xrange(self._nbeams):
+                self.point_array(beam, self._reference_pointing[0] + self._pointings[beam][0],
+                                 self._reference_pointing[1] + self._pointings[beam][1])
+                time.sleep(self._pointing_period)
+                logging.info("Updated beamforming coefficients")
+            self._lock.release()
+
+    def start_reading_weighs(self):
+        """ Lock weights for access to beamformer """
+        self._lock.acquire()
+
+    def stop_reading_weights(self):
+        """ Beamformer finished, unlock weights """
+        self._lock.release()
+
+    def point_array_static(self, beam, altitude, azimuth):
         """ Calculate the phase shift given the altitude and azimuth coordinates of a sky object as astropy angles
+        :param beam: beam to which this applies
         :param altitude: altitude coordinates of a sky object as astropy angle
         :param azimuth: azimuth coordinates of a sky object as astropy angles
         :return: The phase shift in radians for each antenna
         """
 
-        # Type conversions if required
-        if type(altitude) is str:
-            altitude = Angle(altitude)
-        if type(azimuth) is str:
-            azimuth = Angle(azimuth)
-
         # Calculate East-North-Up vector
         vectors_enu = self._rotate_ecef_to_enu(self._baseline_vectors_ecef, self._array.lat, self._array.lon)
 
-        for i in xrange(self._nof_channels):
+        for i in xrange(self._nsubs):
             # Calculate complex coefficients
-            frequency = Quantity(self._start_channel_frequency + (i * self._bandwidth / self._nof_channels), u.Hz)
-            print frequency
-            real, imag = self._phaseshifts_from_altitude_azimuth(altitude, azimuth, frequency, vectors_enu)
+            frequency = Quantity(self._start_center_frequency + (i * self._bandwidth / self._nsubs), u.Hz)
+            real, imag = self._phaseshifts_from_altitude_azimuth(altitude.rad, azimuth.rad, frequency, vectors_enu)
 
             # Apply to weights file
-            self.weights[:, :, i, 0] = real
-            self.weights[:, :, i, 1] = imag
+            self._weights[i, :, beam].real = real
+            self._weights[i, :, beam].imag = imag
 
-    def point_array(self, right_ascension, declination, pointing_time=None):
+            self._weights = np.zeros((self._nsubs, self._nants, self._nbeams), dtype=np.complex64)
+
+    def point_array(self, beam, right_ascension, declination, pointing_time=None):
         """ Calculate the phase shift between two antennas which is given by the phase constant (2 * pi / wavelength)
         multiplied by the projection of the baseline vector onto the plane wave arrival vector
+        :param beam: Beam to which this applies
         :param right_ascension: Right ascension of source (astropy angle, or string that can be converted to angle)
         :param declination: Declination of source (astropy angle, or string that can be converted to angle)
         :param pointing_time: Time of observation (in format astropy time)
         :return: The phaseshift in radians for each antenna
         """
 
+        # Type conversions if required
+        if type(right_ascension) is not Angle:
+            if type(right_ascension) is str:
+                right_ascension = Angle(right_ascension)
+            else:
+                right_ascension = Angle(right_ascension, u.deg)
+
+        if type(declination) is not Angle:
+            if type(declination) is str:
+                declination = Angle(declination)
+            else:
+                declination = Angle(declination, u.deg)
+
         if pointing_time is None:
             pointing_time = Time(datetime.datetime.utcnow(), scale='utc')
 
-        reference_antenna_loc = EarthLocation.from_geodetic(self._array.lon, self._array.lat,
-                                                            height=self._array.height,
-                                                            ellipsoid='WGS84')
         alt, az = self._ra_dec_to_alt_az(Angle(right_ascension), Angle(declination),
-                                         Time(pointing_time), reference_antenna_loc)
-        self.point_array_static(alt, az)
+                                         Time(pointing_time), self._reference_antenna_loc)
+        self.point_array_static(beam, alt, az)
 
     def _calculate_ecef_baseline_vectors(self):
         """ Calculate the displacement vectors in metres for each antenna relative to master antenna.
@@ -219,6 +305,7 @@ class Beamformer(ProcessingModule):
 
         k = (2.0 * np.pi * frequency.to(u.Hz).value) / constants.c.value
         return np.cos(np.multiply(k, path_length)), np.sin(np.multiply(k, path_length))
+
 
 # --------------------------------------------------------------------------------------------------
 

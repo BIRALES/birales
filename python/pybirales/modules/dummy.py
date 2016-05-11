@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import time
 
@@ -16,12 +17,12 @@ class DummyDataGenerator(ProcessingModule):
             raise PipelineError("DummyDataGenerator: Invalid input data type, should be None")
 
         # Sanity checks on configuration
-        if {'nants', 'nsamp', 'nchans', 'nbits', 'complex'} - set(config.settings()) != set():
+        if {'nants', 'nsamp', 'nsubs', 'nbits', 'complex'} - set(config.settings()) != set():
             raise PipelineError("DummyDataGenerator: Missing keys on configuration "
-                                "(nants, nsamp, nchans, nbits, complex")
+                                "(nants, nsamp, nsub, nbits, complex")
         self._nants = config.nants
         self._nsamp = config.nsamp
-        self._nchans = config.nchans
+        self._nsubs = config.nsubs
         self._nbits = config.nbits
         self._complex = config.complex
 
@@ -41,22 +42,23 @@ class DummyDataGenerator(ProcessingModule):
         """ Generate output data blob """
 
         # Generate blob
-        return DummyBlob(self._config, [('nchans', self._nchans),
+        return DummyBlob(self._config, [('nsubs', self._nsubs),
                                         ('nsamp', self._nsamp),
                                         ('nants', self._nants)],
                          datatype=self._datatype)
 
     def process(self, obs_info, input_data, output_data):
-        time.sleep(0.2)
 
         # Perform operations
-        output_data[:] = np.ones((self._nchans, self._nsamp, self._nchans), dtype=self._datatype) * 1.5
+        output_data[:] = np.ones((self._nsubs, self._nsamp, self._nsubs), dtype=self._datatype) * 1.5
 
         # Create observation information
         obs_info = ObservationInfo()
         obs_info['sampling_time'] = 0.0
         obs_info['timestamp'] = 0.0
-        obs_info['nchans'] = self._nchans
+        obs_info['nsubs'] = self._nsubs
         obs_info['nsamp'] = self._nsamp
+
+        logging.info("Generated data")
 
         return obs_info
