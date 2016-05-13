@@ -50,11 +50,6 @@ class DataBlob(object):
         self._writer_lock = Lock()
         self._writer_index = 0
 
-        # Add items in config to instance
-      #  if config is not None:
-      #      for x, y in config.iteritems():
-      #          self.__dict__[x] = y
-
     def request_read(self):
         """ Wait while reader and writer are not pointing to the same block, then return read block
         :return: Data splice associated with current block and associated observation information

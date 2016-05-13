@@ -98,7 +98,7 @@ if __name__ == "__main__":
     # for i in xrange(nsamp):
     #     a[0, i] = np.sin(i * 0.1) + 5 * np.sin(i * 0.5) + random.random() * 10
 
-    pfb = PFB(512, 4, nsamp, nbeams, nthreads=4)
+    pfb = PFB(512, 4, nsamp, nbeams, nthreads=8)
 
     tstart = time.time()
     pfb.set_input(a)

@@ -3,16 +3,16 @@ from abc import abstractmethod
 from threading import Thread
 
 
-class ProcessingModule(Thread):
-    """ Processing module """
+class Module(Thread):
 
-    def __init__(self, config, input_blob=None):
+    def __init__(self, config=None, input_blob=None):
         """ Class constructor
         :param config: Configuration object
         :param input_blob: Input data blob
         """
-        # Call superclass constructor
-        super(ProcessingModule, self).__init__()
+
+        # Call superclass
+        super(Module, self).__init__()
 
         # Set module configuration
         self._config = config
@@ -31,8 +31,59 @@ class ProcessingModule(Thread):
             self._output = self.generate_output_blob()
 
         # Stopping clause
+        self.daemon = True
         self._stop = False
         self._is_stopped = True
+
+    @abstractmethod
+    def generate_output_blob(self):
+        """ Create the output blob to be used by the next module in the pipeline
+        :return: Create data blob """
+        pass
+
+    def stop(self):
+        """ Stops the current thread """
+        self._stop = True
+
+    @property
+    def is_stopped(self):
+        """ Specified whether the thread body is running or not """
+        return self._is_stopped
+
+    @property
+    def output_blob(self):
+        """ Return output blob generate by module """
+        return self._output
+
+
+class Generator(Module):
+
+    @abstractmethod
+    def generate_output_blob(self):
+        """ Create the output blob to be used by the next module in the pipeline
+        :return: Create data blob """
+        pass
+
+    def run(self):
+        """ Thread body """
+        self._is_stopped = False
+        while not self._stop:
+            time.sleep(1)
+
+        self._is_stopped = True
+
+    def request_output_blob(self):
+        """ Request a new output blob to write data into """
+        self._output.request_write()
+
+    def release_output_blob(self, obs_info):
+        """ Release output blob
+        :param obs_info: Observation information object """
+        self._output.release_write(obs_info)
+
+
+class ProcessingModule(Module):
+    """ Processing module """
 
     @abstractmethod
     def generate_output_blob(self):
@@ -83,16 +134,5 @@ class ProcessingModule(Thread):
 
         self._is_stopped = True
 
-    def stop(self):
-        """ Stops the current thread """
-        self._stop = True
 
-    @property
-    def is_stopped(self):
-        """ Specified whether the thread body is running or not """
-        return self._is_stopped
-
-    @property
-    def output_blob(self):
-        """ Return output blob generate by module """
-        return self._output
+# ------------------------------------ Generator ----------------------------------------

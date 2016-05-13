@@ -40,7 +40,6 @@ class DummyDataGenerator(ProcessingModule):
 
     def generate_output_blob(self):
         """ Generate output data blob """
-
         # Generate blob
         return DummyBlob(self._config, [('nsubs', self._nsubs),
                                         ('nsamp', self._nsamp),
@@ -48,9 +47,9 @@ class DummyDataGenerator(ProcessingModule):
                          datatype=self._datatype)
 
     def process(self, obs_info, input_data, output_data):
-
+        time.sleep(0.4)
         # Perform operations
-        output_data[:] = np.ones((self._nsubs, self._nsamp, self._nsubs), dtype=self._datatype) * 1.5
+        output_data[:] = np.ones((self._nsubs, self._nsamp, self._nants), dtype=self._datatype) * 1.5
 
         # Create observation information
         obs_info = ObservationInfo()
@@ -58,6 +57,7 @@ class DummyDataGenerator(ProcessingModule):
         obs_info['timestamp'] = 0.0
         obs_info['nsubs'] = self._nsubs
         obs_info['nsamp'] = self._nsamp
+        obs_info['nants'] = self._nsubs
 
         logging.info("Generated data")
 

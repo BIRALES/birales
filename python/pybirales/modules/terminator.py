@@ -1,9 +1,5 @@
-import numpy as np
-import time
-
-from pybirales.base.definitions import PipelineError, ObservationInfo
 from pybirales.base.processing_module import ProcessingModule
-from pybirales.blobs.dummy_data import DummyBlob
+import time
 
 
 class Terminator(ProcessingModule):
@@ -14,6 +10,8 @@ class Terminator(ProcessingModule):
         # Call superclass initialiser
         super(Terminator, self).__init__(config, input_blob)
 
+        self._prev_time = time.time()
+
         # Processing module name
         self.name = "Terminator"
 
@@ -22,4 +20,7 @@ class Terminator(ProcessingModule):
         return None
 
     def process(self, obs_info, input_data, output_data):
+        # Calculate processed secondfs
+#        print "Processed %d samples in %.2fs" % (obs_info['nsamp'], time.time() - self._prev_time)
+        self._prev_time = time.time()
         return obs_info

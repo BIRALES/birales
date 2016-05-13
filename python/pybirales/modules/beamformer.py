@@ -1,4 +1,6 @@
+from numpy import ctypeslib
 import numpy as np
+import ctypes
 import os
 
 import datetime
@@ -12,6 +14,7 @@ from astropy import constants
 from astropy import units as u
 from astropy.time import Time
 
+from pybirales.base import settings
 from pybirales.base.definitions import PipelineError
 from pybirales.base.processing_module import ProcessingModule
 from pybirales.blobs.beamformed_data import BeamformedBlob
@@ -20,6 +23,9 @@ from pybirales.blobs.dummy_data import DummyBlob
 # Mute astropy warning
 import warnings
 from astropy.utils.exceptions import AstropyWarning
+
+from pybirales.blobs.receiver_data import ReceiverBlob
+
 warnings.simplefilter('ignore', category=AstropyWarning)
 
 
@@ -28,23 +34,32 @@ class Beamformer(ProcessingModule):
 
     def __init__(self, config, input_blob=None):
         # This module needs an input blob of type channelised
-        if type(input_blob) is not DummyBlob:
-            raise PipelineError("Baeamformer: Invalid input data type, should be DummyBlob")
+        if type(input_blob) not in [DummyBlob, ReceiverBlob]:
+            raise PipelineError("Beamformer: Invalid input data type, should be DummyBlob or ReceiverBlob")
 
         # Sanity checks on configuration
-        if {'nbeams', 'nants', 'antenna_locations', 'pointings', 'reference_pointing',
-                'start_center_frequency', 'bandwidth'} - set(config.settings()) != set():
+        if {'nbeams', 'antenna_locations', 'pointings', 'reference_pointing'} - set(config.settings()) != set():
             raise PipelineError("Beamformer: Missing keys on configuration "
                                 "(nbeams, nants, antenna_locations, pointings)")
         self._nbeams = config.nbeams
-        self._nants = config.nants
 
         # Make sure that antenna locations is a list
         if type(config.antenna_locations) is not list:
             raise PipelineError("Beamformer: Expected list of antennas with long/lat/height as antenna locations")
 
+        self._nthreads = 2
+        if 'nthreads' in config.settings():
+            self._nthreads = config.nthreads
+
         # Create placeholder for pointing class instance
         self._pointing = None
+
+        # Wrap library containing C-implementation of beamformer
+        self._beamformer = ctypes.CDLL("libbeamformer.so")
+        complex_p = ctypeslib.ndpointer(np.complex64, ndim=1, flags='C')
+        self._beamformer.beamform.argtypes = [complex_p, complex_p, complex_p, ctypes.c_uint32, ctypes.c_uint32,
+                                              ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32]
+        self._beamformer.beamform.restype = None
 
         # Call superclass initialiser
         super(Beamformer, self).__init__(config, input_blob)
@@ -58,7 +73,7 @@ class Beamformer(ProcessingModule):
         datatype = self._input.datatype
 
         # Initialise pointing
-        self._initialise(input_shape['nsubs'])
+        self._initialise(input_shape['nsubs'], input_shape['nants'])
 
         # Create output blob
         return BeamformedBlob(self._config, [('nbeams', self._nbeams),
@@ -66,27 +81,35 @@ class Beamformer(ProcessingModule):
                                              ('nsamp', input_shape['nsamp'])],
                               datatype=datatype)
 
-    def _initialise(self, nsubs):
+    def _initialise(self, nsubs, nants):
         """ Initialise pointing """
 
         # Create pointing instance
         if self._pointing is None:
-            self._pointing = Pointing(self._config, nsubs)
+            self._pointing = Pointing(self._config, nsubs, nants)
             self._pointing.start()
 
     def process(self, obs_info, input_data, output_data):
         # Get data information
         nsamp = obs_info['nsamp']
         nsubs = obs_info['nsubs']
+        nants = obs_info['nants']
 
         # If pointing is not initialise, initialise
-        self._initialise(nsubs)
+        if self._pointing is None:
+            self._initialise(nsubs, nants)
 
-        # Perform operation
-        output_data[:] = np.reshape(np.sum(input_data, axis=2), (1, nsubs, nsamp)).repeat(self._nbeams, 0)
+        # Get weights
+        self._pointing.start_reading_weighs()
+
+        # Apply pointing coefficients
+        self._beamformer.beamform(input_data.ravel(), self._pointing.weights.ravel(), output_data.ravel(),
+                                  nsamp, nsubs, self._nbeams, nants, self._nthreads)
+
+        # Done using weights
+        self._pointing.stop_reading_weights()
 
         # Update observation information
-        obs_info['beamformer'] = "Done"
         obs_info['nbeams'] = self._nbeams
         logging.info("Beamformed data")
 
@@ -97,23 +120,27 @@ class Beamformer(ProcessingModule):
 class Pointing(Thread):
     """ Pointing class which periodically updates pointing weights """
 
-    def __init__(self, config, nsubs):
+    def __init__(self, config, nsubs, nants):
 
         # Call superclass initialiser
         super(Pointing, self).__init__()
 
-        # Make sure that antenna locations is a list
-        if len(config.antenna_locations) != config.nants:
+        # Make sure that we have enough antenna locations
+        if len(config.antenna_locations) != nants:
             raise PipelineError("Pointing: Mismatch between number of antennas and number of antenna locations")
+
+        # Make sure that we have enough pointing
+        if len(config.pointings) != config.nbeams:
+            raise PipelineError("Pointing: Mismatch between number of beams and number of beam pointings")
 
         # Initialise Pointing
         array = config.antenna_locations
-        self._start_center_frequency = config.start_center_frequency
+        self._start_center_frequency = settings.observation.start_center_frequency
         self._reference_pointing = config.reference_pointing
         self._pointings = config.pointings
-        self._bandwidth = config.bandwidth
+        self._bandwidth = settings.observation.bandwidth
         self._nbeams = config.nbeams
-        self._nants = config.nants
+        self._nants = nants
         self._nsubs = nsubs
 
         self._pointing_period = 5
@@ -129,23 +156,27 @@ class Pointing(Thread):
         self._baseline_vectors_ecef = self._calculate_ecef_baseline_vectors()
         self._baseline_vectors_enu = self._rotate_ecef_to_enu(self._baseline_vectors_ecef, self._array.lat,
                                                               self._array.lon)
+        # Calculate East-North-Up vector
+        self._vectors_enu = self._rotate_ecef_to_enu(self._baseline_vectors_ecef, self._array.lat, self._array.lon)
 
         # Lock to be used for synchronised access
         self._lock = Lock()
 
         # Create initial weights
-        self._weights = np.zeros((self._nsubs, self._nants, self._nbeams), dtype=np.complex64)
+        self.weights = np.zeros((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
+        self._temp_weights = np.zeros((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
 
     def run(self):
         """ Run thread """
         while True:
-            self._lock.acquire()
             for beam in xrange(self._nbeams):
                 self.point_array(beam, self._reference_pointing[0] + self._pointings[beam][0],
                                  self._reference_pointing[1] + self._pointings[beam][1])
-                time.sleep(self._pointing_period)
-                logging.info("Updated beamforming coefficients")
+            self._lock.acquire()
+            self.weights = self._temp_weights.copy()
             self._lock.release()
+            logging.info("Updated beamforming coefficients")
+            time.sleep(self._pointing_period)
 
     def start_reading_weighs(self):
         """ Lock weights for access to beamformer """
@@ -163,19 +194,14 @@ class Pointing(Thread):
         :return: The phase shift in radians for each antenna
         """
 
-        # Calculate East-North-Up vector
-        vectors_enu = self._rotate_ecef_to_enu(self._baseline_vectors_ecef, self._array.lat, self._array.lon)
-
         for i in xrange(self._nsubs):
             # Calculate complex coefficients
             frequency = Quantity(self._start_center_frequency + (i * self._bandwidth / self._nsubs), u.Hz)
-            real, imag = self._phaseshifts_from_altitude_azimuth(altitude.rad, azimuth.rad, frequency, vectors_enu)
+            real, imag = self._phaseshifts_from_altitude_azimuth(altitude.rad, azimuth.rad, frequency, self._vectors_enu)
 
             # Apply to weights file
-            self._weights[i, :, beam].real = real
-            self._weights[i, :, beam].imag = imag
-
-            self._weights = np.zeros((self._nsubs, self._nants, self._nbeams), dtype=np.complex64)
+            self._temp_weights[i, beam, :].real = real
+            self._temp_weights[i, beam, :].imag = imag
 
     def point_array(self, beam, right_ascension, declination, pointing_time=None):
         """ Calculate the phase shift between two antennas which is given by the phase constant (2 * pi / wavelength)
@@ -308,7 +334,6 @@ class Pointing(Thread):
 
 
 # --------------------------------------------------------------------------------------------------
-
 
 class AntennaArray(object):
     """ Class representing antenna array """

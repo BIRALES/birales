@@ -2,10 +2,14 @@ import ConfigParser
 import ast
 import re
 
+import signal
+
 from pybirales.base import settings
 from sys import stdout
 import logging
 import time
+
+from pybirales.base.definitions import PipelineError
 
 
 class PipelineManager(object):
@@ -20,10 +24,21 @@ class PipelineManager(object):
         self._initialise_logging()
 
         # Config patters
-        self._config_pattern = re.compile("^True|False|[+\-\.0-9]+$")
+        self._config_pattern = re.compile("^True|False|[0-9]+(\.[0-9]*)?$")
 
         # Load configuration file
         self._configure_pipeline(config_file)
+
+        # Check configuration
+        self._check_configuration()
+
+        # Capturing interrupt signal
+        def signal_handler(sig, frame):
+            logging.info("Ctrl-C detected, stopping pipeline")
+            self.stop_pipeline()
+
+        # Set interrupt signal handler
+        signal.signal(signal.SIGINT, signal_handler)
 
     def _configure_pipeline(self, config_file):
         """ Parse configuration file and set pipeline
@@ -60,6 +75,15 @@ class PipelineManager(object):
             # Add object instance to settings
             setattr(settings, key, instance)
 
+    def _check_configuration(self):
+        """ Check that an observation entry is in the config file and it contains the required information """
+        if "observation" not in settings.__dict__:
+            raise PipelineError("PipelineManager: observation section not foudn in configuration file")
+
+        if {"start_center_frequency", "bandwidth"} - set(settings.observation.settings()):
+            raise PipelineError("PipelineManager: Missing keys in observation section "
+                                "(need start_center_frequency, bandwidth")
+
     def add_module(self, name, module):
         """ Add a new module instance to the pipeline
         :param name: Name of the module instance
@@ -86,9 +110,11 @@ class PipelineManager(object):
             # Stop module
             module.stop()
 
-            # Wait for module to stop
-            while not module.is_stopped:
+            # Try to kill it several time, otherwise skip (will be killed when main process exists)
+            tries = 0
+            while not module.is_stopped and tries < 5:
                 time.sleep(0.5)
+                tries += 1
 
         # All done
 
@@ -104,6 +130,9 @@ class PipelineManager(object):
 
     def wait_pipeline(self):
         """ Wait for modules to finish processing """
-        for module in self._modules[1:]:
-            module.join()
+        for module in self._modules:
+            while module.isAlive() and module._stop is False:
+                module.join(2)
+            if module.isAlive():
+                logging.warning("PipelineManager: Killing thread %s abruptly" % module.name)
 

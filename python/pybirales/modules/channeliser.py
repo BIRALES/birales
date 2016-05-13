@@ -119,8 +119,7 @@ class PFB(ProcessingModule):
         self.channelise_parallel()
 
         # Update observation information
-        obs_info['nchans'] = self._nchans * obs_info['nchans']
-        obs_info['channeliser'] = "Done"
+        obs_info['nchans'] = self._nchans * obs_info['nsubs']
         logging.info("Channelised data")
 
     # ------------------------------------------- HELPER FUNCTIONS ---------------------------------------
