@@ -1,8 +1,9 @@
-from plotly.offline import plot
-from plotly.tools import FigureFactory
 import plotly.graph_objs as go
 import numpy as np
-from app.sandbox.postprocessing.vendor import markup
+
+from plotly.offline import plot
+from plotly.tools import FigureFactory
+from vendor import markup
 
 
 class TableMakerHelper:

@@ -1,6 +1,6 @@
-from app.sandbox.postprocessing.controllers.SpaceDebrisController import SpaceDebrisController
-import app.sandbox.postprocessing.config.log as log_config
-import app.sandbox.postprocessing.config.application as config
+from controllers.SpaceDebrisController import SpaceDebrisController
+import config.log as log_config
+import config.application as config
 import cProfile
 import pstats
 import StringIO
@@ -10,10 +10,16 @@ log.basicConfig(format = log_config.FORMAT, level = log.DEBUG)
 
 
 def run():
+    """
+    Post process the data
+    :return:
+    """
+
+    # The observations / data sets which will be processed
     observations = {
         'medicina_07_03_2016': [
-            # 'mock_1358',
-            # '1358',
+            'mock_1358',
+            '1358',
             '24773',
             '25484',
             '40058',

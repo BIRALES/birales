@@ -1,11 +1,10 @@
-import app.sandbox.postprocessing.config.application as config
-
-from app.sandbox.postprocessing.lib.BeamDataFilter import Filters
-from app.sandbox.postprocessing.lib.SpaceDebrisDetection import *
-from app.sandbox.postprocessing.lib.DBScanSpaceDebrisDetectionStrategy import DBScanSpaceDebrisDetectionStrategy
-from app.sandbox.postprocessing.models.Observation import Observation
-
+import config.application as config
 import logging as log
+
+from lib.BeamDataFilter import Filters
+from lib.SpaceDebrisDetection import *
+from lib.DBScanSpaceDebrisDetectionStrategy import DBScanSpaceDebrisDetectionStrategy
+from models.Observation import Observation
 
 
 class SpaceDebrisController:

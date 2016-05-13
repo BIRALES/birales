@@ -1,9 +1,10 @@
-from app.sandbox.postprocessing.helpers.LineGeneratorHelper import LineGeneratorHelper
 import os.path
 import numpy as np
 import inflection as inf
+
+from helpers.LineGeneratorHelper import LineGeneratorHelper
 from matplotlib import pyplot as plt
-from app.sandbox.postprocessing.views.BeamDataView import BeamDataView
+from views.BeamDataView import BeamDataView
 
 
 class Beam:

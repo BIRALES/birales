@@ -1,15 +1,13 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import config.application as config
 
 from skimage.transform import hough_line
 from skimage.transform import hough_line_peaks
-
-from app.sandbox.postprocessing.lib.SpaceDebrisDetection import SpaceDebrisDetectionStrategy
-from app.sandbox.postprocessing.models.SpaceDebrisCandidate import SpaceDebrisCandidate
-
+from lib.SpaceDebrisDetection import SpaceDebrisDetectionStrategy
+from models.SpaceDebrisCandidate import SpaceDebrisCandidate
 from sklearn.cluster import KMeans
 from sklearn.cluster import DBSCAN
-import matplotlib.pyplot as plt
-import app.sandbox.postprocessing.config.application as config
 
 
 class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):

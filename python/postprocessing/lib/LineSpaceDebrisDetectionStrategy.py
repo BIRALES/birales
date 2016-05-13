@@ -1,12 +1,11 @@
 import numpy as np
+import config.application as app_config
+
 from skimage.transform import hough_line
 from skimage.transform import hough_line_peaks
-
-from app.sandbox.postprocessing.lib.SpaceDebrisDetection import SpaceDebrisDetectionStrategy
-from app.sandbox.postprocessing.models.SpaceDebrisCandidate import SpaceDebrisCandidate
-from app.sandbox.postprocessing.helpers.LineGeneratorHelper import LineGeneratorHelper
-
-import app.sandbox.postprocessing.config.application as app_config
+from lib.SpaceDebrisDetection import SpaceDebrisDetectionStrategy
+from models.SpaceDebrisCandidate import SpaceDebrisCandidate
+from helpers.LineGeneratorHelper import LineGeneratorHelper
 
 
 class LineSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):

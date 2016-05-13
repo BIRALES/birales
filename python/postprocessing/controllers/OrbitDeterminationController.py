@@ -1,12 +1,12 @@
 import pymongo as mongo
-import app.sandbox.postprocessing.config.database as DB
-from app.sandbox.postprocessing.models.Observation import Observation
-from matplotlib import cm, pyplot as plt
-from flask import make_response
-import StringIO
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-import numpy as np
+import config.database as DB
 import itertools
+import StringIO
+
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from models.Observation import Observation
+from matplotlib import pyplot as plt
+from flask import make_response
 
 
 class OrbitDeterminationController:
@@ -36,12 +36,15 @@ class OrbitDeterminationController:
 
         ax = fig.add_subplot(1, 1, 1)
         ax.set_title("Beam %s" % beam.id)
+
         ax.imshow(beam.snr.transpose(), aspect = 'auto', interpolation = "none", origin = "lower",
                   extent = [beam.channels[0], beam.channels[len(beam.snr)], 0, beam.time[-1]])
+
         ax.set_xlabel("Frequency (MHz)")
         ax.set_ylabel("Time (s)")
         colors = ['b', 'g', 'r', 'c', 'm', 'k', 'w', 'y']
         color = itertools.cycle(colors)
+
         for i, candidate in enumerate(list(candidates)):
             c = next(color)
             ax.plot(candidate['data']['frequency'], candidate['data']['time'], 'o', color = c,

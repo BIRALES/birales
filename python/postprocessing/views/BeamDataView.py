@@ -1,7 +1,7 @@
 from plotly.offline import plot
 import plotly.graph_objs as go
 import os
-import app.sandbox.postprocessing.config.application as config
+import config.application as config
 import itertools
 import matplotlib.pyplot as plt
 

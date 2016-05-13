@@ -1,8 +1,9 @@
 import os
-from xml.dom import minidom
-import app.sandbox.postprocessing.config.application as config
-from app.sandbox.postprocessing.models.Beam import Beam
+import config.application as config
 import numpy as np
+
+from xml.dom import minidom
+from models.Beam import Beam
 
 
 class Observation:

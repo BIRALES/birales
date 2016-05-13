@@ -1,20 +1,32 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 class Filters:
+
     def __init__(self):
         pass
 
     @staticmethod
     def remove_background_noise(beam, std = 3.):
-        # Remove instaces that are n stds away from the mean
+        """
+        Remove instances that are n stds away from the mean
+
+        :param beam:
+        :param std:
+        :return:
+        """
+
         beam.snr[beam.snr < np.mean(beam.snr) + std * np.std(beam.snr)] = 0.
 
         return beam
 
     @staticmethod
     def remove_transmitter_channel(beam):
+        """
+        Remove the main transmission beam from the beam data
+        :param beam:
+        :return:
+        """
         sum_across_time = beam.snr.sum(axis = 1)
         # todo determine how 20.0 threshold is determined
         peaks = np.where(sum_across_time > 20.)[0]

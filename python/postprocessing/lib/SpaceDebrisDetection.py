@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from app.sandbox.postprocessing.lib.SpaceDebrisCandidateCollection import SpaceDebrisCandidateCollection
+from lib.SpaceDebrisCandidateCollection import SpaceDebrisCandidateCollection
 
 
 class SpaceDebrisDetection(object):

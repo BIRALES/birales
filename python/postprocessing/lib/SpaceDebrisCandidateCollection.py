@@ -1,6 +1,6 @@
 import os.path
-import app.sandbox.postprocessing.config.application as config
-import app.sandbox.postprocessing.config.database as DB
+import config.application as config
+import config.database as DB
 import pymongo as mongo
 
 

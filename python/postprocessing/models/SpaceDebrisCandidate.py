@@ -1,7 +1,7 @@
-from app.sandbox.postprocessing.helpers.TableMakerHelper import TableMakerHelper
-from app.sandbox.postprocessing.helpers.DateTimeHelper import DateTimeHelper
-
 import inflection as inf
+
+from helpers.TableMakerHelper import TableMakerHelper
+from helpers.DateTimeHelper import DateTimeHelper
 
 
 class SpaceDebrisCandidate:
