@@ -92,6 +92,14 @@ class PipelineManager(object):
         self._module_names.append(name)
         self._modules.append(module)
 
+    def add_plotter(self, name, plotter):
+        """ Add a new plotter instance to the pipeline
+        :param name: Name of the plotter instance
+        :param plotter: Plotter instance
+        :return:
+        """
+        self.add_module(name, plotter)
+
     def start_pipeline(self):
         """ Start running pipeline """
         try:

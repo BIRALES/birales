@@ -1,6 +1,6 @@
 import logging
 import os
-
+import pickle
 import time
 
 from pybirales.base import settings
@@ -27,7 +27,7 @@ class Persister(ProcessingModule):
         else:
             if 'filename' not in config.settings():
                 raise PipelineError("Persister: filename required when not using timestamp")
-            filepath = os.path.join(config.directory, config.filename)
+            filepath = os.path.join(config.directory, config.filename + '.dat')
 
         # Open file (if file exists, remove first)
         if os.path.exists(filepath):
@@ -35,7 +35,7 @@ class Persister(ProcessingModule):
         self._file = open(filepath, "ab+")
 
         # Variable to check whether meta file has been written
-        self._head_filepath = filepath + '.head'
+        self._head_filepath = filepath + '.pkl'
         self._head_written = False
 
         # Processing module name
@@ -52,7 +52,7 @@ class Persister(ProcessingModule):
             obs_info['start_center_frequency'] = settings.observation.start_center_frequency
             obs_info['bandwidth'] = settings.observation.bandwidth
             with open(self._head_filepath, 'w') as f:
-                f.write(str(obs_info))
+                pickle.dump(obs_info, f)
             self._head_written = True
 
         # Transpose data and write to file
