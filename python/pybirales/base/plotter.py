@@ -37,8 +37,8 @@ class Plotter(Thread):
     def run(self):
         """ Thread body """
         # Initialise plot
-        self.initialise_plot()
         self._index = self.create_index()
+        self.initialise_plot()
 
         # Loop until thread is stopped
         self._is_stopped = False

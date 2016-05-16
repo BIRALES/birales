@@ -6,7 +6,7 @@ from modules.terminator import Terminator
 from pybirales.base import settings
 from pybirales.modules.beamformer import Beamformer
 from pybirales.modules.channeliser import PFB
-from pybirales.modules.dummy import DummyDataGenerator
+from pybirales.modules.generator import DummyDataGenerator
 from pybirales.modules.persister import Persister
 from pybirales.modules.receiver import Receiver
 from pybirales.pipeline_manager import PipelineManager
@@ -17,11 +17,14 @@ def test_receiver(manager):
     receiver = Receiver(settings.receiver)
     manager.add_module("receiver", receiver)
 
-def test_plotter(manager):
-    receiver = Receiver(settings.receiver)
-    manager.add_module("receiver", receiver)
 
-    raw_plotter = RawDataPlotter(settings.rawplotter, receiver.output_blob)
+def test_plotter(manager):
+    generator = DummyDataGenerator(settings.generator)
+    manager.add_module("generator", generator)
+    terminator = Terminator(None, generator.output_blob)
+    manager.add_module("terminator", terminator)
+
+    raw_plotter = RawDataPlotter(settings.rawplotter, generator.output_blob)
     manager.add_plotter("raw_plotter", raw_plotter)
 
 

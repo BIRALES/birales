@@ -35,6 +35,8 @@ class DummyDataGenerator(ProcessingModule):
         # Call superclass initialiser
         super(DummyDataGenerator, self).__init__(config, input_blob)
 
+        self._counter = 1
+
         # Processing module name
         self.name = "Generator"
 
@@ -47,9 +49,12 @@ class DummyDataGenerator(ProcessingModule):
                          datatype=self._datatype)
 
     def process(self, obs_info, input_data, output_data):
-        time.sleep(0.4)
+        time.sleep(0.5)
         # Perform operations
-        output_data[:] = np.ones((self._nsubs, self._nsamp, self._nants), dtype=self._datatype) * 1.5
+        output_data[:] = np.ones((self._nsubs, self._nsamp, self._nants), dtype=self._datatype)
+        for i in xrange(self._nants):
+            output_data[:, :, i] = np.sin(np.arange(self._nsamp) * 0.05 + self._counter + i)
+        self._counter += 1
 
         # Create observation information
         obs_info = ObservationInfo()

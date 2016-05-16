@@ -88,7 +88,7 @@ class DataBlob(object):
         self._writer_lock.acquire()
         while self._block_has_data[self._writer_index] is None:
             self._writer_lock.release()
-            time.sleep(0.001)
+            time.sleep(0.01)
             self._writer_lock.acquire()
 
         # Test to see whether data is being overwritten
@@ -120,22 +120,19 @@ class DataBlob(object):
         """
         # The reader must wait for the writer to insert data into the blob. When the reader and writer have the
         # same index it means that the reader is waiting for data to be available (the writer must be ahead of reader)
-        self._writer_lock.acquire()
-        while self._reader_index == self._writer_index and not self._block_has_data[self._reader_index]:
-            self._writer_lock.release()
-            time.sleep(0.001)  # Wait for data to become available
-            self._writer_lock.acquire()
+        snapshot_index = self._reader_index - 1
+        while snapshot_index == self._writer_index and not self._block_has_data[snapshot_index]:
+            time.sleep(0.001)
 
         # Release writer lock and acquire reader lock
-        self._writer_lock.release()
-        self._reader_lock.acquire()
+        # self._writer_lock.release()
+ #       self._reader_lock.acquire()
 
         # Required required segment of data
-        to_return = self._data[tuple([slice(self._reader_index, self._reader_index + 1)]) + index].copy(), \
-                    copy.copy(self._obs_info[self._reader_index])
+        to_return = self._data[snapshot_index][index].copy(), copy.copy(self._obs_info[snapshot_index])
 
         # Release reader lock
-        self._reader_lock.release()
+  #      self._reader_lock.release()
 
         # All done, return data segment and associated obs_info
         return to_return
