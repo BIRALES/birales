@@ -1,14 +1,14 @@
 import numpy as np
 import logging
 from multiprocessing.pool import ThreadPool
-
 import numba
 import math
-
 from pybirales.base.definitions import PipelineError
 from pybirales.base.processing_module import ProcessingModule
 from pybirales.blobs.beamformed_data import BeamformedBlob
 from pybirales.blobs.channelised_data import ChannelisedBlob
+from pybirales.blobs.dummy_data import DummyBlob
+from pybirales.blobs.receiver_data import ReceiverBlob
 
 
 @numba.jit(nopython=True, nogil=True)
@@ -34,8 +34,11 @@ class PFB(ProcessingModule):
     def __init__(self, config, input_blob=None):
 
         # This module needs an input blob of type dummy
-        if type(input_blob) is not BeamformedBlob:
-            raise PipelineError("PPF: Invalid input data type, should be BeamformedBlob")
+        if type(input_blob) not in [BeamformedBlob, DummyBlob, ReceiverBlob]:
+            raise PipelineError("PFB: Invalid input data type, should be BeamformedBlob, DummyBlob or ReceiverBlob")
+
+        # Check if we're dealing with beamformed data or receiver data
+        self._after_beamformer = True if type(input_blob) is BeamformedBlob else False
 
         # Sanity checks on configuration
         if {'nchans', 'ntaps'} - set(config.settings()) != set():
@@ -71,11 +74,13 @@ class PFB(ProcessingModule):
         input_shape = dict(self._input.shape)
         datatype = self._input.datatype
 
-        # Initialise
-        self._initialise(input_shape['nsamp'], input_shape['nbeams'], input_shape['nsubs'])
+        # Initialise and generate output blob depending on where it is placed in pipeline
+        nstreams = input_shape['nbeams'] if self._after_beamformer else input_shape['nants']
+
+        self._initialise(input_shape['nsamp'], nstreams, input_shape['nsubs'])
 
         # Generate output blob
-        return ChannelisedBlob(self._config, [('nbeams', input_shape['nbeams']),
+        return ChannelisedBlob(self._config, [('nbeams', nstreams),
                                               ('nchans', self._nchans * input_shape['nsubs']),
                                               ('nsamp', input_shape['nsamp'] / self._nchans)],
                                datatype=datatype)
@@ -91,29 +96,37 @@ class PFB(ProcessingModule):
         self._generate_filter()
 
         # Create temporary array for filtered data
-        self._filtered = np.zeros((self._nbeams, self._nsubs, self._nchans, self._nsamp / self._nchans), dtype=np.complex64)
+        self._filtered = np.zeros((self._nbeams, self._nsubs, self._nchans, self._nsamp / self._nchans),
+                                  dtype=np.complex64)
 
         # Create temporary input array
-        self._temp_input = np.zeros((self._nbeams, self._nsubs, self._nsamp + self._nchans * self._ntaps), dtype=np.complex64)
+        self._temp_input = np.zeros((self._nbeams, self._nsubs, self._nsamp + self._nchans * self._ntaps),
+                                    dtype=np.complex64)
 
     def process(self, obs_info, input_data, output_data):
         """ Perform channelisation """
 
         # Check if initialised, if not initialise
+        nstreams = obs_info['nbeams'] if self._after_beamformer else obs_info['nants']
         if self._filter is None:
-            self._initialise(obs_info['nsamp'], obs_info['nbeams'], obs_info['nsubs'])
-        else:
-            # Update nsamp and nbeams with value in block
-            self._nsamp = obs_info['nsamp']
-            self._nbeams = obs_info['nbeams']
-            self._nsubs= obs_info['nsubs']
+            self._initialise(obs_info['nsamp'], nstreams, obs_info['nsubs'])
 
-        # Update temporary input array
-        self._temp_input[:, :, :self._nchans * self._ntaps] = self._temp_input[:, :, -self._nchans * self._ntaps:]
-        self._temp_input[:, :, self._nchans * self._ntaps:] = input_data
+        # Update parameters
+        self._nsamp = obs_info['nsamp']
+        self._nsubs = obs_info['nsubs']
+        self._nbeams = nstreams
 
         # Set current output
         self._current_output = output_data
+
+        # Update temporary input array
+        self._temp_input[:, :, :self._nchans * self._ntaps] = self._temp_input[:, :, -self._nchans * self._ntaps:]
+
+        # Format channeliser input depending on where it was placed in pipeline
+        if self._after_beamformer:
+            self._temp_input[:, :, self._nchans * self._ntaps:] = input_data
+        else:
+            self._temp_input[:, :, self._nchans * self._ntaps:] = np.transpose(input_data, (2, 0, 1))
 
         # Channelise
         self.channelise_parallel()
@@ -133,18 +146,6 @@ class PFB(ProcessingModule):
         # Reverse filter to ease fast computation
         self._filter = self._filter[::-1]
 
-    def channelise(self):
-        """ Perform channelisation, serial version """
-        for b in range(self._nbeams):
-            for c in range(self._nsubs):
-                # Apply filter
-                apply_fir_filter(self._temp_input[b, c, :], self._filter,
-                             self._filtered[b, c, :], self._ntaps, self._nchans)
-
-                # Fourier transform and save output
-                self._current_output[b, c * self._nchans: (c + 1) * self._nchans] = \
-                     np.abs(np.fft.fft(self._filtered[b, c, :], axis=0))
-
     def channelise_thread(self, beam):
         """ Perform channelisation, to be used with ThreadPool
         :param beam: Beam number associated with call  """
@@ -160,3 +161,16 @@ class PFB(ProcessingModule):
     def channelise_parallel(self):
         """ Perform channelisation, parallel version """
         self._thread_pool.map(self.channelise_thread, range(self._nbeams))
+
+    def channelise(self):
+        """ Perform channelisation, serial version """
+        for b in range(self._nbeams):
+            for c in range(self._nsubs):
+                # Apply filter
+                apply_fir_filter(self._temp_input[b, c, :], self._filter,
+                                 self._filtered[b, c, :], self._ntaps, self._nchans)
+               # self._filtered[b, c, :] = self._temp_input[b, c, :]
+
+                # Fourier transform and save output
+                self._current_output[b, c * self._nchans: (c + 1) * self._nchans] = \
+                    np.abs(np.fft.fft(self._filtered[b, c, :], axis=0))

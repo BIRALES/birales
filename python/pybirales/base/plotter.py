@@ -4,16 +4,13 @@ from threading import Thread
 import time
 
 
-class Plotter(Thread):
+class Plotter(object):
 
-    def __init__(self, config, input_blob):
+    def __init__(self, config, input_blob, figure):
         """ Class constructor
         :param config: Configuration object
         :param input_blob: Input data blob
         """
-
-        # Call superclass
-        super(Plotter, self).__init__()
 
         # Set module configuration
         self._config = config
@@ -28,26 +25,18 @@ class Plotter(Thread):
 
         # Default index
         self._index = None
+        self._figure = figure
 
         # Stopping clause
         self.daemon = True
         self._stop = False
         self._is_stopped = True
 
-    def run(self):
+    def update_plot(self):
         """ Thread body """
-        # Initialise plot
-        self._index = self.create_index()
-        self.initialise_plot()
-
-        # Loop until thread is stopped
-        self._is_stopped = False
-        while not self._stop:
-            # Get snapshot from blob
-            data, obs_info = self._input.request_snapshot(self._index)
-            self.update_plot(data, obs_info)
-            time.sleep(self._update_period)
-        self._is_stopped = True
+        # Get snapshot from blob
+        data, obs_info = self._input.get_snapshot(self._index)
+        self.refresh_plot(data, obs_info)
 
     @abstractmethod
     def initialise_plot(self):
@@ -58,9 +47,13 @@ class Plotter(Thread):
         pass
 
     @abstractmethod
-    def update_plot(self, input_data, obs_info):
+    def refresh_plot(self, input_data, obs_info):
         pass
 
     @property
     def index(self):
         return self._index
+
+    @index.setter
+    def index(self, x):
+        self._index = x

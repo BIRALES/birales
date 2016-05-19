@@ -11,14 +11,14 @@ from pybirales.blobs.receiver_data import ReceiverBlob
 
 
 class RawDataPlotter(Plotter):
-    def __init__(self, config, input_blob):
+    def __init__(self, config, input_blob, figure):
 
         # Make sure that the input data blob is what we're expecting
         if type(input_blob) not in [DummyBlob, ReceiverBlob]:
             raise PipelineError("RawDataPlotter: Invalid input data type, should be DummyBlob or ReceiverBlob")
 
         # Call superclass initialiser
-        super(RawDataPlotter, self).__init__(config, input_blob)
+        super(RawDataPlotter, self).__init__(config, input_blob, figure)
 
         # Get dimensions from input data blob
         input_shape = dict(self._input.shape)
@@ -27,13 +27,9 @@ class RawDataPlotter(Plotter):
 
         # Figure and axes placeholders
         self._antennas_to_plot = None
-        self._figure = None
-        self._axes = None
 
     def create_index(self):
         """ Create data index to get from blob """
-
-        logging.info("RawDataPlotter: Called create index")
 
         # Check whether config file has any indexing defined
         nof_samples = None
@@ -50,41 +46,18 @@ class RawDataPlotter(Plotter):
         return slice(None), slice(nof_samples), slice(self._antennas_to_plot[0], self._antennas_to_plot[-1] + 1)
 
     def initialise_plot(self):
+        """ Initialise plot """
 
-        # Initialise figure and turn on interactive plotting
-        self._figure = plt.figure()
+        # Initialise figure
         plt.title("Antenna Plot")
-
-        # # Add a subplot per antenna
-        # self._axes = []
-        #
-        # if len(self._antennas_to_plot) == 2:
-        #     axes = plt.subplot2grid((1, 2), (0, 0))
-        #     plt.title("Antenna %d" % self._antennas_to_plot[0])
-        #     self._axes.append(axes)
-        #     axes = plt.subplot2grid((1, 2), (0, 1))
-        #     plt.title("Antenna %d" % self._antennas_to_plot[1])
-        #     self._axes.append(axes)
-        # else:
-        #     grid_dim_x = int(math.ceil(math.sqrt(len(self._antennas_to_plot))))
-        #     grid_dim_y = int(math.ceil(math.sqrt(len(self._antennas_to_plot))))
-        #
-        #     for index, i in enumerate(self._antennas_to_plot):
-        #         axes = plt.subplot2grid((grid_dim_x, grid_dim_y),
-        #                                 (int((index / grid_dim_x)),
-        #                                  int(index % grid_dim_x)))
-        #         plt.title("Antenna %d" % i)
-        #         self._axes.append(axes)
-
-        # Tight layout
         self._figure.set_tight_layout(0.9)
 
-        logging.info("RawDataPlotter: Called initialise plotter")
-        pass
+    def refresh_plot(self, input_data, obs_info):
+        """ Update plot with new data
+        :param input_data: Input data to plot
+        :param obs_info: Observation information """
 
-    def update_plot(self, input_data, obs_info):
-
-        plt.cla()
+        self._figure.clf()
         plt.title("Antenna plot")
         for index, ant in enumerate(self._antennas_to_plot):
             plt.plot(np.abs(input_data[0, :, index]), label="Antenna %d" % ant)
@@ -97,5 +70,4 @@ class RawDataPlotter(Plotter):
         self._figure.canvas.flush_events()
         plt.show(block=False)
 
-        logging.info("RawDataPlotter: Called update plot")
-        pass
+        logging.info("RawDataPlotter: Updated plot")

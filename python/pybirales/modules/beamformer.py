@@ -111,6 +111,8 @@ class Beamformer(ProcessingModule):
 
         # Update observation information
         obs_info['nbeams'] = self._nbeams
+        obs_info['reference_pointing'] = self._config.reference_pointing
+        obs_info['pointings'] = self._config.pointings
         logging.info("Beamformed data")
 
 

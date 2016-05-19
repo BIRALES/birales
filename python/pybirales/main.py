@@ -10,6 +10,8 @@ from pybirales.modules.generator import DummyDataGenerator
 from pybirales.modules.persister import Persister
 from pybirales.modules.receiver import Receiver
 from pybirales.pipeline_manager import PipelineManager
+from pybirales.plotters.bandpass_plotter import BandpassPlotter
+from pybirales.plotters.channel_plotter import ChannelisedDataPlotter
 from pybirales.plotters.raw_data_plotter import RawDataPlotter
 
 
@@ -18,28 +20,28 @@ def test_receiver(manager):
     manager.add_module("receiver", receiver)
 
 
-def test_plotter(manager):
-    generator = DummyDataGenerator(settings.generator)
-    manager.add_module("generator", generator)
-    terminator = Terminator(None, generator.output_blob)
-    manager.add_module("terminator", terminator)
-
-    raw_plotter = RawDataPlotter(settings.rawplotter, generator.output_blob)
-    manager.add_plotter("raw_plotter", raw_plotter)
-
-
-def test_pipeline(manager):
+def test_channel_plotter(manager):
     # Generate processing modules and data blobs
-    dummy_generator = DummyDataGenerator(settings.generator)
-    beamformer = Beamformer(settings.beamformer, dummy_generator.output_blob)
+   # receiver = Receiver(settings.receiver)
+    generator = DummyDataGenerator(settings.generator)
+    beamformer = Beamformer(settings.beamformer, generator.output_blob)
     ppf = PFB(settings.channeliser, beamformer.output_blob)
-    terminator = Terminator(None, ppf.output_blob)
+    # terminator = Terminator(None, ppf.output_blob)
+    persister = Persister(settings.persister, ppf.output_blob)
 
     # Add modules to pipeline manager
-    manager.add_module("dummy_generator", dummy_generator)
+   # manager.add_module("receiver", receiver)
+    manager.add_module("generator", generator)
     manager.add_module("beamformer", beamformer)
     manager.add_module("ppf", ppf)
-    manager.add_module("terminator", terminator)
+    # manager.add_module("terminator", terminator)
+    manager.add_module("persister", persister)
+
+    # Add plotters
+  #  manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
+  #  manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
+  #  manager.add_plotter("raw_plotter", RawDataPlotter, settings.rawplotter, generator.output_blob)
+
 
 if __name__ == "__main__":
 
@@ -48,10 +50,9 @@ if __name__ == "__main__":
 
     logging.info("Initialising")
 
-    test_plotter(manager)
+    test_channel_plotter(manager)
 
     logging.info("Started")
 
     # Start pipeline
     manager.start_pipeline()
-    manager.wait_pipeline()

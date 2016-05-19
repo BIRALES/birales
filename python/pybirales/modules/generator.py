@@ -2,6 +2,8 @@ import logging
 import numpy as np
 import time
 
+from scipy import signal
+
 from pybirales.base.definitions import PipelineError, ObservationInfo
 from pybirales.base.processing_module import ProcessingModule
 from pybirales.blobs.dummy_data import DummyBlob
@@ -49,11 +51,16 @@ class DummyDataGenerator(ProcessingModule):
                          datatype=self._datatype)
 
     def process(self, obs_info, input_data, output_data):
-        time.sleep(0.5)
+        time.sleep(0.1)
         # Perform operations
+        # output_data[:] = np.ones((self._nsubs, self._nsamp, self._nants), dtype=self._datatype)
+        # for i in xrange(self._nants):
+        #     output_data[:, :, i] = np.sin(np.arange(self._nsamp) * 0.001 + self._counter + i) * 50
+        # self._counter += 1
+
         output_data[:] = np.ones((self._nsubs, self._nsamp, self._nants), dtype=self._datatype)
         for i in xrange(self._nants):
-            output_data[:, :, i] = np.sin(np.arange(self._nsamp) * 0.05 + self._counter + i)
+            output_data[:, :, i] = np.sin(2**np.logspace(0.0001, 4, num=self._nsamp, base=2))
         self._counter += 1
 
         # Create observation information
@@ -62,7 +69,7 @@ class DummyDataGenerator(ProcessingModule):
         obs_info['timestamp'] = 0.0
         obs_info['nsubs'] = self._nsubs
         obs_info['nsamp'] = self._nsamp
-        obs_info['nants'] = self._nsubs
+        obs_info['nants'] = self._nants
 
         logging.info("Generated data")
 
