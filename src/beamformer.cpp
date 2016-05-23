@@ -26,7 +26,7 @@ void beamform(complex64 *input, complex64 *weights, complex64 *output,
             for (unsigned s = 0; s < nsamp; s++)
             {
                 // Get pointer to required segment of weights and create temporary result
-                complex64 *wp = weights + c * nants * nbeams;
+                complex64 *wp = weights + c * nants * nbeams + b * nants;
 
                 // Get pointer to required segment of input buffer
                 complex64 *ip = input + c * nsamp * nants + s * nants;
