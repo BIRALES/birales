@@ -35,7 +35,7 @@ class Receiver(Generator):
 
         # Sanity checks on configuration
         if {'nsamp', 'nants', 'nsubs', 'port', 'interface', 'frame_size',
-            'frames_per_block', 'nblocks', 'nbits', 'complex'}  - set(config.settings()) != set():
+            'frames_per_block', 'nblocks', 'nbits', 'complex', 'samples_per_second'} - set(config.settings()) != set():
             raise PipelineError("Receiver: Missing keys on configuration "
                                 "(nsamp, nants, nsubs, ports, interface, frame_size, frames_per_block, nblocks)")
         self._nsamp = config.nsamp
@@ -43,6 +43,8 @@ class Receiver(Generator):
         self._nsubs = config.nsubs
         self._nbits = config.nbits
         self._complex = config.complex
+        self._samples_per_second = config.samples_per_second
+        self._start_time = 0
 
         # Define data type
         if self._nbits == 64 and self._complex:
@@ -126,7 +128,8 @@ class Receiver(Generator):
             raise PipelineError("Receiver: Failed to set receiver port %d" % self._config.port)
 
         # Start data consumer
-        if self._daq.startBiralesConsumer(self._nsamp) != Result.Success.value:
+        if self._daq.startBiralesConsumer(self._nsamp, self._start_time,
+                                          self._samples_per_second) != Result.Success.value:
             raise PipelineError("Receiver: Failed to start data consumer")
 
         # Set channel data consumer callback
@@ -160,4 +163,3 @@ class Receiver(Generator):
         # Define setBeamConsumerCallback function
         self._daq.setBiralesConsumerCallback.argtypes = [self._callback_type]
         self._daq.setBiralesConsumerCallback.restype = ctypes.c_int
-
