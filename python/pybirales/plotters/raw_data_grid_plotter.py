@@ -79,6 +79,7 @@ class RawDataGridPlotter(Plotter):
         for index, antenna in enumerate(self._antennas_to_plot):
             self._axes[index].cla()
             self._axes[index].plot(np.abs(input_data[0, :, index]))
+            self._axes[index].set_xlim([0, input_data.shape[1]])
             self._axes[index].set_xlabel("Time")
             self._axes[index].set_ylabel("Channel")
             self._axes[index].set_title("Antenna %d" % antenna)

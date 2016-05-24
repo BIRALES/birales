@@ -60,24 +60,31 @@ class BandpassPlotter(Plotter):
         """ Initialise plot """
         plt.title("BandpassPlot")
         self._figure.set_tight_layout(0.9)
+        logging.info("BandpassPlotter: Initialised")
 
     def refresh_plot(self, input_data, obs_info):
         """ Update plot with new data
         :param input_data: Input data to plot
         :param obs_info: Observation information """
 
+        # Check if data is valid
+        if 'nants' not in obs_info:
+            return
+
         # Loop over all beams to plot
         self._figure.clf()
         plt.title("Bandpass plot")
+        divisor = 1.0# 1.0 / obs_info['nants']
         for index, beam in enumerate(self._beams_to_plot):
-            plt.plot(np.sum(np.abs(input_data[index, self._channels_to_plot, :]), axis=1), label="Beam %d" % beam)
+            input_data[index, self._nchans / 2 - 1, :] = 1000
+            plt.plot(np.sum(np.abs(input_data[index, :, :]), axis=1) * divisor, label="Beam %d" % beam)
             plt.xlabel("Frequency")
             plt.ylabel("Power")
-            plt.xlim([0, input_data.shape[1]])
+            plt.xlim([self._channels_to_plot[0], self._channels_to_plot[-1]])
 
         plt.legend()
-        # self._figure.canvas.draw()
-        # self._figure.canvas.flush_events()
-        # plt.show(block=False)
+        self._figure.canvas.draw()
+        self._figure.canvas.flush_events()
+        plt.show(block=False)
 
         logging.info("BandpassPlotter: Updated plot")

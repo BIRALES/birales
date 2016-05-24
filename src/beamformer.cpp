@@ -65,14 +65,6 @@ int main()
     complex64 *weights = (complex64 *) malloc(nchans * nbeams * nants * sizeof(complex64));
     complex64 *output = (complex64 *) malloc(nbeams * nchans * nsamp * sizeof(complex64));
 
-//    for(unsigned i = 0; i < nsamp * nants * nchans; i++)
-//        input[i] = {1 ,1};
-//
-//    for(unsigned i = 0; i < nchans * nbeams * nants; i++)
-//        weights[i] = {1 ,1};
-//
-//    memset(output, 1, nbeams * nchans * nsamp * sizeof(complex64));
-
     struct timeval start, end;
     long mtime, seconds, useconds;
     gettimeofday(&start, NULL);
@@ -85,8 +77,4 @@ int main()
 
     mtime = ((seconds) * 1000 + useconds/1000.0) + 0.5;
     printf("Time: %ld ms\n", mtime);
-
-    // Check output
-//    for(unsigned i = 0; i < nbeams * nchans * nsamp; i++)
-//        printf("%f %f\n", output[i].r, output[i].i);
 }

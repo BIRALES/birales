@@ -2,6 +2,7 @@ import logging
 import os
 import pickle
 import time
+import struct
 from pybirales.base import settings
 from pybirales.base.definitions import PipelineError
 from pybirales.base.processing_module import ProcessingModule
@@ -86,6 +87,8 @@ class Persister(ProcessingModule):
             self._head_written = True
 
         # Transpose data and write to file
-        np.save(self._file, np.abs(input_data[self._beam_range, self._channel_range, :].T))
+        #np.save(self._file, np.abs(input_data[self._beam_range, self._channel_range, :].T))
+        temp_array = np.abs(input_data[self._beam_range, self._channel_range, :].T).ravel()
+        self._file.write(struct.pack('f'*len(temp_array), *list(temp_array)))
         self._file.flush()
         logging.info("Persisted data")

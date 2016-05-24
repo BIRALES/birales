@@ -25,7 +25,7 @@ class Result(Enum):
 
 
 class Receiver(Generator):
-    """ Dummy data generator """
+    """ Receiver """
 
     def __init__(self, config, input_blob=None):
 
@@ -50,7 +50,7 @@ class Receiver(Generator):
         if self._nbits == 64 and self._complex:
             self._datatype = np.complex64
         else:
-            raise PipelineError("DummyDataGenerator: Unsupported datatype (bits, complex)")
+            raise PipelineError("Receiver: Unsupported datatype (bits, complex)")
 
         # Call superclass initialiser
         super(Receiver, self).__init__(config, input_blob)
@@ -106,7 +106,7 @@ class Receiver(Generator):
             # Release output blob
             self.release_output_blob(obs_info)
 
-            logging.info("Receiver: Received and cast data")
+            logging.info("Receiver: Received buffer")
 
         return self._callback_type(data_callback)
 

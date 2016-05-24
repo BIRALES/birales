@@ -51,9 +51,15 @@ class Beamformer(ProcessingModule):
         if type(config.antenna_locations) is not list:
             raise PipelineError("Beamformer: Expected list of antennas with long/lat/height as antenna locations")
 
+        # Number of threads to use
         self._nthreads = 2
         if 'nthreads' in config.settings():
             self._nthreads = config.nthreads
+
+        # Check if we have to move the telescope
+        self._move_to_dec = False
+        if 'move_to_dec' in config.settings():
+            self._move_to_dec = config.move_to_dec
 
         # Create placeholder for pointing class instance
         self._pointing = None
