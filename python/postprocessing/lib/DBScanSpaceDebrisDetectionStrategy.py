@@ -127,10 +127,14 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         d = np.array(data)
         x = d[:, 0]
         y = d[:, 1]
-        A = np.vstack([x, np.ones(len(x))]).T
+        a = np.vstack([x, np.ones(len(x))]).T
 
-        m, c = np.linalg.lstsq(A, y)[0]  # determine gradient and y-intercept of data
-        r = np.corrcoef(x, y)[0, 1]  # determine correlation coefficient
+        m, c = np.linalg.lstsq(a, y)[0]  # determine gradient and y-intercept of data
+
+        r = 0.0
+        if np.round(c) > 0.0:
+            r = np.corrcoef(x, y)[0, 1]  # determine correlation coefficient if c > 0.0
+
         return m, c, r
 
     @staticmethod
