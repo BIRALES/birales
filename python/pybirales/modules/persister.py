@@ -1,8 +1,8 @@
 import logging
 import os
-
+import pickle
 import time
-
+import struct
 from pybirales.base import settings
 from pybirales.base.definitions import PipelineError
 from pybirales.base.processing_module import ProcessingModule
@@ -23,19 +23,36 @@ class Persister(ProcessingModule):
 
         # Create file
         if config.use_timestamp:
-            filepath = os.path.join(config.directory, str(time.now()))
+            filepath = os.path.join(config.directory, "%s_%s" % (config.filename, str(time.now())))
         else:
             if 'filename' not in config.settings():
                 raise PipelineError("Persister: filename required when not using timestamp")
-            filepath = os.path.join(config.directory, config.filename)
+            filepath = os.path.join(config.directory, config.filename + '.dat')
 
         # Open file (if file exists, remove first)
         if os.path.exists(filepath):
             os.remove(filepath)
-        self._file = open(filepath, "ab+")
+
+        self._file = open(filepath, "wb+")
+
+        # Initialise ranges to persist for file
+        self._beam_range = slice(None)
+        self._channel_range = slice(None)
+
+        if 'channel_range' in self._config.settings():
+            if type(self._config.channel_range) is list:
+                self._channel_range = slice(self._config.channel_range[0], self._config.channel_range[1] + 1)
+            else:
+                self._channel_range = self._config.channel_range
+
+        if 'beam_range' in self._config.settings():
+            if type(self._config.beam_range) is list:
+                self._beam_range = slice(self._config.beam_range[0], self._config.beam_range[1] + 1)
+            else:
+                self._beam_range = self._config.beam_range
 
         # Variable to check whether meta file has been written
-        self._head_filepath = filepath + '.head'
+        self._head_filepath = filepath + '.pkl'
         self._head_written = False
 
         # Processing module name
@@ -51,10 +68,27 @@ class Persister(ProcessingModule):
         if not self._head_written:
             obs_info['start_center_frequency'] = settings.observation.start_center_frequency
             obs_info['bandwidth'] = settings.observation.bandwidth
-            with open(self._head_filepath, 'w') as f:
-                f.write(str(obs_info))
+            obs_info['transmitter_frequency'] = settings.observation.transmitter_frequency
+            obs_info['start_beam_in_file'] = self._beam_range.start if self._beam_range.start is not None else 0
+
+            obs_info['nof_beams_in_file'] = obs_info['nbeams'] if self._beam_range.start is None else \
+                self._beam_range.stop - self._beam_range.start
+
+            obs_info[
+                'start_channel_in_file'] = self._channel_range.start if self._channel_range.start is not None else 0
+
+            obs_info['nof_channels_in_file'] = obs_info['nchans'] if self._channel_range.start is None else \
+                self._channel_range.stop - self._channel_range.start
+
+            del obs_info['nsubs']
+
+            with open(self._head_filepath, 'wb') as f:
+                pickle.dump(obs_info.get_dict(), f)
             self._head_written = True
 
         # Transpose data and write to file
-        np.save(self._file, input_data.T)
+        #np.save(self._file, np.abs(input_data[self._beam_range, self._channel_range, :].T))
+        temp_array = np.abs(input_data[self._beam_range, self._channel_range, :].T).ravel()
+        self._file.write(struct.pack('f'*len(temp_array), *list(temp_array)))
+        self._file.flush()
         logging.info("Persisted data")

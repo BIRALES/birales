@@ -28,6 +28,9 @@ from pybirales.blobs.receiver_data import ReceiverBlob
 
 warnings.simplefilter('ignore', category=AstropyWarning)
 
+# Required for IERS tables and what not
+import astroplan
+
 
 class Beamformer(ProcessingModule):
     """ Beamformer processing module """
@@ -38,7 +41,8 @@ class Beamformer(ProcessingModule):
             raise PipelineError("Beamformer: Invalid input data type, should be DummyBlob or ReceiverBlob")
 
         # Sanity checks on configuration
-        if {'nbeams', 'antenna_locations', 'pointings', 'reference_pointing'} - set(config.settings()) != set():
+        if {'nbeams', 'antenna_locations', 'pointings', 'reference_pointing', 'reference_antenna_location'} \
+                - set(config.settings()) != set():
             raise PipelineError("Beamformer: Missing keys on configuration "
                                 "(nbeams, nants, antenna_locations, pointings)")
         self._nbeams = config.nbeams
@@ -47,9 +51,15 @@ class Beamformer(ProcessingModule):
         if type(config.antenna_locations) is not list:
             raise PipelineError("Beamformer: Expected list of antennas with long/lat/height as antenna locations")
 
+        # Number of threads to use
         self._nthreads = 2
         if 'nthreads' in config.settings():
             self._nthreads = config.nthreads
+
+        # Check if we have to move the telescope
+        self._move_to_dec = False
+        if 'move_to_dec' in config.settings():
+            self._move_to_dec = config.move_to_dec
 
         # Create placeholder for pointing class instance
         self._pointing = None
@@ -111,6 +121,8 @@ class Beamformer(ProcessingModule):
 
         # Update observation information
         obs_info['nbeams'] = self._nbeams
+        obs_info['reference_pointing'] = self._config.reference_pointing
+        obs_info['pointings'] = self._config.pointings
         logging.info("Beamformed data")
 
 
@@ -124,6 +136,7 @@ class Pointing(Thread):
 
         # Call superclass initialiser
         super(Pointing, self).__init__()
+        self._set_daemon()
 
         # Make sure that we have enough antenna locations
         if len(config.antenna_locations) != nants:
@@ -133,9 +146,15 @@ class Pointing(Thread):
         if len(config.pointings) != config.nbeams:
             raise PipelineError("Pointing: Mismatch between number of beams and number of beam pointings")
 
+        # Check if we're using static beams
+        self._static_beams = False
+        if "static_beams" in config.settings():
+            self._static_beams = config.static_beams
+
         # Initialise Pointing
         array = config.antenna_locations
         self._start_center_frequency = settings.observation.start_center_frequency
+        self._reference_location = config.reference_antenna_location
         self._reference_pointing = config.reference_pointing
         self._pointings = config.pointings
         self._bandwidth = settings.observation.bandwidth
@@ -148,16 +167,15 @@ class Pointing(Thread):
             self._pointing_period = config.pointing_period
 
         # Create AntennaArray object
-        self._array = AntennaArray(array)
+        self._array = AntennaArray(array, self._reference_location[0], self._reference_location[1])
 
         # Calculate displacement vectors to each antenna from reference antenna
-        self._reference_antenna_loc = EarthLocation.from_geodetic(self._array.lon, self._array.lat,
-                                                                  height=self._array.height)
-        self._baseline_vectors_ecef = self._calculate_ecef_baseline_vectors()
-        self._baseline_vectors_enu = self._rotate_ecef_to_enu(self._baseline_vectors_ecef, self._array.lat,
-                                                              self._array.lon)
-        # Calculate East-North-Up vector
-        self._vectors_enu = self._rotate_ecef_to_enu(self._baseline_vectors_ecef, self._array.lat, self._array.lon)
+        self._reference_location = EarthLocation.from_geodetic(self._array.lon, self._array.lat,
+                                                               height=self._array.height)
+
+        self._vectors_enu = np.full([self._nants, 3], np.nan)
+        for i in range(self._nants):
+            self._vectors_enu[i, :] = self._array.antenna_position(i)
 
         # Lock to be used for synchronised access
         self._lock = Lock()
@@ -169,9 +187,15 @@ class Pointing(Thread):
     def run(self):
         """ Run thread """
         while True:
+
+            # Get time once (so that all beams use the same time for pointing)
+            pointing_time = Time(datetime.datetime.utcnow(), scale='utc', location=self._reference_location)
+
             for beam in xrange(self._nbeams):
-                self.point_array(beam, self._reference_pointing[0] + self._pointings[beam][0],
-                                 self._reference_pointing[1] + self._pointings[beam][1])
+                self.point_array(beam, self._reference_pointing[0], self._reference_pointing[1],
+                                 self._pointings[beam][0], self._pointings[beam][1],
+                                 pointing_time)
+
             self._lock.acquire()
             self.weights = self._temp_weights.copy()
             self._lock.release()
@@ -196,14 +220,14 @@ class Pointing(Thread):
 
         for i in xrange(self._nsubs):
             # Calculate complex coefficients
-            frequency = Quantity(self._start_center_frequency + (i * self._bandwidth / self._nsubs), u.Hz)
+            frequency = Quantity(self._start_center_frequency + (i * self._bandwidth / self._nsubs), u.MHz)
             real, imag = self._phaseshifts_from_altitude_azimuth(altitude.rad, azimuth.rad, frequency, self._vectors_enu)
 
             # Apply to weights file
             self._temp_weights[i, beam, :].real = real
             self._temp_weights[i, beam, :].imag = imag
 
-    def point_array(self, beam, right_ascension, declination, pointing_time=None):
+    def point_array(self, beam, ref_ra, ref_dec, delta_ra, delta_dec, pointing_time=None):
         """ Calculate the phase shift between two antennas which is given by the phase constant (2 * pi / wavelength)
         multiplied by the projection of the baseline vector onto the plane wave arrival vector
         :param beam: Beam to which this applies
@@ -214,59 +238,23 @@ class Pointing(Thread):
         """
 
         # Type conversions if required
-        if type(right_ascension) is not Angle:
-            if type(right_ascension) is str:
-                right_ascension = Angle(right_ascension)
-            else:
-                right_ascension = Angle(right_ascension, u.deg)
+        ref_ra = Angle(ref_ra, u.deg)
+        ref_dec = Angle(ref_dec, u.deg)
+        delta_ra = Angle(delta_ra, u.deg)
+        delta_dec = Angle(delta_dec, u.deg)
 
-        if type(declination) is not Angle:
-            if type(declination) is str:
-                declination = Angle(declination)
-            else:
-                declination = Angle(declination, u.deg)
+        # If we're using static beam, then we must adjust RA (by setting reference RA equal to LST)
+        if self._static_beams:
+            ref_ra = Angle(pointing_time.sidereal_time('mean'))
 
-        if pointing_time is None:
-            pointing_time = Time(datetime.datetime.utcnow(), scale='utc')
+        # Convert RA DEC to ALT AZ
+        alt, az = self._ra_dec_to_alt_az(ref_ra + delta_ra,
+                                         ref_dec + delta_dec,
+                                         Time(pointing_time),
+                                         self._reference_location)
 
-        alt, az = self._ra_dec_to_alt_az(Angle(right_ascension), Angle(declination),
-                                         Time(pointing_time), self._reference_antenna_loc)
+        # Point beam to required ALT AZ
         self.point_array_static(beam, alt, az)
-
-    def _calculate_ecef_baseline_vectors(self):
-        """ Calculate the displacement vectors in metres for each antenna relative to master antenna.
-        :return: an (n, 3) array of displacement vectors for each antenna
-        """
-        displacement_vectors = np.full([self._nants, 3], np.nan)
-        array_positions = self._array.positions()
-
-        ref_loc = EarthLocation.from_geodetic(lon=self._array.lon, lat=self._array.lat,
-                                              height=self._array.height, ellipsoid='WGS84')
-        ant_ref_pos = ref_loc.to_geocentric()
-        ant_ref_values = np.array(
-                [ant_ref_pos[0].to(u.m).value, ant_ref_pos[1].to(u.m).value, ant_ref_pos[2].to(u.m).value])
-
-        for i in xrange(0, self._nants):
-            ant_i_pos = (array_positions[0][i], array_positions[1][i], array_positions[2][i])
-            ant_i_pos_values = np.array(
-                    [ant_i_pos[0].to(u.m).value, ant_i_pos[1].to(u.m).value, ant_i_pos[2].to(u.m).value])
-            displacement_vectors[i, :] = ant_i_pos_values - ant_ref_values
-
-        return displacement_vectors
-
-    def _rotate_ecef_to_enu(self, ecef_vectors, latitude, longitude):
-        """
-        Rotates a set of vectors expressed in the geocentric Earth-Centred Earth-Fixed coordinate system to the local
-        East-North-Up surface tangential (horizontal) coordinate system with the specified latitude, longitude.
-        :param ecef_vectors: (n, 3) array of vectors expressed in ECEF
-        :param latitude: Geodectic latitude (astropy angle)
-        :param longitude: Geodectic longitude (astropy angle)
-        :return: array containing vectors rotated to East North Up coordinate system
-        """
-
-        rotation_matrix = self._rotation_matrix_ecef_to_enu(latitude, longitude)
-        vectors_enu = np.dot(rotation_matrix, np.array(ecef_vectors).transpose())
-        return vectors_enu.transpose()
 
     @staticmethod
     def _ra_dec_to_alt_az(right_ascension, declination, time, location):
@@ -284,35 +272,6 @@ class Pointing(Thread):
         c_altaz = sky_coordinates.transform_to(AltAz(obstime=time, location=location))
 
         return c_altaz.alt, c_altaz.az
-
-    @staticmethod
-    def _rotation_matrix_ecef_to_enu(latitude, longitude):
-        """
-        Compute a rotation matrix for converting vectors in ECEF to local
-        ENU (horizontal) cartesian coordinates at the specified latitude, longitude.
-        :param latitude: The geodetic latitude of the reference point
-        :param longitude: The geodetic longitude of the reference point
-        :return: A 3*3 rotation (direction cosine) matrix.
-        """
-        sin_lat = np.sin(latitude)
-        cos_lat = np.cos(latitude)
-        sin_long = np.sin(longitude)
-        cos_long = np.cos(longitude)
-
-        rotation_matrix = np.zeros((3, 3), dtype=float)
-        rotation_matrix[0, 0] = -sin_long
-        rotation_matrix[0, 1] = cos_long
-        rotation_matrix[0, 2] = 0
-
-        rotation_matrix[1, 0] = -sin_lat * cos_long
-        rotation_matrix[1, 1] = -sin_lat * sin_long
-        rotation_matrix[1, 2] = cos_lat
-
-        rotation_matrix[2, 0] = cos_lat * cos_long
-        rotation_matrix[2, 1] = cos_lat * sin_long
-        rotation_matrix[2, 2] = sin_lat
-
-        return rotation_matrix
 
     @staticmethod
     def _phaseshifts_from_altitude_azimuth(altitude, azimuth, frequency, displacements):
@@ -338,10 +297,10 @@ class Pointing(Thread):
 class AntennaArray(object):
     """ Class representing antenna array """
 
-    def __init__(self, positions=None, filepath=None):
-        self._ref_lat = None
-        self._ref_lon = None
-        self._ref_height = None
+    def __init__(self, positions, ref_lat, ref_long):
+        self._ref_lat = ref_lat
+        self._ref_lon = ref_long
+        self._ref_height = 0
 
         self._x = None
         self._y = None
@@ -349,22 +308,21 @@ class AntennaArray(object):
         self._height = None
 
         self._n_antennas = None
-        self._baseline_vectors_ecef = None
-        self._baseline_vectors_enu = None
-
-        # If filepath is defined, initialise array
-        if filepath:
-            self.load_from_file(filepath)
 
         # If positions is defined, initialise array
-        if positions:
-            self.load_from_positions(positions)
+        self.load_from_positions(positions)
 
     def positions(self):
         """
         :return: Antenna positions
         """
         return self._x, self._y, self._z, self._height
+
+    def antenna_position(self, i):
+        """
+        :return: Position for antenna i
+        """
+        return self._x[i], self._y[i], self._z[i]
 
     @property
     def size(self):
@@ -401,72 +359,7 @@ class AntennaArray(object):
         self._n_antennas = len(positions)
 
         # Convert file data to astropy format, and store lat, lon and height for each antenna
-        self._x = []
-        self._y = []
-        self._z = []
-        self._height = []
-
-        for i in xrange(len(positions)):
-            latitude = Angle(str(positions[i][0]) + 'd')
-            longitude = Angle(str(positions[i][1]) + 'd')
-            height = u.Quantity(positions[i][2], u.m)
-
-            loc = EarthLocation.from_geodetic(lon=longitude, lat=latitude, height=height, ellipsoid='WGS84')
-            (x, y, z) = loc.to_geocentric()
-
-            self._x.append(x)
-            self._y.append(y)
-            self._z.append(z)
-            self._height.append(height)
-
-        # Use first antenna as reference antenna
-        self._ref_lat = Angle(str(positions[0][0]) + 'd')
-        self._ref_lon = Angle(str(positions[0][1]) + 'd')
-        self._ref_height = u.Quantity(positions[0][2], u.m)
-
-    def load_from_file(self, filepath):
-        """ Load antenna positions from file
-        :param filepath: Path to file
-        """
-
-        # Check that file exists
-        if not os.path.exists(filepath):
-            logging.error("Could not load antenna positions from %s" % filepath)
-            return
-
-        # Load file
-        array = np.loadtxt(filepath, delimiter=',')
-
-        # Keep track of how many antennas are in the array
-        self._n_antennas = len(array)
-
-        # Convert file data to astropy format, and store lat, lon and height for each antenna
-        if self._x is None:
-            self._x = []
-
-        if self._y is None:
-            self._y = []
-
-        if self._z is None:
-            self._z = []
-
-        if self._height is None:
-            self._height = []
-
-        for i in range(len(array)):
-            latitude = Angle(str(array[i, 0]) + 'd')
-            longitude = Angle(str(array[i, 1]) + 'd')
-            height = u.Quantity(array[i, 2], u.m)
-
-            loc = EarthLocation.from_geodetic(lon=longitude, lat=latitude, height=height, ellipsoid='WGS84')
-            (x, y, z) = loc.to_geocentric()
-
-            self._x.append(x)
-            self._y.append(y)
-            self._z.append(z)
-            self._height.append(height)
-
-        # Use first antenna as reference antenna
-        self._ref_lat = Angle(str(array[0, 0]) + 'd')
-        self._ref_lon = Angle(str(array[0, 1]) + 'd')
-        self._ref_height = u.Quantity(array[0, 2], u.m)
+        self._x = [positions[i][0] for i in xrange(len(positions))]
+        self._y = [positions[i][1] for i in xrange(len(positions))]
+        self._z = [positions[i][2] for i in xrange(len(positions))]
+        self._height = [0 for i in xrange(len(positions))]

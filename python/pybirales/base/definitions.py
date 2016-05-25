@@ -16,6 +16,9 @@ class ObservationInfo(collections.MutableMapping):
         self['nchans'] = 0
         self['nsamp'] = 0
 
+    def get_dict(self):
+        return self.store
+
     def __getitem__(self, key):
         return self.store[key]
 

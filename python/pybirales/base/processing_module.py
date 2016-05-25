@@ -74,7 +74,7 @@ class Generator(Module):
 
     def request_output_blob(self):
         """ Request a new output blob to write data into """
-        self._output.request_write()
+        return self._output.request_write()
 
     def release_output_blob(self, obs_info):
         """ Release output blob

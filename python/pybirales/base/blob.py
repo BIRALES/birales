@@ -88,7 +88,7 @@ class DataBlob(object):
         self._writer_lock.acquire()
         while self._block_has_data[self._writer_index] is None:
             self._writer_lock.release()
-            time.sleep(0.001)
+            time.sleep(0.01)
             self._writer_lock.acquire()
 
         # Test to see whether data is being overwritten
@@ -113,12 +113,21 @@ class DataBlob(object):
         self._writer_index = (self._writer_index + 1) % self._nof_blocks
         self._writer_lock.release()
 
-    def request_snapshot(self):
+    def get_snapshot(self, index=None):
         """ Get a data snapshot from the blob
+        :param index: Index of sub-array to send to caller
         :return: snapshot with observation info
         """
-        # TODO: implement
-        pass
+        # Assign snapshot index to the previously read blob
+        snapshot_index = self._reader_index - 1
+        while snapshot_index == self._writer_index and not self._block_has_data[snapshot_index]:
+            time.sleep(0.001)
+
+        # Required required segment of data
+        to_return = self._data[snapshot_index][index].copy(), copy.copy(self._obs_info[snapshot_index])
+
+        # All done, return data segment and associated obs_info
+        return to_return
 
     @property
     def shape(self):

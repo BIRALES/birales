@@ -20,7 +20,7 @@ class Terminator(ProcessingModule):
         return None
 
     def process(self, obs_info, input_data, output_data):
-        # Calculate processed secondfs
-#        print "Processed %d samples in %.2fs" % (obs_info['nsamp'], time.time() - self._prev_time)
+        # Calculate processed seconds
+        print "Processed %d samples in %.2fs" % (obs_info['nsamp'], time.time() - self._prev_time)
         self._prev_time = time.time()
         return obs_info
