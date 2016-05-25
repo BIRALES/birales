@@ -55,6 +55,9 @@ class Persister(ProcessingModule):
         self._head_filepath = filepath + '.pkl'
         self._head_written = False
 
+        # Counter
+        self._counter = 0
+
         # Processing module name
         self.name = "Persister"
 
@@ -86,9 +89,14 @@ class Persister(ProcessingModule):
                 pickle.dump(obs_info.get_dict(), f)
             self._head_written = True
 
+        # Ignore first 2 buffers (because of channeliser)
+        self._counter += 1
+        if self._counter <= 2:
+            return
+
         # Transpose data and write to file
         #np.save(self._file, np.abs(input_data[self._beam_range, self._channel_range, :].T))
         temp_array = np.abs(input_data[self._beam_range, self._channel_range, :].T).ravel()
-        self._file.write(struct.pack('f'*len(temp_array), *list(temp_array)))
+        self._file.write(struct.pack('f' * len(temp_array), *temp_array))
         self._file.flush()
         logging.info("Persisted data")
