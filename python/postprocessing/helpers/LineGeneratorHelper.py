@@ -1,15 +1,20 @@
 class LineGeneratorHelper:
+    """
+    The LineGeneratorHelper class can be used to paint a line between two coordinates. It returns the coordinates
+    from which such a line passes.
+    """
+
     def __init__(self):
         return
 
     @staticmethod
     def get_line(start, end):
         """
-        Bresenham's Line Algorithm
+        Bresenham's Line Algorithm. Return the coordinates from which a line (from 'start' to 'end') passes
 
-        :param start: Coordinate (x0, y0)
-        :param end: Coordinate (x1, y1)
-        :return: Tuples of Coordinates in which the line will pass in a square grid
+        :param start: First coordinate (x0, y0)
+        :param end: Last coordinate (x1, y1)
+        :return: Tuples of Coordinates through which the line will pass in a square grid
         """
         # Setup initial conditions
         x1, y1 = start

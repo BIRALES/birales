@@ -8,7 +8,23 @@ from views.BeamDataView import BeamDataView
 
 
 class Beam:
+    """
+    The Beam class from which beam object can be created.
+    """
+
     def __init__(self, beam_id, dec, ra, ha, top_frequency, frequency_offset, observation, beam_data):
+        """
+
+        :param beam_id: The beam data id
+        :param dec: declination
+        :param ra:
+        :param ha:
+        :param top_frequency:
+        :param frequency_offset:
+        :param observation: The observation object with which the beam is associated with
+        :param beam_data:
+        :return: void
+        """
         self.id = beam_id
         self.name = 'Beam ' + str(beam_id)
 
@@ -19,7 +35,7 @@ class Beam:
         self.frequency_offset = frequency_offset
         self._view = BeamDataView()
 
-        self.observation = observation
+        self.observation = observation  # todo - check if the dependency on observation can be removed.
 
         self.observation_name = observation.name
         self.data_set = Beam.get_data_set(observation.data_dir)
@@ -48,9 +64,17 @@ class Beam:
 
     def get_human_name(self):
         return 'Observation ' + inf.humanize(self.observation_name) + ' - ' + inf.humanize(
-                os.path.basename(self.data_set))
+            os.path.basename(self.data_set))
 
+    # todo remove beam id from this use self.id
     def set_data(self, beam_data, beam_id):
+        """
+        Set the beam properties (time, snr, channels) from the raw beam data (as read from data set)
+
+        :param beam_data: The raw beam data
+        :param beam_id: The id of this beam
+        :return: void
+        """
         data = beam_data[:, :, beam_id]
         self.time = np.arange(0, self.sampling_rate * data.shape[0], self.sampling_rate)
 
@@ -65,6 +89,12 @@ class Beam:
 
     @staticmethod
     def add_mock_tracks(snr):
+        """
+        Add mock detections (can be used to test pipeline)
+
+        :param snr: The snr data (2D numpy array)
+        :return: Snr data with mock tracks added
+        """
         snr = Beam.add_mock_track(snr, (3090, 150), (3500, 200))
         snr = Beam.add_mock_track(snr, (2500, 90), (3000, 110))
         snr = Beam.add_mock_track(snr, (950, 100), (1100, 50))
@@ -72,12 +102,17 @@ class Beam:
         return snr
 
     def im_view(self):
-        fig = plt.figure(figsize = (8, 8))
+        """
+        Naive plotting of the raw data. This is usually used to visualise quickly the beam data read
+        :return: void
+        """
+
+        fig = plt.figure(figsize=(8, 8))
 
         ax = fig.add_subplot(1, 1, 1)
         ax.set_title("Beam %s" % self.id)
-        ax.imshow(self.snr.transpose(), aspect = 'auto',
-                  origin = 'lower', extent = [self.channels[0], self.channels[-1], 0, self.time[-1]])
+        ax.imshow(self.snr.transpose(), aspect='auto',
+                  origin='lower', extent=[self.channels[0], self.channels[-1], 0, self.time[-1]])
 
         ax.set_xlabel("Channel (kHz)")
         ax.set_ylabel("Time (s)")
@@ -86,11 +121,16 @@ class Beam:
 
     @staticmethod
     def get_data_set(file_path):
+        """
+        Return the file path of the data set associated with this Observation
+        :param: The file path of the folder which co
+        :return: The file path of the data_set
+        """
         data_sets = [each for each in os.listdir(file_path) if each.endswith('.dat')]
         return os.path.join(file_path, data_sets[0])
 
     @staticmethod
-    def add_mock_track(snr, start_coordinate = (120, 90), end_coordinate = (180, 140)):
+    def add_mock_track(snr, start_coordinate=(120, 90), end_coordinate=(180, 140)):
         track_points = LineGeneratorHelper.get_line(start_coordinate, end_coordinate)  # (x0, y0), (x1, y1)
         mean = np.mean(snr)
         for (channel, time) in track_points:
@@ -98,17 +138,17 @@ class Beam:
 
         return snr
 
-    def view(self, file_path, name = 'Beam Data'):
+    def view(self, file_path, name='Beam Data'):
         if name:
             self._view.name = name
 
-        self._view.set_layout(figure_title = name,
-                              x_axis_title = 'Frequency (Hz)',
-                              y_axis_title = 'Time (s)')
+        self._view.set_layout(figure_title=name,
+                              x_axis_title='Frequency (Hz)',
+                              y_axis_title='Time (s)')
 
-        self._view.set_data(data = self.snr.transpose(),
-                            x_axis = self.channels,
-                            y_axis = self.time)
+        self._view.set_data(data=self.snr.transpose(),
+                            x_axis=self.channels,
+                            y_axis=self.time)
 
         self._view.save(file_path)
 

@@ -7,8 +7,14 @@ from vendor import markup
 
 
 class TableMakerHelper:
-
+    """
+    The TableMakerHelper class can be used to create HTML tables.
+    """
     def __init__(self):
+        """
+        Initialises the default values of the TableMakerHelper class
+        :return: void
+        """
         self.headers = [
             'Epoch',
             'MJD2000',
@@ -22,16 +28,38 @@ class TableMakerHelper:
         self.caption = None
 
     def create(self, headers, rows):
+        """
+        Create HTML table
+
+        :param headers: The header columns of the table
+        :param rows: The rows data of the table
+        :return: void
+        """
         self.set_headers(headers)
         self.set_rows(rows)
 
     def set_caption(self, caption):
+        """
+        Create the caption of the HTML table
+        :param caption: The text of that is to be written as the caption
+        :return: void
+        """
         self.caption = caption
 
     def set_headers(self, headers):
+        """
+        Create the Headers of the HTML Table
+        :param headers: An array of strings to be used as headers
+        :return: void
+        """
         self.headers = headers
 
     def set_rows(self, rows):
+        """
+        Create the rows of the HTML Table
+        :param rows: An 2D array of strings to be used as the rows
+        :return: void
+        """
         self.rows = rows
 
     def create_table(self):

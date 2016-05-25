@@ -2,6 +2,8 @@ import os.path
 import config.application as config
 import config.database as DB
 import pymongo as mongo
+import logging as log
+import sys
 
 
 class SpaceDebrisCandidateCollection:
@@ -83,3 +85,6 @@ class SpaceDebrisCandidateCollection:
                 db.candidates.update(key, data, upsert= True)
             except mongo.errors.DuplicateKeyError:
                 pass
+            except mongo.errors.ServerSelectionTimeoutError:
+                log.error('MongoDB is not running. Exiting.')
+                sys.exit(1)
