@@ -74,10 +74,11 @@ class BandpassPlotter(Plotter):
         # Loop over all beams to plot
         self._figure.clf()
         plt.title("Bandpass plot")
-        divisor = 1.0# 1.0 / obs_info['nants']
+
         for index, beam in enumerate(self._beams_to_plot):
-            input_data[index, self._nchans / 2 - 1, :] = 1000
-            plt.plot(np.sum(np.abs(input_data[index, :, :]), axis=1) * divisor, label="Beam %d" % beam)
+            input_data[index, self._nchans / 2 - 1, :] = input_data[index, self._nchans / 2, :]
+            values = np.sum(np.abs(input_data[index, :, :]), axis=1)
+            plt.plot(np.log10(values), label="Beam %d" % beam)
             plt.xlabel("Frequency")
             plt.ylabel("Power")
             plt.xlim([self._channels_to_plot[0], self._channels_to_plot[-1]])
