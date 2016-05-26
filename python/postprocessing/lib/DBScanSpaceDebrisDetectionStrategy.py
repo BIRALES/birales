@@ -206,7 +206,7 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         db_scan_clusters = self.db_scan_cluster(beam.snr)
         clusters = self.interpolate_clusters(db_scan_clusters)
         clusters = self.delete_dirty_clusters(clusters, threshold = 0.85)
-        # clusters = self.merge_clusters(clusters)
+        clusters = self.merge_clusters(clusters)
 
         # Visualise clusters
         for i, cluster in enumerate(clusters.iterkeys()):

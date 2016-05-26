@@ -19,20 +19,15 @@ class SpaceDebrisController:
 
     def run(self):
         log.info('Processing data set %s in %s', self.observation.data_set, self.observation.name)
-        for beam in self.observation.beams[15:16]:
+        for beam in self.observation.beams:
             log.info('Analysing beam data from beam %s', beam.id)
             if config.SAVE_INPUT_DATA:
                 log.info('Input beam data saved in %s', config.INPUT_BEAM_FILE_NAME)
                 beam.save(file_name=config.INPUT_BEAM_FILE_NAME)
 
             # Pre-processing: Remove background noise from beam data
-            filtered_beam = Filters.remove_background_noise(beam, 3.)
+            filtered_beam = Filters.remove_background_noise(beam, 2.)
             log.info('Background noise removed from input beam %s', beam.id)
-
-            if filtered_beam.id == 14:
-                import numpy as np
-                print np.mean(beam.snr)
-                # exit(0)
 
             # Pre-processing: Remove transmitter channel from beam data
             filtered_beam = Filters.remove_transmitter_channel(filtered_beam)

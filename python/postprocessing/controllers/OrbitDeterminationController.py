@@ -29,7 +29,7 @@ class OrbitDeterminationController:
         return self.view_candidates(beam, candidates)
 
     @staticmethod
-    def view_candidates(beam, candidates):
+    def view_candidates(beam, candidates, show_beam_data=True):
         fig = plt.figure(figsize=(8, 8))
 
         ax = fig.add_subplot(1, 1, 1)
@@ -45,8 +45,40 @@ class OrbitDeterminationController:
             ax.plot(candidate['data']['frequency'], candidate['data']['time'], 'o', color=c,
                     label="Candidate " + str(i + 1))
 
-        ax.imshow(beam.snr.transpose(), aspect='auto', origin="lower",
-                  extent=[beam.channels[0], beam.channels[-1], 0, beam.time[-1]])
+        if show_beam_data:
+            ax.imshow(beam.snr.transpose(), aspect='auto', origin="lower",
+                      extent=[beam.channels[0], beam.channels[-1], 0, beam.time[-1]])
+        ax.ticklabel_format(useOffset=False)
+
+        # plt.show()
+        ax.legend()
+        canvas = FigureCanvas(fig)
+        output = StringIO.StringIO()
+        canvas.print_png(output)
+        response = make_response(output.getvalue())
+        response.mimetype = 'image/png'
+        return response
+
+    def get_candidates_image(self, observation, data_set, beam_id):
+        candidates = self.get_candidates(observation, data_set, beam_id)
+        return self.view_candidates_only(candidates, beam_id)
+
+    @staticmethod
+    def view_candidates_only(candidates, beam_id):
+        fig = plt.figure(figsize=(8, 8))
+
+        ax = fig.add_subplot(1, 1, 1)
+        ax.set_title("Beam %s" % beam_id)
+
+        ax.set_xlabel("Frequency (MHz)")
+        ax.set_ylabel("Time (s)")
+        colors = ['b', 'g', 'r', 'c', 'm', 'k', 'w', 'y']
+        color = itertools.cycle(colors)
+
+        for i, candidate in enumerate(list(candidates)):
+            c = next(color)
+            ax.plot(candidate['data']['frequency'], candidate['data']['time'], 'o', color=c,
+                    label="Candidate " + str(i + 1))
         ax.ticklabel_format(useOffset=False)
 
         # plt.show()

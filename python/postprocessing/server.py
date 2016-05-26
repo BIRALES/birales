@@ -7,6 +7,18 @@ from flask import Flask, render_template
 app = Flask(__name__, template_folder = 'views')
 
 
+@app.route("/birales/all_waterfalls/<observation>/<data_set>")
+def w_orbit_determination(observation='medicina_07_03_2016', data_set='1358'):
+    return render_template('waterfall_all.html', observation=observation, data_set=data_set, beams=range(0, 32))
+
+
+@app.route("/birales/all_waterfalls/<observation>/<data_set>/<beam_id>/candidates")
+def w_beam_data(observation='medicina_07_03_2016', data_set='mock_1358', beam_id=15):
+    od = OrbitDeterminationController()
+    response = od.get_candidates_image(observation, data_set, beam_id)
+
+    return response
+
 @app.route("/birales/images/<observation>/<data_set>/<beam_id>")
 def beam_data(observation = 'medicina_07_03_2016', data_set = 'mock_1358', beam_id = 15):
     """
