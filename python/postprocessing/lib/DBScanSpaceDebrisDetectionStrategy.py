@@ -216,14 +216,14 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
                     plt.plot(x, y, 'o', label = eq)
 
         if config.DEBUG_CANDIDATES:
-            plt.style.use('ggplot')
+            # plt.style.use('ggplot')
             plt.legend(loc = 'best', fancybox = True, framealpha = 0.5)
             plt.xlabel('Channel')
             plt.ylabel('Time')
             plt.tight_layout()
             plt.grid()
             manager = plt.get_current_fig_manager()
-            manager.resize(*manager.window.maxsize())
+            # manager.resize(*manager.window.maxsize())
             plt.show()
             exit(0)
 

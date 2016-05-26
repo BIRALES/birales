@@ -26,7 +26,7 @@ SAVE_INPUT_DATA = False
 SAVE_CANDIDATES = True
 
 # Visualise candidates on beam data (Heat map)
-VIEW_CANDIDATES = False
+VIEW_CANDIDATES = True
 
 # File name to give to the unprocessed input beam
 INPUT_BEAM_FILE_NAME = 'input_beam'
@@ -41,7 +41,7 @@ DETECTIONS_BEAM_FILE_NAME = 'detection_profile'
 OD_FILE_NAME = 'orbit_determination_data'
 
 # Output format for visualisations [HTML, PNG]
-VIEW_OUTPUT_FORMAT = 'PNG'
+VIEW_OUTPUT_FORMAT = 'HTML'
 
 # Location where to save the database [HTML, DB]
 CANDIDATES_SAVE = 'DB'

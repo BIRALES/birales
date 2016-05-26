@@ -40,13 +40,13 @@ class Beam:
         self.observation_name = observation.name
         self.data_set = Beam.get_data_set(observation.data_dir)
 
-        self.n_beams = observation.n_beams
-        self.n_channels = observation.n_channels
-        self.n_sub_channels = observation.n_sub_channels
+        self.n_beams = observation.data_set_config['nbeams']
+        self.n_channels = observation.data_set_config['nchans']
 
-        self.f_ch1 = observation.f_ch1
-        self.f_off = observation.f_off
-        self.sampling_rate = observation.sampling_rate
+        self.n_sub_channels = observation.data_set_config['nchans'] / 2
+        self.f_ch1 = observation.data_set_config['f_ch1']
+        self.f_off = observation.data_set_config['f_off']
+        self.sampling_rate = observation.data_set_config['sampling_rate']
 
         self.name = self.get_human_name()
 
@@ -80,11 +80,16 @@ class Beam:
 
         start = self.f_ch1 - ((20. / self.n_channels) * self.f_off)
         rate = ((20. / self.n_channels) / self.n_sub_channels) * 2
+        # rate = 20. / self.n_channels
+        # self.channels = np.arange(start, start + rate * self.n_channels, rate)
         self.channels = np.arange(start, start + rate * self.n_sub_channels * 2, rate)
         # self.time = np.arange(0, data.shape[0], 1)
         # self.channels = np.arange(0, data.shape[1], 1)
 
         self.snr = np.log10(data).transpose()
+
+        # self.im_view()
+        # exit(0)
         # self.snr = self.add_mock_tracks(self.snr)
 
     @staticmethod

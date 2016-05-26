@@ -17,7 +17,6 @@ class Filters:
         """
 
         beam.snr[beam.snr < np.mean(beam.snr) + std * np.std(beam.snr)] = 0.
-
         return beam
 
     @staticmethod
@@ -27,6 +26,7 @@ class Filters:
         :param beam:
         :return:
         """
+
         sum_across_time = beam.snr.sum(axis = 1)
         # todo determine how 20.0 threshold is determined
         peaks = np.where(sum_across_time > 20.)[0]

@@ -8,6 +8,7 @@ import logging as log
 import os
 import sys
 import getopt
+from glob import glob
 
 log.basicConfig(format=log_config.FORMAT, level=log.DEBUG)
 
@@ -32,13 +33,39 @@ def run():
         elif o is '-o':
             observation = o
 
+    def get_observations():
+        data = os.listdir(config.DATA_FILE_PATH)
+        observations_dir = [os.path.join(config.DATA_FILE_PATH, obs) for obs in data if
+                            os.path.isdir(os.path.join(config.DATA_FILE_PATH, obs))]
+        return observations_dir
+
+    def get_data_sets(observation_dir):
+        data = os.listdir(observation_dir)
+        data_sets_dirs = [os.path.join(observation_dir, d) for d in data if
+                          os.path.isdir(os.path.join(observation_dir, d))]
+        return data_sets_dirs
+
     if observation is None and data_set is None:
-        for observation in os.listdir(config.DATA_FILE_PATH):
-            for data_set in os.listdir(os.path.join(config.DATA_FILE_PATH, observation)):
-                odc = SpaceDebrisController(observation=observation, data_set=data_set, tx=399)
+        # observations = [os.path.join(config.DATA_FILE_PATH, o) for o in os.listdir(config.DATA_FILE_PATH) if
+        #                 os.path.isdir(os.path.join(config.DATA_FILE_PATH, o))]
+        # for observation in observations:
+        #     if os.path.isdir(os.path.join(config.DATA_FILE_PATH, observation)):
+        #         for data_set in os.listdir(os.path.join(config.DATA_FILE_PATH, observation)):
+        #             if os.path.isdir(os.path.join(config.DATA_FILE_PATH, observation, data_set)):
+        #                 odc = SpaceDebrisController(observation=observation, data_set=data_set)
+        #                 odc.run()
+
+        observations = get_observations()
+        for observation_dir in observations:
+            data_sets = get_data_sets(observation_dir)
+            for data_set_dir in data_sets:
+                observation = os.path.basename(observation_dir)
+                data_set = os.path.basename(data_set_dir)
+                odc = SpaceDebrisController(observation=observation, data_set=data_set)
                 odc.run()
+
     else:
-        odc = SpaceDebrisController(observation=observation, data_set=data_set, tx=399)
+        odc = SpaceDebrisController(observation=observation, data_set=data_set)
         odc.run()
 
         # else:

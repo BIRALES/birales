@@ -1,6 +1,8 @@
 import os
 import config.application as config
 import numpy as np
+import pickle
+import logging as log
 
 from xml.dom import minidom
 from models.Beam import Beam
@@ -15,7 +17,7 @@ class Observation:
     each Observation object.
     """
 
-    def __init__(self, name, data_set, tx):
+    def __init__(self, name, data_set):
         """
         Initialisation of the Observation object.
 
@@ -31,21 +33,14 @@ class Observation:
 
         self.observation_config = self.read_xml_config()
 
-        # Read from data_set's xml configuration
-        # todo replace this by a dedicate configure function
-        self.n_beams = self.get_n_beams()
-        self.n_channels = self.get_n_channels()
-        self.n_sub_channels = self.get_n_sub_channels()
-        self.tx = tx
-        self.f_ch1 = self.get_stop_channel()
-        self.f_off = -19531.25  # 20Mhz / 1024
-        self.f_off = self.get_start_channel()
-        self.sampling_rate = self.get_sampling_rate()
+        self.data_set_config = self._get_data_set_config(self.data_dir)
+
+        self.tx = self.data_set_config['transmitter_frequency']
 
         # Read the beam data from the data_set
         beam_data = self.read_data_file(
-            n_beams=self.n_beams,
-            n_channels=self.n_sub_channels * 2)
+            n_beams=self.data_set_config['nbeams'],
+            n_channels=self.data_set_config['nchans'])
 
         # Create beams an associate them with this observation
         self.beams = self.create_beams(beam_data)
@@ -114,8 +109,8 @@ class Observation:
         """
 
         # todo - What happens if n_sub_channels is odd? Index must be an integer
-        data1 = data[:, (self.n_sub_channels * 0.5):(self.n_sub_channels - 1), :]
-        data2 = data[:, (self.n_sub_channels * 1.5):, :]
+        data1 = data[:, (self.data_set_config['n_sub_channels'] * 0.5):(self.data_set_config['n_sub_channels'] - 1), :]
+        data2 = data[:, (self.data_set_config['n_sub_channels'] * 1.5):, :]
 
         # Merge the two data set into one data set
         return np.hstack((data1, data2))
@@ -130,16 +125,47 @@ class Observation:
         data_sets = [each for each in os.listdir(self.data_dir) if each.endswith('.dat')]
         return os.path.join(self.data_dir, data_sets[0])
 
-    def _configure_observation(self):
-        pass
+    def _get_file_with_extension(self, base_path, extension):
+        """
+        Return the file with this extension in the supplied directory
+
+        :param base_path: The base directory the file is contained in
+        :param extension: The extension of the file
+        :return: The full path of the file matching the extension requested
+        """
+        files = [each for each in os.listdir(self.data_dir) if each.endswith(extension)]
+        return os.path.join(base_path, files[0])
+
+    def _get_data_set_config(self, data_set_config_file_path):
+        """
+        Configure this observation with the settings of the pickle file in the data_set
+        :return: void
+        """
+        config_file_path = self._get_file_with_extension(data_set_config_file_path, '.pkl')
+        data_set_config = pickle.load(open(config_file_path, "rb"))
+        # print data_set_config
+        # data_set_config['nbeams'] = self.get_stop_channel()
+        # data_set_config['nchans'] = data_set_config.n_channels
+        # data_set_config.tx = data_set_config.transmitter_frequency
+
+        # todo change these to the pickle file
+        data_set_config['n_sub_channels'] = self.get_n_sub_channels()
+        data_set_config['f_ch1'] = self.get_stop_channel()
+        data_set_config['f_off'] = self.get_start_channel()
+        data_set_config['sampling_rate'] = self.get_sampling_rate()
+
+        return data_set_config
 
     # todo replace the below functionality with the configuration read from pickle file
     def read_xml_config(self):
         file_path = self.data_dir
-        files = [each for each in os.listdir(file_path) if each.endswith('.xml')]
-        xml_config = minidom.parse(os.path.join(file_path, files[0]))
-
-        return xml_config
+        try:
+            files = [each for each in os.listdir(file_path) if each.endswith('.xml')]
+            xml_config = minidom.parse(os.path.join(file_path, files[0]))
+            return xml_config
+        except IndexError:
+            log.error('XML configuration not found in' + file_path + '. Exiting.')
+            exit(1)
 
     def get_n_beams(self):
         beams = self.observation_config.getElementsByTagName('beam')

@@ -24,7 +24,7 @@ def beam_data(observation = 'medicina_07_03_2016', data_set = 'mock_1358', beam_
 
 
 @app.route("/birales/<observation>/<data_set>/<beam_id>")
-def orbit_determination(observation = 'medicina_07_03_2016', data_set = 'mock_1358', beam_id = 15):
+def orbit_determination(observation='medicina_07_03_2016', data_set='1358', beam_id=15):
     """
     Renders an html page with the candidates detected and beam data for a particular observation > data set > beam
 
