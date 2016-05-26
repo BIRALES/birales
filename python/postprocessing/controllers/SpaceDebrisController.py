@@ -19,7 +19,7 @@ class SpaceDebrisController:
 
     def run(self):
         log.info('Processing data set %s in %s', self.observation.data_set, self.observation.name)
-        for beam in self.observation.beams[14:16]:
+        for beam in self.observation.beams:
             log.info('Analysing beam data from beam %s', beam.id)
             if config.SAVE_INPUT_DATA:
                 log.info('Input beam data saved in %s', config.INPUT_BEAM_FILE_NAME)
