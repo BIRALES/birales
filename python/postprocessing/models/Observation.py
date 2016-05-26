@@ -157,7 +157,7 @@ class Observation:
         # data_set_config['f_off'] = data_set_config['channel_bandwidth'] * data_set_config['nchans']
 
         data_set_config['n_sub_channels'] = data_set_config['nchans']  # change or remove
-        data_set_config['sampling_rate'] = data_set_config['sampling_time'] / data_set_config['nchans']
+        data_set_config['sampling_rate'] = data_set_config['sampling_time']
         data_set_config['f_ch1'] = data_set_config['start_center_frequency']
         data_set_config['f_off'] = data_set_config['channel_bandwidth']
 
