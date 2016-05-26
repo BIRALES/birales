@@ -28,7 +28,7 @@ class SpaceDebrisCandidate:
             self.data['mdj2000'].append(SpaceDebrisCandidate.get_mdj2000(time))
             self.data['time_elapsed'].append(SpaceDebrisCandidate.time_elapsed(time))
             self.data['frequency'].append(channel)
-            self.data['doppler_shift'].append(SpaceDebrisCandidate.get_doppler_shift(self.tx, channel))
+            self.data['doppler_shift'].append(SpaceDebrisCandidate.get_doppler_shift(self.tx, channel) * 1e6)
             self.data['snr'].append(snr)
 
     def view(self, file_path, name = 'Candidate'):
@@ -97,7 +97,8 @@ class SpaceDebrisCandidate:
 
     @staticmethod
     def get_doppler_shift(tf, channel):
-        return tf - channel
+        # doppler = reflected frequency - transmission frequency
+        return channel - tf
 
     @staticmethod
     def time_elapsed(time):

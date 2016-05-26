@@ -85,8 +85,11 @@ class Beam:
         # rate = 20. / self.n_channels
         # self.channels = np.arange(start, start + rate * self.n_channels, rate)
         self.channels = np.arange(start, start + rate * self.n_sub_channels * 2, rate)
-        # self.time = np.arange(0, data.shape[0], 1)
-        # self.channels = np.arange(0, data.shape[1], 1)
+
+        self.time = np.arange(0, data.shape[0], 1)
+        self.channels = np.arange(0, data.shape[1], 1)
+
+        self.channels = np.arange(self.f_ch1, self.f_ch1 + self.f_off * self.n_channels, self.f_off)
 
         self.snr = np.log10(data).transpose()
 
