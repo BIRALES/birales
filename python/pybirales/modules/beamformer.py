@@ -157,7 +157,7 @@ class Pointing(Thread):
         self._reference_location = config.reference_antenna_location
         self._reference_pointing = config.reference_pointing
         self._pointings = config.pointings
-        self._bandwidth = settings.observation.bandwidth
+        self._bandwidth = settings.observation.channel_bandwidth
         self._nbeams = config.nbeams
         self._nants = nants
         self._nsubs = nsubs

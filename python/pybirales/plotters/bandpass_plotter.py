@@ -78,7 +78,7 @@ class BandpassPlotter(Plotter):
         for index, beam in enumerate(self._beams_to_plot):
             input_data[index, self._nchans / 2 - 1, :] = input_data[index, self._nchans / 2, :]
             values = np.sum(np.abs(input_data[index, :, :]), axis=1)
-            plt.plot(np.log10(values), label="Beam %d" % beam)
+            plt.plot(values, label="Beam %d" % beam)
             plt.xlabel("Frequency")
             plt.ylabel("Power")
             plt.xlim([self._channels_to_plot[0], self._channels_to_plot[-1]])

@@ -11,7 +11,7 @@ setup(
     author='Alessio Magro',
     author_email='alessio.magro@um.edu.mt',
     description='',
-    scripts=['pybirales/scripts/best2_server.py', 'pybirales/scripts/best2_client.py'],
+    scripts=['pybirales/scripts/best2_server.py', 'pybirales/scripts/best2_client.py', 'pybirales/scripts/best2_process_beams.py'],
     install_requires=['futures', 'enum34', "astropy", "astroplan",
                       "numpy", "matplotlib", "numba"],
 )

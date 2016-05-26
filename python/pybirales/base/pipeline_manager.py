@@ -93,7 +93,7 @@ class PipelineManager(object):
         if "observation" not in settings.__dict__:
             raise PipelineError("PipelineManager: observation section not found in configuration file")
 
-        if {"start_center_frequency", "bandwidth"} - set(settings.observation.settings()):
+        if {"start_center_frequency", "channel_bandwidth", "samples_per_second"} - set(settings.observation.settings()):
             raise PipelineError("PipelineManager: Missing keys in observation section "
                                 "(need start_center_frequency, bandwidth")
 
@@ -180,4 +180,3 @@ class PipelineManager(object):
                 module.join(2)
             if module.isAlive():
                 logging.warning("PipelineManager: Killing thread %s abruptly" % module.name)
-

@@ -69,8 +69,6 @@ class Persister(ProcessingModule):
 
         # If head file not written, write it now
         if not self._head_written:
-            obs_info['start_center_frequency'] = settings.observation.start_center_frequency
-            obs_info['bandwidth'] = settings.observation.bandwidth
             obs_info['transmitter_frequency'] = settings.observation.transmitter_frequency
             obs_info['start_beam_in_file'] = self._beam_range.start if self._beam_range.start is not None else 0
 
