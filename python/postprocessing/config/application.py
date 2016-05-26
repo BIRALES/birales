@@ -1,5 +1,9 @@
+import socket
+
 # Directory where observation data is stored
 DATA_FILE_PATH = 'data/'
+if socket.gethostname() is 'fahal':
+    DATA_FILE_PATH = '/data/'
 
 # Directory where to store results
 RESULTS_FILE_PATH = 'public/results'
