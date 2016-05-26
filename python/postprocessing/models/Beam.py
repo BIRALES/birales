@@ -39,7 +39,7 @@ class Beam:
 
         self.observation_name = observation.name
         self.data_set = Beam.get_data_set(observation.data_dir)
-
+        self.tx = observation.data_set_config['transmitter_frequency']
         self.n_beams = observation.data_set_config['nbeams']
         self.n_channels = observation.data_set_config['nchans']
 
@@ -55,6 +55,8 @@ class Beam:
         self.snr = None
 
         self.set_data(beam_data, self.id)
+        # if self.id == 15:
+        #     self.im_view()
 
     def save(self, file_name):
         beam_id = 'beam_' + str(self.id)

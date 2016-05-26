@@ -18,9 +18,8 @@ class OrbitDeterminationController:
         query = {
             "observation": observation,
             "data_set": data_set,
-            "beam": str(beam_id),
+            "beam": int(beam_id),
         }
-
         return self.db.candidates.find(query)
 
     def get_beam_data(self, observation, data_set, beam_id):
@@ -35,7 +34,6 @@ class OrbitDeterminationController:
 
         ax = fig.add_subplot(1, 1, 1)
         ax.set_title("Beam %s" % beam.id)
-        print len(beam.channels)
 
         ax.set_xlabel("Frequency (MHz)")
         ax.set_ylabel("Time (s)")
@@ -48,7 +46,7 @@ class OrbitDeterminationController:
                     label="Candidate " + str(i + 1))
 
         ax.imshow(beam.snr.transpose(), aspect='auto', origin="lower",
-                  extent=[beam.channels[0], beam.channels[len(beam.snr)], 0, beam.time[-1]])
+                  extent=[beam.channels[0], beam.channels[-1], 0, beam.time[-1]])
         ax.ticklabel_format(useOffset=False)
 
         # plt.show()

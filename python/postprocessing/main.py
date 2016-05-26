@@ -28,10 +28,10 @@ def run():
     observation = None
     data_set = None
     for o, a in myopts:
-        if o is '-d':
+        if o == '-d':
             data_set = a
-        elif o is '-o':
-            observation = o
+        elif o == '-o':
+            observation = a
 
     def get_observations():
         data = os.listdir(config.DATA_FILE_PATH)
@@ -46,15 +46,6 @@ def run():
         return data_sets_dirs
 
     if observation is None and data_set is None:
-        # observations = [os.path.join(config.DATA_FILE_PATH, o) for o in os.listdir(config.DATA_FILE_PATH) if
-        #                 os.path.isdir(os.path.join(config.DATA_FILE_PATH, o))]
-        # for observation in observations:
-        #     if os.path.isdir(os.path.join(config.DATA_FILE_PATH, observation)):
-        #         for data_set in os.listdir(os.path.join(config.DATA_FILE_PATH, observation)):
-        #             if os.path.isdir(os.path.join(config.DATA_FILE_PATH, observation, data_set)):
-        #                 odc = SpaceDebrisController(observation=observation, data_set=data_set)
-        #                 odc.run()
-
         observations = get_observations()
         for observation_dir in observations:
             data_sets = get_data_sets(observation_dir)

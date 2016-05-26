@@ -34,7 +34,6 @@ class Observation:
         self.observation_config = self.read_xml_config()
 
         self.data_set_config = self._get_data_set_config(self.data_dir)
-
         self.tx = self.data_set_config['transmitter_frequency']
 
         # Read the beam data from the data_set
@@ -43,9 +42,9 @@ class Observation:
             n_channels=self.data_set_config['nchans'])
 
         # Create beams an associate them with this observation
-        self.beams = self.create_beams(beam_data)
+        self.beams = self.create_beams(self.data_set_config['nbeams'], beam_data)
 
-    def create_beams(self, beam_data):
+    def create_beams(self, nbeams, beam_data):
         """
         Create an array of Beam objects from the beam data.
 
@@ -55,16 +54,17 @@ class Observation:
 
         # Read the number of beams from the data_set config file
         # todo this must be done from the pickle file
-        beams = self.observation_config.getElementsByTagName('beam')
+        # beams = self.observation_config.getElementsByTagName('beam')
 
+        # todo check how beam attribtues have to be determined
         def attr(key):
-            return beam.attributes[key].value
+            return 0.0
 
         beam_collection = []
 
         # Create beam objects for each beam in the config file
-        for beam in beams:
-            beam_collection.append(Beam(beam_id=attr('beamId'),
+        for beam in range(0, nbeams):
+            beam_collection.append(Beam(beam_id=beam,
                                         dec=attr('dec'),
                                         ra=attr('ra'),
                                         ha=attr('ha'),
@@ -97,7 +97,7 @@ class Observation:
 
         # De-mirror the beam data
         # Todo - maybe this can be done at the beamforming stage
-        data = self.de_mirror(data)
+        # data = self.de_mirror(data)
 
         return data
 
@@ -149,10 +149,19 @@ class Observation:
         # data_set_config.tx = data_set_config.transmitter_frequency
 
         # todo change these to the pickle file
-        data_set_config['n_sub_channels'] = self.get_n_sub_channels()
-        data_set_config['f_ch1'] = self.get_stop_channel()
-        data_set_config['f_off'] = self.get_start_channel()
-        data_set_config['sampling_rate'] = self.get_sampling_rate()
+        # data_set_config['n_sub_channels'] = self.get_n_sub_channels()
+        # data_set_config['f_ch1'] = self.get_stop_channel()
+        # data_set_config['f_off'] = self.get_start_channel()
+        # data_set_config['sampling_rate'] = self.get_sampling_rate()
+        # data_set_config['sampling_rate'] = 0.0000512
+        # data_set_config['f_off'] = data_set_config['channel_bandwidth'] * data_set_config['nchans']
+
+        data_set_config['n_sub_channels'] = data_set_config['nchans']  # change or remove
+        data_set_config['sampling_rate'] = data_set_config['sampling_time'] / data_set_config['nchans']
+        data_set_config['f_ch1'] = data_set_config['start_center_frequency']
+        data_set_config['f_off'] = data_set_config['start_center_frequency'] + data_set_config['channel_bandwidth'] * \
+                                                                               data_set_config['nchans']
+
 
         return data_set_config
 
@@ -165,7 +174,7 @@ class Observation:
             return xml_config
         except IndexError:
             log.error('XML configuration not found in' + file_path + '. Exiting.')
-            exit(1)
+            # exit(1)
 
     def get_n_beams(self):
         beams = self.observation_config.getElementsByTagName('beam')

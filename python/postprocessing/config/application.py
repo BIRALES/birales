@@ -12,7 +12,7 @@ RESULTS_FILE_PATH = 'public/results'
 SNR_DETECTION_THRESHOLD = 1.0
 
 # Maximum number of detections per beam
-MAX_DETECTIONS = 3
+MAX_DETECTIONS = 10
 
 # Algorithm to use for Detection [LineSpaceDebrisDetectionStrategy]
 DETECTION_STRATEGY = 'LineSpaceDebrisDetectionStrategy'
@@ -30,7 +30,7 @@ SAVE_INPUT_DATA = False
 SAVE_CANDIDATES = True
 
 # Visualise candidates on beam data (Heat map)
-VIEW_CANDIDATES = True
+VIEW_CANDIDATES = False
 
 # File name to give to the unprocessed input beam
 INPUT_BEAM_FILE_NAME = 'input_beam'

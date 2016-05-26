@@ -8,7 +8,7 @@ from lib.SpaceDebrisDetection import SpaceDebrisDetectionStrategy
 from models.SpaceDebrisCandidate import SpaceDebrisCandidate
 from sklearn.cluster import KMeans
 from sklearn.cluster import DBSCAN
-
+import logging as log
 
 class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
     def __init__(self, max_detections):
@@ -199,10 +199,14 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         return good_clusters
 
     def detect(self, beam):
+        if np.sum(beam.snr) == 0.0:
+            log.warning('SNR is 0 for filtered beam ' + str(beam))
+            return []
+
         db_scan_clusters = self.db_scan_cluster(beam.snr)
         clusters = self.interpolate_clusters(db_scan_clusters)
         clusters = self.delete_dirty_clusters(clusters, threshold = 0.85)
-        clusters = self.merge_clusters(clusters)
+        # clusters = self.merge_clusters(clusters)
 
         # Visualise clusters
         for i, cluster in enumerate(clusters.iterkeys()):
@@ -233,9 +237,8 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
             detection_data = np.array(
                     [[beam.channels[c], beam.time[t], beam.snr[c][t]] for (c, t) in cluster_data])
-            candidate = SpaceDebrisCandidate(tx = 100, beam = beam, detection_data = detection_data)
+            candidate = SpaceDebrisCandidate(tx=beam.tx, beam=beam, detection_data=detection_data)
             candidates.append(candidate)
-
         return candidates
 
     def detect_km(self, beam):
