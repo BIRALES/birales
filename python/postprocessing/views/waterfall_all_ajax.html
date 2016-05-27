@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Orbit determination input">
+    <meta name="author" content="">
+
+    <title>Orbit Determination | {{ observation }} - {{ data_set }}</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
+          integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css"
+          integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+
+    <style>
+        td.od_value {
+            font-size: 70%;
+            margin-left: 40px;
+            word-break: break-all;
+        }
+
+        #plots {
+            width: 600px;
+
+            height: 800px;
+        }
+    </style>
+
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- Numeric JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.min.js"></script>
+</head>
+<body>
+
+<!-- Modal -->
+<!-- Creates the bootstrap modal where the image will appear -->
+<div class="modal fade" id="imagemodal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                        class="sr-only">Close</span></button>
+                <h4 class="modal-title" id="myModalLabel">Image preview</h4>
+            </div>
+            <div class="modal-body">
+                <img src="" id="imagepreview" style="width: 100%;">
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="container">
+    <div class="page-header">
+        <h1>Orbit Determination</h1>
+        <h2>Observation <b>{{ observation }}</b> and data set <b>{{ data_set }}</b></h2>
+        <h2>
+            <small>Showing all beam data</small>
+        </h2>
+    </div>
+    <div class="row">
+        <div class="col-lg-12">
+            <!--{% for beam in beams %}-->
+
+            <!--<div id="plot_{{ beam }}" class="plots">-->
+            <!--</div>-->
+
+            <!--{% endfor %} -->
+            <div id="plots"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-2.2.3.min.js"
+        integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo="
+        crossorigin="anonymous">
+</script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"
+        integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS"
+        crossorigin="anonymous">
+</script>
+
+
+<script>
+    var domain_pos_x = [0, 0.45, 0.55, 1.0];
+    var domain_pos_y = [0, 0.45, 0.55, 1.0];
+    function build_x_axis(i) {
+        return {
+            autorange: true,
+            title: 'Frequency (Hz)',
+//            anchor: 'y' + i,
+//            domain: [domain_pos_x[i % 4], domain_pos_x[(i + 1) % 4]]
+        };
+    }
+
+    function build_y_axis(i) {
+        return {
+            autorange: true,
+            title: 'Time (s)',
+//            anchor: 'x' + i,
+//            domain: [domain_pos_y[i % 4], domain_pos_y[(i + 1) % 8]]
+        };
+    }
+
+    //    var layout = {
+    //        title: 'Beam',
+    //        xaxis1: build_x_axis(1),
+    //        xaxis2: build_x_axis(2),
+    //        xaxis3: build_x_axis(3),
+    //        xaxis4: build_x_axis(4),
+    //
+    //        yaxis1: build_y_axis(1),
+    //        yaxis2: build_y_axis(2),
+    //        yaxis3: build_y_axis(3),
+    //        yaxis4: build_y_axis(4),
+    //        yaxis5: build_y_axis(5),
+    //        yaxis6: build_y_axis(6),
+    //        yaxis7: build_y_axis(7),
+    //        yaxis8: build_y_axis(8),
+    //    };
+
+    //    var layout = {
+    //        xaxis: {domain: [0, 0.45]},
+    //        yaxis: {domain: [0, 0.45]},
+    //        xaxis4: {
+    //            domain: [0.55, 1],
+    //            anchor: 'y4'
+    //        },
+    //        xaxis2: {domain: [0.55, 1]},
+    //        yaxis3: {domain: [0.55, 1]},
+    //        yaxis4: {
+    //            domain: [0.55, 1],
+    //            anchor: 'x4'
+    //        }
+    //    };
+    var layout = {
+        xaxis: build_x_axis(1),
+        yaxis: build_y_axis(1),
+    };
+
+    var data;
+    var limit = -1;
+    $(document).ready(function () {
+                var observation = "{{ observation|safe }}";
+                var data_set = "{{ data_set|safe }}";
+
+
+                var x_axii = ['x', 'x2', 'x', 'x4'];
+                var y_axii = ['y', 'y2', 'y', 'y4'];
+
+                data_url = "{{request.url_root}}birales/rest/{{observation}}/{{data_set}}/candidates";
+                $.ajax({
+                    url: data_url,
+                    success: function (json) {
+                        data = [];
+                        $(json).each(function (beam_id, beam) {
+
+                            if (beam_id == limit) {
+                                return false;
+                            }
+                            var show_legend = true;
+                            var beam_color = '#' + Math.floor(Math.random() * 16777215).toString(16);
+
+                            if (beam.length === 0) {
+                                trace = {
+                                    x: [],
+                                    y: [],
+                                    type: 'scatter',
+                                    mode: 'markers',
+                                    name: 'beam ' + beam_id,
+//                                    xaxis: x_axii[(beam_id) % 4],
+//                                    yaxis: y_axii[(beam_id) % 4],
+                                    legendgroup: 'beam ' + beam_id,
+                                    showlegend: show_legend
+                                };
+                                data.push(trace);
+                            }
+
+                            $.each(beam, function (candidate, candidate_data) {
+                                trace = {
+                                    x: candidate_data.data.frequency,
+                                    y: candidate_data.data.time,
+                                    type: 'scatter',
+                                    mode: 'markers',
+                                    marker: {color: beam_color},
+                                    name: 'beam ' + beam_id + ' candidates',
+//                                    xaxis: x_axii[(beam_id) % 4],
+//                                    yaxis: y_axii[(beam_id) % 4],
+                                    legendgroup: 'beam ' + beam_id,
+                                    showlegend: show_legend
+                                };
+//console.log(trace);
+                                data.push(trace);
+                                show_legend = false;
+                            });
+
+//                    layout.xaxis = {
+//                            domain: domain_pos[beam_id % 4]
+//                        }
+                        });
+                        Plotly.newPlot("plots", data, layout);
+                    }
+                });
+
+                $(".plots").each(function (index) {
+
+//
+
+                });
+            }
+    );
+
+
+</script>
+</body>
+</html>

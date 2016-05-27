@@ -8,11 +8,28 @@ from models.Observation import Observation
 from matplotlib import pyplot as plt
 from flask import make_response
 
+import config.application as config
+import pickle
+import os
+
 
 class OrbitDeterminationController:
     def __init__(self):
         client = mongo.MongoClient(DB.HOST, DB.PORT)
         self.db = client['birales']
+
+    def get_pointings(self, observation, data_set):
+
+        data_set_config_file_path = os.path.join(config.DATA_FILE_PATH, observation, data_set)
+
+        def _get_file_with_extension(base_path, extension):
+            files = [each for each in os.listdir(data_set_config_file_path) if each.endswith(extension)]
+            return os.path.join(base_path, files[0])
+
+        config_file_path = _get_file_with_extension(data_set_config_file_path, '.pkl')
+        data_set_config = pickle.load(open(config_file_path, "rb"))
+
+        return data_set_config['reference_pointing'], data_set_config['pointings']
 
     def get_candidates(self, observation, data_set, beam_id):
         query = {
@@ -20,7 +37,7 @@ class OrbitDeterminationController:
             "data_set": data_set,
             "beam": int(beam_id),
         }
-        return self.db.candidates.find(query)
+        return self.db.candidates.find(query).sort("beam", mongo.ASCENDING)
 
     def get_beam_data(self, observation, data_set, beam_id):
         observation = Observation(observation, data_set)
