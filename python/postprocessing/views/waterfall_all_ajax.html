@@ -91,52 +91,16 @@
     function build_x_axis(i) {
         return {
             autorange: true,
-            title: 'Frequency (Hz)',
-//            anchor: 'y' + i,
-//            domain: [domain_pos_x[i % 4], domain_pos_x[(i + 1) % 4]]
+            title: 'Frequency (Hz)'
         };
     }
 
     function build_y_axis(i) {
         return {
             autorange: true,
-            title: 'Time (s)',
-//            anchor: 'x' + i,
-//            domain: [domain_pos_y[i % 4], domain_pos_y[(i + 1) % 8]]
+            title: 'Time (s)'
         };
     }
-
-    //    var layout = {
-    //        title: 'Beam',
-    //        xaxis1: build_x_axis(1),
-    //        xaxis2: build_x_axis(2),
-    //        xaxis3: build_x_axis(3),
-    //        xaxis4: build_x_axis(4),
-    //
-    //        yaxis1: build_y_axis(1),
-    //        yaxis2: build_y_axis(2),
-    //        yaxis3: build_y_axis(3),
-    //        yaxis4: build_y_axis(4),
-    //        yaxis5: build_y_axis(5),
-    //        yaxis6: build_y_axis(6),
-    //        yaxis7: build_y_axis(7),
-    //        yaxis8: build_y_axis(8),
-    //    };
-
-    //    var layout = {
-    //        xaxis: {domain: [0, 0.45]},
-    //        yaxis: {domain: [0, 0.45]},
-    //        xaxis4: {
-    //            domain: [0.55, 1],
-    //            anchor: 'y4'
-    //        },
-    //        xaxis2: {domain: [0.55, 1]},
-    //        yaxis3: {domain: [0.55, 1]},
-    //        yaxis4: {
-    //            domain: [0.55, 1],
-    //            anchor: 'x4'
-    //        }
-    //    };
     var layout = {
         xaxis: build_x_axis(1),
         yaxis: build_y_axis(1),
@@ -147,10 +111,6 @@
     $(document).ready(function () {
                 var observation = "{{ observation|safe }}";
                 var data_set = "{{ data_set|safe }}";
-
-
-                var x_axii = ['x', 'x2', 'x', 'x4'];
-                var y_axii = ['y', 'y2', 'y', 'y4'];
 
                 data_url = "{{request.url_root}}birales/rest/{{observation}}/{{data_set}}/candidates";
                 $.ajax({
@@ -172,8 +132,6 @@
                                     type: 'scatter',
                                     mode: 'markers',
                                     name: 'beam ' + beam_id,
-//                                    xaxis: x_axii[(beam_id) % 4],
-//                                    yaxis: y_axii[(beam_id) % 4],
                                     legendgroup: 'beam ' + beam_id,
                                     showlegend: show_legend
                                 };
@@ -188,33 +146,19 @@
                                     mode: 'markers',
                                     marker: {color: beam_color},
                                     name: 'beam ' + beam_id + ' candidates',
-//                                    xaxis: x_axii[(beam_id) % 4],
-//                                    yaxis: y_axii[(beam_id) % 4],
                                     legendgroup: 'beam ' + beam_id,
                                     showlegend: show_legend
                                 };
-//console.log(trace);
+
                                 data.push(trace);
                                 show_legend = false;
                             });
-
-//                    layout.xaxis = {
-//                            domain: domain_pos[beam_id % 4]
-//                        }
                         });
                         Plotly.newPlot("plots", data, layout);
                     }
                 });
-
-                $(".plots").each(function (index) {
-
-//
-
-                });
             }
     );
-
-
 </script>
 </body>
 </html>
