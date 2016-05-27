@@ -4,6 +4,8 @@ import logging
 import numpy as np
 from enum import Enum
 
+np.set_printoptions(threshold=np.nan)
+
 from pybirales.base import settings
 from pybirales.base.definitions import PipelineError, ObservationInfo
 from pybirales.base.processing_module import Generator
@@ -35,7 +37,7 @@ class Receiver(Generator):
 
         # Sanity checks on configuration
         if {'nsamp', 'nants', 'nsubs', 'port', 'interface', 'frame_size',
-            'frames_per_block', 'nblocks', 'nbits', 'complex', 'samples_per_second'} - set(config.settings()) != set():
+            'frames_per_block', 'nblocks', 'nbits', 'complex'} - set(config.settings()) != set():
             raise PipelineError("Receiver: Missing keys on configuration "
                                 "(nsamp, nants, nsubs, ports, interface, frame_size, frames_per_block, nblocks)")
         self._nsamp = config.nsamp
@@ -43,7 +45,7 @@ class Receiver(Generator):
         self._nsubs = config.nsubs
         self._nbits = config.nbits
         self._complex = config.complex
-        self._samples_per_second = config.samples_per_second
+        self._samples_per_second = settings.observation.samples_per_second
         self._start_time = 0
 
         # Define data type
@@ -91,7 +93,9 @@ class Receiver(Generator):
             values = np.frombuffer(values, np.complex64)
 
             obs_info = ObservationInfo()
-            obs_info['sampling_time'] = 0.0
+            obs_info['sampling_time'] = 1.0 / settings.observation.samples_per_second
+            obs_info['start_center_frequency'] = settings.observation.start_center_frequency
+            obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
             obs_info['timestamp'] = timestamp
             obs_info['nsubs'] = self._nsubs
             obs_info['nsamp'] = self._nsamp

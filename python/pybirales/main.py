@@ -13,6 +13,7 @@ from pybirales.modules.generator import DummyDataGenerator
 from pybirales.modules.persister import Persister
 from pybirales.modules.receiver import Receiver
 from pybirales.plotters.bandpass_plotter import BandpassPlotter
+from pybirales.plotters.antenna_plotter import AntennaPlotter
 from pybirales.plotters.channel_plotter import ChannelisedDataPlotter
 from pybirales.plotters.raw_data_plotter import RawDataPlotter
 from pybirales.plotters.raw_data_grid_plotter import RawDataGridPlotter
@@ -28,7 +29,8 @@ def test_receiver(manager):
     manager.add_module("terminator", terminator)
 
     #manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
-    manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
+    #manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
+    manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
 
 
 def birales_pipeline(manager):
