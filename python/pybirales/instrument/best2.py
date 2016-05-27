@@ -40,12 +40,12 @@ class BEST2(object):
         if not self._connected:
             logging.warn("BEST2: Not connected, cannot get current declination")
 
-        self._socket.sendall("best")  # Issue command
         data = None
         for i in range(3):
+            time.sleep(1)
+            self._socket.sendall("best")  # Issue command
             time.sleep(2)      # Wait for reply
             data = self._socket.recv(self._buffer_size)  # Get reply
-            print data
             if re.search("[0-9]+", data) is not None:
                 break
 

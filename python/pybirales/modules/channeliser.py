@@ -159,7 +159,7 @@ class PFB(ProcessingModule):
 
             # Fourier transform and save output
             self._current_output[beam, c * self._nchans: (c + 1) * self._nchans] = \
-                np.flipud(np.fft.fftshift(np.fft.fft(self._filtered[beam, c, :], axis=0)))
+                np.flipud(np.fft.fftshift(np.fft.fft(self._filtered[beam, c, :], axis=0), axes=0))
 
     def channelise_parallel(self):
         """ Perform channelisation, parallel version """
