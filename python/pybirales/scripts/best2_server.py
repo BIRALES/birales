@@ -1,21 +1,21 @@
 #!/usr/bin/env python
-
+ 
 # Copyright (C) 2016, Osservatorio di RadioAstronomia, INAF, Italy.
-#
+# 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-#
+# 
 # This program is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 # General Public License for more details.
-#
+# 
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-#
+# 
 # Correspondence concerning this software should be addressed as follows:
 #
 #	Andrea Mattana
@@ -25,8 +25,8 @@
 #	40059, Medicina (BO), Italy
 
 """
-Provides a socket comunication between the RS-232 lane
-of the Northern Cross Pointing System Computer
+Provides a socket comunication between the RS-232 lane 
+of the Northern Cross Pointing System Computer 
 done by Andrea Maccaferri for the Pulsar Scheduler(1990)
 """
 
@@ -39,7 +39,7 @@ import time
 import datetime
 import logging
 import logging.handlers
-import os, sys
+import os,sys
 
 __author__ = "Andrea Mattana"
 __copyright__ = "Copyright 2016, Osservatorio di RadioAstronomia, INAF, Italy"
@@ -62,10 +62,10 @@ MOVE_BEST = 'NS2 %s \r'
 MOVE_GO   = 'GO \r'
 
 # ANT_NUM
-EW    = 0
+EW    = 0   
 NORD2 = 1
 NORD1 = 2
-SUD1  = 3
+SUD1  = 3  
 SUD2  = 4
 
 # ERROR CODES
@@ -77,7 +77,7 @@ class Pointing:
         self._conn = socket.socket( socket.AF_INET , socket.SOCK_STREAM )
         self._conn.settimeout(5)
         logger.info("\tETH-RS232 Connecting to the Master...")
-        #print "\nConnecting to the Master... ",
+        #print "\nConnecting to the Master... ",       
         try:
             self._conn.connect((ip,port))
             logger.info("\tETH-RS232 Connection estabilished!")
@@ -149,17 +149,14 @@ class Pointing:
         return "MOVING!"
 
     def check(self):
-        self._conn.send(CHK_STATUS)
-        time.sleep(0.5)
-        self.send_cmd()
-        self.waiting = 0
-        while not self.waiting:
-            try:
-                ans = self._conn.recv(BUFF_LEN)
-                self.waiting = 1
-            except:
-                time.sleep(0.1)
-        return ans
+        try:
+            if self._send_cmd(CHK_STATUS):
+                ans = self._readLine()
+                return ans
+            else:
+                return ERR02
+        except:
+            return ERR01
 
     def get_status_string(self):
         try:
@@ -178,7 +175,7 @@ class Pointing:
 
 
 class SdebTCPHandler(SocketServer.BaseRequestHandler):
-
+    
     def handle(self):
         #try:
         #while True:
@@ -242,7 +239,7 @@ class SdebTCPServer(SocketServer.TCPServer):
             except:
                 #logger.error("Pointing Computer might be SWITCHED OFF!!")
                 return("ERROR - Pointing Computer might be SWITCHED OFF!!")
-        except:
+        except: 
             #logger.error("Can\'t be estabilished a connection with the ETH-RS232 adapter!")
             return("ERROR - Can\'t be estabilished a connection with the ETH-RS232 adapter!")
         P.close()
@@ -255,19 +252,19 @@ class SdebTCPServer(SocketServer.TCPServer):
             P = Pointing()
             try:
                 if newdec == "dont_move":
-                    ans = P.get_status_string()
-                    ans = ans.split()[NORD1]
+                    ans = P.get_status_string().split()[NORD1]
+                    logger.info("Answered: "+ans)
                 else:
                     ans = P.get_status_string()
                     logger.info("Requested to move the BEST from %s to %s"%(ans.split()[NORD1],newdec))
                     ans = P.set_dec(newdec)
                     ans = P.move_go()
                     ans = "MOVING!"
-
+                    
             except:
                 #logger.error("Pointing Computer might be SWITCHED OFF!!")
                 return("ERROR - Pointing Computer might be SWITCHED OFF!!")
-        except:
+        except: 
             #logger.error("Can\'t be estabilished a connection with the ETH-RS232 adapter!")
             return("ERROR - Can\'t be estabilished a connection with the ETH-RS232 adapter!")
         P.close()
@@ -288,7 +285,7 @@ class SdebTCPServer(SocketServer.TCPServer):
             except:
                 #logger.error("Pointing Computer might be SWITCHED OFF!!")
                 return("ERROR - Pointing Computer might be SWITCHED OFF!!")
-        except:
+        except: 
             #logger.error("Can\'t be estabilished a connection with the ETH-RS232 adapter!")
             return("ERROR - Can\'t be estabilished a connection with the ETH-RS232 adapter!")
         P.close()
@@ -324,8 +321,8 @@ class SdebTCPServer(SocketServer.TCPServer):
         return res
 
 
-# Setting up logging
-log_filename = "/tmp/best2_server.log"
+#Setting up logging    
+log_filename = "log/dataserver.log"
 logger = logging.getLogger('DataLogger')
 logger.setLevel(logging.INFO)
 formatter = logging.Formatter("%(asctime)s - %(levelname)s: %(message)s", "%Y/%m/%d_%H:%M:%S")
@@ -361,3 +358,7 @@ if __name__=="__main__":
         logger.info("Closing Comunication.")
 	del(server)
         logger.info("Ended Successfully")
+
+
+
+
