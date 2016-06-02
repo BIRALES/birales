@@ -112,7 +112,7 @@
                 var observation = "{{ observation|safe }}";
                 var data_set = "{{ data_set|safe }}";
 
-                data_url = "{{request.url_root}}birales/rest/{{observation}}/{{data_set}}/candidates";
+        data_url = "{{request.url_root}}birales/api/candidates/{{observation}}/{{data_set}}";
                 $.ajax({
                     url: data_url,
                     success: function (json) {

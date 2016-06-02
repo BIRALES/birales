@@ -19,7 +19,6 @@ class OrbitDeterminationController:
         self.db = client['birales']
 
     def get_pointings(self, observation, data_set):
-
         data_set_config_file_path = os.path.join(config.DATA_FILE_PATH, observation, data_set)
 
         def _get_file_with_extension(base_path, extension):
