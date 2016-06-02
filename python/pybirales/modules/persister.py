@@ -21,6 +21,10 @@ class Persister(ProcessingModule):
         if {'directory'} - set(config.settings()) != set():
             raise PipelineError("Persister: Missing keys on configuration. (directory)")
 
+        # Create directory if it doesn't exist
+        if not os.path.exists(config.directory):
+            os.mkdir(config.directory)
+
         # Create file
         if config.use_timestamp:
             filepath = os.path.join(config.directory, "%s_%s" % (config.filename, str(time.now())))
