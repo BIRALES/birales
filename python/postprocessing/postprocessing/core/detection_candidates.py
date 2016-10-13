@@ -64,9 +64,9 @@ class BeamSpaceDebrisCandidate:
         return DateTimeHelper.ephem2juldate(dates)
 
     def save(self):
-        if config.get('application', 'SAVE_CANDIDATES'):
+        if config.get('io', 'SAVE_CANDIDATES'):
             host = config.get('database', 'HOST')
-            port = config.get('database', 'PORT')
+            port = config.get_int('database', 'PORT')
             client = mongo.MongoClient(host, port)
             db = client['birales']
 
@@ -87,3 +87,5 @@ class BeamSpaceDebrisCandidate:
             except mongo.errors.ServerSelectionTimeoutError:
                 log.error('MongoDB is not running. Exiting.')
                 sys.exit(1)
+        else:
+            log.debug('Candidates were not saved in database')

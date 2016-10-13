@@ -40,7 +40,7 @@ class RemoveTransmitterChannelFilter(BeamDataFilter):
             beam.snr[peak][peak_snr > 0.0] -= mean
             beam.snr[peak][peak_snr < 0.0] = 0.0
 
-        log.debug('Transmitter frequency removed from filtered beam %s', beam.id)
+        log.debug('Filter: Transmitter frequency removed from filtered beam %s', beam.id)
 
 
 class RemoveBackgroundNoiseFilter(BeamDataFilter):
@@ -57,4 +57,4 @@ class RemoveBackgroundNoiseFilter(BeamDataFilter):
 
         beam.snr[beam.snr < np.mean(beam.snr) + self.std_threshold * np.std(beam.snr)] = 0.
 
-        log.debug('Background noise removed from input beam %s', beam.id)
+        log.debug('Filter: Background noise removed from input beam %s', beam.id)

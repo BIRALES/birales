@@ -111,6 +111,7 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         """
         Fit a line equation onto each cluster
         :param clusters:
+        :type clusters: dict A dictionary of clusters containing the detection data
         :return:
         """
         for cluster in clusters.iterkeys():
@@ -247,7 +248,6 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
             plt.grid()
 
             plt.show()
-            exit(0)
 
         candidates = []
         for cluster_id in clusters.iterkeys():

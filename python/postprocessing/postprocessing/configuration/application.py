@@ -29,6 +29,9 @@ class ApplicationConfiguration:
     def get_boolean(self, section, attribute):
         return self.config_parser.getboolean(section, attribute)
 
+    def get_int(self, section, attribute):
+        return self.config_parser.getint(section, attribute)
+
     @staticmethod
     def _init_logger(file_name='configuration/logging.ini'):
         fileConfig(file_name)

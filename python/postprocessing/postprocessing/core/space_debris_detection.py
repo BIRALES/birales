@@ -15,17 +15,19 @@ class SpaceDebrisDetector:
         Run the Space Debris Detector pipeline
         :return void
         """
-        log.info('Running space debris detection algorithm on %s beams', len(self.observation.beams))
         n_beam_candidates = 0
+        n_beams = len(self.observation.beams)
+        log.info('Running space debris detection algorithm on %s beams', n_beams)
         for beam in self.observation.beams:
             beam.apply_filters()
-            # beam.save()
-
             beam_candidates = self.detect_space_debris_candidates(beam)
             n_beam_candidates += len(beam_candidates)
-            # beam_candidates.save()
-            # map(BeamSpaceDebrisCandidate.save, beam_candidates)
-        log.info('%s beam space debris candidates were detected  algorithm on %s beams', len(self.observation.beams))
+
+            for beam_candidate in beam_candidates:
+                beam_candidate.save()
+
+            log.info('Beam candidates saved to database')
+        log.info('%s beam space debris candidates were detected across %s beams', n_beam_candidates, n_beams)
 
     def detect_space_debris_candidates(self, beam):
         log.debug('Running space debris detection algorithm on beam %s data', beam.id)

@@ -57,8 +57,7 @@ class DataSet:
         base_path = config.get('io', 'DATA_FILE_PATH')
         return os.path.join(base_path, observation_name, data_set_name, data_set_name + self.config_ext)
 
-    @staticmethod
-    def _read_data_set(data_set_file_path, n_beams, n_channels):
+    def _read_data_set(self, data_set_file_path, n_beams, n_channels):
         """
         Read beam data from the data_set file associated with this observation
         :param n_beams: The number of beams
@@ -69,10 +68,13 @@ class DataSet:
         start = time.time()
         if os.path.isfile(data_set_file_path):
             data = np.fromfile(data_set_file_path, dtype=np.dtype('f'))
-            n_samples = len(data) / (n_beams * n_channels * 1.)
+            n_samples = len(data) / (n_beams * n_channels)
             data = np.reshape(data, (n_samples, n_channels, n_beams))
 
             log.info('Data set data loaded in %s seconds', DataSet._time_taken(start))
+            log.info('Read %s samples (%s s), %s channels, %s beams', n_samples,
+                     round(self.config['sampling_rate'] * n_samples, 2), n_channels, n_beams)
+
             return data
 
         raise IOError('Data set was not found at ' + data_set_file_path)

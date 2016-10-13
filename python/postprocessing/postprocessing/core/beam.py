@@ -37,7 +37,7 @@ class Beam:
         self.frequency_offset = frequency_offset
 
         self.observation_name = data_set.observation.name
-        self.data_set_name = data_set.name
+        self.data_set = data_set
         self.tx = data_set.config['transmitter_frequency']
         self.n_beams = data_set.config['nbeams']
         self.n_channels = data_set.config['nchans']
@@ -60,7 +60,7 @@ class Beam:
 
     def _get_human_name(self):
         return 'Observation ' + inf.humanize(self.observation_name) + ' - ' + inf.humanize(
-            os.path.basename(self.data_set_name))
+            os.path.basename(self.data_set.name))
 
     def _set_data(self, beam_data):
         """
