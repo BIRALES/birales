@@ -1,7 +1,7 @@
 import socket
 
 # Directory where observation data is stored
-DATA_FILE_PATH = '/data/'
+DATA_FILE_PATH = 'data/'
 # DATA_FILE_PATH = '/mnt/fahal/data'
 if socket.gethostname() is 'fahal':
     DATA_FILE_PATH = '/data/'

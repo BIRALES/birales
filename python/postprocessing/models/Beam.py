@@ -134,7 +134,7 @@ class Beam:
     def get_data_set(file_path):
         """
         Return the file path of the data set associated with this Observation
-        :param: The file path of the folder which co
+        :param file_path: The file path of the folder which co
         :return: The file path of the data_set
         """
         data_sets = [each for each in os.listdir(file_path) if each.endswith('.dat')]

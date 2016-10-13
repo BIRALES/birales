@@ -59,21 +59,6 @@ def run():
         odc = SpaceDebrisController(observation=observation, data_set=data_set)
         odc.run()
 
-        # else:
-        #     # The observations / data sets which will be processed
-        #     observations = {
-        #         'medicina_07_03_2016': [
-        #             'mock_1358',
-        #             '1358',
-        #             '24773',
-        #             '25484',
-        #             '40058',
-        #             '5438',
-        #             '7434'
-        #         ]
-        #     }
-
-
 if not config.PROFILE:
     run()
 else:

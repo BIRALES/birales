@@ -2,15 +2,16 @@ import pymongo as mongo
 import config.database as DB
 import itertools
 import StringIO
+import config.application as config
+import pickle
+import os
+import numpy as np
+import operator
 
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from models.Observation import Observation
 from matplotlib import pyplot as plt
 from flask import make_response
-
-import config.application as config
-import pickle
-import os
 
 
 class OrbitDeterminationController:
@@ -36,7 +37,37 @@ class OrbitDeterminationController:
             "data_set": data_set,
             "beam": int(beam_id),
         }
-        return self.db.candidates.find(query).sort("beam", mongo.ASCENDING)
+
+        result = self.db.candidates.aggregate(
+            [{"$match": query},
+             # {"$sort": {"data.time": mongo.ASCENDING}}
+
+             ])  # ("data.time", mongo.DESCENDING)
+        return list(result)
+
+    def filter_candidate(self, candidates, min_time, min_frequency, max_frequency):
+        processed_candidates = []
+        for candidate in candidates:
+            mean_frequency = np.mean(candidate['data']['frequency'])
+            mean_time = np.mean(candidate['data']['time'])
+            if mean_time > min_time:
+                if min_frequency < mean_frequency < max_frequency:
+                    processed_candidates.append(candidate)
+        return processed_candidates
+
+    def get_candidates_min_time(self, candidates):
+        """
+        Return the mininum time across the given candidates
+        :param candidates: space debris candidates
+        :return: the minimum time
+        """
+        if candidates:
+            time = []
+            for candidate in candidates:
+                time += candidate['data']['time']
+            return np.min(time)
+        else:
+            raise ValueError('Candidates list is empty')
 
     def get_beam_data(self, observation, data_set, beam_id):
         observation = Observation(observation, data_set)
@@ -56,7 +87,7 @@ class OrbitDeterminationController:
         colors = ['b', 'g', 'r', 'c', 'm', 'k', 'w', 'y']
         color = itertools.cycle(colors)
 
-        for i, candidate in enumerate(list(candidates)):
+        for i, candidate in enumerate((candidates)):
             c = next(color)
             ax.plot(candidate['data']['frequency'], candidate['data']['time'], 'o', color=c,
                     label="Candidate " + str(i + 1))

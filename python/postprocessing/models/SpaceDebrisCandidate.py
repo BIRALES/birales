@@ -23,7 +23,8 @@ class SpaceDebrisCandidate:
         self.set_data(detection_data)
 
     def set_data(self, detection_data):
-        for channel, time, snr in detection_data:
+        # for channel, time, snr in detection_data:
+        for channel, time, snr in sorted(detection_data, key=lambda row: row[1]):
             self.data['time'].append(time)
             self.data['mdj2000'].append(SpaceDebrisCandidate.get_mdj2000(time))
             self.data['time_elapsed'].append(SpaceDebrisCandidate.time_elapsed(time))
@@ -31,11 +32,11 @@ class SpaceDebrisCandidate:
             self.data['doppler_shift'].append(SpaceDebrisCandidate.get_doppler_shift(self.tx, channel) * 1e6)
             self.data['snr'].append(snr)
 
-    def view(self, file_path, name = 'Candidate'):
+    def view(self, file_path, name='Candidate'):
         view = self.beam.data.get_view()
-        view.set_layout(figure_title = inf.humanize(name),
-                        x_axis_title = 'Frequency (Hz)',
-                        y_axis_title = 'Time (s)')
+        view.set_layout(figure_title=inf.humanize(name),
+                        x_axis_title='Frequency (Hz)',
+                        y_axis_title='Time (s)')
 
         # todo superimpose detection line as a scatter
         for time, channel in zip(self.data['time'], self.data['channel']):
@@ -43,11 +44,11 @@ class SpaceDebrisCandidate:
             if snr == 1.:
                 self.beam.data.snr[channel][time] = 2.0
 
-        view.set_data(data = self.beam.data.snr.transpose(),
-                      x_axis = self.beam.data.channels,
-                      y_axis = self.beam.data.time
+        view.set_data(data=self.beam.data.snr.transpose(),
+                      x_axis=self.beam.data.channels,
+                      y_axis=self.beam.data.time
                       )
-        view.show(file_path = file_path)
+        view.show(file_path=file_path)
 
     def get_detection_box(self):
         x0 = self.data['frequency'][0]
@@ -102,6 +103,7 @@ class SpaceDebrisCandidate:
 
     @staticmethod
     def time_elapsed(time):
+        return 'n/a'
         return time
 
     @staticmethod

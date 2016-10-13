@@ -11,7 +11,6 @@ from models.Observation import Observation
 # todo fix bug why frontend is not agreeing with back end plots
 # todo re implment front with client side plotting using plotly
 # todo fill in remaining pickle data
-# todo test using data
 # todo remove old code like xml config once you are sure it working
 class SpaceDebrisController:
     def __init__(self, observation='medicina_07_03_2016', data_set='mock_1358'):

@@ -23,7 +23,7 @@
         }
 
         #plots {
-            width: 600px;
+            /*width: 600px;*/
 
             height: 800px;
         }
@@ -64,13 +64,21 @@
     </div>
     <div class="row">
         <div class="col-lg-12">
-            <!--{% for beam in beams %}-->
-
-            <!--<div id="plot_{{ beam }}" class="plots">-->
-            <!--</div>-->
-
-            <!--{% endfor %} -->
-            <div id="plots"></div>
+            <div class="col-sm-8">
+                <h3>Candidates</h3>
+                <div id="plots"></div>
+            </div>
+            <div class="col-sm-4">
+                <h3>Pointings</h3>
+                <h4>Beam order</h4>
+                <div id="beam_firing_order"></div>
+                <div id="pointings"></div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-12">
+            <div id="candidates_table"></div>
         </div>
     </div>
 </div>
@@ -86,6 +94,85 @@
 
 
 <script>
+
+    function set_beam_firing_order(json_beam) {
+        $(json_beam).each(function (index, beam_id) {
+            var placeholder = '[BEAM_ID]';
+            var html = '' + placeholder + ' ';
+            $('#beam_firing_order').append(html.replace(placeholder, beam_id[0]));
+        });
+    }
+
+    function set_pointings(pointings) {
+        var reference = pointings.reference;
+        var beam_pointings = pointings.beams;
+        var shapes = [];
+        var data = [{
+            x: [],
+            y: [],
+            text: [],
+            mode: 'text'
+        }];
+        $(beam_pointings).each(function (beam_id, pointing_data) {
+            ra = pointing_data[0];
+            dec = pointing_data[1];
+            bw_ra = 1.75;
+            bw_dec = 0.5;
+
+            shape = {
+                type: 'circle',
+                xref: 'x',
+                yref: 'y',
+                x0: reference[0] + ra,
+                x1: reference[0] + ra + bw_ra,
+                y0: reference[1] + dec,
+                y1: reference[1] + dec + bw_dec
+            };
+            data[0].x.push(reference[0] + ra + (bw_ra * 0.5));
+            data[0].y.push(reference[1] + dec + (bw_dec * 0.5));
+            data[0].text.push(beam_id);
+
+            shapes.push(shape);
+        });
+
+        var layout = {
+            title: 'MultiBeam',
+            xaxis: {
+                autorange: true,
+                title: 'ra (deg)'
+            },
+            yaxis: {
+                autorange: true,
+                title: 'dec (deg)'
+            },
+            width: 500,
+            height: 500,
+            shapes: shapes
+        };
+
+        Plotly.newPlot('pointings', data, layout);
+    }
+
+
+    function set_beam_data(json_beam) {
+        $(json_beam).each(function (index, beam_id) {
+            var placeholder = '[BEAM ID]';
+            var html = '<div id="candidate_beam_' + placeholder + '"></div>';
+            $('#candidates_table').append(html.replace(placeholder, beam_id[0]));
+        });
+
+        $(json_beam).each(function (index, beam_id) {
+            data_url = "{{request.url_root}}birales/api/candidates/table/{{observation}}/{{data_set}}/" + beam_id[0];
+            $.ajax({
+                url: data_url,
+                success: function (response) {
+                    $('#candidate_beam_' + beam_id[0]).html(response);
+                }
+            });
+        });
+    }
+
+
     var domain_pos_x = [0, 0.45, 0.55, 1.0];
     var domain_pos_y = [0, 0.45, 0.55, 1.0];
     function build_x_axis(i) {
@@ -103,8 +190,9 @@
     }
     var layout = {
         xaxis: build_x_axis(1),
-        yaxis: build_y_axis(1),
+        yaxis: build_y_axis(1)
     };
+
 
     var data;
     var limit = -1;
@@ -117,8 +205,7 @@
                     url: data_url,
                     success: function (json) {
                         data = [];
-                        $(json).each(function (beam_id, beam) {
-
+                        $(json['candidates']).each(function (beam_id, beam) {
                             if (beam_id == limit) {
                                 return false;
                             }
@@ -131,8 +218,8 @@
                                     y: [],
                                     type: 'scatter',
                                     mode: 'markers',
-                                    name: 'beam ' + beam_id,
-                                    legendgroup: 'beam ' + beam_id,
+                                    name: 'beam ' + beam.beam,
+                                    legendgroup: 'beam ' + beam.beam,
                                     showlegend: show_legend
                                 };
                                 data.push(trace);
@@ -145,8 +232,8 @@
                                     type: 'scatter',
                                     mode: 'markers',
                                     marker: {color: beam_color},
-                                    name: 'beam ' + beam_id + ' candidates',
-                                    legendgroup: 'beam ' + beam_id,
+                                    name: 'beam ' + candidate_data.beam,
+                                    legendgroup: 'beam ' + candidate_data.beam,
                                     showlegend: show_legend
                                 };
 
@@ -155,6 +242,13 @@
                             });
                         });
                         Plotly.newPlot("plots", data, layout);
+
+                        // Set beam firing order
+                        set_beam_firing_order(json['beam_firing_order']);
+
+                        set_pointings(json['pointings']);
+
+                        set_beam_data(json['beam_firing_order'])
                     }
                 });
             }
