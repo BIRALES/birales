@@ -12,7 +12,7 @@ def application(observation, data_set):
     :param data_set The data_set to be processed
     :return:
     """
-    odc = SpaceDebrisDetector(observation=observation, data_set=data_set)
+    odc = SpaceDebrisDetector(observation_name=observation, data_set_name=data_set)
     odc.run()
 
 

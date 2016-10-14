@@ -36,7 +36,7 @@ class Beam:
         self.top_frequency = top_frequency
         self.frequency_offset = frequency_offset
 
-        self.observation_name = data_set.observation.name
+        self.observation_name = data_set.observation_name
         self.data_set = data_set
         self.tx = data_set.config['transmitter_frequency']
         self.n_beams = data_set.config['nbeams']
