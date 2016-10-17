@@ -6,7 +6,7 @@ import time
 
 from beam import Beam
 from configuration.application import config
-
+from datetime import datetime
 
 class DataSet:
     """
@@ -81,7 +81,7 @@ class DataSet:
         # todo - check how beam attributes have to be determined
         beams = []
         for n_beam in range(0, self.n_beams):
-            log.info('Generating beam %s from data set %s', n_beam, self.name)
+            log.debug('Generating beam %s from data set %s', n_beam, self.name)
             beam = Beam(beam_id=n_beam,
                         dec=0.0,
                         ra=0.0,
@@ -132,3 +132,5 @@ class DataSet:
         yield 'n_channels', self.n_channels
         yield 'n_beams', self.n_beams
         yield 'tx', self.tx
+        yield 'created_at', datetime.now()
+        yield 'config', self.config

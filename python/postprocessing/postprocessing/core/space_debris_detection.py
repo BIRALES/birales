@@ -3,6 +3,7 @@ from data_set import DataSet
 from detection_strategies import DBScanSpaceDebrisDetectionStrategy
 from detection_candidates import BeamSpaceDebrisCandidate
 from repository import DataSetRepository
+from repository import BeamCandidateRepository
 
 
 class SpaceDebrisDetector:
@@ -16,21 +17,19 @@ class SpaceDebrisDetector:
         Run the Space Debris Detector pipeline
         :return void
         """
-        n_beam_candidates = 0
-        n_beams = len(self.data_set.beams)
-        log.info('Running space debris detection algorithm on %s beams', n_beams)
+        log.info('Running space debris detection algorithm on %s beams', len(self.data_set.beams))
+
+        beam_candidates = []
         for beam in self.data_set.beams:
-            beam_candidates = self.detect_space_debris_candidates(beam)
-            n_beam_candidates += len(beam_candidates)
+            beam_candidates += self.detect_space_debris_candidates(beam)
 
-            # for beam_candidate in beam_candidates:
-            #     beam_candidate.save()
-
-            log.info('Beam candidates saved to database')
-        log.info('%s beam space debris candidates were detected across %s beams', n_beam_candidates, n_beams)
-
-        data_set_repository = DataSetRepository(self.data_set)
+        # Persist data_set to database
+        data_set_repository = DataSetRepository()
         data_set_repository.persist(self.data_set)
+
+        # Persist beam candidates to database
+        beam_candidates_repository = BeamCandidateRepository(self.data_set)
+        beam_candidates_repository.persist(beam_candidates)
 
     def detect_space_debris_candidates(self, beam):
         beam.apply_filters()
@@ -38,5 +37,5 @@ class SpaceDebrisDetector:
         log.debug('Running space debris detection algorithm on beam %s data', beam.id)
         candidates = self.detection_strategy.detect(beam)
 
-        log.info('%s candidates where detected in beam %s', len(candidates), beam.id)
+        log.info('%s candidates were detected in beam %s', len(candidates), beam.id)
         return candidates

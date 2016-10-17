@@ -1,9 +1,5 @@
-import logging as log
-import pymongo as mongo
-import sys
-
 from helpers import DateTimeHelper
-from configuration.application import config
+from datetime import datetime
 
 
 class SpaceDebrisCandidate:
@@ -63,29 +59,8 @@ class BeamSpaceDebrisCandidate:
     def _get_mdj2000(dates):
         return DateTimeHelper.ephem2juldate(dates)
 
-    def save(self):
-        if config.get('io', 'SAVE_CANDIDATES'):
-            host = config.get('database', 'HOST')
-            port = config.get_int('database', 'PORT')
-            client = mongo.MongoClient(host, port)
-            db = client['birales']
-
-            data = {
-                '_id': self.id,
-                'data': self.data,
-                'beam': self.beam.id,
-                'observation': self.beam.observation_name,
-                'data_set': self.beam.data_set.name,
-                'tx': self.beam.tx,
-            }
-
-            try:
-                key = {'_id': self.id}
-                db.candidates.update(key, data, upsert=True)
-            except mongo.errors.DuplicateKeyError:
-                pass
-            except mongo.errors.ServerSelectionTimeoutError:
-                log.error('MongoDB is not running. Exiting.')
-                sys.exit(1)
-        else:
-            log.debug('Candidates were not saved in database')
+    def __iter__(self):
+        yield '_id', self.id
+        yield 'data', self.data
+        yield 'data_set_id', self.beam.data_set.id
+        yield 'created_at', datetime.now()
