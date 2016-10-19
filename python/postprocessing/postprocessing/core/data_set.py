@@ -8,6 +8,7 @@ from beam import Beam
 from configuration.application import config
 from datetime import datetime
 
+
 class DataSet:
     """
     The DataSet class encapsulates the logic for reading and creating the beam data from the data set
@@ -16,11 +17,12 @@ class DataSet:
     config_ext = '.dat.pkl'
     data_set_ext = '.dat'
 
-    def __init__(self, observation_name, data_set_name):
+    def __init__(self, observation_name, data_set_name, n_beams):
         """
         Initialise the Data Set object
         :param observation_name:
         :param data_set_name:
+        :param n_beams:
         :return:
         """
         self.observation_name = observation_name
@@ -30,7 +32,7 @@ class DataSet:
         self.config_file_path = self._get_config_file_path(self.observation_name, data_set_name)
 
         self.config = self._init_data_set_config(self.config_file_path)
-        self.n_beams = self.config['nbeams']
+        self.n_beams = int(n_beams) or self.config['nbeams']
         self.n_channels = self.config['nchans']
         self.tx = self.config['transmitter_frequency']
 
@@ -57,6 +59,8 @@ class DataSet:
         start = time.time()
         if os.path.isfile(data_set_file_path):
             data = np.fromfile(data_set_file_path, dtype=np.dtype('f'))
+            limit = n_beams / float(self.config['nbeams']) * len(data)
+            data = data[:int(limit)]
             n_samples = len(data) / (n_beams * n_channels)
             data = np.reshape(data, (n_samples, n_channels, n_beams))
 
@@ -76,7 +80,7 @@ class DataSet:
         """
 
         # Read the data set data
-        data_set_data = self._read_data_set(self.data_file_path, self.n_beams, self.n_channels)
+        data_set_data = self._read_data_set(self.data_file_path, self.config['nbeams'], self.config['nchans'])
 
         # todo - check how beam attributes have to be determined
         beams = []
