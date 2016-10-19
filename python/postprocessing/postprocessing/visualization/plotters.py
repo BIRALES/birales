@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import logging as log
+
 from configuration.application import config
 from abc import abstractmethod
 
@@ -45,6 +47,7 @@ class MultiLineMatplotlibPlotter(Plotter):
 
         file_path = os.path.join(self.output_dir, file_name + self.ext)
         fig.savefig(file_path)
+        log.info('%s visualisation saved in %s', file_name, file_path)
 
     def _build(self):
         fig, axs = plt.subplots(nrows=self.n_rows, ncols=self.n_cols, sharex=True, sharey=True, figsize=self.fig_size)
@@ -112,6 +115,7 @@ class MultiWaterfallMatplotlibPlotter(Plotter):
 
         file_path = os.path.join(self.output_dir, file_name + self.ext)
         fig.savefig(file_path)
+        log.debug('%s visualisation saved in %s', file_name, file_path)
 
     def _build(self):
         fig, axs = plt.subplots(nrows=self.n_rows, ncols=self.n_cols, sharex=True, sharey=True, figsize=self.fig_size)
