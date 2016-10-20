@@ -1,4 +1,5 @@
 import click
+
 from core.space_debris_detection import SpaceDebrisDetector
 
 

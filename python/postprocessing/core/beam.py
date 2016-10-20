@@ -1,10 +1,11 @@
 import os.path
-import numpy as np
-import inflection as inf
 
+import inflection as inf
+import numpy as np
 from matplotlib import pyplot as plt
-from filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter
+
 from configuration.application import config
+from filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter
 from helpers import LineGeneratorHelper
 
 

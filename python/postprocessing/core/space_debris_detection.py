@@ -1,10 +1,11 @@
 import logging as log
+
+from configuration.application import config
 from data_set import DataSet
 from detection_strategies import DBScanSpaceDebrisDetectionStrategy
-from repository import DataSetRepository
 from repository import BeamCandidateRepository
+from repository import DataSetRepository
 from visualization.beam import MultiBeamVisualisation
-from configuration.application import config
 
 
 class SpaceDebrisDetector:

@@ -1,12 +1,13 @@
-import os
-import numpy as np
-import pickle
 import logging as log
+import os
+import pickle
 import time
+from datetime import datetime
+
+import numpy as np
 
 from beam import Beam
 from configuration.application import config
-from datetime import datetime
 
 
 class DataSet:

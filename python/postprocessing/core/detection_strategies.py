@@ -1,10 +1,11 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import logging as log
+from abc import abstractmethod
+
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.cluster import DBSCAN
 
 from configuration.application import config
-from abc import abstractmethod
-from sklearn.cluster import DBSCAN
 from detection_candidates import BeamSpaceDebrisCandidate
 
 

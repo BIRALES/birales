@@ -1,10 +1,11 @@
+import logging as log
+import os
+from abc import abstractmethod
+
 import matplotlib.pyplot as plt
 import numpy as np
-import os
-import logging as log
 
 from configuration.application import config
-from abc import abstractmethod
 
 
 class Plotter:

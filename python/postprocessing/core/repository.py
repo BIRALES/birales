@@ -1,8 +1,10 @@
-from abc import abstractmethod
-from configuration.application import config
-import pymongo as mongo
 import logging as log
 import sys
+from abc import abstractmethod
+
+import pymongo as mongo
+
+from configuration.application import config
 
 
 class Repository:

@@ -1,8 +1,7 @@
-import os
 import logging as log
-
-from logging.config import fileConfig
+import os
 from ConfigParser import ConfigParser
+from logging.config import fileConfig
 
 
 class ApplicationConfiguration:
