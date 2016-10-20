@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from visualization.app.common.plotters import MultiLineMatplotlibPlotter, MultiWaterfallMatplotlibPlotter
+from visualization.api.common.plotters import MultiLineMatplotlibPlotter, MultiWaterfallMatplotlibPlotter
 
 
 class MultiBeamVisualisation:
