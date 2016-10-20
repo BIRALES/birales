@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Orbit determination input">
+    <meta name="author" content="">
+
+    <title>Orbit Determination | {{ observation }} - {{ data_set }}</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
+          integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css"
+          integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+
+    <style>
+        td.od_value {
+            font-size: 70%;
+            margin-left: 40px;
+            word-break: break-all;
+        }
+
+        #plots {
+            /*width: 600px;*/
+
+            height: 800px;
+        }
+    </style>
+
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- Numeric JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.min.js"></script>
+</head>
+<body>
+
+<!-- Modal -->
+<!-- Creates the bootstrap modal where the image will appear -->
+<div class="modal fade" id="imagemodal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                        class="sr-only">Close</span></button>
+                <h4 class="modal-title" id="myModalLabel">Image preview</h4>
+            </div>
+            <div class="modal-body">
+                <img src="" id="imagepreview" style="width: 100%;">
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="container">
+    <div class="page-header">
+        <h1>Orbit Determination</h1>
+        <h2>Observation <b>{{ observation }}</b> and data set <b>{{ data_set }}</b></h2>
+        <h2>
+            <small>Showing all beam data</small>
+        </h2>
+    </div>
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="col-sm-8">
+                <h3>Candidates</h3>
+                <div id="plots"></div>
+            </div>
+            <div class="col-sm-4">
+                <h3>Pointings</h3>
+                <h4>Beam order</h4>
+                <div id="beam_firing_order"></div>
+                <div id="pointings"></div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-12">
+            <div id="candidates_table"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-2.2.3.min.js"
+        integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo="
+        crossorigin="anonymous">
+</script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"
+        integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS"
+        crossorigin="anonymous">
+</script>
+
+
+<script>
+
+    function set_beam_firing_order(json_beam) {
+        $(json_beam).each(function (index, beam_id) {
+            var placeholder = '[BEAM_ID]';
+            var html = '' + placeholder + ' ';
+            $('#beam_firing_order').append(html.replace(placeholder, beam_id[0]));
+        });
+    }
+
+    function set_pointings(pointings) {
+        var reference = pointings.reference;
+        var beam_pointings = pointings.beams;
+        var shapes = [];
+        var data = [{
+            x: [],
+            y: [],
+            text: [],
+            mode: 'text'
+        }];
+        $(beam_pointings).each(function (beam_id, pointing_data) {
+            ra = pointing_data[0];
+            dec = pointing_data[1];
+            bw_ra = 1.75;
+            bw_dec = 0.5;
+
+            shape = {
+                type: 'circle',
+                xref: 'x',
+                yref: 'y',
+                x0: reference[0] + ra,
+                x1: reference[0] + ra + bw_ra,
+                y0: reference[1] + dec,
+                y1: reference[1] + dec + bw_dec
+            };
+            data[0].x.push(reference[0] + ra + (bw_ra * 0.5));
+            data[0].y.push(reference[1] + dec + (bw_dec * 0.5));
+            data[0].text.push(beam_id);
+
+            shapes.push(shape);
+        });
+
+        var layout = {
+            title: 'MultiBeam',
+            xaxis: {
+                autorange: true,
+                title: 'ra (deg)'
+            },
+            yaxis: {
+                autorange: true,
+                title: 'dec (deg)'
+            },
+            width: 500,
+            height: 500,
+            shapes: shapes
+        };
+
+        Plotly.newPlot('pointings', data, layout);
+    }
+
+
+    function set_beam_data(json_beam) {
+        $(json_beam).each(function (index, beam_id) {
+            var placeholder = '[BEAM ID]';
+            var html = '<div id="candidate_beam_' + placeholder + '"></div>';
+            $('#candidates_table').append(html.replace(placeholder, beam_id[0]));
+        });
+
+        $(json_beam).each(function (index, beam_id) {
+            data_url = "{{request.url_root}}birales/api/candidates/table/{{observation}}/{{data_set}}/" + beam_id[0];
+            $.ajax({
+                url: data_url,
+                success: function (response) {
+                    $('#candidate_beam_' + beam_id[0]).html(response);
+                }
+            });
+        });
+    }
+
+
+    var domain_pos_x = [0, 0.45, 0.55, 1.0];
+    var domain_pos_y = [0, 0.45, 0.55, 1.0];
+    function build_x_axis(i) {
+        return {
+            autorange: true,
+            title: 'Frequency (Hz)'
+        };
+    }
+
+    function build_y_axis(i) {
+        return {
+            autorange: true,
+            title: 'Time (s)'
+        };
+    }
+    var layout = {
+        xaxis: build_x_axis(1),
+        yaxis: build_y_axis(1)
+    };
+
+
+    var data;
+    var limit = -1;
+    $(document).ready(function () {
+                var observation = "{{ observation|safe }}";
+                var data_set = "{{ data_set|safe }}";
+
+                data_url = "{{request.url_root}}birales/api/candidates/{{observation}}/{{data_set}}";
+                $.ajax({
+                    url: data_url,
+                    success: function (json) {
+                        data = [];
+                        $(json['candidates']).each(function (beam_id, beam) {
+                            if (beam_id == limit) {
+                                return false;
+                            }
+                            var show_legend = true;
+                            var beam_color = '#' + Math.floor(Math.random() * 16777215).toString(16);
+
+                            if (beam.length === 0) {
+                                trace = {
+                                    x: [],
+                                    y: [],
+                                    type: 'scatter',
+                                    mode: 'markers',
+                                    name: 'beam ' + beam.beam,
+                                    legendgroup: 'beam ' + beam.beam,
+                                    showlegend: show_legend
+                                };
+                                data.push(trace);
+                            }
+
+                            $.each(beam, function (candidate, candidate_data) {
+                                trace = {
+                                    x: candidate_data.data.frequency,
+                                    y: candidate_data.data.time,
+                                    type: 'scatter',
+                                    mode: 'markers',
+                                    marker: {color: beam_color},
+                                    name: 'beam ' + candidate_data.beam,
+                                    legendgroup: 'beam ' + candidate_data.beam,
+                                    showlegend: show_legend
+                                };
+
+                                data.push(trace);
+                                show_legend = false;
+                            });
+                        });
+                        Plotly.newPlot("plots", data, layout);
+
+                        // Set beam firing order
+                        set_beam_firing_order(json['beam_firing_order']);
+
+                        set_pointings(json['pointings']);
+
+                        set_beam_data(json['beam_firing_order'])
+                    }
+                });
+            }
+    );
+</script>
+</body>
+</html>
