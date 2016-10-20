@@ -5,7 +5,7 @@ from data_set import DataSet
 from detection_strategies import DBScanSpaceDebrisDetectionStrategy
 from repository import BeamCandidateRepository
 from repository import DataSetRepository
-from visualization.beam import MultiBeamVisualisation
+from visualization import MultiBeamVisualisation
 
 
 class SpaceDebrisDetector:
