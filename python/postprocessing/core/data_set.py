@@ -33,7 +33,7 @@ class DataSet:
         self.config_file_path = self._get_config_file_path(self.observation_name, data_set_name)
 
         self.config = self._init_data_set_config(self.config_file_path)
-        self.n_beams = n_beams or self.config['nbeams']
+        self.n_beams = int(n_beams) or self.config['nbeams']
         self.n_channels = self.config['nchans']
         self.tx = self.config['transmitter_frequency']
 
@@ -83,7 +83,6 @@ class DataSet:
         # Read the data set data
         data_set_data = self._read_data_set(self.data_file_path, self.config['nbeams'], self.config['nchans'])
 
-        # todo - check how beam attributes have to be determined
         beams = []
         for n_beam in range(0, self.n_beams):
             log.debug('Generating beam %s from data set %s', n_beam, self.name)
@@ -96,7 +95,6 @@ class DataSet:
                         data_set=self, beam_data=data_set_data)
 
             beams.append(beam)
-
         return beams
 
     @staticmethod

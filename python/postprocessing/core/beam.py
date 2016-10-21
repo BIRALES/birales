@@ -47,6 +47,7 @@ class Beam:
         self.f_ch1 = data_set.config['f_ch1']
         self.f_off = data_set.config['f_off']
         self.sampling_rate = data_set.config['sampling_rate']
+        self.n_samples = data_set.config['nsamp']
 
         self.name = self._get_human_name()
 
@@ -54,6 +55,7 @@ class Beam:
         self.time = None
         self.snr = None
 
+        # self.data = beam_data[:, :, self.id]
         self._set_data(beam_data)
 
         if config.get_boolean('debug', 'DEBUG_BEAMS'):
@@ -72,9 +74,9 @@ class Beam:
         """
         data = beam_data[:, :, self.id]
 
-        self.time = np.arange(0, self.sampling_rate * data.shape[0], self.sampling_rate)
+        self.time = np.arange(0, self.sampling_rate * self.n_samples, self.sampling_rate)
         self.channels = np.arange(self.f_ch1, self.f_ch1 + self.f_off * self.n_channels, self.f_off)
-        self.snr = np.log10(data).transpose()
+        self.snr = np.log10(data).T
 
     def visualise(self):
         """
@@ -87,7 +89,7 @@ class Beam:
         ax = fig.add_subplot(1, 1, 1)
         ax.set_title("Beam %s" % self.id)
 
-        ax.imshow(self.snr.transpose(), aspect='auto',
+        ax.imshow(self.snr, aspect='auto',
                   origin='lower', extent=[self.channels[0], self.channels[-1], 0, self.time[-1]])
 
         ax.set_xlabel("Channel (kHz)")

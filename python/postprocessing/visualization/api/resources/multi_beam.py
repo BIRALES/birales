@@ -12,12 +12,13 @@ class MultiBeam(Resource):
     """
 
     @staticmethod
-    def _get_plot(bv, plot_type):
+    def _get_plot(bv, data, plot_type):
+
         if plot_type == 'bandpass':
-            return send_file(bv.bandpass(), mimetype='image/png')
+            return send_file(bv.bandpass(data), mimetype='image/png')
 
         if plot_type == 'water_fall':
-            return send_file(bv.waterfall(), mimetype='image/png')
+            return send_file(bv.waterfall(data), mimetype='image/png')
 
         # if plot type is not available, return 404 error
         abort(404)
@@ -33,10 +34,14 @@ class RawMultiBeam(MultiBeam):
     """
 
     def get(self, observation, data_set, plot_type):
-        data_set = DataSet(observation, data_set, n_beams=None)
-        bv = MultiBeamVisualisation(beams=data_set.beams, name='raw_multi_beam')
+        bv = MultiBeamVisualisation(observation, data_set, name='raw_multi_beam')
 
-        return self._get_plot(bv, plot_type)
+        file_path = bv.get_plot_file_path(plot_type)
+        if file_path:
+            return send_file(file_path)
+
+        data_set = DataSet(observation, data_set, n_beams=32)
+        return self._get_plot(bv, data_set.beams, plot_type)
 
 
 class FilteredMultiBeam(MultiBeam):
@@ -63,7 +68,7 @@ class FilteredMultiBeam(MultiBeam):
         :param plot_type:
         :return:
         """
-        data_set = DataSet(observation, data_set, n_beams=None)
+        data_set = DataSet(observation, data_set, n_beams=32)
 
         data_set = self._apply_filters(data_set)
 

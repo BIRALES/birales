@@ -37,14 +37,13 @@ class MultiLineMatplotlibPlotter(Plotter):
         self.x_label = x_label
         self.y_label = y_label
         self.data = data
-        self.ext = '.png'
 
     def plot(self):
         fig = self._build()
         fig.show()
 
     def save(self, file_name):
-        file_path = os.path.join(self.output_dir, file_name + self.ext)
+        file_path = os.path.join(self.output_dir, file_name)
         if not os.path.isfile(file_path):
             fig = self._build()
             fig.savefig(file_path)
@@ -106,14 +105,13 @@ class MultiWaterfallMatplotlibPlotter(Plotter):
         self.x_label = x_label
         self.y_label = y_label
         self.data = data
-        self.ext = '.png'
 
     def plot(self):
         fig = self._build()
         fig.show()
 
     def save(self, file_name):
-        file_path = os.path.join(self.output_dir, file_name + self.ext)
+        file_path = os.path.join(self.output_dir, file_name)
         if not os.path.isfile(file_path):
             fig = self._build()
             fig.savefig(file_path)
