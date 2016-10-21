@@ -33,7 +33,7 @@ class DataSet:
         self.config_file_path = self._get_config_file_path(self.observation_name, data_set_name)
 
         self.config = self._init_data_set_config(self.config_file_path)
-        self.n_beams = int(n_beams) or self.config['nbeams']
+        self.n_beams = n_beams or self.config['nbeams']
         self.n_channels = self.config['nchans']
         self.tx = self.config['transmitter_frequency']
 
@@ -43,11 +43,11 @@ class DataSet:
 
     def _get_data_file_path(self, observation_name, data_set_name):
         base_path = config.get('io', 'DATA_FILE_PATH')
-        return os.path.join(base_path, observation_name, data_set_name, data_set_name + self.data_set_ext)
+        return os.path.join(config.ROOT, base_path, observation_name, data_set_name, data_set_name + self.data_set_ext)
 
     def _get_config_file_path(self, observation_name, data_set_name):
         base_path = config.get('io', 'DATA_FILE_PATH')
-        return os.path.join(base_path, observation_name, data_set_name, data_set_name + self.config_ext)
+        return os.path.join(config.ROOT, base_path, observation_name, data_set_name, data_set_name + self.config_ext)
 
     def _read_data_set(self, data_set_file_path, n_beams, n_channels):
         """
@@ -118,7 +118,7 @@ class DataSet:
 
             return data_set_config
 
-        raise IOError('Config file was not found at' + config_file_path)
+        raise IOError('Config file was not found at ' + config_file_path)
 
     @staticmethod
     def _time_taken(start):

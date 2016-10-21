@@ -22,7 +22,9 @@ class MultiBeamVisualisation:
                                                   x_label='Channel',
                                                   y_label='Time Sample',
                                                   data=data)
-        plotter.save(self.name + '_waterfall')
+        file_path = plotter.save(self.name + '_waterfall')
+
+        return file_path
 
     def bandpass(self):
         data = []
