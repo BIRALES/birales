@@ -5,7 +5,8 @@ from data_set import DataSet
 from detection_strategies import DBScanSpaceDebrisDetectionStrategy
 from repository import BeamCandidateRepository
 from repository import DataSetRepository
-from visualization.api.common.beam import MultiBeamVisualisation
+from visualization.beam import MultiBeamVisualisation
+from multiprocessing.dummy import Pool as ThreadPool
 
 
 class SpaceDebrisDetector:
@@ -23,15 +24,30 @@ class SpaceDebrisDetector:
 
         self._visualize_beams(self.data_set.beams, name='raw_multi_beam')
 
-        beam_candidates = []
-        for beam in self.data_set.beams:
-            beam_candidates += self._detect_space_debris_candidates(beam)
+        # Process the beam data to detect the beam candidates
+        beam_candidates = self._get_beam_candidates()
 
         self._visualize_beams(self.data_set.beams, name='filtered_multi_beam')
 
         self._save_data_set()
 
         self._save_beam_candidates(beam_candidates)
+
+    def _get_beam_candidates(self):
+        # Initialise thread pool with
+        pool = ThreadPool(16)
+
+        # Run N threads
+        beam_candidates = pool.map(self._detect_space_debris_candidates, self.data_set.beams)
+
+        # Flatten list of beam candidates returned by the N threads
+        beam_candidates = [candidate for sub_list in beam_candidates for candidate in sub_list]
+
+        # Close thread pool upon completion
+        pool.close()
+        pool.join()
+
+        return beam_candidates
 
     def _save_beam_candidates(self, beam_candidates):
         if config.get_boolean('io', 'SAVE_CANDIDATES'):

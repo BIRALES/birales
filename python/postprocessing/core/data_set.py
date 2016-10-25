@@ -3,11 +3,11 @@ import os
 import pickle
 import time
 from datetime import datetime
-
 import numpy as np
-
 from beam import Beam
 from configuration.application import config
+from multiprocessing.dummy import Pool as ThreadPool
+from functools import partial
 
 
 class DataSet:
@@ -83,19 +83,33 @@ class DataSet:
         # Read the data set data
         data_set_data = self._read_data_set(self.data_file_path, self.config['nbeams'], self.config['nchans'])
 
-        beams = []
-        for n_beam in range(0, self.n_beams):
-            log.debug('Generating beam %s from data set %s', n_beam, self.name)
-            beam = Beam(beam_id=n_beam,
-                        dec=0.0,
-                        ra=0.0,
-                        ha=0.0,
-                        top_frequency=0.0,
-                        frequency_offset=0.0,
-                        data_set=self, beam_data=data_set_data)
+        # Initialise thread pool
+        pool = ThreadPool(16)
 
-            beams.append(beam)
+        # Pass the data set data to the create beam function
+        create_beam_func = partial(self._create_beam, data_set_data)
+
+        # Create the iterable
+        n_beams = range(0, self.n_beams)
+
+        # Collect the beam data processed by N threads
+        beams = pool.map(create_beam_func, n_beams)
+
+        pool.close()
+        pool.join()
+
         return beams
+
+    def _create_beam(self, data_set_data, n_beam):
+        log.debug('Generating beam %s from data set %s', n_beam, self.name)
+        beam = Beam(beam_id=n_beam,
+                    dec=0.0,
+                    ra=0.0,
+                    ha=0.0,
+                    top_frequency=0.0,
+                    frequency_offset=0.0,
+                    data_set=self, beam_data=data_set_data)
+        return beam
 
     @staticmethod
     def _init_data_set_config(config_file_path):
