@@ -84,7 +84,7 @@ class DataSet:
         data_set_data = self._read_data_set(self.data_file_path, self.config['nbeams'], self.config['nchans'])
 
         # Initialise thread pool
-        pool = ThreadPool(16)
+        pool = ThreadPool(4)
 
         # Pass the data set data to the create beam function
         create_beam_func = partial(self._create_beam, data_set_data)

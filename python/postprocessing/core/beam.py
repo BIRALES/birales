@@ -51,12 +51,9 @@ class Beam:
 
         self.name = self._get_human_name()
 
-        self.channels = None
-        self.time = None
-        self.snr = None
-
-        # self.data = beam_data[:, :, self.id]
-        self._set_data(beam_data)
+        self.time = np.arange(0, self.sampling_rate * self.n_samples, self.sampling_rate)
+        self.channels = np.arange(self.f_ch1, self.f_ch1 + self.f_off * self.n_channels, self.f_off)
+        self.snr = self._set_data(beam_data)
 
         if config.get_boolean('debug', 'DEBUG_BEAMS'):
             self.visualise()
@@ -73,10 +70,11 @@ class Beam:
         :return: void
         """
         data = beam_data[:, :, self.id]
+        return self._get_snr(data)
 
-        self.time = np.arange(0, self.sampling_rate * self.n_samples, self.sampling_rate)
-        self.channels = np.arange(self.f_ch1, self.f_ch1 + self.f_off * self.n_channels, self.f_off)
-        self.snr = np.log10(data).T
+    @staticmethod
+    def _get_snr(data):
+        return np.log10(data).T
 
     def visualise(self):
         """
