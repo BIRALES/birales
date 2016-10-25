@@ -1,12 +1,11 @@
 import os.path
-
 import inflection as inf
 import numpy as np
-from matplotlib import pyplot as plt
 
 from configuration.application import config
 from filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter
 from helpers import LineGeneratorHelper
+from visualization.api.common.plotters import BeamMatplotlibPlotter
 
 
 class Beam:
@@ -48,15 +47,23 @@ class Beam:
         self.f_off = data_set.config['f_off']
         self.sampling_rate = data_set.config['sampling_rate']
         self.n_samples = data_set.config['nsamp']
-
         self.name = self._get_human_name()
-
         self.time = np.arange(0, self.sampling_rate * self.n_samples, self.sampling_rate)
         self.channels = np.arange(self.f_ch1, self.f_ch1 + self.f_off * self.n_channels, self.f_off)
         self.snr = self._set_data(beam_data)
 
-        if config.get_boolean('debug', 'DEBUG_BEAMS'):
-            self.visualise()
+    def visualize(self, title):
+        bp = BeamMatplotlibPlotter(fig_size=(16, 10),
+                                   fig_title='Waterfall',
+                                   plot_title=title,
+                                   x_limits='auto',
+                                   y_limits='auto',
+                                   x_label='Channel',
+                                   y_label='Time Sample',
+                                   data=self.snr)
+
+        file_path = os.path.join(config.get('visualization', 'FILE_PATH'), self.observation_name, self.data_set.name)
+        bp.save(file_path)
 
     def _get_human_name(self):
         return 'Observation ' + inf.humanize(self.observation_name) + ' - ' + inf.humanize(
@@ -76,31 +83,12 @@ class Beam:
     def _get_snr(data):
         return np.log10(data).T
 
-    def visualise(self):
-        """
-        Naive plotting of the raw data. This is usually used to visualise quickly the beam data read
-        :return: void
-        """
-
-        fig = plt.figure(figsize=(8, 8))
-
-        ax = fig.add_subplot(1, 1, 1)
-        ax.set_title("Beam %s" % self.id)
-
-        ax.imshow(self.snr, aspect='auto',
-                  origin='lower', extent=[self.channels[0], self.channels[-1], 0, self.time[-1]])
-
-        ax.set_xlabel("Channel (kHz)")
-        ax.set_ylabel("Time (s)")
-
-        plt.show()
-
-    def apply_filter(self, beam_filter):
+    def _apply_filter(self, beam_filter):
         beam_filter.apply(self)
 
     def apply_filters(self):
-        self.apply_filter(RemoveBackgroundNoiseFilter(std_threshold=3.))
-        self.apply_filter(RemoveTransmitterChannelFilter())
+        self._apply_filter(RemoveBackgroundNoiseFilter(std_threshold=3.))
+        self._apply_filter(RemoveTransmitterChannelFilter())
 
 
 class MockBeam(Beam):

@@ -221,6 +221,8 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         return good_clusters
 
     def detect(self, beam):
+        log.debug('Running space debris detection algorithm on beam %s data', beam.id)
+
         if np.sum(beam.snr) == 0.0:
             log.debug('SNR is 0 for filtered beam %s', beam.id)
             return []

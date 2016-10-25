@@ -10,14 +10,14 @@ from configuration.application import config
 
 class Plotter:
     def __init__(self):
-        self.output_dir = config.get('io', 'MONITORING_FILE_PATH')
+        pass
 
     @abstractmethod
     def plot(self):
         pass
 
     @abstractmethod
-    def save(self, file_name):
+    def save(self, file_path):
         pass
 
 
@@ -154,3 +154,60 @@ class MultiWaterfallMatplotlibPlotter(Plotter):
         else:
             ax = axs[col]
         return ax
+
+
+class BeamMatplotlibPlotter(Plotter):
+    def __init__(self, fig_size, fig_title, plot_title, x_limits, y_limits, x_label, y_label, data):
+        Plotter.__init__(self)
+
+        self.fig_size = fig_size
+        self.fig_title = fig_title
+        self.plot_title = plot_title
+        self.x_lim = x_limits
+        self.y_lim = y_limits
+        self.x_lim_n = 4
+        self.y_lim_n = 8
+        self.x_label = x_label
+        self.y_label = y_label
+        self.data = data
+
+        self.file_name = plot_title.replace(' ', '_') + '.png'
+
+    def plot(self):
+        fig = self._build()
+        fig.show()
+
+    def save(self, base_dir):
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
+
+        file_path = os.path.join(base_dir, self.file_name)
+        fig = self._build()
+        fig.savefig(file_path)
+        log.debug('%s visualisation saved in %s', self.file_name, file_path)
+
+        return file_path
+
+    def _build(self):
+        fig = plt.figure(figsize=(8, 8))
+
+        ax = fig.add_subplot(1, 1, 1)
+
+        if self.x_lim is not 'auto':
+            x_axis = np.linspace(self.x_lim[0], self.x_lim[1], self.x_lim_n)
+            ax.set_xticks(x_axis)
+
+        if self.y_lim is not 'auto':
+            y_axis = np.linspace(self.y_lim[0], self.y_lim[1], self.y_lim_n)
+            ax.set_yticks(y_axis)
+
+        ax.set_title(self.plot_title, fontsize=7, y=0.99)
+        ax.tick_params(axis='both', which='major', labelsize=8)
+        ax.imshow(self.data,
+                  aspect='auto',
+                  origin='lower')
+
+        ax.set_xlabel(self.x_label)
+        ax.set_ylabel(self.y_label)
+
+        return fig

@@ -22,12 +22,8 @@ class SpaceDebrisDetector:
         """
         log.info('Running space debris detection algorithm on %s beams', len(self.data_set.beams))
 
-        self._visualize_beams(self.data_set.beams, name='raw_multi_beam')
-
         # Process the beam data to detect the beam candidates
         beam_candidates = self._get_beam_candidates()
-
-        self._visualize_beams(self.data_set.beams, name='filtered_multi_beam')
 
         self._save_data_set()
 
@@ -62,18 +58,19 @@ class SpaceDebrisDetector:
             data_set_repository.persist(self.data_set)
 
     def _detect_space_debris_candidates(self, beam):
+        # Save raw beam data for post processing
+        if config.get_boolean('visualization', 'VISUALIZE_BEAM'):
+            beam.visualize('raw beam ' + str(beam.id))
+
         # Apply the pre-processing filters to the beam data
         beam.apply_filters()
 
-        log.debug('Running space debris detection algorithm on beam %s data', beam.id)
+        # Save filtered beam data for post processing
+        if config.get_boolean('visualization', 'VISUALIZE_BEAM'):
+            beam.visualize('filtered beam ' + str(beam.id))
+
+        # Run detection algorithm on the beam data to extract possible candidates
         candidates = self.detection_strategy.detect(beam)
 
         log.info('%s candidates were detected in beam %s', len(candidates), beam.id)
         return candidates
-
-    @staticmethod
-    def _visualize_beams(data, name):
-        if config.get_boolean('visualization', 'VISUALIZE_BEAM'):
-            bv = MultiBeamVisualisation(data, name)
-            bv.bandpass()
-            bv.waterfall()

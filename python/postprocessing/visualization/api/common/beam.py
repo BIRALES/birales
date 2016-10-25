@@ -30,8 +30,8 @@ class MultiBeamVisualisation:
         plotter = MultiWaterfallMatplotlibPlotter(fig_size=(16, 10),
                                                   fig_title='Waterfall',
                                                   plot_title='beam',
-                                                  x_limits=(0, 8000),
-                                                  y_limits=(0, 600),
+                                                  x_limits='auto',
+                                                  y_limits='auto',
                                                   x_label='Channel',
                                                   y_label='Time Sample',
                                                   data=beam_data)
