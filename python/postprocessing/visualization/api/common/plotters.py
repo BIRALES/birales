@@ -1,10 +1,9 @@
 import logging as log
 import os
-from abc import abstractmethod
-
 import matplotlib.pyplot as plt
 import numpy as np
 
+from abc import abstractmethod
 from configuration.application import config
 
 
@@ -171,16 +170,13 @@ class BeamMatplotlibPlotter(Plotter):
         self.y_label = y_label
         self.data = data
 
-        self.file_name = plot_title.replace(' ', '_') + '.png'
+        self.file_name = plot_title.replace(' ', '_') + config.get('visualization', 'IMAGE_EXT')
 
     def plot(self):
         fig = self._build()
         fig.show()
 
     def save(self, base_dir):
-        if not os.path.exists(base_dir):
-            os.makedirs(base_dir)
-
         file_path = os.path.join(base_dir, self.file_name)
         fig = self._build()
         fig.savefig(file_path)
@@ -201,7 +197,7 @@ class BeamMatplotlibPlotter(Plotter):
             y_axis = np.linspace(self.y_lim[0], self.y_lim[1], self.y_lim_n)
             ax.set_yticks(y_axis)
 
-        ax.set_title(self.plot_title, fontsize=7, y=0.99)
+        ax.set_title(self.plot_title)
         ax.tick_params(axis='both', which='major', labelsize=8)
         ax.imshow(self.data,
                   aspect='auto',

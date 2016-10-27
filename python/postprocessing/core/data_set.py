@@ -32,13 +32,14 @@ class DataSet:
         self.data_file_path = self._get_data_file_path(self.observation_name, data_set_name)
         self.config_file_path = self._get_config_file_path(self.observation_name, data_set_name)
 
+        self._init_visualisation_directory(observation_name, data_set_name)
+
         self.config = self._init_data_set_config(self.config_file_path)
         self.n_beams = int(n_beams) or self.config['nbeams']
         self.n_channels = self.config['nchans']
         self.tx = self.config['transmitter_frequency']
 
         log.info('Extracting beam data from data set %s', data_set_name)
-        # todo - this can be part of a multi-beam class instead of being associated with the data set
         self.beams = self.get_beams()
 
     def _get_data_file_path(self, observation_name, data_set_name):
@@ -136,6 +137,12 @@ class DataSet:
     def _time_taken(start):
         time_taken = time.time() - start
         return round(time_taken, 2)
+
+    @staticmethod
+    def _init_visualisation_directory(observation_name, data_set_name):
+        file_path = os.path.join(config.get('visualization', 'FILE_PATH'), observation_name, data_set_name)
+        if not os.path.exists(file_path):
+            os.makedirs(file_path)
 
     def __iter__(self):
         """

@@ -81,7 +81,7 @@ class Beam:
 
     @staticmethod
     def _get_snr(data):
-        return np.log10(data).T
+        return np.log10(data)
 
     def _apply_filter(self, beam_filter):
         beam_filter.apply(self)

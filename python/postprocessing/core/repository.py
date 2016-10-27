@@ -33,6 +33,16 @@ class DataSetRepository(Repository):
             log.error('MongoDB is not running. Exiting.')
             sys.exit(1)
 
+    def get(self, data_set_id):
+        try:
+            return self.database.data_sets.find_one({
+                '_id': data_set_id
+            })
+
+        except mongo.errors.ServerSelectionTimeoutError:
+            log.error('MongoDB is not running. Exiting.')
+            sys.exit(1)
+
 
 class BeamCandidateRepository(Repository):
     def __init__(self, data_set):

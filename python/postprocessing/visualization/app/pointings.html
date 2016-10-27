@@ -33,10 +33,7 @@
 <div class="container">
     <div class="page-header">
         <h1>Multi-Beam</h1>
-        <h2>Observation <b>{{ observation }}</b> and data set <b>{{ data_set }}</b></h2>
-        <!--<h2>-->
-        <!--<small>Showing all beam data</small>-->
-        <!--</h2>-->
+        <h2>Observation <b>medicina_26_05_2016</b> and data set <b>norad_29499</b></h2>
     </div>
     <div class="row">
         <div class="col-lg-12">
@@ -57,13 +54,13 @@
 
 <script>
     $(document).ready(function () {
-        var data_url = "{{request.url_root}}birales/api/pointings/{{observation}}/{{data_set}}";
+        var data_url = "http://127.0.0.1:5000/monitoring/medicina_26_05_2016/norad_29499/configuration";
 
         $.ajax({
             url: data_url,
             success: function (pointings) {
-                var reference = pointings['reference'];
-                var beam_pointings = pointings['beams'];
+                var reference = pointings['config']['reference_pointing'];
+                var beam_pointings = pointings['config']['pointings'];
                 var shapes = [];
                 var data = [{
                     x: [],
