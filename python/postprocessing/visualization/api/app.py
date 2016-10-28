@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_restful import Api
 from resources.beam import FilteredBeam, RawBeam
-from resources.candidates import BeamCandidate, SpaceDebrisCandidate
+from resources.candidates import BeamCandidate, SpaceDebrisCandidate, MultiBeamCandidate
 from resources.data_set import DataSet
 from flask_cors import CORS
 
@@ -18,11 +18,12 @@ api.add_resource(FilteredBeam,
 
 # Candidates routes
 api.add_resource(BeamCandidate, '/monitoring/<string:observation>/<string:data_set>/beam/<int:beam_id>/candidates')
+api.add_resource(MultiBeamCandidate, '/monitoring/<string:observation>/<string:data_set>/multi_beam/beam_candidates')
 api.add_resource(SpaceDebrisCandidate,
                  '/monitoring/<string:observation>/<string:data_set>/multi_beam/space_debris_candidates')
 
 # Data sets routes
-api.add_resource(DataSet, '/monitoring/<string:observation>/<string:data_set>/configuration')
+api.add_resource(DataSet, '/monitoring/<string:observation>/<string:data_set>/multi_beam/configuration')
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,5 +1,5 @@
 from flask_restful import Resource
-from flask import abort, jsonify, Response
+from flask import jsonify
 from configuration.application import config
 from core.repository import DataSetRepository
 

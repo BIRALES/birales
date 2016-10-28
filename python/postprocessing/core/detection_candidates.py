@@ -24,6 +24,7 @@ class BeamSpaceDebrisCandidate:
 
     def __init__(self, name, beam, detection_data):
         self.beam = beam
+        self.name = name
         self.id = self.beam.observation_name + '.' + str(self.beam.id) + '.' + str(name)
         self.detection_data = detection_data
 
@@ -62,6 +63,8 @@ class BeamSpaceDebrisCandidate:
 
     def __iter__(self):
         yield '_id', self.id
+        yield 'name', self.name
         yield 'data', self.data
+        yield 'beam_id', self.beam.id
         yield 'data_set_id', self.beam.data_set.id
         yield 'created_at', datetime.now()

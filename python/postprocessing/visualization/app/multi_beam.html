@@ -36,8 +36,11 @@
         <h2>Observation <b>medicina_26_05_2016</b> and data set <b>norad_29499</b></h2>
     </div>
     <div class="row">
-        <div class="col-lg-12">
-            <div id="plots"></div>
+        <div class="col-md-8">
+            <div id="beam-candidates-plot"></div>
+        </div>
+        <div class="col-md-4">
+            <div id="multi-beam-configuration-plot"></div>
         </div>
     </div>
 </div>
@@ -53,8 +56,8 @@
 
 
 <script>
-    $(document).ready(function () {
-        var data_url = "http://127.0.0.1:5000/monitoring/medicina_26_05_2016/norad_29499/configuration";
+    function get_multi_beam_configuration(observation, data_set, selector) {
+        var data_url = "http://127.0.0.1:5000/monitoring/" + observation + "/" + data_set + "/multi_beam/configuration";
 
         $.ajax({
             url: data_url,
@@ -105,9 +108,62 @@
                     shapes: shapes
                 };
 
-                Plotly.newPlot('plots', data, layout);
+                Plotly.newPlot(selector, data, layout);
             }
         });
+    }
+
+    function get_multi_beam_candidates(observation, data_set, selector) {
+        var data_url = "http://127.0.0.1:5000/monitoring/" + observation + "/" + data_set + "/multi_beam/beam_candidates";
+
+        $.ajax({
+            url: data_url,
+            success: function (beam_data) {
+                var beams = beam_data['beams'];
+                var traces = [];
+                $.each(beams, function (i, beam) {
+                    $.each(beam, function (j, beam_candidate) {
+                        var beam_candidates_trace = {
+                            x: beam_candidate.data['frequency'],
+                            y: beam_candidate.data['time'],
+                            mode: 'markers',
+                            type: 'scatter',
+                            name: 'beam ' + beam_candidate.beam_id + ' candidate ' + j,
+                            marker: {
+                                size: beam_candidate.data['snr'] * 10.
+                            }
+                        };
+                        traces.push(beam_candidates_trace)
+                    });
+                });
+
+                var layout = {
+                    title: 'Beam Candidates Detected',
+                    xaxis: {
+                        autorange: true,
+                        title: 'Channel (MHz)'
+                    },
+                    yaxis: {
+                        autorange: true,
+                        title: 'Time sample'
+                    }
+                };
+
+                Plotly.newPlot(selector, traces, layout);
+            }
+        })
+        ;
+    }
+
+    $(document).ready(function () {
+        var observation = "medicina_26_05_2016";
+        var data_set = "norad_29499";
+
+        var pointings_plot_selector = "multi-beam-configuration-plot";
+        var beam_candidates_plot_selector = "beam-candidates-plot";
+
+        get_multi_beam_configuration(observation, data_set, pointings_plot_selector);
+        get_multi_beam_candidates(observation, data_set, beam_candidates_plot_selector);
     });
 
 </script>

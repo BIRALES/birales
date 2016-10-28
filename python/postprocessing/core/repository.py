@@ -45,7 +45,7 @@ class DataSetRepository(Repository):
 
 
 class BeamCandidateRepository(Repository):
-    def __init__(self, data_set):
+    def __init__(self, data_set=None):
         Repository.__init__(self)
         self.collection = 'beam_candidates'
         self.data_set = data_set
@@ -68,6 +68,45 @@ class BeamCandidateRepository(Repository):
         except mongo.errors.ServerSelectionTimeoutError:
             log.error('MongoDB is not running. Exiting.')
             sys.exit(1)
+
+    def get(self, beam_id, data_set_id):
+        try:
+            beam_candidates = self.database.beam_candidates.find({"$and": [
+                {'beam_id': beam_id},
+                {'data_set_id': data_set_id}
+            ]})
+
+            return list(beam_candidates)
+
+        except mongo.errors.ServerSelectionTimeoutError:
+            log.error('MongoDB is not running. Exiting.')
+            sys.exit(1)
+
+
+class MultiBeamCandidateRepository(Repository):
+    def __init__(self, data_set=None):
+        Repository.__init__(self)
+        self.collection = 'beam_candidates'
+        self.data_set = data_set
+
+    def get(self, data_set_id):
+        try:
+            multi_beam_candidates = {'beams': {}}
+            beam_candidates = self.database.beam_candidates.find({'data_set_id': data_set_id})
+
+            for candidate in list(beam_candidates):
+                if candidate['beam_id'] not in multi_beam_candidates['beams']:
+                    multi_beam_candidates['beams'][candidate['beam_id']] = []
+                multi_beam_candidates['beams'][candidate['beam_id']].append(candidate)
+
+            return multi_beam_candidates
+
+        except mongo.errors.ServerSelectionTimeoutError:
+            log.error('MongoDB is not running. Exiting.')
+            sys.exit(1)
+
+    def persist(self, entity):
+        pass
 
 
 class SpaceDebrisRepository(Repository):
