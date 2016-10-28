@@ -87,7 +87,7 @@ class Beam:
         beam_filter.apply(self)
 
     def apply_filters(self):
-        self._apply_filter(RemoveBackgroundNoiseFilter(std_threshold=3.))
+        self._apply_filter(RemoveBackgroundNoiseFilter(std_threshold=2.))
         self._apply_filter(RemoveTransmitterChannelFilter())
 
 
