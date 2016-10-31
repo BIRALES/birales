@@ -3,13 +3,13 @@ $(document).ready(function () {
     var data_set = "norad_29499";
 
     var multi_beam = new MultiBeam(observation, data_set);
-    multi_beam.plot_beam_configuration("beam-candidates-plot");
+    multi_beam.plot_beam_configuration("multi-beam-configuration-plot");
     multi_beam.plot_beam_candidates("beam-candidates-plot");
 
     // todo
     // multi_beam.plot_beam_firing_order();
-    // multi_beam.plot_orbit_determination_data_table();
-    // multi_beam.plot_filtered_beam_data();
+    multi_beam.plot_orbit_determination_data_table('orbit-determination-data-table');
+    //multi_beam.plot_filtered_beam_data();
 });
 
 var MultiBeam = function (observation, data_set) {
@@ -86,6 +86,12 @@ var MultiBeam = function (observation, data_set) {
         var x_label = 'Channel (MHz)';
         var y_label = 'Time sample';
 
+        var _get = function (object, key) {
+            return $.map(object, function (a) {
+                return a[key];
+            });
+        };
+
         $.ajax({
             url: data_url,
             success: function (beam_data) {
@@ -94,8 +100,8 @@ var MultiBeam = function (observation, data_set) {
                 $.each(beams, function (i, beam) {
                     $.each(beam, function (j, beam_candidate) {
                         var beam_candidates_trace = {
-                            x: beam_candidate.data['frequency'],
-                            y: beam_candidate.data['time'],
+                            x: _get(beam_candidate['detections'], 'frequency'),
+                            y: _get(beam_candidate['detections'], 'time'),
                             mode: 'markers',
                             type: 'scatter',
                             name: 'beam ' + beam_candidate.beam_id + ' candidate ' + j,
@@ -118,6 +124,33 @@ var MultiBeam = function (observation, data_set) {
                 };
 
                 Plotly.newPlot(selector, traces, layout);
+            }
+        });
+    };
+
+    this.plot_orbit_determination_data_table = function (selector) {
+        var data_url = self.host + "/monitoring/" + self.observation + "/" + self.data_set + "/multi_beam/beam_candidates";
+        var template_url = 'views/beam_candidate_table.mustache';
+
+        $.ajax({
+            url: data_url,
+            success: function (beam_data) {
+                var beams = beam_data['beams'];
+                var template = $('#orbit-determination-table-template').html();
+
+                $.get(template_url, function (template) {
+                    $.each(beams, function (i, beam) {
+                        $.each(beam, function (candidate_number, beam_candidate) {
+                            $('#' + selector).append(
+                                Mustache.render(template, {
+                                    detections: beam_candidate.detections,
+                                    beam_id: beam_candidate.beam_id,
+                                    candidate_id: candidate_number
+                                })
+                            );
+                        });
+                    })
+                });
             }
         });
     };

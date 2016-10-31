@@ -1,6 +1,7 @@
 import os.path
 import inflection as inf
 import numpy as np
+import logging as log
 
 from configuration.application import config
 from filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter
@@ -88,6 +89,7 @@ class Beam:
 
     def apply_filters(self):
         self._apply_filter(RemoveBackgroundNoiseFilter(std_threshold=2.))
+
         self._apply_filter(RemoveTransmitterChannelFilter())
 
 

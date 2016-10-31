@@ -37,6 +37,8 @@ class BeamSpaceDebrisCandidate:
             'snr': [],
         }
 
+        self.detections = []
+
         # todo - This function can be called lazily, since it is only for visualisation
         self.set_data(detection_data)
 
@@ -48,6 +50,15 @@ class BeamSpaceDebrisCandidate:
             self.data['frequency'].append(frequency)
             self.data['doppler_shift'].append(self._get_doppler_shift(self.beam.tx, frequency))
             self.data['snr'].append(snr)
+
+            self.detections.append({
+                'time': time,
+                'mdj2000': self._get_mdj2000(time),
+                'time_elapsed': self._time_elapsed(time),
+                'frequency': frequency,
+                'doppler_shift': self._get_doppler_shift(self.beam.tx, frequency),
+                'snr': snr,
+            })
 
     @staticmethod
     def _get_doppler_shift(transmission_frequency, reflected_frequency):
@@ -65,6 +76,7 @@ class BeamSpaceDebrisCandidate:
         yield '_id', self.id
         yield 'name', self.name
         yield 'data', self.data
+        yield 'detections', self.detections
         yield 'beam_id', self.beam.id
         yield 'data_set_id', self.beam.data_set.id
         yield 'created_at', datetime.now()
