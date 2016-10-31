@@ -7,14 +7,52 @@
     <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap-theme.css">
 
+    <script src="node_modules/jquery/dist/jquery.min.js"></script>
     <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
-    <script src="node_modules/vue/dist/vue.min.js"></script>
-    <script src="node_modules/vue-resource/dist/vue-resource.min.js"></script>
+    <script src="node_modules/plotly.js/dist/plotly.min.js"></script>
     <script src="js/app.js"></script>
 </head>
 
 <body>
-<div></div>
+
+<section>
+    <div class="container">
+        <div class="page-header">
+            <h1>Multi-Beam</h1>
+            <!-- todo needs to be dynamic -->
+            <h2>Observation <b>medicina_26_05_2016</b> and data set <b>norad_29499</b></h2>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <h3>Beam candidates</h3>
+                <div id="beam-candidates-plot"></div>
+                <div id="beam-firing-order"></div>
+            </div>
+            <div class="col-md-4">
+                <h3>Beam configuration</h3>
+                <div id="multi-beam-configuration-plot"></div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <h3>Orbit determination data table</h3>
+                <div id="orbit-determination-data-table"></div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <h3>Filtered Beam data</h3>
+                <div id="filtered-multi-beam-plot"></div>
+            </div>
+        </div>
+
+
+    </div>
+</section>
+
 </body>
 
 </html>
