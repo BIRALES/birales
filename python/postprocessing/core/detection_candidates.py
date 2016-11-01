@@ -1,5 +1,6 @@
-from datetime import datetime
+import numpy as np
 
+from datetime import datetime
 from helpers import DateTimeHelper
 
 
@@ -26,14 +27,14 @@ class BeamSpaceDebrisCandidate:
         self.beam = beam
         self.name = name
         self.id = self.beam.observation_name + '.' + str(self.beam.id) + '.' + str(name)
-        self.detection_data = detection_data
         self.detections = []
+        self.illumination_time = np.min(detection_data[:, 1])  # get minimum time
 
         # todo - This function can be called lazily, since it is only for visualisation
         self.set_data(detection_data)
 
     def set_data(self, detection_data):
-        for frequency, time, snr in sorted(detection_data, key=lambda row: row[1]):
+        for frequency, time, snr in detection_data:
             self.detections.append({
                 'time': time,
                 'mdj2000': self._get_mdj2000(time),
@@ -61,4 +62,5 @@ class BeamSpaceDebrisCandidate:
         yield 'detections', self.detections
         yield 'beam_id', self.beam.id
         yield 'data_set_id', self.beam.data_set.id
+        yield 'illumination_time', self.illumination_time
         yield 'created_at', datetime.now()

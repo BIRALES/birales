@@ -8,13 +8,21 @@ class MultiBeamCandidate(Resource):
     The candidate that were detected in a beam
     """
 
-    @staticmethod
-    def get(observation, data_set):
+    def get(self, observation, data_set):
         data_set_id = observation + '.' + data_set
         repository = MultiBeamCandidateRepository()
-        data = repository.get(data_set_id)
+        candidates = repository.get(data_set_id)
+        order = self._get_beam_illumination_order(candidates)
+
+        data = {'candidates': repository.get(data_set_id),
+                'order': order}
 
         return jsonify(data)
+
+    @staticmethod
+    def _get_beam_illumination_order(ordered_candidates):
+        beam_order = [candidate['beam_id'] for candidate in ordered_candidates]
+        return beam_order
 
 
 class BeamCandidate(Resource):

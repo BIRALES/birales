@@ -91,13 +91,13 @@ class MultiBeamCandidateRepository(Repository):
 
     def get(self, data_set_id):
         try:
-            multi_beam_candidates = {'beams': {}}
-            beam_candidates = self.database.beam_candidates.find({'data_set_id': data_set_id})
+            multi_beam_candidates = []
+            beam_candidates = self.database.beam_candidates \
+                .find({'data_set_id': data_set_id}) \
+                .sort("illumination_time", mongo.ASCENDING)
 
             for candidate in list(beam_candidates):
-                if candidate['beam_id'] not in multi_beam_candidates['beams']:
-                    multi_beam_candidates['beams'][candidate['beam_id']] = []
-                multi_beam_candidates['beams'][candidate['beam_id']].append(candidate)
+                multi_beam_candidates.append(candidate)
 
             return multi_beam_candidates
 
