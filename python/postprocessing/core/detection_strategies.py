@@ -258,7 +258,7 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
             cluster_data = clusters[cluster_id]['data']
 
             detection_data = np.array(
-                [[beam.channels[c], beam.time[t], beam.snr[c][t]] for (c, t) in cluster_data])
+                [[beam.channels[c], beam.time[t], beam.snr[t][c]] for (t, c) in cluster_data])
 
             if beam.id not in beam_candidates_counter:
                 beam_candidates_counter[beam.id] = 0

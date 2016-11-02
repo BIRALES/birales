@@ -8,10 +8,11 @@ class MultiBeamDetections(Resource):
     The detections that were not filtered out when filters were applied to the beam
     """
 
-    def get(self, observation, data_set):
+    @staticmethod
+    def get(observation, data_set, beam_id):
         data_set_id = observation + '.' + data_set
         repository = BeamDataRepository()
-        beams_detections = repository.get(data_set_id)
+        beams_detections = repository.get(beam_id, data_set_id)
         filtered_data = []
         for detections in beams_detections:
             filtered_data.append({

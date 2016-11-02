@@ -19,7 +19,7 @@ api.add_resource(FilteredBeam,
 # Candidates routes
 api.add_resource(BeamCandidate, '/monitoring/<string:observation>/<string:data_set>/beam/<int:beam_id>/candidates')
 api.add_resource(MultiBeamDetections,
-                 '/monitoring/<string:observation>/<string:data_set>/multi_beam/beam_detections')
+                 '/monitoring/<string:observation>/<string:data_set>/beam/<int:beam_id>/beam_detections')
 api.add_resource(MultiBeamCandidate, '/monitoring/<string:observation>/<string:data_set>/multi_beam/beam_candidates')
 api.add_resource(SpaceDebrisCandidate,
                  '/monitoring/<string:observation>/<string:data_set>/multi_beam/space_debris_candidates')

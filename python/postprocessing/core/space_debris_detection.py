@@ -23,13 +23,32 @@ class SpaceDebrisDetector:
         log.info('Running space debris detection algorithm on %s beams', len(self.data_set.beams))
 
         # Process the beam data to detect the beam candidates
-        beam_candidates = self._get_beam_candidates()
+        if config.get_boolean('application', 'PARALLEL'):
+            beam_candidates = self._get_beam_candidates_parallel()
+        else:
+            beam_candidates = self._get_beam_candidates_single()
 
         self._save_data_set()
 
         self._save_beam_candidates(beam_candidates)
 
-    def _get_beam_candidates(self):
+    def _get_beam_candidates_single(self):
+        """
+        Run the detection algorithm using 1 process
+        :return: beam_candidates Beam candidates detected across the 32 beams
+        """
+        beam_candidates = []
+        for beam in self.data_set.beams:
+            beam_candidates += self._detect_space_debris_candidates(beam)
+
+        return beam_candidates
+
+    def _get_beam_candidates_parallel(self):
+        """
+
+        :return: beam_candidates Beam candidates detected across the 32 beams
+        """
+
         # Initialise thread pool with
         pool = ThreadPool(4)
 

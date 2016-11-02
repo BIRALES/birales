@@ -49,4 +49,14 @@
 
 </body>
 
+<script>
+    $(document).ready(function () {
+        var observation = "medicina_26_05_2016";
+        var data_set = "norad_29499";
+
+        var multi_beam = new MultiBeam(observation, data_set);
+        multi_beam.plot_beam_configuration("multi-beam-configuration-plot");
+        multi_beam.plot_beam_candidates("beam-candidates-plot");
+    });
+</script>
 </html>

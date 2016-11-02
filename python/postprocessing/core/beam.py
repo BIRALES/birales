@@ -49,7 +49,8 @@ class Beam:
         self.sampling_rate = data_set.config['sampling_rate']
         self.n_samples = data_set.config['nsamp']
         self.name = self._get_human_name()
-        self.time = np.arange(0, self.sampling_rate * self.n_samples, self.sampling_rate)
+        self.time_samples = beam_data.shape[0]
+        self.time = np.linspace(0, self.time_samples * self.sampling_rate, num=self.time_samples)
         self.channels = np.arange(self.f_ch1, self.f_ch1 + self.f_off * self.n_channels, self.f_off)
         self.snr = self._set_data(beam_data)
 

@@ -1,15 +1,3 @@
-$(document).ready(function () {
-    var observation = "medicina_26_05_2016";
-    var data_set = "norad_29499";
-
-    var multi_beam = new MultiBeam(observation, data_set);
-    multi_beam.plot_beam_configuration("multi-beam-configuration-plot");
-    multi_beam.plot_beam_candidates("beam-candidates-plot");
-
-    // todo
-    // multi_beam.plot_filtered_beam_data();
-});
-
 var MultiBeam = function (observation, data_set) {
     var self = this;
     this.observation = observation;
@@ -49,7 +37,7 @@ var MultiBeam = function (observation, data_set) {
                 y: _get(beam_candidate['detections'], 'time'),
                 mode: 'markers',
                 type: 'scatter',
-                name: 'beam ' + beam_candidate.beam_id + ' candidate ' + j,
+                name: 'beam ' + beam_candidate.beam_id + ' candidate ' + beam_candidate.name,
                 marker: {
                     size: _get(beam_candidate['detections'], 'snr') * 10.
                 }
@@ -68,6 +56,24 @@ var MultiBeam = function (observation, data_set) {
         };
 
         Plotly.newPlot(selector, traces, layout);
+    };
+
+    this._plot_orbit_determination_data_table = function (beam_candidates) {
+        var template_url = 'views/beam_candidate_table.mustache';
+        var selector = '#orbit-determination-data-table';
+        $.get(template_url, function (template) {
+            $.each(beam_candidates, function (candidate_number, beam_candidate) {
+                $(selector).append(
+                    Mustache.render(template, {
+                        detections: beam_candidate.detections,
+                        beam_id: beam_candidate.beam_id,
+                        candidate_id: beam_candidate.name,
+                        beam_ra: self.beam_config[beam_candidate.beam_id].beam_ra,
+                        beam_dec: self.beam_config[beam_candidate.beam_id].beam_dec
+                    })
+                );
+            })
+        });
     };
 
     this.plot_beam_configuration = function (selector) {
@@ -158,21 +164,42 @@ var MultiBeam = function (observation, data_set) {
         });
     };
 
-    this._plot_orbit_determination_data_table = function (beam_candidates) {
-        var template_url = 'views/beam_candidate_table.mustache';
-        var selector = '#orbit-determination-data-table';
-        $.get(template_url, function (template) {
-            $.each(beam_candidates, function (candidate_number, beam_candidate) {
-                $(selector).append(
-                    Mustache.render(template, {
-                        detections: beam_candidate.detections,
-                        beam_id: beam_candidate.beam_id,
-                        candidate_id: beam_candidate.name,
-                        beam_ra: self.beam_config[beam_candidate.beam_id].beam_ra,
-                        beam_dec: self.beam_config[beam_candidate.beam_id].beam_dec
-                    })
-                );
-            })
+    this.plot_filtered_beam_data = function (selector) {
+        var data_url = self.host + "/monitoring/" + self.observation + "/" + self.data_set + "/beam/2/beam_detections";
+
+        $.ajax({
+            url: data_url,
+            success: function (beams_data) {
+                var title = 'Detections in Filtered Beams';
+                var x_label = 'Channel (MHz)';
+                var y_label = 'Time sample';
+                var traces = [];
+                $.each(beams_data, function (j, beam_data) {
+                    var beam_candidates_trace = {
+                        x: beam_data['channel'],
+                        y: beam_data['time'],
+                        mode: 'markers',
+                        name: 'beam ' + beam_data['beam_id'],
+                        marker: {
+                            color: beam_data['snr']
+                        }
+                    };
+                    traces.push(beam_candidates_trace);
+                });
+
+                var layout = {
+                    title: title,
+                    xaxis: {
+                        title: x_label
+                    },
+                    yaxis: {
+                        title: y_label
+                    }
+                };
+
+                Plotly.newPlot(selector, traces, layout);
+            }
         });
-    };
+
+    }
 };

@@ -50,9 +50,12 @@ class BeamDataRepository(Repository):
             log.error('MongoDB is not running. Exiting.')
             sys.exit(1)
 
-    def get(self, data_set_id):
+    def get(self, beam_id, data_set_id):
         try:
-            detections = self.database.filtered_data.find({'data_set_id': data_set_id})
+            detections = self.database.filtered_data.find({"$and": [
+                {'beam_id': beam_id},
+                {'data_set_id': data_set_id}
+            ]})
 
             return list(detections)
 
