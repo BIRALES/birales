@@ -65,6 +65,10 @@ class SpaceDebrisDetector:
         # Apply the pre-processing filters to the beam data
         beam.apply_filters()
 
+        # Save the filtered beam data to the database
+        if config.get_boolean('visualization', 'SAVE_FILTERED_BEAM_DATA'):
+            beam.save_detections()
+
         # Save filtered beam data for post processing
         if config.get_boolean('visualization', 'VISUALIZE_BEAM'):
             beam.visualize('filtered beam ' + str(beam.id))

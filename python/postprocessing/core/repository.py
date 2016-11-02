@@ -19,6 +19,48 @@ class Repository:
         pass
 
 
+class BeamDataRepository(Repository):
+    def __init__(self, beam_id=None, data_set=None):
+        Repository.__init__(self)
+        self.data_set = data_set
+        self.beam_id = beam_id
+
+    def persist(self, detections):
+        try:
+            # Clear the database of old data
+            self.database.filtered_data.remove(
+                {'beam_id': self.beam_id},
+                {'data_set_id': self.data_set}
+            )
+
+            # Convert beam objects to a dict representation
+            filtered_data = {
+                'data_set_id': self.data_set.id,
+                'beam_id': self.beam_id,
+                'time': detections[:, 0].tolist(),
+                'channel': detections[:, 1].tolist(),
+                'snr': detections[:, 2].tolist()
+            }
+
+            # Insert beam data to the database
+            self.database.filtered_data.insert(filtered_data)
+            log.info('Filtered data saved to database')
+
+        except mongo.errors.ServerSelectionTimeoutError:
+            log.error('MongoDB is not running. Exiting.')
+            sys.exit(1)
+
+    def get(self, data_set_id):
+        try:
+            detections = self.database.filtered_data.find({'data_set_id': data_set_id})
+
+            return list(detections)
+
+        except mongo.errors.ServerSelectionTimeoutError:
+            log.error('MongoDB is not running. Exiting.')
+            sys.exit(1)
+
+
 class DataSetRepository(Repository):
     def __init__(self):
         Repository.__init__(self)

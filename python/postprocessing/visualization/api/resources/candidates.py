@@ -1,6 +1,28 @@
 from flask_restful import Resource
 from flask import jsonify
-from core.repository import BeamCandidateRepository, MultiBeamCandidateRepository
+from core.repository import BeamCandidateRepository, MultiBeamCandidateRepository, BeamDataRepository
+
+
+class MultiBeamDetections(Resource):
+    """
+    The detections that were not filtered out when filters were applied to the beam
+    """
+
+    def get(self, observation, data_set):
+        data_set_id = observation + '.' + data_set
+        repository = BeamDataRepository()
+        beams_detections = repository.get(data_set_id)
+        filtered_data = []
+        for detections in beams_detections:
+            filtered_data.append({
+                'data_set_id': detections['data_set_id'],
+                'beam_id': detections['beam_id'],
+                'time': detections['time'],
+                'channel': detections['channel'],
+                'snr': detections['snr']
+            })
+
+        return jsonify(filtered_data)
 
 
 class MultiBeamCandidate(Resource):
@@ -14,7 +36,7 @@ class MultiBeamCandidate(Resource):
         candidates = repository.get(data_set_id)
         order = self._get_beam_illumination_order(candidates)
 
-        data = {'candidates': repository.get(data_set_id),
+        data = {'candidates': candidates,
                 'order': order}
 
         return jsonify(data)

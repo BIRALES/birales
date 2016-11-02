@@ -1,12 +1,12 @@
 import os.path
 import inflection as inf
 import numpy as np
-import logging as log
 
 from configuration.application import config
 from filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter
 from helpers import LineGeneratorHelper
 from visualization.api.common.plotters import BeamMatplotlibPlotter
+from repository import BeamDataRepository
 
 
 class Beam:
@@ -91,6 +91,20 @@ class Beam:
         self._apply_filter(RemoveBackgroundNoiseFilter(std_threshold=2.))
 
         self._apply_filter(RemoveTransmitterChannelFilter())
+
+    def save_detections(self):
+        # Select points with an SNR > 0
+        indices = np.where(self.snr > 0.)
+        snr = self.snr[indices]
+        time = self.time[indices[0]]
+        channel = self.channels[indices[1]]
+
+        detections = np.column_stack([time, channel, snr])
+
+        repository = BeamDataRepository(self.id, self.data_set)
+        repository.persist(detections)
+
+        return indices
 
 
 class MockBeam(Beam):
