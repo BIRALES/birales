@@ -18,9 +18,9 @@ var MultiBeam = function (observation, data_set) {
     };
 
     this._plot_beam_candidates = function (beam_candidates) {
-        var title = 'Beam Candidates Detected';
+        var title = 'Detected Beam Candidates';
         var x_label = 'Channel (MHz)';
-        var y_label = 'Time sample';
+        var y_label = 'Time (s)';
         var selector = 'beam-candidates-plot';
 
         var _get = function (object, key) {
@@ -36,10 +36,10 @@ var MultiBeam = function (observation, data_set) {
                 x: _get(beam_candidate['detections'], 'frequency'),
                 y: _get(beam_candidate['detections'], 'time'),
                 mode: 'markers',
-                type: 'scatter',
                 name: 'beam ' + beam_candidate.beam_id + ' candidate ' + beam_candidate.name,
                 marker: {
-                    size: _get(beam_candidate['detections'], 'snr') * 10.
+                    // size: _get(beam_candidate['detections'], 'snr'),
+                    // sizeref: 0.1,
                 }
             };
             traces.push(beam_candidates_trace);
