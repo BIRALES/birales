@@ -17,6 +17,51 @@ var MultiBeam = function (observation, data_set) {
         });
     };
 
+    this._plot_beam_illumination_timeline = function (beam_candidates) {
+
+        var title = 'Beam Illumination Time line';
+        var x_label = 'Time (s)';
+        var y_label = 'Beam';
+        var selector = 'beam-illumination-time-line-plot';
+
+        var _get = function (object, key) {
+            return $.map(object, function (a) {
+                return a[key];
+            });
+        };
+
+        var traces = [];
+
+        $.each(beam_candidates, function (j, beam_candidate) {
+            x_data = _get(beam_candidate['detections'], 'time');
+            y_data = [];
+
+            $.each(x_data, function (i, e) {
+                y_data.push(beam_candidate.beam_id)
+            });
+            var beam_candidates_trace = {
+                x: x_data,
+                y: y_data,
+                mode: 'markers',
+                name: 'Candidate ' + beam_candidate.name,
+            };
+            traces.push(beam_candidates_trace);
+        });
+
+        var layout = {
+            title: title,
+            xaxis: {
+                title: x_label
+            },
+            yaxis: {
+                dtick: 1.0,
+                title: y_label
+            }
+        };
+
+        Plotly.newPlot(selector, traces, layout);
+    };
+
     this._plot_beam_candidates = function (beam_candidates) {
         var title = 'Detected Beam Candidates';
         var x_label = 'Channel (MHz)';
@@ -160,6 +205,9 @@ var MultiBeam = function (observation, data_set) {
 
                 // Plot the beam firing order
                 self._plot_beam_firing_order(beam_firing_order);
+
+                // Plot the beam illumination time-line
+                self._plot_beam_illumination_timeline(beam_candidates);
             }
         });
     };
