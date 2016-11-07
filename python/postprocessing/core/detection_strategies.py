@@ -1,13 +1,12 @@
 import logging as log
 from abc import abstractmethod
-
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.cluster import DBSCAN
-
 from configuration.application import config
 from detection_candidates import BeamSpaceDebrisCandidate
 import warnings
+
 
 class SpaceDebrisDetection(object):
     def __init__(self, detection_strategy):
@@ -20,7 +19,7 @@ class SpaceDebrisDetection(object):
 
 class SpaceDebrisDetectionStrategy(object):
     def __init__(self):
-        self.max_detections = 3
+        self.max_detections = config.get_int('application', 'MAX_DETECTIONS')
 
     @abstractmethod
     def detect(self, beam):

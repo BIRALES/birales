@@ -28,6 +28,8 @@ class SpaceDebrisDetectorPipeline:
         else:
             beam_candidates = self._get_beam_candidates_single()
 
+        log.info('Data processed, saving %s beam candidates to database', len(beam_candidates))
+
         self._save_data_set()
 
         self._save_beam_candidates(beam_candidates)
