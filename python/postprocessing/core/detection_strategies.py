@@ -7,7 +7,7 @@ from sklearn.cluster import DBSCAN
 
 from configuration.application import config
 from detection_candidates import BeamSpaceDebrisCandidate
-
+import warnings
 
 class SpaceDebrisDetection(object):
     def __init__(self, detection_strategy):
@@ -144,6 +144,7 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         :param data:
         :return:
         """
+        warnings.filterwarnings('error')
         d = np.array(data)
         x = d[:, 0]
         y = d[:, 1]
@@ -153,9 +154,12 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         m, c = np.linalg.lstsq(a, y)[0]
 
         r = 0.0
-        if np.round(c) > 0.0:
-            # determine correlation coefficient if c > 0.0
-            r = np.corrcoef(x, y)[0, 1]
+        try:
+            if np.round(c) > 0.0:
+                # determine correlation coefficient if c > 0.0
+                r = np.corrcoef(x, y)[0, 1]
+        except Warning:
+            r = 0.
 
         return m, c, r
 
