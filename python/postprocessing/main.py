@@ -45,7 +45,7 @@ def run_server(port):
     """
     Run the flask server
 
-    :param port:
+    :param port The port that the server will run on
     :return:
     """
     pass
