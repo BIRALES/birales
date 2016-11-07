@@ -63,6 +63,16 @@ class BeamDataRepository(Repository):
             log.error('MongoDB is not running. Exiting.')
             sys.exit(1)
 
+    def destroy(self, data_set_id):
+        """
+        Delete this beam data from the database
+
+        @param data_set_id The id of the data_set that is to be deleted
+        :return:
+        """
+
+        self.database.filtered_data.delete({"data_set_id": data_set_id})
+
 
 class DataSetRepository(Repository):
     def __init__(self):
@@ -70,9 +80,9 @@ class DataSetRepository(Repository):
 
     def persist(self, data_set):
         try:
-            self.database.data_sets.update({'_id': data_set.id},
-                                           {"$set": dict(data_set)},
-                                           upsert=True)
+            self.database.data_sets.update_one({'_id': data_set.id},
+                                               {"$set": dict(data_set)},
+                                               upsert=True)
             log.info('Data set %s meta data was saved to the database', data_set.name)
         except mongo.errors.ServerSelectionTimeoutError:
             log.error('MongoDB is not running. Exiting.')
@@ -87,6 +97,16 @@ class DataSetRepository(Repository):
         except mongo.errors.ServerSelectionTimeoutError:
             log.error('MongoDB is not running. Exiting.')
             sys.exit(1)
+
+    def destroy(self, data_set_id):
+        """
+        Delete this data set from the database
+
+        @param data_set_id The id of the data_set that is to be deleted
+        :return:
+        """
+
+        self.database.data_sets.delete({"data_set_id": data_set_id})
 
 
 class BeamCandidateRepository(Repository):

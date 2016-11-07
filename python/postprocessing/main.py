@@ -1,29 +1,77 @@
 import click
 import time
 from core.space_debris_detection import SpaceDebrisDetector
+from core.repository import DataSetRepository, BeamDataRepository
 import logging as log
 
-@click.command()
-@click.option('--observation', prompt='Please specify the observation:', help='Observation you want to process')
-@click.option('--data_set', prompt='Please specify the data set:', help='The data set you want to process')
-@click.option('--n_beams', prompt='Please specify the number of beams to process:', help='Number of beams to process')
-@click.option('--multiproc')
-@click.option('--client')
-@click.option('--port')
-@click.option('--file')
-def application(observation, data_set, n_beams, multiproc, client, port, file):
+
+@click.group()
+@click.option('--multiproc', help='Needed when running in parallel', type=click.STRING)
+@click.option('--client', help='Needed when running in parallel', type=click.STRING)
+@click.option('--port', help='Needed when running in parallel', type=click.INT)
+@click.option('--file', help='Needed when running in parallel', type=click.STRING)
+def cli(multiproc, client, port, file):
+    log.debug('Using %s for multiproc', multiproc)
+    log.debug('Using %s for client', client)
+    log.debug('Using %s for port', port)
+    log.debug('Using %s for file', file)
+
+
+@cli.command()
+@click.option('--observation', help='Observation you want to process', required=True)
+@click.option('--data_set', help='The data set you want to process', required=True)
+@click.option('--n_beams', help='Number of beams to process', type=click.INT, required=True)
+def post_process(observation, data_set, n_beams):
     """
     Post process the beam data and generate space debris candidates
-    :param observation The observation to be processed
-    :param data_set The data_set to be processed
-    :param n_beams The number of beams to process
+
+    :param observation  The observation to be processed
+    :param data_set     The data_set to be processed
+    :param n_beams      The number of beams to process
+
     :return:
     """
+    log.debug('Using file %s', observation)
     before = time.time()
     odc = SpaceDebrisDetector(observation_name=observation, data_set_name=data_set, n_beams=n_beams)
     odc.run()
     log.info('Process finished in %s seconds', round(time.time() - before, 3))
 
 
+@cli.command()
+@click.option('--port', help='The port that the server will run on', type=click.INT, default=8000)
+def run_server(port):
+    """
+    Run the flask server
+
+    :param port:
+    :return:
+    """
+    pass
+
+
+@cli.command()
+@click.option('--observation', help='Observation you want to delete', required=True)
+@click.option('--data_set', help='The data set you want to delete', required=True)
+def reset(observation, data_set):
+    """
+    Drop the database for the selected data set
+
+    :param observation  The observation that the data set belongs to
+    :param data_set     The data set to be deleted
+    :return:
+    """
+    # Build the data_set unique id
+    data_set_id = observation + '.' + data_set
+
+    # Delete the beam data for this data_set from the database
+    beam_data_repository = BeamDataRepository()
+    beam_data_repository.destroy(data_set_id)
+
+    # Delete the data_set from the database
+    data_set_repository = DataSetRepository()
+    data_set_repository.destroy(data_set_id)
+
+
 if __name__ == '__main__':
-    application()
+    cli()
