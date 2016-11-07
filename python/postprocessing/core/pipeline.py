@@ -9,7 +9,7 @@ from visualization.api.common.beam import MultiBeamVisualisation
 from multiprocessing.dummy import Pool as ThreadPool
 
 
-class SpaceDebrisDetector:
+class SpaceDebrisDetectorPipeline:
     def __init__(self, observation_name, data_set_name, n_beams):
         log.info('Processing data set %s in %s', observation_name, data_set_name)
         self.data_set = DataSet(observation_name, data_set_name, n_beams)

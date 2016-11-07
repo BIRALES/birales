@@ -1,6 +1,6 @@
 import click
 import time
-from core.space_debris_detection import SpaceDebrisDetector
+from core.pipeline import SpaceDebrisDetectorPipeline
 from core.repository import DataSetRepository, BeamDataRepository
 import logging as log
 
@@ -31,10 +31,11 @@ def post_process(observation, data_set, n_beams):
 
     :return:
     """
-    log.debug('Using file %s', observation)
+
     before = time.time()
-    odc = SpaceDebrisDetector(observation_name=observation, data_set_name=data_set, n_beams=n_beams)
-    odc.run()
+    pipeline = SpaceDebrisDetectorPipeline(observation_name=observation, data_set_name=data_set, n_beams=n_beams)
+    pipeline.run()
+
     log.info('Process finished in %s seconds', round(time.time() - before, 3))
 
 
