@@ -5,7 +5,6 @@ from data_set import DataSet
 from detection_strategies import DBScanSpaceDebrisDetectionStrategy
 from repository import BeamCandidateRepository
 from repository import DataSetRepository
-from visualization.api.common.beam import MultiBeamVisualisation
 from multiprocessing.dummy import Pool as ThreadPool
 
 

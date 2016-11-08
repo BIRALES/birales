@@ -9,6 +9,9 @@ class ApplicationConfiguration:
     # Set application root
     ROOT = os.path.dirname(os.path.dirname(__file__))
 
+    env_prefix = 'BIRALES'
+    env_glue = '__'
+
     def __init__(self, file_name='configuration/local.ini'):
         # Set the config parser for the configuration
         self.config_parser = ConfigParser()
@@ -36,13 +39,26 @@ class ApplicationConfiguration:
             raise IOError('Configuration file was not found at %s', file_path)
 
     def get(self, section, attribute):
-        return self.config_parser.get(section, attribute)
+        return self.get_env(section, attribute) or self.config_parser.get(section, attribute)
 
     def get_boolean(self, section, attribute):
+        env = self.get_env(section, attribute)
+        if env:
+            return bool(env)
         return self.config_parser.getboolean(section, attribute)
 
     def get_int(self, section, attribute):
+        env = self.get_env(section, attribute)
+        if env:
+            return int(env)
+
         return self.config_parser.getint(section, attribute)
+
+    def get_env(self, section, attribute):
+        env_variable_key = self.env_glue.join([self.env_prefix, section, attribute]).upper()
+
+        if env_variable_key in os.environ:
+            return os.environ[env_variable_key]
 
 
 config = ApplicationConfiguration()

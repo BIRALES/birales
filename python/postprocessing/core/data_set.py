@@ -21,6 +21,7 @@ class DataSet:
     def __init__(self, observation_name, data_set_name, n_beams):
         """
         Initialise the Data Set object
+
         :param observation_name:
         :param data_set_name:
         :param n_beams:
@@ -43,16 +44,31 @@ class DataSet:
         self.beams = self.get_beams()
 
     def _get_data_file_path(self, observation_name, data_set_name):
+        """
+        Get the data file path for the specified observation and data set
+
+        :param observation_name:
+        :param data_set_name:
+        :return:
+        """
         base_path = config.get('io', 'DATA_FILE_PATH')
         return os.path.join(config.ROOT, base_path, observation_name, data_set_name, data_set_name + self.data_set_ext)
 
     def _get_config_file_path(self, observation_name, data_set_name):
+        """
+        Get the configuration file path for the specified observation and data set
+
+        :param observation_name:
+        :param data_set_name:
+        :return:
+        """
         base_path = config.get('io', 'DATA_FILE_PATH')
         return os.path.join(config.ROOT, base_path, observation_name, data_set_name, data_set_name + self.config_ext)
 
     def _read_data_set(self, data_set_file_path, n_beams, n_channels):
         """
         Read beam data from the data_set file associated with this observation
+
         :param n_beams: The number of beams
         :param n_channels: The number of channels
         :return: The processed beam data
@@ -147,7 +163,6 @@ class DataSet:
     def __iter__(self):
         """
         Get a dict representation of this data set object
-        todo - add last updated and created time stamps
 
         :return:
         """
