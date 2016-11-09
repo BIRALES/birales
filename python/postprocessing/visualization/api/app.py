@@ -1,31 +1,34 @@
 from flask import Flask
 from flask_restful import Api
-from resources.beam import FilteredBeam, RawBeam
-from resources.candidates import BeamCandidate, SpaceDebrisCandidate, MultiBeamCandidate, MultiBeamDetections
+from resources.candidates import BeamCandidate, MultiBeamCandidate, MultiBeamDetections
 from resources.data_set import DataSet
 from flask_cors import CORS
 
 
-app = Flask(__name__)
-CORS(app)
-api = Api(app)
+def init_api_resources(api):
 
-# Beam routes
-api.add_resource(RawBeam,
-                 '/monitoring/<string:observation>/<string:data_set>/beam/<int:beam_id>/raw/<string:plot_type>')
-api.add_resource(FilteredBeam,
-                 '/monitoring/<string:observation>/<string:data_set>/beam/<int:beam_id>/filtered/<string:plot_type>')
+    pre_fix_route = '/monitoring/<string:observation>/<string:data_set>/'
 
-# Candidates routes
-api.add_resource(BeamCandidate, '/monitoring/<string:observation>/<string:data_set>/beam/<int:beam_id>/candidates')
-api.add_resource(MultiBeamDetections,
-                 '/monitoring/<string:observation>/<string:data_set>/beam/<int:beam_id>/beam_detections')
-api.add_resource(MultiBeamCandidate, '/monitoring/<string:observation>/<string:data_set>/multi_beam/beam_candidates')
-api.add_resource(SpaceDebrisCandidate,
-                 '/monitoring/<string:observation>/<string:data_set>/multi_beam/space_debris_candidates')
+    # Detections
+    api.add_resource(MultiBeamDetections, pre_fix_route + 'beam/<int:beam_id>/beam_detections')
 
-# Data sets routes
-api.add_resource(DataSet, '/monitoring/<string:observation>/<string:data_set>/multi_beam/configuration')
+    # Candidates routes
+    api.add_resource(MultiBeamCandidate, pre_fix_route + 'multi_beam/beam_candidates')
+
+    # Data set routes
+    api = api.add_resource(DataSet,  pre_fix_route + 'multi_beam/configuration')
+
+    return api
+
+
+def run_server(port=5000):
+    app = Flask(__name__)
+    CORS(app)
+    api = Api(app)
+
+    api = init_api_resources(api)
+    app.run(debug=True, port=port)
+
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    run_server()
