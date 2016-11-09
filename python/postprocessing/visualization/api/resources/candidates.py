@@ -1,5 +1,5 @@
 from flask_restful import Resource
-from flask import jsonify
+from flask import jsonify, request
 from core.repository import BeamCandidateRepository, MultiBeamCandidateRepository, BeamDataRepository
 
 
@@ -34,7 +34,11 @@ class MultiBeamCandidate(Resource):
     def get(self, observation, data_set):
         data_set_id = observation + '.' + data_set
         repository = MultiBeamCandidateRepository()
-        candidates = repository.get(data_set_id)
+
+        max_freq = request.args.get('max_frequency')    # Max frequency in Mhz
+        min_freq = request.args.get('min_frequency')    # Min frequency in Mhz
+
+        candidates = repository.get(data_set_id, max_freq=max_freq, min_freq=min_freq)
         order = self._get_beam_illumination_order(candidates)
 
         data = {'candidates': candidates,

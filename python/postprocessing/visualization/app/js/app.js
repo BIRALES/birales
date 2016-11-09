@@ -190,9 +190,15 @@ var MultiBeam = function (observation, data_set) {
 
     this.plot_beam_candidates = function () {
         var data_url = self.host + "/monitoring/" + self.observation + "/" + self.data_set + "/multi_beam/beam_candidates";
+        var min_freq = 409.99;
+        var max_freq = 410.01;
 
         $.ajax({
             url: data_url,
+            data: {
+                    min_frequency: min_freq,
+                    max_frequency: max_freq
+            },
             success: function (beam_data) {
                 var beam_candidates = beam_data['candidates'];
                 var beam_firing_order = beam_data['order'];
@@ -248,6 +254,5 @@ var MultiBeam = function (observation, data_set) {
                 Plotly.newPlot(selector, traces, layout);
             }
         });
-
     }
 };

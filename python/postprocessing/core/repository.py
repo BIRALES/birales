@@ -1,9 +1,7 @@
 import logging as log
 import sys
 from abc import abstractmethod
-
 import pymongo as mongo
-
 from configuration.application import config
 
 
@@ -154,11 +152,20 @@ class MultiBeamCandidateRepository(Repository):
         self.collection = 'beam_candidates'
         self.data_set = data_set
 
-    def get(self, data_set_id):
+    def get(self, data_set_id, max_freq=None, min_freq=None):
         try:
             multi_beam_candidates = []
+            query = {'data_set_id': data_set_id}
+
+            if max_freq and min_freq:
+                query = {"$and": [
+                    {'detections.frequency': {'$gte': float(min_freq)}},
+                    {'detections.frequency': {'$lte': float(max_freq)}},
+                    {'data_set_id': data_set_id}
+                ]}
+
             beam_candidates = self.database.beam_candidates \
-                .find({'data_set_id': data_set_id}) \
+                .find(query) \
                 .sort("illumination_time", mongo.ASCENDING)
 
             for candidate in list(beam_candidates):
