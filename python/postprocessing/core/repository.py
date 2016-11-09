@@ -68,8 +68,12 @@ class BeamDataRepository(Repository):
         @param data_set_id The id of the data_set that is to be deleted
         :return:
         """
-
-        self.database.filtered_data.delete({"data_set_id": data_set_id})
+        try:
+            result = self.database.filtered_data.delete_many({"data_set_id": data_set_id})
+            log.info('Deleted %s beam data detections', result.deleted_count)
+        except mongo.errors.ServerSelectionTimeoutError:
+            log.error('MongoDB is not running. Exiting.')
+            sys.exit(1)
 
 
 class DataSetRepository(Repository):
@@ -103,8 +107,13 @@ class DataSetRepository(Repository):
         @param data_set_id The id of the data_set that is to be deleted
         :return:
         """
+        try:
+            result = self.database.data_sets.delete_many({"_id": data_set_id})
+            log.info('Deleted %s data sets', result.deleted_count)
 
-        self.database.data_sets.delete({"data_set_id": data_set_id})
+        except mongo.errors.ServerSelectionTimeoutError:
+            log.error('MongoDB is not running. Exiting.')
+            sys.exit(1)
 
 
 class BeamCandidateRepository(Repository):
@@ -119,8 +128,8 @@ class BeamCandidateRepository(Repository):
             return False
 
         try:
-            # Clear the database of old data
-            self.database.beam_candidates.delete_many({"data_set_id": self.data_set.id})
+            # Clear the database of old beam data candidates
+            self.destroy(self.data_set.id)
 
             # Convert beam objects to a dict representation
             beam_candidates = [dict(candidate) for candidate in beam_candidates]
@@ -140,6 +149,15 @@ class BeamCandidateRepository(Repository):
             ]})
 
             return list(beam_candidates)
+
+        except mongo.errors.ServerSelectionTimeoutError:
+            log.error('MongoDB is not running. Exiting.')
+            sys.exit(1)
+
+    def destroy(self, data_set_id):
+        try:
+            result = self.database.beam_candidates.delete_many({"data_set_id": data_set_id})
+            log.info('Deleted %s beam candidates', result.deleted_count)
 
         except mongo.errors.ServerSelectionTimeoutError:
             log.error('MongoDB is not running. Exiting.')
