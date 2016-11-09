@@ -2,6 +2,8 @@ import click
 import time
 from core.pipeline import SpaceDebrisDetectorPipeline
 from core.repository import DataSetRepository, BeamDataRepository
+from visualization.api import app
+
 import logging as log
 
 
@@ -40,15 +42,15 @@ def post_process(observation, data_set, n_beams):
 
 
 @cli.command()
-@click.option('--port', help='The port that the server will run on', type=click.INT, default=8000)
-def run_server(port):
+@click.option('--port', help='The port that the server will run on', type=click.INT)
+def run_dev_server(port):
     """
     Run the flask server
 
     :param port The port that the server will run on
     :return:
     """
-    pass
+    app.run_server(port)
 
 
 @cli.command()
