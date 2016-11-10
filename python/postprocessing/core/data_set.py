@@ -144,13 +144,32 @@ class DataSet:
             data_set_config['sampling_rate'] = data_set_config['sampling_time']
             data_set_config['f_ch1'] = data_set_config['start_center_frequency']
             data_set_config['f_off'] = data_set_config['channel_bandwidth']
+            data_set_config['timestamp'] = 1464250387401        # Timestamp in ms
+            data_set_config['human_timestamp'] = DataSet._get_human_timestamp(data_set_config['timestamp'])
 
             return data_set_config
 
         raise IOError('Config file was not found at ' + config_file_path)
 
     @staticmethod
+    def _get_human_timestamp(timestamp):
+        """
+        Return a human readable timestamp (including the timezone offset)
+
+        :param timestamp: The unix time stamp (in milli seconds)
+        :return:
+        """
+        value = datetime.utcfromtimestamp(timestamp / 1000.)
+        return value.strftime('%Y-%m-%d %H:%M:%S') + ' UTC+00:00'
+
+    @staticmethod
     def _time_taken(start):
+        """
+        Return the time taken between now and a start time
+
+        :param start: The time from which to subtract the current time
+        :return:
+        """
         time_taken = time.time() - start
         return round(time_taken, 2)
 

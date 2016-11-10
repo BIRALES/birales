@@ -121,71 +121,97 @@ var MultiBeam = function (observation, data_set) {
         });
     };
 
-    this.plot_beam_configuration = function (selector) {
-        var data_url = self.host + "/monitoring/" + self.observation + "/" + self.data_set + "/multi_beam/configuration";
-        var title = 'Multi-Beam';
-        var x_label = 'ra (deg)';
-        var y_label = 'dec (deg)';
+    this.plot_data_set_data = function () {
+        var data_url = self.host + "/monitoring/" + self.observation + "/" + self.data_set + "/about";
 
         $.ajax({
             url: data_url,
-            success: function (pointings) {
-                var reference = pointings['config']['reference_pointing'];
-                var beam_pointings = pointings['config']['pointings'];
-                var shapes = [];
-                var data = [{
-                    x: [],
-                    y: [],
-                    text: [],
-                    mode: 'text'
-                }];
+            success: function (data_set) {
+                // Display the beam plot configuration
+                self._plot_beam_configuration('multi-beam-configuration-plot', data_set);
 
-                $(beam_pointings).each(function (beam_id, pointing_data) {
-                    var ra = pointing_data[0];
-                    var dec = pointing_data[1];
-                    var bw_ra = 1.75;
-                    var bw_dec = 0.5;
-
-                    self.beam_config[beam_id] = {
-                        'beam_ra': ra,
-                        'beam_dec': dec
-                    };
-
-                    var shape = {
-                        type: 'circle',
-                        xref: 'x',
-                        yref: 'y',
-                        x0: reference[0] + ra,
-                        x1: reference[0] + ra + bw_ra,
-                        y0: reference[1] + dec,
-                        y1: reference[1] + dec + bw_dec
-                    };
-
-                    data[0].x.push(reference[0] + ra + (bw_ra * 0.5));
-                    data[0].y.push(reference[1] + dec + (bw_dec * 0.5));
-                    data[0].text.push(beam_id);
-
-                    shapes.push(shape);
-                });
-
-                var layout = {
-                    title: title,
-                    xaxis: {
-                        autorange: true,
-                        title: x_label
-                    },
-                    yaxis: {
-                        autorange: true,
-                        title: y_label
-                    },
-                    width: 500,
-                    height: 500,
-                    shapes: shapes
-                };
-
-                Plotly.newPlot(selector, data, layout);
+                // Display the Data set information table
+                self._display_data_set_info_table('data-set-info-table', data_set);
             }
         });
+    };
+
+    this._display_data_set_info_table = function (selector, data_set) {
+        var template_url = 'views/data_set_info_table.mustache';
+        $.get(template_url, function (template) {
+            $('#' + selector).append(
+                Mustache.render(template, {
+                    observation: data_set.observation,
+                    name: data_set.name,
+                    created_at: data_set.created_at,
+                    transmitter_frequency: data_set.config.transmitter_frequency,
+                    sampling_time: data_set.config.sampling_time,
+                    human_timestamp: data_set.config.human_timestamp,
+                    nbeams: data_set.config.nbeams,
+                })
+            );
+        });
+    };
+
+    this._plot_beam_configuration = function (selector, data_set) {
+        var title = 'Multi-Beam';
+        var x_label = 'RA (deg)';
+        var y_label = 'DEC (deg)';
+
+        var reference = data_set['config']['reference_pointing'];
+        var beam_pointings = data_set['config']['pointings'];
+        var shapes = [];
+        var data = [{
+            x: [],
+            y: [],
+            text: [],
+            mode: 'text'
+        }];
+
+        $(beam_pointings).each(function (beam_id, pointing_data) {
+            var ra = pointing_data[0];
+            var dec = pointing_data[1];
+            var bw_ra = 1.75;
+            var bw_dec = 0.5;
+
+            self.beam_config[beam_id] = {
+                'beam_ra': ra,
+                'beam_dec': dec
+            };
+
+            var shape = {
+                type: 'circle',
+                xref: 'x',
+                yref: 'y',
+                x0: reference[0] + ra,
+                x1: reference[0] + ra + bw_ra,
+                y0: reference[1] + dec,
+                y1: reference[1] + dec + bw_dec
+            };
+
+            data[0].x.push(reference[0] + ra + (bw_ra * 0.5));
+            data[0].y.push(reference[1] + dec + (bw_dec * 0.5));
+            data[0].text.push(beam_id);
+
+            shapes.push(shape);
+        });
+
+        var layout = {
+            title: title,
+            xaxis: {
+                autorange: true,
+                title: x_label
+            },
+            yaxis: {
+                autorange: true,
+                title: y_label
+            },
+            width: 500,
+            height: 500,
+            shapes: shapes
+        };
+
+        Plotly.newPlot(selector, data, layout);
     };
 
     this.plot_beam_candidates = function () {
@@ -196,8 +222,8 @@ var MultiBeam = function (observation, data_set) {
         $.ajax({
             url: data_url,
             data: {
-                    min_frequency: min_freq,
-                    max_frequency: max_freq
+                min_frequency: min_freq,
+                max_frequency: max_freq
             },
             success: function (beam_data) {
                 var beam_candidates = beam_data['candidates'];

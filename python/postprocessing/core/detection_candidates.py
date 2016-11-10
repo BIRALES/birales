@@ -1,7 +1,7 @@
 import numpy as np
-
+import astropy.units as u
 from datetime import datetime
-from helpers import DateTimeHelper
+from astropy.time import Time, TimezoneInfo
 
 
 class SpaceDebrisCandidate:
@@ -34,11 +34,11 @@ class BeamSpaceDebrisCandidate:
         self.set_data(detection_data)
 
     def set_data(self, detection_data):
-        for frequency, time, snr in detection_data:
+        for frequency, elapsed_time, snr in detection_data:
             self.detections.append({
-                'time': time,
-                'mdj2000': self._get_mdj2000(time),
-                'time_elapsed': self._time_elapsed(time),
+                'time': self._timestamp(elapsed_time),
+                'mdj2000': self._get_mjd2000(elapsed_time),
+                'time_elapsed': self._time_elapsed(elapsed_time),
                 'frequency': frequency,
                 'doppler_shift': self._get_doppler_shift(self.beam.tx, frequency),
                 'snr': snr,
@@ -49,12 +49,21 @@ class BeamSpaceDebrisCandidate:
         return (reflected_frequency - transmission_frequency) * 1e6
 
     @staticmethod
-    def _time_elapsed(time):
-        return 'n/a'
+    def _time_elapsed(elapsed_time):
+        return elapsed_time
 
-    @staticmethod
-    def _get_mdj2000(dates):
-        return DateTimeHelper.ephem2juldate(dates)
+    def _time(self, time):
+        ref_time = self.beam.data_set.config['timestamp'] / 1000.
+
+        return Time(time + ref_time, format='unix')
+
+    def _timestamp(self, elapsed_time):
+        time = self._time(elapsed_time)
+        return time.iso
+
+    def _get_mjd2000(self, elapsed_time):
+        time = self._time(elapsed_time)
+        return time.mjd
 
     def __iter__(self):
         yield '_id', self.id

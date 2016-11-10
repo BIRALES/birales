@@ -16,7 +16,7 @@ def init_api_resources(api):
     api.add_resource(MultiBeamCandidate, pre_fix_route + 'multi_beam/beam_candidates')
 
     # Data set routes
-    api = api.add_resource(DataSet,  pre_fix_route + 'multi_beam/configuration')
+    api = api.add_resource(DataSet,  pre_fix_route + 'about')
 
     return api
 
