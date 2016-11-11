@@ -5,11 +5,10 @@ var MultiBeam = function (observation, data_set) {
     this.host = "http://127.0.0.1:5000";
     this.beam_config = {};
 
-    this._plot_beam_firing_order = function (beam_firing_order) {
+    this._plot_beam_illumination_order = function (selector, beam_firing_order) {
         var template_url = 'views/beam_firing_order.mustache';
-        var selector = '#beam-firing-order';
         $.get(template_url, function (template) {
-            $(selector).append(
+            $('#' + selector).append(
                 Mustache.render(template, {
                     order: beam_firing_order
                 })
@@ -17,12 +16,11 @@ var MultiBeam = function (observation, data_set) {
         });
     };
 
-    this._plot_beam_illumination_timeline = function (beam_candidates) {
+    this._plot_beam_illumination_timeline = function (selector, beam_candidates) {
 
         var title = 'Beam Illumination Time line';
         var x_label = 'Time (s)';
         var y_label = 'Beam';
-        var selector = 'beam-illumination-time-line-plot';
 
         var _get = function (object, key) {
             return $.map(object, function (a) {
@@ -62,11 +60,10 @@ var MultiBeam = function (observation, data_set) {
         Plotly.newPlot(selector, traces, layout);
     };
 
-    this._plot_beam_candidates = function (beam_candidates) {
+    this._plot_beam_candidates = function (selector, beam_candidates, data_set) {
         var title = 'Detected Beam Candidates';
         var x_label = 'Channel (MHz)';
         var y_label = 'Time (s)';
-        var selector = 'beam-candidates-plot';
 
         var _get = function (object, key) {
             return $.map(object, function (a) {
@@ -76,17 +73,27 @@ var MultiBeam = function (observation, data_set) {
 
         var traces = [];
 
+        var min_time = new Date().toUTCString();
+        var max_time = data_set.config.human_timestamp;
         $.each(beam_candidates, function (j, beam_candidate) {
             var beam_candidates_trace = {
                 x: _get(beam_candidate['detections'], 'frequency'),
                 y: _get(beam_candidate['detections'], 'time'),
                 mode: 'markers',
-                name: 'beam ' + beam_candidate.beam_id + ' candidate ' + beam_candidate.name,
-                marker: {
-                    // size: _get(beam_candidate['detections'], 'snr'),
-                    // sizeref: 0.1,
-                }
+                name: 'beam ' + beam_candidate.beam_id + ' candidate ' + beam_candidate.name
             };
+
+            var min = beam_candidates_trace.y.reduce(function (a, b) { return a < b ? a : b; });
+            var max = beam_candidates_trace.y.reduce(function (a, b) { return a > b ? a : b; });
+
+            if(min < min_time){
+                min_time = min;
+            }
+
+            if (max > max_time){
+                max_time = max;
+            }
+
             traces.push(beam_candidates_trace);
         });
 
@@ -97,18 +104,30 @@ var MultiBeam = function (observation, data_set) {
             },
             yaxis: {
                 title: y_label
-            }
+            },
+            shapes: [
+                {
+                    'type': 'line',
+                    'x0': data_set.config.transmitter_frequency,
+                    'y0': min_time,
+                    'x1': data_set.config.transmitter_frequency,
+                    'y1': max_time,
+                    'line': {
+                        'color': 'rgb(55, 128, 191)',
+                        'width': 3
+                    }
+                }
+            ]
         };
 
         Plotly.newPlot(selector, traces, layout);
     };
 
-    this._plot_orbit_determination_data_table = function (beam_candidates) {
+    this._plot_orbit_determination_data_table = function (selector, beam_candidates) {
         var template_url = 'views/beam_candidate_table.mustache';
-        var selector = '#orbit-determination-data-table';
         $.get(template_url, function (template) {
             $.each(beam_candidates, function (candidate_number, beam_candidate) {
-                $(selector).append(
+                $('#' + selector).append(
                     Mustache.render(template, {
                         detections: beam_candidate.detections,
                         beam_id: beam_candidate.beam_id,
@@ -118,21 +137,6 @@ var MultiBeam = function (observation, data_set) {
                     })
                 );
             })
-        });
-    };
-
-    this.plot_data_set_data = function () {
-        var data_url = self.host + "/monitoring/" + self.observation + "/" + self.data_set + "/about";
-
-        $.ajax({
-            url: data_url,
-            success: function (data_set) {
-                // Display the beam plot configuration
-                self._plot_beam_configuration('multi-beam-configuration-plot', data_set);
-
-                // Display the Data set information table
-                self._display_data_set_info_table('data-set-info-table', data_set);
-            }
         });
     };
 
@@ -214,33 +218,53 @@ var MultiBeam = function (observation, data_set) {
         Plotly.newPlot(selector, data, layout);
     };
 
-    this.plot_beam_candidates = function () {
+    this.plot = function () {
+        var beam_candidates = self._get_beam_candidates_response();
+        var data_set = self._get_data_set_data();
+
+        $.when(beam_candidates).done(function (beam_candidates_data) {
+            // Build the beam candidates data table
+            self._plot_orbit_determination_data_table('orbit-determination-data-table', beam_candidates_data['candidates']);
+
+            // Plot the beam firing order
+            self._plot_beam_illumination_order('beam-firing-order', beam_candidates_data['order']);
+
+            // Plot the beam illumination time-line
+            self._plot_beam_illumination_timeline('beam-illumination-time-line-plot', beam_candidates_data['candidates']);
+        });
+
+        $.when(data_set).done(function (data_set_data) {
+            // Display the beam plot configuration
+            self._plot_beam_configuration('multi-beam-configuration-plot', data_set_data);
+
+            // Display the Data set information table
+            self._display_data_set_info_table('data-set-info-table', data_set_data);
+        });
+
+        $.when(beam_candidates, data_set).done(function (beam_candidates_data, data_set_data) {
+            // Plot the beam candidates
+            self._plot_beam_candidates('beam-candidates-plot', beam_candidates_data[0]['candidates'], data_set_data[0]);
+        });
+    };
+
+    this._get_beam_candidates_response = function () {
         var data_url = self.host + "/monitoring/" + self.observation + "/" + self.data_set + "/multi_beam/beam_candidates";
         var min_freq = 409.99;
         var max_freq = 410.01;
 
-        $.ajax({
+        return $.ajax({
             url: data_url,
             data: {
                 min_frequency: min_freq,
                 max_frequency: max_freq
-            },
-            success: function (beam_data) {
-                var beam_candidates = beam_data['candidates'];
-                var beam_firing_order = beam_data['order'];
-
-                // Plot the beam candidates
-                self._plot_beam_candidates(beam_candidates);
-
-                // Build the beam candidates data table
-                self._plot_orbit_determination_data_table(beam_candidates);
-
-                // Plot the beam firing order
-                self._plot_beam_firing_order(beam_firing_order);
-
-                // Plot the beam illumination time-line
-                self._plot_beam_illumination_timeline(beam_candidates);
             }
+        });
+    };
+
+    this._get_data_set_data = function () {
+        var data_url = self.host + "/monitoring/" + self.observation + "/" + self.data_set + "/about";
+        return $.ajax({
+            url: data_url
         });
     };
 

@@ -18,3 +18,19 @@ class DataSet(Resource):
         data = ds.get(data_set_id)
 
         return jsonify(data)
+
+
+class Observation(Resource):
+    """
+    The beam parent class
+    """
+    beam_dir = None
+    image_ext = config.get('visualization', 'IMAGE_EXT')
+
+    @staticmethod
+    def get(observation, data_set):
+        data_set_id = observation + '.' + data_set
+        ds = DataSetRepository()
+        data = ds.get(data_set_id)
+
+        return jsonify(data)
