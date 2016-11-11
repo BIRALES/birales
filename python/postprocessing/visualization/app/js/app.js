@@ -123,17 +123,19 @@ var MultiBeam = function (observation, data_set) {
         Plotly.newPlot(selector, traces, layout);
     };
 
-    this._plot_orbit_determination_data_table = function (selector, beam_candidates) {
+    this._plot_orbit_determination_data_table = function (selector, beam_candidates, data_set) {
         var template_url = 'views/beam_candidate_table.mustache';
+
         $.get(template_url, function (template) {
             $.each(beam_candidates, function (candidate_number, beam_candidate) {
+
                 $('#' + selector).append(
                     Mustache.render(template, {
                         detections: beam_candidate.detections,
                         beam_id: beam_candidate.beam_id,
                         candidate_id: beam_candidate.name,
-                        beam_ra: self.beam_config[beam_candidate.beam_id].beam_ra,
-                        beam_dec: self.beam_config[beam_candidate.beam_id].beam_dec
+                        beam_ra: data_set.config.pointings[beam_candidate.beam_id][0],
+                        beam_dec: data_set.config.pointings[beam_candidate.beam_id][1]
                     })
                 );
             })
@@ -178,11 +180,6 @@ var MultiBeam = function (observation, data_set) {
             var bw_ra = 1.75;
             var bw_dec = 0.5;
 
-            self.beam_config[beam_id] = {
-                'beam_ra': ra,
-                'beam_dec': dec
-            };
-
             var shape = {
                 type: 'circle',
                 xref: 'x',
@@ -223,9 +220,6 @@ var MultiBeam = function (observation, data_set) {
         var data_set = self._get_data_set_data();
 
         $.when(beam_candidates).done(function (beam_candidates_data) {
-            // Build the beam candidates data table
-            self._plot_orbit_determination_data_table('orbit-determination-data-table', beam_candidates_data['candidates']);
-
             // Plot the beam firing order
             self._plot_beam_illumination_order('beam-firing-order', beam_candidates_data['order']);
 
@@ -242,6 +236,9 @@ var MultiBeam = function (observation, data_set) {
         });
 
         $.when(beam_candidates, data_set).done(function (beam_candidates_data, data_set_data) {
+            // Build the beam candidates data table
+            self._plot_orbit_determination_data_table('orbit-determination-data-table', beam_candidates_data[0]['candidates'], data_set_data[0]);
+
             // Plot the beam candidates
             self._plot_beam_candidates('beam-candidates-plot', beam_candidates_data[0]['candidates'], data_set_data[0]);
         });
