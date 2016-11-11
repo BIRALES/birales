@@ -1,7 +1,8 @@
 from flask import Flask
 from flask_restful import Api
-from resources.candidates import BeamCandidate, MultiBeamCandidate, MultiBeamDetections
+from resources.candidates import MultiBeamCandidate, MultiBeamDetections
 from resources.data_set import DataSet
+from resources.observations import Observations
 from flask_cors import CORS
 
 
@@ -16,7 +17,10 @@ def init_api_resources(api):
     api.add_resource(MultiBeamCandidate, pre_fix_route + 'multi_beam/beam_candidates')
 
     # Data set routes
-    api = api.add_resource(DataSet,  pre_fix_route + 'about')
+    api.add_resource(DataSet,  pre_fix_route + 'about')
+
+    # Observations
+    api.add_resource(Observations,  '/monitoring/observations')
 
     return api
 

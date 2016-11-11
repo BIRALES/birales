@@ -1,9 +1,7 @@
 var MultiBeam = function (observation, data_set) {
     var self = this;
-    this.observation = observation;
-    this.data_set = data_set;
     this.host = "http://127.0.0.1:5000";
-    this.beam_config = {};
+
 
     this._plot_beam_illumination_order = function (selector, beam_firing_order) {
         var template_url = 'views/beam_firing_order.mustache';
@@ -215,9 +213,9 @@ var MultiBeam = function (observation, data_set) {
         Plotly.newPlot(selector, data, layout);
     };
 
-    this.plot = function () {
-        var beam_candidates = self._get_beam_candidates_response();
-        var data_set = self._get_data_set_data();
+    this.plot = function (observation_name, data_set_name) {
+        var beam_candidates = self._get_beam_candidates_data(observation_name, data_set_name);
+        var data_set = self._get_data_set_data(observation_name, data_set_name);
 
         $.when(beam_candidates).done(function (beam_candidates_data) {
             // Plot the beam firing order
@@ -244,8 +242,8 @@ var MultiBeam = function (observation, data_set) {
         });
     };
 
-    this._get_beam_candidates_response = function () {
-        var data_url = self.host + "/monitoring/" + self.observation + "/" + self.data_set + "/multi_beam/beam_candidates";
+    this._get_beam_candidates_data = function (observation_name, data_set_name) {
+        var data_url = self.host + "/monitoring/" + observation + "/" + data_set_name + "/multi_beam/beam_candidates";
         var min_freq = 409.99;
         var max_freq = 410.01;
 
@@ -258,8 +256,8 @@ var MultiBeam = function (observation, data_set) {
         });
     };
 
-    this._get_data_set_data = function () {
-        var data_url = self.host + "/monitoring/" + self.observation + "/" + self.data_set + "/about";
+    this._get_data_set_data = function (observation_name, data_set_name) {
+        var data_url = self.host + "/monitoring/" + observation + "/" + data_set_name + "/about";
         return $.ajax({
             url: data_url
         });

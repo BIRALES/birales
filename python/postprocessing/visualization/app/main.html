@@ -63,12 +63,11 @@
 
 <script>
     $(document).ready(function () {
-        var observation = "medicina_26_05_2016";
-        var data_set = "norad_29499";
+        var observation_name = "medicina_26_05_2016";
+        var data_set_name = "norad_29499";
 
-        var multi_beam = new MultiBeam(observation, data_set);
-//        multi_beam.plot_data_set_data();
-        multi_beam.plot();
+        var multi_beam = new MultiBeam();
+        multi_beam.plot(observation_name, data_set_name);
     });
 </script>
 </html>

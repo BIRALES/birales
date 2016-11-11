@@ -220,6 +220,31 @@ class MultiBeamCandidateRepository(Repository):
         pass
 
 
+class ObservationRepository(Repository):
+    def __init__(self):
+        Repository.__init__(self)
+
+    def get(self):
+        """
+        Returns a dictionary of available observations and their corresponding data_sets
+
+        :return:
+        """
+        try:
+            data_sets = self.database.data_sets.aggregate([{"$group":{
+                '_id': '$observation',
+                'data_sets': {
+                    '$push': '$name'
+                }}
+            }])
+
+            return list(data_sets)
+
+        except mongo.errors.ServerSelectionTimeoutError:
+            log.error('MongoDB is not running. Exiting.')
+            sys.exit(1)
+
+
 class SpaceDebrisRepository(Repository):
     def __init__(self):
         Repository.__init__(self)
