@@ -3,6 +3,8 @@ import sys
 from abc import abstractmethod
 import pymongo as mongo
 from configuration.application import config
+from pyevtk.hl import pointsToVTK
+import numpy as np
 
 
 class Repository:
@@ -127,6 +129,8 @@ class BeamCandidateRepository(Repository):
             log.warning('No beam space debris candidates were found.')
             return False
 
+        # self.save_to_vtk(beam_candidates)
+
         try:
             # Clear the database of old beam data candidates
             self.destroy(self.data_set.id)
@@ -140,6 +144,23 @@ class BeamCandidateRepository(Repository):
         except mongo.errors.ServerSelectionTimeoutError:
             log.error('MongoDB is not running. Exiting.')
             sys.exit(1)
+
+    @staticmethod
+    def save_to_vtk(beam_candidates):
+        for candidate in beam_candidates:
+            time = []
+            frequencies = []
+            snr = []
+            for detection in candidate.detections:
+                time.append(detection['time_elapsed'])
+                frequencies.append(detection['frequency'])
+                snr.append(detection['snr'])
+
+            pointsToVTK('beam_candidate_' + candidate.id,
+                        x=np.array(time),
+                        y=np.array(frequencies),
+                        z=np.linspace(1., 1., len(frequencies)),
+                        data={'snr': np.array(snr)})
 
     def get(self, beam_id, data_set_id):
         try:

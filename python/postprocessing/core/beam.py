@@ -1,12 +1,12 @@
 import os.path
 import inflection as inf
 import numpy as np
-
 from configuration.application import config
 from filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter
 from helpers import LineGeneratorHelper
 from visualization.api.common.plotters import BeamMatplotlibPlotter
 from repository import BeamDataRepository
+from pyevtk.hl import gridToVTK, pointsToVTK
 
 
 class Beam:
@@ -53,6 +53,25 @@ class Beam:
         self.time = np.linspace(0, self.time_samples * self.sampling_rate, num=self.time_samples)
         self.channels = np.arange(self.f_ch1, self.f_ch1 + self.f_off * self.n_channels, self.f_off)
         self.snr = self._set_data(beam_data)
+
+        # self.save_to_vtk()
+
+    def save_to_vtk(self):
+        n_time = len(self.time)
+        n_channels = len(self.channels)
+        n_beam = 1
+
+        time = np.arange(0, n_time)
+        channels = np.arange(0, n_channels)
+        snr = self.snr.reshape(n_time, n_channels, 1)
+        # gridToVTK("beam_vtk_" + str(self.id), x=self.time, y=self.channels, z=np.arange(0, n_beam),
+        #           cellData={'snr': snr})
+
+        pointsToVTK('beam_vtk_' + str(self.id),
+                        x=self.time,
+                        y=self.channels,
+                        z=np.linspace(1., 1., len(self.channels)),
+                        data={'snr': self.snr})
 
     def visualize(self, title):
         bp = BeamMatplotlibPlotter(fig_size=(16, 10),

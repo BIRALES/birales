@@ -1,5 +1,4 @@
 import numpy as np
-import astropy.units as u
 from datetime import datetime
 from astropy.time import Time, TimezoneInfo
 
@@ -73,3 +72,4 @@ class BeamSpaceDebrisCandidate:
         yield 'data_set_id', self.beam.data_set.id
         yield 'illumination_time', self.illumination_time
         yield 'created_at', datetime.now()
+
