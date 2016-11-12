@@ -1,10 +1,15 @@
 <div class="dropdown">
-    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">Choose observation
+    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">Change observation
         <span class="caret"></span></button>
     <ul class="dropdown-menu">
         {{#observations}}
-            <li><a id="dropdown-obs-{{ _id }}" class="observation-drop-down" data-data_set-name="{{ name }}"
-                   data-data_set-observation="{{observation}}">{{ observation }} | {{ name }}</a></li>
+            <li>
+                <a id="dropdown-obs-{{ _id }}"
+                   class="observation-drop-down"
+                   data-data_set-name="{{ name }}"
+                   data-data_set-observation="{{observation}}">{{ observation }} | {{ name }}
+                </a>
+            </li>
         {{/observations}}
     </ul>
 </div>
