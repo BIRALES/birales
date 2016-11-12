@@ -157,7 +157,7 @@ var MultiBeam = function (observation, data_set) {
                     transmitter_frequency: data_set.config.transmitter_frequency,
                     sampling_time: data_set.config.sampling_time,
                     human_timestamp: data_set.config.human_timestamp,
-                    nbeams: data_set.config.nbeams,
+                    nbeams: data_set.config.nbeams
                 })
             );
         });
@@ -226,6 +226,9 @@ var MultiBeam = function (observation, data_set) {
         var beam_candidates = self._get_beam_candidates_data(observation_name, data_set_name);
         var data_set = self._get_data_set_data(observation_name, data_set_name);
 
+        // Update view
+        self._update_view(observation_name, data_set_name);
+
         $.when(beam_candidates).done(function (beam_candidates_data) {
             // Plot the beam firing order
             self._plot_beam_illumination_order('beam-firing-order', beam_candidates_data['order']);
@@ -248,9 +251,6 @@ var MultiBeam = function (observation, data_set) {
 
             // Plot the beam candidates
             self._plot_beam_candidates('beam-candidates-plot', beam_candidates_data[0]['candidates'], data_set_data[0]);
-
-            // Update view
-            self._update_view(observation_name, data_set_name);
         });
     };
 
@@ -319,9 +319,17 @@ var MultiBeam = function (observation, data_set) {
         });
     };
 
-    this._update_view = function (observation_name, data_set_name){
-        $('#obs-name-heading').html(observation_name);
-        $('#data_set-name-heading').html(data_set_name);
+    this._update_view = function (observation_name, data_set_name) {
+        var template_url = 'views/main_heading.mustache';
+        var selector = 'observation-heading';
+        $.get(template_url, function (template) {
+            $('#' + selector).html(
+                Mustache.render(template, {
+                    observation: observation_name,
+                    data_set: data_set_name
+                })
+            );
+        });
     };
 
     this.init = function () {
