@@ -1,12 +1,13 @@
 var MultiBeam = function (observation, data_set) {
     var self = this;
     this.host = "http://127.0.0.1:5000";
-
+    this.observation_name = undefined;
+    this.data_set_name = undefined;
 
     this._plot_beam_illumination_order = function (selector, beam_firing_order) {
         var template_url = 'views/beam_firing_order.mustache';
         $.get(template_url, function (template) {
-            $('#' + selector).append(
+            $('#' + selector).html(
                 Mustache.render(template, {
                     order: beam_firing_order
                 })
@@ -81,14 +82,18 @@ var MultiBeam = function (observation, data_set) {
                 name: 'beam ' + beam_candidate.beam_id + ' candidate ' + beam_candidate.name
             };
 
-            var min = beam_candidates_trace.y.reduce(function (a, b) { return a < b ? a : b; });
-            var max = beam_candidates_trace.y.reduce(function (a, b) { return a > b ? a : b; });
+            var min = beam_candidates_trace.y.reduce(function (a, b) {
+                return a < b ? a : b;
+            });
+            var max = beam_candidates_trace.y.reduce(function (a, b) {
+                return a > b ? a : b;
+            });
 
-            if(min < min_time){
+            if (min < min_time) {
                 min_time = min;
             }
 
-            if (max > max_time){
+            if (max > max_time) {
                 max_time = max;
             }
 
@@ -125,6 +130,7 @@ var MultiBeam = function (observation, data_set) {
         var template_url = 'views/beam_candidate_table.mustache';
 
         $.get(template_url, function (template) {
+            $('#' + selector).empty();
             $.each(beam_candidates, function (candidate_number, beam_candidate) {
 
                 $('#' + selector).append(
@@ -143,7 +149,7 @@ var MultiBeam = function (observation, data_set) {
     this._display_data_set_info_table = function (selector, data_set) {
         var template_url = 'views/data_set_info_table.mustache';
         $.get(template_url, function (template) {
-            $('#' + selector).append(
+            $('#' + selector).html(
                 Mustache.render(template, {
                     observation: data_set.observation,
                     name: data_set.name,
@@ -213,7 +219,10 @@ var MultiBeam = function (observation, data_set) {
         Plotly.newPlot(selector, data, layout);
     };
 
-    this.plot = function (observation_name, data_set_name) {
+    this.publish = function (observation_name, data_set_name) {
+        this.observation_name = observation_name;
+        this.data_set_name = data_set_name;
+
         var beam_candidates = self._get_beam_candidates_data(observation_name, data_set_name);
         var data_set = self._get_data_set_data(observation_name, data_set_name);
 
@@ -239,11 +248,20 @@ var MultiBeam = function (observation, data_set) {
 
             // Plot the beam candidates
             self._plot_beam_candidates('beam-candidates-plot', beam_candidates_data[0]['candidates'], data_set_data[0]);
+
+            // Update view
+            self._update_view(observation_name, data_set_name);
         });
     };
 
+    this.update = function (observation_name, data_set_name) {
+        if (this.observation_name !== observation_name && this.data_set_name !== data_set_name) {
+            this.publish(observation_name, data_set_name)
+        }
+    };
+
     this._get_beam_candidates_data = function (observation_name, data_set_name) {
-        var data_url = self.host + "/monitoring/" + observation + "/" + data_set_name + "/multi_beam/beam_candidates";
+        var data_url = self.host + "/monitoring/" + observation_name + "/" + data_set_name + "/multi_beam/beam_candidates";
         var min_freq = 409.99;
         var max_freq = 410.01;
 
@@ -257,7 +275,7 @@ var MultiBeam = function (observation, data_set) {
     };
 
     this._get_data_set_data = function (observation_name, data_set_name) {
-        var data_url = self.host + "/monitoring/" + observation + "/" + data_set_name + "/about";
+        var data_url = self.host + "/monitoring/" + observation_name + "/" + data_set_name + "/about";
         return $.ajax({
             url: data_url
         });
@@ -299,5 +317,39 @@ var MultiBeam = function (observation, data_set) {
                 Plotly.newPlot(selector, traces, layout);
             }
         });
-    }
+    };
+
+    this._update_view = function (observation_name, data_set_name){
+        $('#obs-name-heading').html(observation_name);
+        $('#data_set-name-heading').html(data_set_name);
+    };
+
+    this.init = function () {
+        var template_url = 'views/data_sets_dropdown.mustache';
+        var data_url = self.host + "/monitoring/observations";
+        var selector = 'observations-drop_down';
+        var observation_drop_down_selector = '.observation-drop-down';
+        var observations = $.ajax(data_url);
+
+        $.when(observations).done(function (observations) {
+
+            $.get(template_url, function (template) {
+                $('#' + selector).html(
+                    Mustache.render(template, {
+                        observations: observations
+                    })
+                );
+
+                $(observation_drop_down_selector).click(function () {
+                    self.update($(this).data('data_set-observation'), $(this).data('data_set-name'));
+                });
+
+                var default_observation = $(observation_drop_down_selector).first();
+                self.publish(default_observation.data('data_set-observation'), default_observation.data('data_set-name'));
+            });
+        }).fail(function () {
+            console.log('Failed to retrieve the available data_sets.')
+        });
+    };
+
 };

@@ -231,12 +231,8 @@ class ObservationRepository(Repository):
         :return:
         """
         try:
-            data_sets = self.database.data_sets.aggregate([{"$group":{
-                '_id': '$observation',
-                'data_sets': {
-                    '$push': '$name'
-                }}
-            }])
+            # Return all data sets in the repository
+            data_sets = self.database.data_sets.find({}, {'observation': 1, 'name': 1})
 
             return list(data_sets)
 
