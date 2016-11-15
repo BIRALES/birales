@@ -7,5 +7,5 @@ Start the Flask server on port 9000
 Post-Process a data set XXX in observation YYY (32 beams)
 <code> python main.py post_process --observation YYY --data_set XXX --n_beams=32 <code>
 
-Reset the database
-<code> python main.py reset <code>
+Reset the database of ata set XXX in observation YYY
+<code> python main.py reset --observation YYY --data_set XXX <code>
