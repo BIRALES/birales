@@ -1,11 +1,9 @@
 import click
 import time
+import logging as log
 from core.pipeline import SpaceDebrisDetectorPipeline
 from core.repository import DataSetRepository, BeamDataRepository
 from visualization.api import app
-
-import logging as log
-
 
 @click.group()
 @click.option('--multiproc', help='Needed when running in parallel', type=click.STRING)

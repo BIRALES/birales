@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from abc import abstractmethod
-from configuration.application import config
+from postprocessing.configuration.application import config
 
 
 class Plotter:
