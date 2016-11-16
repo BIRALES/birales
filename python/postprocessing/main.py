@@ -1,85 +1,78 @@
-from controllers.SpaceDebrisController import SpaceDebrisController
-import config.log as log_config
-import config.application as config
-import cProfile
-import pstats
-import StringIO
+import click
+import time
 import logging as log
-import os
-import sys
-import getopt
-from glob import glob
+from core.pipeline import SpaceDebrisDetectorPipeline
+from core.repository import DataSetRepository, BeamDataRepository
+from visualization.api import app
 
-log.basicConfig(format=log_config.FORMAT, level=log.DEBUG)
+@click.group()
+@click.option('--multiproc', help='Needed when running in parallel', type=click.STRING)
+@click.option('--client', help='Needed when running in parallel', type=click.STRING)
+@click.option('--port', help='Needed when running in parallel', type=click.INT)
+@click.option('--file', help='Needed when running in parallel', type=click.STRING)
+def cli(multiproc, client, port, file):
+    log.debug('Using %s for multiproc', multiproc)
+    log.debug('Using %s for client', client)
+    log.debug('Using %s for port', port)
+    log.debug('Using %s for file', file)
 
 
-# todo - Separate viewing of results from postprocessing of beam data
-# todo - do not commit vendor files
-
-
-def run():
+@cli.command()
+@click.option('--observation', help='Observation you want to process', required=True)
+@click.option('--data_set', help='The data set you want to process', required=True)
+@click.option('--n_beams', help='Number of beams to process', type=click.INT, required=True)
+def post_process(observation, data_set, n_beams):
     """
-    Post process the data
+    Post process the beam data and generate space debris candidates
+
+    :param observation  The observation to be processed
+    :param data_set     The data_set to be processed
+    :param n_beams      The number of beams to process
+
     :return:
     """
 
-    myopts, args = getopt.getopt(sys.argv[1:], "o:d:")
+    before = time.time()
+    pipeline = SpaceDebrisDetectorPipeline(observation_name=observation, data_set_name=data_set, n_beams=n_beams)
+    pipeline.run()
 
-    observation = None
-    data_set = None
-    for o, a in myopts:
-        if o == '-d':
-            data_set = a
-        elif o == '-o':
-            observation = a
-
-    def get_observations():
-        data = os.listdir(config.DATA_FILE_PATH)
-        observations_dir = [os.path.join(config.DATA_FILE_PATH, obs) for obs in data if
-                            os.path.isdir(os.path.join(config.DATA_FILE_PATH, obs))]
-        return observations_dir
-
-    def get_data_sets(observation_dir):
-        data = os.listdir(observation_dir)
-        data_sets_dirs = [os.path.join(observation_dir, d) for d in data if
-                          os.path.isdir(os.path.join(observation_dir, d))]
-        return data_sets_dirs
-
-    if observation is None and data_set is None:
-        observations = get_observations()
-        for observation_dir in observations:
-            data_sets = get_data_sets(observation_dir)
-            for data_set_dir in data_sets:
-                observation = os.path.basename(observation_dir)
-                data_set = os.path.basename(data_set_dir)
-                odc = SpaceDebrisController(observation=observation, data_set=data_set)
-                odc.run()
-
-    else:
-        odc = SpaceDebrisController(observation=observation, data_set=data_set)
-        odc.run()
-
-        # else:
-        #     # The observations / data sets which will be processed
-        #     observations = {
-        #         'medicina_07_03_2016': [
-        #             'mock_1358',
-        #             '1358',
-        #             '24773',
-        #             '25484',
-        #             '40058',
-        #             '5438',
-        #             '7434'
-        #         ]
-        #     }
+    log.info('Process finished in %s seconds', round(time.time() - before, 3))
 
 
-if not config.PROFILE:
-    run()
-else:
-    cProfile.run('run()', config.PROFILE_LOG_FILE)
-    stream = StringIO.StringIO()
-    pr = cProfile.Profile()
-    stats = pstats.Stats(config.PROFILE_LOG_FILE, stream=stream).sort_stats('cumulative')
-    stats.print_stats()
-    print stream.getvalue()
+@cli.command()
+@click.option('--port', help='The port that the server will run on', type=click.INT)
+def run_dev_server(port):
+    """
+    Run the flask server
+
+    :param port The port that the server will run on
+    :return:
+    """
+    app.run_server(port)
+
+
+@cli.command()
+@click.option('--observation', help='Observation you want to delete', required=True)
+@click.option('--data_set', help='The data set you want to delete', required=True)
+def reset(observation, data_set):
+    """
+    Drop the database for the selected data set
+
+    :param observation  The observation that the data set belongs to
+    :param data_set     The data set to be deleted
+    :return:
+    """
+    # Build the data_set unique id
+    data_set_id = observation + '.' + data_set
+
+    # Delete the beam data for this data_set from the database
+    beam_data_repository = BeamDataRepository()
+    beam_data_repository.destroy(data_set_id)
+
+    # Delete the data_set from the database
+    data_set_repository = DataSetRepository()
+    data_set_repository.destroy(data_set_id)
+
+
+if __name__ == '__main__':
+    cli()
