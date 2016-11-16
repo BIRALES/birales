@@ -1,0 +1,5 @@
+venv/
+data/
+public
+postprocessing/visualization/app/node_modules
+
