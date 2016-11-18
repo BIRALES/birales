@@ -5,6 +5,7 @@ from core.pipeline import SpaceDebrisDetectorPipeline
 from core.repository import DataSetRepository, BeamDataRepository
 from visualization.api import app
 
+
 @click.group()
 @click.option('--multiproc', help='Needed when running in parallel', type=click.STRING)
 @click.option('--client', help='Needed when running in parallel', type=click.STRING)

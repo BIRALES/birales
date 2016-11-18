@@ -1,10 +1,11 @@
 import logging as log
 import sys
-from abc import abstractmethod
 import pymongo as mongo
-from configuration.application import config
-from pyevtk.hl import pointsToVTK
 import numpy as np
+
+from abc import abstractmethod
+from postprocessing.configuration.application import config
+from pyevtk.hl import pointsToVTK
 
 
 class Repository:
@@ -129,8 +130,6 @@ class BeamCandidateRepository(Repository):
             log.warning('No beam space debris candidates were found.')
             return False
 
-        # self.save_to_vtk(beam_candidates)
-
         try:
             # Clear the database of old beam data candidates
             self.destroy(self.data_set.id)
@@ -162,12 +161,22 @@ class BeamCandidateRepository(Repository):
                         z=np.linspace(1., 1., len(frequencies)),
                         data={'snr': np.array(snr)})
 
-    def get(self, beam_id, data_set_id):
+    def get(self, beam_id, data_set_id, max_freq=None, min_freq=None, max_time=None, min_time=None):
         try:
-            beam_candidates = self.database.beam_candidates.find({"$and": [
+            query = {"$and": [
                 {'beam_id': beam_id},
                 {'data_set_id': data_set_id}
-            ]})
+            ]}
+
+            if max_freq and min_freq:
+                query['$and'].append({'detections.frequency': {'$gte': float(min_freq)}})
+                query['$and'].append({'detections.frequency': {'$lte': float(max_freq)}})
+
+            if max_time and min_time:
+                query['$and'].append({'detections.time': {'$gte': float(max_time)}})
+                query['$and'].append({'detections.time': {'$lte': float(min_time)}})
+
+            beam_candidates = self.database.beam_candidates.find(query)
 
             return list(beam_candidates)
 

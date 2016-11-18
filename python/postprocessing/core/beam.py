@@ -1,10 +1,11 @@
 import os.path
 import inflection as inf
 import numpy as np
-from configuration.application import config
+
+from postprocessing.configuration.application import config
 from filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter
 from helpers import LineGeneratorHelper
-from visualization.api.common.plotters import BeamMatplotlibPlotter
+from postprocessing.visualization.api.common.plotters import BeamMatplotlibPlotter
 from repository import BeamDataRepository
 from pyevtk.hl import gridToVTK, pointsToVTK
 
@@ -54,8 +55,6 @@ class Beam:
         self.channels = np.arange(self.f_ch1, self.f_ch1 + self.f_off * self.n_channels, self.f_off)
         self.snr = self._set_data(beam_data)
 
-        # self.save_to_vtk()
-
     def save_to_vtk(self):
         n_time = len(self.time)
         n_channels = len(self.channels)
@@ -67,13 +66,20 @@ class Beam:
         # gridToVTK("beam_vtk_" + str(self.id), x=self.time, y=self.channels, z=np.arange(0, n_beam),
         #           cellData={'snr': snr})
 
+        time = np.tile(self.time, n_channels)
+        channel = np.tile(self.channels, n_time)
+        snr = self.snr.flatten()
+        points = np.column_stack((channel, time, snr))
         pointsToVTK('beam_vtk_' + str(self.id),
-                        x=self.time,
-                        y=self.channels,
-                        z=np.linspace(1., 1., len(self.channels)),
-                        data={'snr': self.snr})
+                    x=points[:, 0],
+                    y=points[:, 1],
+                    z=np.linspace(1, 1, len(time)),
+                    data={'snr': points[:, 2]})
 
     def visualize(self, title):
+        self.save_to_vtk()
+        exit(0)
+        """
         bp = BeamMatplotlibPlotter(fig_size=(16, 10),
                                    fig_title='Waterfall',
                                    plot_title=title,
@@ -85,6 +91,7 @@ class Beam:
 
         file_path = os.path.join(config.get('visualization', 'FILE_PATH'), self.observation_name, self.data_set.name)
         bp.save(file_path)
+        """
 
     def _get_human_name(self):
         return 'Observation ' + inf.humanize(self.observation_name) + ' - ' + inf.humanize(

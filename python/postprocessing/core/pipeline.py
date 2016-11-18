@@ -1,6 +1,6 @@
 import logging as log
 
-from configuration.application import config
+from postprocessing.configuration.application import config
 from data_set import DataSet
 from detection_strategies import DBScanSpaceDebrisDetectionStrategy
 from repository import BeamCandidateRepository
@@ -14,18 +14,25 @@ class SpaceDebrisDetectorPipeline:
         self.data_set = DataSet(observation_name, data_set_name, n_beams)
         self.detection_strategy = DBScanSpaceDebrisDetectionStrategy()
 
+        self.beams_to_process = n_beams
+
     def run(self):
         """
         Run the Space Debris Detector pipeline
         :return void
         """
-        log.info('Running space debris detection algorithm on %s beams', len(self.data_set.beams))
+
+        # Extract beams from the data set we are processing
+        log.info('Extracting beam data from data set %s', self.data_set.name)
+        beams = self.data_set.create_beams(self.beams_to_process)
 
         # Process the beam data to detect the beam candidates
         if config.get_boolean('application', 'PARALLEL'):
-            beam_candidates = self._get_beam_candidates_parallel()
+            log.info('Running space debris detection algorithm on %s beams in parallel', len(beams))
+            beam_candidates = self._get_beam_candidates_parallel(beams)
         else:
-            beam_candidates = self._get_beam_candidates_single()
+            log.info('Running space debris detection algorithm on %s beams in serial mode', len(beams))
+            beam_candidates = self._get_beam_candidates_single(beams)
 
         log.info('Data processed, saving %s beam candidates to database', len(beam_candidates))
 
@@ -33,28 +40,28 @@ class SpaceDebrisDetectorPipeline:
 
         self._save_beam_candidates(beam_candidates)
 
-    def _get_beam_candidates_single(self):
+    def _get_beam_candidates_single(self, beams):
         """
         Run the detection algorithm using 1 process
         :return: beam_candidates Beam candidates detected across the 32 beams
         """
         beam_candidates = []
-        for beam in self.data_set.beams:
+        for beam in beams:
             beam_candidates += self._detect_space_debris_candidates(beam)
 
         return beam_candidates
 
-    def _get_beam_candidates_parallel(self):
+    def _get_beam_candidates_parallel(self, beams):
         """
 
         :return: beam_candidates Beam candidates detected across the 32 beams
         """
 
         # Initialise thread pool with
-        pool = ThreadPool(4)
+        pool = ThreadPool(16)
 
         # Run N threads
-        beam_candidates = pool.map(self._detect_space_debris_candidates, self.data_set.beams)
+        beam_candidates = pool.map(self._detect_space_debris_candidates, beams)
 
         # Flatten list of beam candidates returned by the N threads
         beam_candidates = [candidate for sub_list in beam_candidates for candidate in sub_list]

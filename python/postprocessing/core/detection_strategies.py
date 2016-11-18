@@ -1,11 +1,12 @@
 import logging as log
-from abc import abstractmethod
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.cluster import DBSCAN
-from configuration.application import config
-from detection_candidates import BeamSpaceDebrisCandidate
 import warnings
+
+from abc import abstractmethod
+from sklearn.cluster import DBSCAN
+from postprocessing.configuration.application import config
+from detection_candidates import BeamSpaceDebrisCandidate
 
 
 class SpaceDebrisDetection(object):
@@ -224,7 +225,7 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         return good_clusters
 
     def detect(self, beam):
-        log.debug('Running space debris detection algorithm on beam %s data', beam.id)
+        log.debug('Running DBSCAN space debris detection algorithm on beam %s', beam.id)
 
         if np.sum(beam.snr) == 0.0:
             log.debug('SNR is 0 for filtered beam %s', beam.id)

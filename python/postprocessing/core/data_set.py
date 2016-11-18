@@ -40,30 +40,8 @@ class DataSet:
         self.n_channels = self.config['nchans']
         self.tx = self.config['transmitter_frequency']
 
-        log.info('Extracting beam data from data set %s', data_set_name)
-        self.beams = self.get_beams()
-
-    def _get_data_file_path(self, observation_name, data_set_name):
-        """
-        Get the data file path for the specified observation and data set
-
-        :param observation_name:
-        :param data_set_name:
-        :return:
-        """
-        base_path = config.get('io', 'DATA_FILE_PATH')
-        return os.path.join(config.ROOT, base_path, observation_name, data_set_name, data_set_name + self.data_set_ext)
-
-    def _get_config_file_path(self, observation_name, data_set_name):
-        """
-        Get the configuration file path for the specified observation and data set
-
-        :param observation_name:
-        :param data_set_name:
-        :return:
-        """
-        base_path = config.get('io', 'DATA_FILE_PATH')
-        return os.path.join(config.ROOT, base_path, observation_name, data_set_name, data_set_name + self.config_ext)
+        # Read the data set data
+        self.data = self._read_data_set(self.data_file_path, self.n_beams, self.n_channels)
 
     def _read_data_set(self, data_set_file_path, n_beams, n_channels):
         """
@@ -90,24 +68,22 @@ class DataSet:
 
         raise IOError('Data set was not found at ' + data_set_file_path)
 
-    def get_beams(self):
+    def create_beams(self, n_beams):
         """
         Create and return a list of Beam objects from the beam data.
 
+        :param n_beams: Number of beams to create from the data_set
         :return: A list of Beams extracted from the data set data
         """
 
-        # Read the data set data
-        data_set_data = self._read_data_set(self.data_file_path, self.config['nbeams'], self.config['nchans'])
-
         # Initialise thread pool
-        pool = ThreadPool(4)
+        pool = ThreadPool(32)
 
         # Pass the data set data to the create beam function
-        create_beam_func = partial(self._create_beam, data_set_data)
+        create_beam_func = partial(self._create_beam, self.data)
 
         # Create the iterable
-        n_beams = range(0, self.n_beams)
+        n_beams = range(0, n_beams)
 
         # Collect the beam data processed by N threads
         beams = pool.map(create_beam_func, n_beams)
@@ -178,6 +154,28 @@ class DataSet:
         file_path = os.path.join(config.get('visualization', 'FILE_PATH'), observation_name, data_set_name)
         if not os.path.exists(file_path):
             os.makedirs(file_path)
+
+    def _get_data_file_path(self, observation_name, data_set_name):
+        """
+        Get the data file path for the specified observation and data set
+
+        :param observation_name:
+        :param data_set_name:
+        :return:
+        """
+        base_path = config.get('io', 'DATA_FILE_PATH')
+        return os.path.join(config.ROOT, base_path, observation_name, data_set_name, data_set_name + self.data_set_ext)
+
+    def _get_config_file_path(self, observation_name, data_set_name):
+        """
+        Get the configuration file path for the specified observation and data set
+
+        :param observation_name:
+        :param data_set_name:
+        :return:
+        """
+        base_path = config.get('io', 'DATA_FILE_PATH')
+        return os.path.join(config.ROOT, base_path, observation_name, data_set_name, data_set_name + self.config_ext)
 
     def __iter__(self):
         """
