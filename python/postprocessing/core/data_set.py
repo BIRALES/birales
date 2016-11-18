@@ -80,7 +80,7 @@ class DataSet:
         pool = ThreadPool(32)
 
         # Pass the data set data to the create beam function
-        create_beam_func = partial(self._create_beam, self.data)
+        create_beam_func = partial(self.create_beam, self.data)
 
         # Create the iterable
         n_beams = range(0, n_beams)
@@ -93,7 +93,7 @@ class DataSet:
 
         return beams
 
-    def _create_beam(self, data_set_data, n_beam):
+    def create_beam(self, n_beam):
         log.debug('Generating beam %s from data set %s', n_beam, self.name)
         beam = Beam(beam_id=n_beam,
                     dec=0.0,
@@ -101,7 +101,7 @@ class DataSet:
                     ha=0.0,
                     top_frequency=0.0,
                     frequency_offset=0.0,
-                    data_set=self, beam_data=data_set_data)
+                    data_set=self, beam_data=self.data)
         return beam
 
     @staticmethod
