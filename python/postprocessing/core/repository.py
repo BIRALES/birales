@@ -173,8 +173,8 @@ class BeamCandidateRepository(Repository):
                 query['$and'].append({'detections.frequency': {'$lte': float(max_freq)}})
 
             if max_time and min_time:
-                query['$and'].append({'detections.time': {'$gte': float(max_time)}})
-                query['$and'].append({'detections.time': {'$lte': float(min_time)}})
+                query['$and'].append({'detections.time_elapsed': {'$gte': float(min_time)}})
+                query['$and'].append({'detections.time_elapsed': {'$lte': float(max_time)}})
 
             beam_candidates = self.database.beam_candidates.find(query)
 
