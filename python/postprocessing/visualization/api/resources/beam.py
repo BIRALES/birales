@@ -43,7 +43,7 @@ class RawBeam(Resource):
     @staticmethod
     def _get_beam_data(observation, data_set, beam_id, max_freq, min_freq, max_time, min_time):
         data_set = DataSet(observation, data_set, 32)
-        beam = data_set.beams[beam_id]
+        beam = data_set.create_beam(beam_id)
 
         channels_indices = \
             np.where(np.logical_and(min_freq <= beam.channels, beam.channels <= max_freq))[0]

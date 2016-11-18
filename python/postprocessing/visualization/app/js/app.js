@@ -253,7 +253,7 @@ var MultiBeam = function (observation, data_set) {
             self._plot_beam_candidates('beam-candidates-plot', beam_candidates_data[0]['candidates'], data_set_data[0]);
         });
 
-        var beam_id = 3;
+        var beam_id = 27;
         var beam_raw_data = self._get_beam_raw_data(observation_name, data_set_name, beam_id);
         $.when(beam_raw_data).done(function (beam_raw_data) {
             // Plot the spectrograph of the raw beam data
@@ -283,11 +283,11 @@ var MultiBeam = function (observation, data_set) {
 
     this._get_beam_raw_data = function (observation_name, data_set_name, beam_id) {
         var data_url = self.host + "/monitoring/" + observation_name + "/" + data_set_name + "/beam/" + beam_id + "/raw";
-        var min_freq = 410.0001;
-        var max_freq = 410.0005;
+        var min_freq = 409.990;
+        var max_freq = 409.9926;
 
-        var min_time = 0.;
-        var max_time = 30.;
+        var min_time = 20.;
+        var max_time = 55.;
 
         return $.ajax({
             url: data_url,
@@ -397,7 +397,8 @@ var MultiBeam = function (observation, data_set) {
             },
             zaxis: {
                 title: z_label
-            }
+            },
+            showlegend: true
         };
 
         Plotly.newPlot(selector, data, layout);

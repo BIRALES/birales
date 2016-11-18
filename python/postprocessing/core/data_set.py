@@ -79,14 +79,11 @@ class DataSet:
         # Initialise thread pool
         pool = ThreadPool(32)
 
-        # Pass the data set data to the create beam function
-        create_beam_func = partial(self.create_beam, self.data)
-
         # Create the iterable
         n_beams = range(0, n_beams)
 
         # Collect the beam data processed by N threads
-        beams = pool.map(create_beam_func, n_beams)
+        beams = pool.map(self.create_beam, n_beams)
 
         pool.close()
         pool.join()
