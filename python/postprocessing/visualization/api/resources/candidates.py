@@ -1,6 +1,6 @@
 from flask_restful import Resource
 from flask import jsonify, request
-from core.repository import BeamCandidateRepository, MultiBeamCandidateRepository, BeamDataRepository
+from postprocessing.core.repository import BeamCandidateRepository, MultiBeamCandidateRepository, BeamDataRepository
 
 
 class MultiBeamDetections(Resource):

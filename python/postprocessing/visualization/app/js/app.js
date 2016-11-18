@@ -30,8 +30,8 @@ var MultiBeam = function (observation, data_set) {
         var traces = [];
 
         $.each(beam_candidates, function (j, beam_candidate) {
-            x_data = _get(beam_candidate['detections'], 'time');
-            y_data = [];
+            var x_data = _get(beam_candidate['detections'], 'time');
+            var y_data = [];
 
             $.each(x_data, function (i, e) {
                 y_data.push(beam_candidate.beam_id)
@@ -59,16 +59,16 @@ var MultiBeam = function (observation, data_set) {
         Plotly.newPlot(selector, traces, layout);
     };
 
+    this._get = function (object, key) {
+        return $.map(object, function (a) {
+            return a[key];
+        });
+    };
+
     this._plot_beam_candidates = function (selector, beam_candidates, data_set) {
         var title = 'Detected Beam Candidates';
         var x_label = 'Channel (MHz)';
         var y_label = 'Time (s)';
-
-        var _get = function (object, key) {
-            return $.map(object, function (a) {
-                return a[key];
-            });
-        };
 
         var traces = [];
 
@@ -76,8 +76,8 @@ var MultiBeam = function (observation, data_set) {
         var max_time = data_set.config.human_timestamp;
         $.each(beam_candidates, function (j, beam_candidate) {
             var beam_candidates_trace = {
-                x: _get(beam_candidate['detections'], 'frequency'),
-                y: _get(beam_candidate['detections'], 'time'),
+                x: self._get(beam_candidate['detections'], 'frequency'),
+                y: self._get(beam_candidate['detections'], 'time'),
                 mode: 'markers',
                 name: 'beam ' + beam_candidate.beam_id + ' candidate ' + beam_candidate.name
             };
@@ -226,8 +226,8 @@ var MultiBeam = function (observation, data_set) {
         var beam_candidates = self._get_beam_candidates_data(observation_name, data_set_name);
         var data_set = self._get_data_set_data(observation_name, data_set_name);
 
-        // Update view
-        self._update_view(observation_name, data_set_name);
+        // Update heading
+        self._update_heading(observation_name, data_set_name);
 
         $.when(beam_candidates).done(function (beam_candidates_data) {
             // Plot the beam firing order
@@ -252,6 +252,13 @@ var MultiBeam = function (observation, data_set) {
             // Plot the beam candidates
             self._plot_beam_candidates('beam-candidates-plot', beam_candidates_data[0]['candidates'], data_set_data[0]);
         });
+
+        var beam_id = 3;
+        var beam_raw_data = self._get_beam_raw_data(observation_name, data_set_name, beam_id);
+        $.when(beam_raw_data).done(function (beam_raw_data) {
+            // Plot the spectrograph of the raw beam data
+            self._plot_raw_beam_spectrograph('beam-raw-data-plot', beam_raw_data['candidates'], beam_raw_data['raw_data'], beam_id);
+        });
     };
 
     this.update = function (observation_name, data_set_name) {
@@ -270,6 +277,25 @@ var MultiBeam = function (observation, data_set) {
             data: {
                 min_frequency: min_freq,
                 max_frequency: max_freq
+            }
+        });
+    };
+
+    this._get_beam_raw_data = function (observation_name, data_set_name, beam_id) {
+        var data_url = self.host + "/monitoring/" + observation_name + "/" + data_set_name + "/beam/" + beam_id + "/raw";
+        var min_freq = 410.0001;
+        var max_freq = 410.0005;
+
+        var min_time = 0.;
+        var max_time = 30.;
+
+        return $.ajax({
+            url: data_url,
+            data: {
+                min_frequency: min_freq,
+                max_frequency: max_freq,
+                min_time: min_time,
+                max_time: max_time
             }
         });
     };
@@ -319,7 +345,7 @@ var MultiBeam = function (observation, data_set) {
         });
     };
 
-    this._update_view = function (observation_name, data_set_name) {
+    this._update_heading = function (observation_name, data_set_name) {
         var template_url = 'views/main_heading.mustache';
         var selector = 'observation-heading';
         $.get(template_url, function (template) {
@@ -330,6 +356,51 @@ var MultiBeam = function (observation, data_set) {
                 })
             );
         });
+    };
+
+    this._plot_raw_beam_spectrograph = function (selector, beam_candidates, raw_beam_data, beam_id) {
+        var title = 'Beam ' + beam_id + ' raw data';
+        var x_label = 'Channel (Mhz)';
+        var y_label = 'Time (s)';
+        var z_label = 'SNR';
+
+        var data = [
+            {
+                x: raw_beam_data.channels,
+                y: raw_beam_data.time,
+                z: raw_beam_data.snr,
+                type: 'heatmap'
+            }
+        ];
+
+        $.each(beam_candidates, function (j, beam_candidate) {
+            var beam_candidates_trace = {
+                x: self._get(beam_candidate['detections'], 'frequency'),
+                y: self._get(beam_candidate['detections'], 'time_elapsed'),
+                mode: 'markers',
+                name: 'beam ' + beam_candidate['beam_id'],
+                marker: {
+                    color: '#000000',
+                    size: 6
+                }
+            };
+            data.push(beam_candidates_trace);
+        });
+
+        var layout = {
+            title: title,
+            xaxis: {
+                title: x_label
+            },
+            yaxis: {
+                title: y_label
+            },
+            zaxis: {
+                title: z_label
+            }
+        };
+
+        Plotly.newPlot(selector, data, layout);
     };
 
     this.init = function () {
@@ -359,5 +430,4 @@ var MultiBeam = function (observation, data_set) {
             console.log('Failed to retrieve the available data_sets.')
         });
     };
-
 };
