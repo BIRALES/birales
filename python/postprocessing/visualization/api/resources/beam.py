@@ -41,10 +41,7 @@ class RawBeam(Resource):
     """
 
     @staticmethod
-    def _get_beam_data(observation, data_set, beam_id, max_freq, min_freq, max_time, min_time):
-        data_set = DataSet(observation, data_set, 32)
-        beam = data_set.create_beam(beam_id)
-
+    def _filter_beam_data(beam, max_freq, min_freq, max_time, min_time):
         channels_indices = \
             np.where(np.logical_and(min_freq <= beam.channels, beam.channels <= max_freq))[0]
         channels = beam.channels[channels_indices]
@@ -54,10 +51,21 @@ class RawBeam(Resource):
 
         snr = beam.snr[time_indices, :][:, channels_indices]
 
-        response = {
+        return {
             'channels': channels.tolist(),
             'time': time.tolist(),
             'snr': snr.tolist(),
+        }
+
+    def _get_beam_data(self, observation, data_set, beam_id, max_freq, min_freq, max_time, min_time):
+        data_set = DataSet(observation, data_set, 32)
+        beam = data_set.create_beam(beam_id)
+        filtered_beam = data_set.create_beam(beam_id)
+        filtered_beam.apply_filters()
+
+        response = {
+            'raw': self._filter_beam_data(beam, max_freq, min_freq, max_time, min_time),
+            'filtered': self._filter_beam_data(filtered_beam, max_freq, min_freq, max_time, min_time)
         }
 
         return response
@@ -75,8 +83,11 @@ class RawBeam(Resource):
         max_time = float(request.args.get('max_time'))  # Max time in s
         min_time = float(request.args.get('min_time'))  # Min time in s
 
+        beam_data = self._get_beam_data(observation, data_set, beam_id, max_freq, min_freq, max_time, min_time)
+
         response = {
-            'raw_data': self._get_beam_data(observation, data_set, beam_id, max_freq, min_freq, max_time, min_time),
+            'raw_data': beam_data['raw'],
+            'filtered_data': beam_data['filtered'],
             'candidates': self._get_candidates_in_beam(observation, data_set, beam_id, max_freq, min_freq, max_time,
                                                        min_time)
         }

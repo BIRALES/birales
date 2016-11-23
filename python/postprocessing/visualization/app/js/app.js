@@ -78,6 +78,7 @@ var MultiBeam = function (observation, data_set) {
             var beam_candidates_trace = {
                 x: self._get(beam_candidate['detections'], 'frequency'),
                 y: self._get(beam_candidate['detections'], 'time'),
+                z: self._get(beam_candidate['detections'], 'snr'),
                 mode: 'markers',
                 name: 'beam ' + beam_candidate.beam_id + ' candidate ' + beam_candidate.name
             };
@@ -282,7 +283,7 @@ var MultiBeam = function (observation, data_set) {
     };
 
     this._get_beam_raw_data = function (observation_name, data_set_name, beam_id) {
-        var data_url = self.host + "/monitoring/" + observation_name + "/" + data_set_name + "/beam/" + beam_id + "/raw";
+        var data_url = self.host + "/monitoring/" + observation_name + "/" + data_set_name + "/beam/" + beam_id;
         var min_freq = 409.990;
         var max_freq = 409.9926;
 
@@ -304,44 +305,6 @@ var MultiBeam = function (observation, data_set) {
         var data_url = self.host + "/monitoring/" + observation_name + "/" + data_set_name + "/about";
         return $.ajax({
             url: data_url
-        });
-    };
-
-    this.plot_filtered_beam_data = function (selector) {
-        var data_url = self.host + "/monitoring/" + self.observation + "/" + self.data_set + "/beam/2/beam_detections";
-
-        $.ajax({
-            url: data_url,
-            success: function (beams_data) {
-                var title = 'Detections in Filtered Beams';
-                var x_label = 'Channel (MHz)';
-                var y_label = 'Time sample';
-                var traces = [];
-                $.each(beams_data, function (j, beam_data) {
-                    var beam_candidates_trace = {
-                        x: beam_data['channel'],
-                        y: beam_data['time'],
-                        mode: 'markers',
-                        name: 'beam ' + beam_data['beam_id'],
-                        marker: {
-                            color: beam_data['snr']
-                        }
-                    };
-                    traces.push(beam_candidates_trace);
-                });
-
-                var layout = {
-                    title: title,
-                    xaxis: {
-                        title: x_label
-                    },
-                    yaxis: {
-                        title: y_label
-                    }
-                };
-
-                Plotly.newPlot(selector, traces, layout);
-            }
         });
     };
 

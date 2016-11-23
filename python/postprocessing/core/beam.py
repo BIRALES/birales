@@ -116,6 +116,8 @@ class Beam:
         :return:
         """
 
+        bandpass = np.mean(data, axis=0)
+
         # Calculate the noise from the first 25% of the available channels
         subset_size = int(self.n_channels * 0.25)
 
@@ -132,6 +134,8 @@ class Beam:
         self._apply_filter(RemoveBackgroundNoiseFilter(std_threshold=2.))
 
         self._apply_filter(RemoveTransmitterChannelFilter())
+
+        return self
 
     def save_detections(self):
         # Select points with an SNR > 0

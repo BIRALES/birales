@@ -24,7 +24,7 @@ def init_api_resources(api):
     api.add_resource(Observations,  '/monitoring/observations')
 
     # Raw Beam
-    api.add_resource(RawBeam, pre_fix_route + 'beam/<int:beam_id>/raw')
+    api.add_resource(RawBeam, pre_fix_route + 'beam/<int:beam_id>')
 
     return api
 
