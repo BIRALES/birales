@@ -1,7 +1,8 @@
 import logging as log
-from abc import abstractmethod
-
 import numpy as np
+import scipy.ndimage as ndimage
+
+from abc import abstractmethod
 
 
 class BeamDataFilter:
@@ -61,3 +62,20 @@ class RemoveBackgroundNoiseFilter(BeamDataFilter):
         beam.snr[beam.snr < threshold] = 0.
 
         log.debug('Filter: Background noise removed from input beam %s', beam.id)
+
+
+class MedianFilter(BeamDataFilter):
+    def __init__(self):
+        BeamDataFilter.__init__(self)
+
+    def apply(self, beam):
+        """
+        Apply a median filter on the beam data
+
+        :param beam:
+        :return: void
+        """
+
+        beam.snr = ndimage.median_filter(beam.snr, 1)
+
+        log.debug('Filter: Median filter applied on beam %s', beam.id)

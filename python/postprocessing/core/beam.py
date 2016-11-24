@@ -2,12 +2,10 @@ import os.path
 import inflection as inf
 import numpy as np
 
-from postprocessing.configuration.application import config
-from filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter
+from filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter, MedianFilter
 from helpers import LineGeneratorHelper
-from postprocessing.visualization.api.common.plotters import BeamMatplotlibPlotter
 from repository import BeamDataRepository
-from pyevtk.hl import gridToVTK, pointsToVTK
+from pyevtk.hl import pointsToVTK
 
 
 class Beam:
@@ -116,24 +114,24 @@ class Beam:
         :return:
         """
 
-        bandpass = np.mean(data, axis=0)
+        # @todo - check if the mean can be used as an estimate for the noise
+        mean_noise_per_channel = np.mean(data, axis=0)
 
         # Calculate the noise from the first 25% of the available channels
         subset_size = int(self.n_channels * 0.25)
 
         # Calculate the average noise in the subset
-        # @todo Change the noise from just a mean to a noise map
         noise = np.mean(data[:, range(0, subset_size)])
 
-        return np.log10(data / noise)
+        return np.log10(data / mean_noise_per_channel)
 
     def _apply_filter(self, beam_filter):
         beam_filter.apply(self)
 
     def apply_filters(self):
         self._apply_filter(RemoveBackgroundNoiseFilter(std_threshold=2.))
-
-        self._apply_filter(RemoveTransmitterChannelFilter())
+        self._apply_filter(MedianFilter())
+        # self._apply_filter(RemoveTransmitterChannelFilter())
 
         return self
 
