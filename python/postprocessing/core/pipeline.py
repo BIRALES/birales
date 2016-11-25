@@ -2,7 +2,7 @@ import logging as log
 
 from postprocessing.configuration.application import config
 from data_set import DataSet
-from detection_strategies import DBScanSpaceDebrisDetectionStrategy
+from detection_strategies import DBScanSpaceDebrisDetectionStrategy, SpiritSpaceDebrisDetectionStrategy
 from repository import BeamCandidateRepository
 from repository import DataSetRepository
 from multiprocessing.dummy import Pool as ThreadPool
@@ -12,7 +12,8 @@ class SpaceDebrisDetectorPipeline:
     def __init__(self, observation_name, data_set_name, n_beams):
         log.info('Processing data set %s in %s', observation_name, data_set_name)
         self.data_set = DataSet(observation_name, data_set_name, n_beams)
-        self.detection_strategy = DBScanSpaceDebrisDetectionStrategy()
+        # self.detection_strategy = DBScanSpaceDebrisDetectionStrategy()
+        self.detection_strategy = SpiritSpaceDebrisDetectionStrategy()
 
         self.beams_to_process = n_beams
 

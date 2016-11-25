@@ -7,6 +7,7 @@ from abc import abstractmethod
 from sklearn.cluster import DBSCAN
 from postprocessing.configuration.application import config
 from detection_candidates import BeamSpaceDebrisCandidate
+from sklearn import linear_model
 
 
 class SpaceDebrisDetection(object):
@@ -24,6 +25,93 @@ class SpaceDebrisDetectionStrategy(object):
 
     @abstractmethod
     def detect(self, beam):
+        pass
+
+
+class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
+    name = 'Spirit'
+
+    def __init__(self):
+        SpaceDebrisDetectionStrategy.__init__(self)
+        pass
+
+    def detect(self, beam):
+        clusters = self._create_clusters(beam)
+        processed_clusters = self._process_clusters(clusters)
+        space_derbis_candidates = self._create_space_debris_candidates(processed_clusters)
+
+        return []
+
+    def _create_clusters(self, beam):
+        """
+        Use the DBScan algorithm to create a set of clusters from the given beam data
+        :param beam: The beam object from which the clusters will be generated
+        :return:
+        """
+
+        # Initialise clustering algorithm
+        db_scan = DBSCAN(eps=10.0, min_samples=5, algorithm='kd_tree')
+
+        # Select the data points that are non-zero and transform them in a time (x), channel (y) nd-array
+        data = np.column_stack(np.where(beam.snr > 0.))
+
+        # Perform clustering on the data and returns cluster labels the points are associated with
+        cluster_labels = db_scan.fit_predict(data)
+
+        # Select only those labels which were not classified as noise (-1)
+        filtered_cluster_labels = cluster_labels[cluster_labels > -1]
+
+        # Group the data points in clusters
+        clusters = dict.fromkeys(np.unique(filtered_cluster_labels))
+        for label in filtered_cluster_labels:
+            clusters[label] = data[np.where(cluster_labels == label)]
+
+        return clusters
+
+    @staticmethod
+    def _linear_model(dirty_clusters):
+        clusters = {}
+        for label in dirty_clusters:
+            clusters[label] = {}
+            # Fit line using all data
+            x = dirty_clusters[label][:, [1]]
+            y = dirty_clusters[label][:, 0]
+
+            # Robustly fit linear model with RANSAC algorithm
+            model_ransac = linear_model.RANSACRegressor(linear_model.LinearRegression())
+            model_ransac.fit(x, y)
+
+            # Remove outliers - select data points that are in-liers
+            inlier_mask = model_ransac.inlier_mask_
+
+            if model_ransac.estimator_.score(x, y) < 0.90:
+                continue
+
+            clusters[label]['data'] = dirty_clusters[label][inlier_mask]
+
+            # Gradient
+            clusters[label]['m'] = model_ransac.estimator_.coef_[0]
+
+            # Intercept
+            clusters[label]['c'] = model_ransac.estimator_.intercept_
+
+            # The coefficient of determination R^2 of the prediction.
+            clusters[label]['r'] = model_ransac.estimator_.score(x, y)
+
+        return clusters
+
+
+    def _process_clusters(self, dirty_clusters):
+        clusters = self._linear_model(dirty_clusters)
+        if clusters[0]:
+            print 'cluster'
+            return clusters
+        pass
+
+    def _create_space_debris_candidates(self, clusters):
+        pass
+
+    def _visualise_cluster(self, cluster):
         pass
 
 
@@ -117,25 +205,28 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         """
         for cluster in clusters.iterkeys():
             m, c, r = self._get_line_equation(clusters[cluster]['data'])
-            clusters[cluster] = self._set_cluster_eq(clusters[cluster], m, c, r)
+            # m, c, r = self._ransac(clusters[cluster]['data'])
+            clusters[cluster] = {
+                'm': m,
+                'r': r,
+                'c': c,
+                'data': clusters[cluster]['data']
+            }
 
         return clusters
 
-    @staticmethod
-    def _set_cluster_eq(cluster, m, c, r):
-        """
-        Update the line equation of the cluster based on the passed parameters
-        :param cluster:
-        :param m: gradient
-        :param c: intercept
-        :param r: correlation
-        :return:
-        """
-        cluster['m'] = m
-        cluster['c'] = c
-        cluster['r'] = r
+    def _ransac(self, data):
+        from sklearn import linear_model
+        d = np.array(data)
+        x = d[:, [0]]
+        y = d[:, 1]
+        linear_model = linear_model.LinearRegression()
+        linear_model.fit(x, y)
 
-        return cluster
+        c = linear_model.intercept_
+        m = linear_model.coef_
+
+        pass
 
     @staticmethod
     def _get_line_equation(data):
@@ -196,7 +287,9 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
                         cluster1['data'] = self._merge_clusters_data(cluster1, cluster2)
                         # recalculate equation of cluster
                         m, c, r = self._get_line_equation(cluster1['data'])
-                        cluster1 = self._set_cluster_eq(cluster1, m, c, r)
+                        cluster1['m'] = m
+                        cluster1['c'] = c
+                        cluster1['r'] = r
 
                         cluster2['m'] = None  # mark cluster for deletion
                         clusters_to_delete.append(cluster_id2)
@@ -242,14 +335,16 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
                 d = np.array(clusters[cluster]['data'])
                 x = d[:, 0]
                 y = d[:, 1]
-                eq = 'y = ' + str(round(clusters[cluster]['m'], 3)) + 'x + ' + str(round(clusters[cluster]['c'], 3))
-                eq += ' (' + str(round(clusters[cluster]['r'], 2)) + ')'
+                eq = str(i) + ') y = ' + str(round(clusters[cluster]['m'], 2)) + 'x + ' + str(
+                    round(clusters[cluster]['c'], 2))
+                eq += ' r = (' + str(round(clusters[cluster]['r'], 3)) + ')'
                 if config.get_boolean('debug', 'DEBUG_CANDIDATES'):
                     plt.plot(x, y, 'o', label=eq)
 
-        if config.get_boolean('debug', 'DEBUG_CANDIDATES'):
+        if config.get_boolean('debug', 'DEBUG_CANDIDATES') and clusters:
             plt.legend(loc='best', fancybox=True, framealpha=0.5)
             plt.xlabel('Channel')
+            plt.title('Beam ' + str(beam.id))
             plt.ylabel('Time')
             plt.tight_layout()
             plt.grid()
