@@ -30,6 +30,10 @@ class SpaceDebrisDetectionStrategy(object):
 
 class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
     name = 'Spirit'
+    eps = 5.0
+    min_samples = 5
+    algorithm = 'kd_tree'
+    r2_threshold = 0.90
 
     def __init__(self):
         SpaceDebrisDetectionStrategy.__init__(self)
@@ -37,10 +41,15 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
     def detect(self, beam):
         clusters = self._create_clusters(beam)
-        processed_clusters = self._process_clusters(clusters)
-        space_derbis_candidates = self._create_space_debris_candidates(processed_clusters)
+        log.debug('%s clusters found in beam %s', len(clusters), beam.id)
 
-        return []
+        processed_clusters = self._process_clusters(clusters)
+        log.debug('After processing, %s clusters remain', len(processed_clusters))
+
+        space_debris_candidates = self._create_space_debris_candidates(beam, processed_clusters)
+        log.debug('After merging, %s clusters remain', len(space_debris_candidates))
+
+        return space_debris_candidates
 
     def _create_clusters(self, beam):
         """
@@ -50,7 +59,7 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         """
 
         # Initialise clustering algorithm
-        db_scan = DBSCAN(eps=10.0, min_samples=5, algorithm='kd_tree')
+        db_scan = DBSCAN(eps=self.eps, min_samples=self.min_samples, algorithm=self.algorithm)
 
         # Select the data points that are non-zero and transform them in a time (x), channel (y) nd-array
         data = np.column_stack(np.where(beam.snr > 0.))
@@ -61,6 +70,9 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         # Select only those labels which were not classified as noise (-1)
         filtered_cluster_labels = cluster_labels[cluster_labels > -1]
 
+        # plt.scatter(y=data[:, 0], x=data[:, 1], c=cluster_labels)
+        # plt.show()
+
         # Group the data points in clusters
         clusters = dict.fromkeys(np.unique(filtered_cluster_labels))
         for label in filtered_cluster_labels:
@@ -68,25 +80,31 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
         return clusters
 
-    @staticmethod
-    def _linear_model(dirty_clusters):
+    def _linear_model(self, dirty_clusters):
         clusters = {}
         for label in dirty_clusters:
-            clusters[label] = {}
             # Fit line using all data
             x = dirty_clusters[label][:, [1]]
             y = dirty_clusters[label][:, 0]
 
             # Robustly fit linear model with RANSAC algorithm
             model_ransac = linear_model.RANSACRegressor(linear_model.LinearRegression())
-            model_ransac.fit(x, y)
+            try:
+                model_ransac.fit(x, y)
+            except ValueError:
+                continue
+            except AttributeError:
+                plt.plot(x, y, '+')
+                plt.show()
+
+            # Skip clusters with a correlation of less than 0.9 (non - linear)
+            if model_ransac.estimator_.score(x, y) < 0.90:
+                continue
 
             # Remove outliers - select data points that are in-liers
             inlier_mask = model_ransac.inlier_mask_
 
-            if model_ransac.estimator_.score(x, y) < 0.90:
-                continue
-
+            clusters[label] = {}
             clusters[label]['data'] = dirty_clusters[label][inlier_mask]
 
             # Gradient
@@ -100,19 +118,56 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
         return clusters
 
+    def _merge_clusters(self, clusters):
+        merged_clusters = []
+        for cluster in clusters:
+            self._visualise_cluster(clusters[cluster])
+        return clusters
 
     def _process_clusters(self, dirty_clusters):
         clusters = self._linear_model(dirty_clusters)
-        if clusters[0]:
-            print 'cluster'
-            return clusters
-        pass
+        clusters = self._merge_clusters(clusters)
 
-    def _create_space_debris_candidates(self, clusters):
-        pass
+        return clusters
 
-    def _visualise_cluster(self, cluster):
-        pass
+    def _create_space_debris_candidates(self, beam, clusters):
+        """
+        Create space debris candidates from the clusters data
+
+        :todo: Implementation is ugly and needs to be re-implemented
+        :param beam:
+        :param clusters:
+        :return:
+        """
+        candidates = []
+        beam_candidates_counter = {}
+        for cluster_id in clusters.iterkeys():
+            cluster_data = clusters[cluster_id]['data']
+
+            channel_data = beam.channels[cluster_data[:, 1]]
+            time_data = beam.time[cluster_data[:, 0]]
+            snr_data = beam.snr[cluster_data[:, 0], cluster_data[:, 1]]
+            detection_data = np.column_stack((channel_data, time_data, snr_data))
+
+            if beam.id not in beam_candidates_counter:
+                beam_candidates_counter[beam.id] = 0
+            beam_candidates_counter[beam.id] += 1
+
+            candidate_name = str(beam.id) + '.' + str(beam_candidates_counter[beam.id])
+            candidate = BeamSpaceDebrisCandidate(candidate_name, beam, detection_data)
+            candidates.append(candidate)
+        return candidates
+
+    @staticmethod
+    def _visualise_cluster(cluster):
+        if cluster and config.get_boolean('debug', 'DEBUG_CANDIDATES'):
+            # cluster_equation = 'm=' + cluster['m'] + ', c=' + cluster['c'] + ', r=' + cluster['r']
+            plt.plot(cluster['data'], 'o', label='')
+            plt.legend(loc='best', fancybox=True, framealpha=0.5)
+            plt.xlabel('Channel')
+            plt.title('Beam')
+            plt.ylabel('Time')
+            # plt.show()
 
 
 class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
@@ -205,7 +260,6 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         """
         for cluster in clusters.iterkeys():
             m, c, r = self._get_line_equation(clusters[cluster]['data'])
-            # m, c, r = self._ransac(clusters[cluster]['data'])
             clusters[cluster] = {
                 'm': m,
                 'r': r,
