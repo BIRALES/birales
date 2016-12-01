@@ -7,10 +7,11 @@ from abc import abstractmethod
 from sklearn.cluster import DBSCAN
 from postprocessing.configuration.application import config
 from detection_candidates import BeamSpaceDebrisCandidate
-from sklearn import linear_model
+from postprocessing.core.detection_clusters import DetectionCluster
 
 
 class SpaceDebrisDetection(object):
+
     def __init__(self, detection_strategy):
         self.detection_strategy = detection_strategy
 
@@ -27,6 +28,37 @@ class SpaceDebrisDetectionStrategy(object):
     def detect(self, beam):
         pass
 
+    @staticmethod
+    def _create_space_debris_candidates(beam, clusters):
+        """
+        Create space debris candidates from the clusters data
+
+        :param beam:
+        :param clusters:
+        :return:
+        """
+        candidates = []
+        beam_candidates_counter = {}
+
+        for cluster_id in clusters:
+            cluster_data_mask = clusters[cluster_id].data
+            channel_mask = cluster_data_mask[:, 1]
+            time_mask = cluster_data_mask[:, 0]
+
+            channels = beam.channels[channel_mask]
+            time = beam.time[time_mask]
+            snr = beam.snr[time_mask, channel_mask]
+
+            detection_data = np.column_stack((channels, time, snr))
+            if beam.id not in beam_candidates_counter:
+                beam_candidates_counter[beam.id] = 0
+            beam_candidates_counter[beam.id] += 1
+
+            candidate_name = str(beam.id) + '.' + str(beam_candidates_counter[beam.id])
+            candidate = BeamSpaceDebrisCandidate(candidate_name, beam, detection_data)
+            candidates.append(candidate)
+        return candidates
+
 
 class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
     name = 'Spirit'
@@ -41,13 +73,8 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
     def detect(self, beam):
         clusters = self._create_clusters(beam)
-        log.debug('%s clusters found in beam %s', len(clusters), beam.id)
-
-        processed_clusters = self._process_clusters(clusters)
-        log.debug('After processing, %s clusters remain', len(processed_clusters))
-
+        processed_clusters = self._merge_clusters(clusters)
         space_debris_candidates = self._create_space_debris_candidates(beam, processed_clusters)
-        log.debug('After merging, %s clusters remain', len(space_debris_candidates))
 
         return space_debris_candidates
 
@@ -58,7 +85,7 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         :return:
         """
 
-        # Initialise clustering algorithm
+        # Initialise the clustering algorithm
         db_scan = DBSCAN(eps=self.eps, min_samples=self.min_samples, algorithm=self.algorithm)
 
         # Select the data points that are non-zero and transform them in a time (x), channel (y) nd-array
@@ -70,108 +97,61 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         # Select only those labels which were not classified as noise (-1)
         filtered_cluster_labels = cluster_labels[cluster_labels > -1]
 
-        # plt.scatter(y=data[:, 0], x=data[:, 1], c=cluster_labels)
-        # plt.show()
-
         # Group the data points in clusters
-        clusters = dict.fromkeys(np.unique(filtered_cluster_labels))
-        for label in filtered_cluster_labels:
-            clusters[label] = data[np.where(cluster_labels == label)]
-
-        return clusters
-
-    def _linear_model(self, dirty_clusters):
         clusters = {}
-        for label in dirty_clusters:
-            # Fit line using all data
-            x = dirty_clusters[label][:, [1]]
-            y = dirty_clusters[label][:, 0]
+        for label in np.unique(filtered_cluster_labels):
+            cluster_data = data[np.where(cluster_labels == label)]
+            cluster = DetectionCluster(cluster_data)
 
-            # Robustly fit linear model with RANSAC algorithm
-            model_ransac = linear_model.RANSACRegressor(linear_model.LinearRegression())
-            try:
-                model_ransac.fit(x, y)
-            except ValueError:
-                continue
-            except AttributeError:
-                plt.plot(x, y, '+')
-                plt.show()
-
-            # Skip clusters with a correlation of less than 0.9 (non - linear)
-            if model_ransac.estimator_.score(x, y) < 0.90:
-                continue
-
-            # Remove outliers - select data points that are in-liers
-            inlier_mask = model_ransac.inlier_mask_
-
-            clusters[label] = {}
-            clusters[label]['data'] = dirty_clusters[label][inlier_mask]
-
-            # Gradient
-            clusters[label]['m'] = model_ransac.estimator_.coef_[0]
-
-            # Intercept
-            clusters[label]['c'] = model_ransac.estimator_.intercept_
-
-            # The coefficient of determination R^2 of the prediction.
-            clusters[label]['r'] = model_ransac.estimator_.score(x, y)
+            # Add only those clusters that are linear
+            if cluster.is_linear(threshold=0.90):
+                clusters[label] = cluster
 
         return clusters
 
     def _merge_clusters(self, clusters):
-        merged_clusters = []
-        for cluster in clusters:
-            self._visualise_cluster(clusters[cluster])
-        return clusters
-
-    def _process_clusters(self, dirty_clusters):
-        clusters = self._linear_model(dirty_clusters)
-        clusters = self._merge_clusters(clusters)
 
         return clusters
-
-    def _create_space_debris_candidates(self, beam, clusters):
         """
-        Create space debris candidates from the clusters data
+        Merge clusters based on how similar the gradient and y-intercept are
 
-        :todo: Implementation is ugly and needs to be re-implemented
-        :param beam:
         :param clusters:
         :return:
         """
-        candidates = []
-        beam_candidates_counter = {}
-        for cluster_id in clusters.iterkeys():
-            cluster_data = clusters[cluster_id]['data']
 
-            channel_data = beam.channels[cluster_data[:, 1]]
-            time_data = beam.time[cluster_data[:, 0]]
-            snr_data = beam.snr[cluster_data[:, 0], cluster_data[:, 1]]
-            detection_data = np.column_stack((channel_data, time_data, snr_data))
+        while True:
+            clusters_to_delete = []
+            clusters_not_merged = 0
+            for cluster_id in clusters:
+                cluster1 = clusters[cluster_id]
+                for cluster_id2 in clusters.iterkeys():
+                    if cluster_id is cluster_id2:
+                        continue
 
-            if beam.id not in beam_candidates_counter:
-                beam_candidates_counter[beam.id] = 0
-            beam_candidates_counter[beam.id] += 1
+                    cluster2 = clusters[cluster_id2]
+                    if self._clusters_are_similar(cluster1, cluster2):
+                        cluster1['data'] = self._merge_clusters_data(cluster1, cluster2)
+                        # recalculate equation of cluster
+                        m, c, r = self._get_line_equation(cluster1['data'])
+                        cluster1['m'] = m
+                        cluster1['c'] = c
+                        cluster1['r'] = r
 
-            candidate_name = str(beam.id) + '.' + str(beam_candidates_counter[beam.id])
-            candidate = BeamSpaceDebrisCandidate(candidate_name, beam, detection_data)
-            candidates.append(candidate)
-        return candidates
+                        cluster2['m'] = None  # mark cluster for deletion
+                        clusters_to_delete.append(cluster_id2)
+                    else:
+                        clusters_not_merged += 1
+            count = len(clusters) * (len(clusters) - 1)
+            clusters = self._delete_clusters(clusters, clusters_to_delete)
 
-    @staticmethod
-    def _visualise_cluster(cluster):
-        if cluster and config.get_boolean('debug', 'DEBUG_CANDIDATES'):
-            # cluster_equation = 'm=' + cluster['m'] + ', c=' + cluster['c'] + ', r=' + cluster['r']
-            plt.plot(cluster['data'], 'o', label='')
-            plt.legend(loc='best', fancybox=True, framealpha=0.5)
-            plt.xlabel('Channel')
-            plt.title('Beam')
-            plt.ylabel('Time')
-            # plt.show()
+            if clusters_not_merged >= count:
+                break
+
+        return clusters
 
 
-class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
-    name = 'DB Scan'
+class NaiveDBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
+    name = 'Naive DBScan'
 
     def __init__(self):
         SpaceDebrisDetectionStrategy.__init__(self)
@@ -180,54 +160,6 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
     @staticmethod
     def _merge_clusters_data(cluster1, cluster2):
         return cluster1['data'] + cluster2['data']
-
-    def _clusters_are_similar(self, cluster1, cluster2):
-        """
-        Determine whether two clusters are considered to be similar. In this case gradient and c-intercept similarity
-        is used.
-        :param cluster1:
-        :param cluster2:
-        :return:
-        """
-        # gradient
-        m = self._is_similar(cluster1['m'], cluster2['m'], threshold=0.20)
-
-        # intercept
-        c = self._is_similar(cluster1['c'], cluster2['c'], threshold=0.20)
-
-        return m and c
-
-    def _is_similar(self, a, b, threshold=0.10):
-        """
-        Determine if two values are similar if they are within a certain threshold
-        :param a:
-        :param b:
-        :param threshold:
-        :return:
-        """
-        if a is None or b is None:
-            return False
-
-        percentage_difference = self._percentage_difference(a, b)
-
-        if percentage_difference >= threshold:  # difference is more that 10 %
-            return False
-
-        return True
-
-    @staticmethod
-    def _percentage_difference(a, b):
-        """
-        Calculate the difference between two values
-        :param a:
-        :param b:
-        :return:
-        """
-        diff = a - b
-        mean = np.mean([a, b])
-        percentage_difference = abs(diff / mean)
-
-        return percentage_difference
 
     @staticmethod
     def _db_scan_cluster(data):
@@ -268,19 +200,6 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
             }
 
         return clusters
-
-    def _ransac(self, data):
-        from sklearn import linear_model
-        d = np.array(data)
-        x = d[:, [0]]
-        y = d[:, 1]
-        linear_model = linear_model.LinearRegression()
-        linear_model.fit(x, y)
-
-        c = linear_model.intercept_
-        m = linear_model.coef_
-
-        pass
 
     @staticmethod
     def _get_line_equation(data):
@@ -421,3 +340,51 @@ class DBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
             candidate = BeamSpaceDebrisCandidate(candidate_name, beam, detection_data)
             candidates.append(candidate)
         return candidates
+
+    def _clusters_are_similar(self, cluster1, cluster2):
+        """
+        Determine whether two clusters are considered to be similar. In this case gradient and c-intercept similarity
+        is used.
+        :param cluster1:
+        :param cluster2:
+        :return:
+        """
+        # gradient
+        m = self._is_similar(cluster1['m'], cluster2['m'], threshold=0.20)
+
+        # intercept
+        c = self._is_similar(cluster1['c'], cluster2['c'], threshold=0.20)
+
+        return m and c
+
+    def _is_similar(self, a, b, threshold=0.10):
+        """
+        Determine if two values are similar if they are within a certain threshold
+        :param a:
+        :param b:
+        :param threshold:
+        :return:
+        """
+        if a is None or b is None:
+            return False
+
+        percentage_difference = self._percentage_difference(a, b)
+
+        if percentage_difference >= threshold:  # difference is more that 10 %
+            return False
+
+        return True
+
+    @staticmethod
+    def _percentage_difference(a, b):
+        """
+        Calculate the difference between two values
+        :param a:
+        :param b:
+        :return:
+        """
+        diff = a - b
+        mean = np.mean([a, b])
+        percentage_difference = abs(diff / mean)
+
+        return percentage_difference
