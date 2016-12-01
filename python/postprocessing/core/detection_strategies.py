@@ -2,6 +2,7 @@ import logging as log
 import matplotlib.pyplot as plt
 import numpy as np
 import warnings
+import sys
 
 from abc import abstractmethod
 from sklearn.cluster import DBSCAN
@@ -12,8 +13,12 @@ from postprocessing.core.detection_clusters import DetectionCluster
 
 class SpaceDebrisDetection(object):
 
-    def __init__(self, detection_strategy):
-        self.detection_strategy = detection_strategy
+    def __init__(self, detection_strategy_name):
+        try:
+            self.detection_strategy = globals()[detection_strategy_name]()
+        except KeyError:
+            log.error('%s is not a valid detection strategy. Exiting.', detection_strategy_name)
+            sys.exit()
 
     def detect(self, beam):
         candidates = self.detection_strategy.detect(beam)
@@ -58,96 +63,6 @@ class SpaceDebrisDetectionStrategy(object):
             candidate = BeamSpaceDebrisCandidate(candidate_name, beam, detection_data)
             candidates.append(candidate)
         return candidates
-
-
-class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
-    name = 'Spirit'
-    eps = 5.0
-    min_samples = 5
-    algorithm = 'kd_tree'
-    r2_threshold = 0.90
-
-    def __init__(self):
-        SpaceDebrisDetectionStrategy.__init__(self)
-        pass
-
-    def detect(self, beam):
-        clusters = self._create_clusters(beam)
-        processed_clusters = self._merge_clusters(clusters)
-        space_debris_candidates = self._create_space_debris_candidates(beam, processed_clusters)
-
-        return space_debris_candidates
-
-    def _create_clusters(self, beam):
-        """
-        Use the DBScan algorithm to create a set of clusters from the given beam data
-        :param beam: The beam object from which the clusters will be generated
-        :return:
-        """
-
-        # Initialise the clustering algorithm
-        db_scan = DBSCAN(eps=self.eps, min_samples=self.min_samples, algorithm=self.algorithm)
-
-        # Select the data points that are non-zero and transform them in a time (x), channel (y) nd-array
-        data = np.column_stack(np.where(beam.snr > 0.))
-
-        # Perform clustering on the data and returns cluster labels the points are associated with
-        cluster_labels = db_scan.fit_predict(data)
-
-        # Select only those labels which were not classified as noise (-1)
-        filtered_cluster_labels = cluster_labels[cluster_labels > -1]
-
-        # Group the data points in clusters
-        clusters = {}
-        for label in np.unique(filtered_cluster_labels):
-            cluster_data = data[np.where(cluster_labels == label)]
-            cluster = DetectionCluster(cluster_data)
-
-            # Add only those clusters that are linear
-            if cluster.is_linear(threshold=0.90):
-                clusters[label] = cluster
-
-        return clusters
-
-    def _merge_clusters(self, clusters):
-
-        return clusters
-        """
-        Merge clusters based on how similar the gradient and y-intercept are
-
-        :param clusters:
-        :return:
-        """
-
-        while True:
-            clusters_to_delete = []
-            clusters_not_merged = 0
-            for cluster_id in clusters:
-                cluster1 = clusters[cluster_id]
-                for cluster_id2 in clusters.iterkeys():
-                    if cluster_id is cluster_id2:
-                        continue
-
-                    cluster2 = clusters[cluster_id2]
-                    if self._clusters_are_similar(cluster1, cluster2):
-                        cluster1['data'] = self._merge_clusters_data(cluster1, cluster2)
-                        # recalculate equation of cluster
-                        m, c, r = self._get_line_equation(cluster1['data'])
-                        cluster1['m'] = m
-                        cluster1['c'] = c
-                        cluster1['r'] = r
-
-                        cluster2['m'] = None  # mark cluster for deletion
-                        clusters_to_delete.append(cluster_id2)
-                    else:
-                        clusters_not_merged += 1
-            count = len(clusters) * (len(clusters) - 1)
-            clusters = self._delete_clusters(clusters, clusters_to_delete)
-
-            if clusters_not_merged >= count:
-                break
-
-        return clusters
 
 
 class NaiveDBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
@@ -388,3 +303,93 @@ class NaiveDBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         percentage_difference = abs(diff / mean)
 
         return percentage_difference
+
+
+class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
+    name = 'Spirit'
+    eps = 5.0
+    min_samples = 5
+    algorithm = 'kd_tree'
+    r2_threshold = 0.90
+
+    def __init__(self):
+        SpaceDebrisDetectionStrategy.__init__(self)
+        pass
+
+    def detect(self, beam):
+        clusters = self._create_clusters(beam)
+        merged_clusters = self._merge_clusters(clusters)
+        space_debris_candidates = self._create_space_debris_candidates(beam, merged_clusters)
+
+        return space_debris_candidates
+
+    def _create_clusters(self, beam):
+        """
+        Use the DBScan algorithm to create a set of clusters from the given beam data
+        :param beam: The beam object from which the clusters will be generated
+        :return:
+        """
+
+        # Initialise the clustering algorithm
+        db_scan = DBSCAN(eps=self.eps, min_samples=self.min_samples, algorithm=self.algorithm)
+
+        # Select the data points that are non-zero and transform them in a time (x), channel (y) nd-array
+        data = np.column_stack(np.where(beam.snr > 0.))
+
+        # Perform clustering on the data and returns cluster labels the points are associated with
+        cluster_labels = db_scan.fit_predict(data)
+
+        # Select only those labels which were not classified as noise (-1)
+        filtered_cluster_labels = cluster_labels[cluster_labels > -1]
+
+        # Group the data points in clusters
+        clusters = {}
+        for label in np.unique(filtered_cluster_labels):
+            cluster_data = data[np.where(cluster_labels == label)]
+            cluster = DetectionCluster(cluster_data)
+
+            # Add only those clusters that are linear
+            if cluster.is_linear(threshold=0.90):
+                clusters[label] = cluster
+
+        return clusters
+
+    def _merge_clusters(self, clusters):
+
+        return clusters
+        """
+        Merge clusters based on how similar the gradient and y-intercept are
+
+        :param clusters:
+        :return:
+        """
+
+        while True:
+            clusters_to_delete = []
+            clusters_not_merged = 0
+            for cluster_id in clusters:
+                cluster1 = clusters[cluster_id]
+                for cluster_id2 in clusters.iterkeys():
+                    if cluster_id is cluster_id2:
+                        continue
+
+                    cluster2 = clusters[cluster_id2]
+                    if self._clusters_are_similar(cluster1, cluster2):
+                        cluster1['data'] = self._merge_clusters_data(cluster1, cluster2)
+                        # recalculate equation of cluster
+                        m, c, r = self._get_line_equation(cluster1['data'])
+                        cluster1['m'] = m
+                        cluster1['c'] = c
+                        cluster1['r'] = r
+
+                        cluster2['m'] = None  # mark cluster for deletion
+                        clusters_to_delete.append(cluster_id2)
+                    else:
+                        clusters_not_merged += 1
+            count = len(clusters) * (len(clusters) - 1)
+            clusters = self._delete_clusters(clusters, clusters_to_delete)
+
+            if clusters_not_merged >= count:
+                break
+
+        return clusters
