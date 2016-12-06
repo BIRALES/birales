@@ -2,6 +2,7 @@ import logging as log
 import matplotlib.pyplot as plt
 import numpy as np
 import warnings
+import itertools
 import sys
 
 from abc import abstractmethod
@@ -12,10 +13,12 @@ from postprocessing.core.detection_clusters import DetectionCluster
 
 
 class SpaceDebrisDetection(object):
+    name = None
 
     def __init__(self, detection_strategy_name):
         try:
             self.detection_strategy = globals()[detection_strategy_name]()
+            self.name = self.detection_strategy.name
         except KeyError:
             log.error('%s is not a valid detection strategy. Exiting.', detection_strategy_name)
             sys.exit()
@@ -45,10 +48,9 @@ class SpaceDebrisDetectionStrategy(object):
         candidates = []
         beam_candidates_counter = {}
 
-        for cluster_id in clusters:
-            cluster_data_mask = clusters[cluster_id].data
-            channel_mask = cluster_data_mask[:, 1]
-            time_mask = cluster_data_mask[:, 0]
+        for cluster in clusters:
+            channel_mask = cluster.data[:, 1]
+            time_mask = cluster.data[:, 0]
 
             channels = beam.channels[channel_mask]
             time = beam.time[time_mask]
@@ -206,8 +208,7 @@ class NaiveDBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         return good_clusters
 
     def detect(self, beam):
-        log.debug('Running DBSCAN space debris detection algorithm on beam %s', beam.id)
-
+        log.debug('Running %s detection algorithm on beam %s', self.name, beam.id)
         if np.sum(beam.snr) == 0.0:
             log.debug('SNR is 0 for filtered beam %s', beam.id)
             return []
@@ -307,10 +308,11 @@ class NaiveDBScanSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
 class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
     name = 'Spirit'
-    eps = 5.0
-    min_samples = 5
-    algorithm = 'kd_tree'
-    r2_threshold = 0.90
+    _eps = 5.0
+    _min_samples = 5
+    _algorithm = 'kd_tree'
+    _r2_threshold = 0.90
+    _merge_threshold = 0.10
 
     def __init__(self):
         SpaceDebrisDetectionStrategy.__init__(self)
@@ -318,8 +320,13 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
     def detect(self, beam):
         clusters = self._create_clusters(beam)
+        log.debug("%s detection clusters detected in beam %s", len(clusters), beam.id)
+
         merged_clusters = self._merge_clusters(clusters)
+        log.debug("%s detection clusters remain after merging in beam %s", len(merged_clusters), beam.id)
+
         space_debris_candidates = self._create_space_debris_candidates(beam, merged_clusters)
+        log.debug("%s space debris candidates detected", len(space_debris_candidates))
 
         return space_debris_candidates
 
@@ -331,7 +338,7 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         """
 
         # Initialise the clustering algorithm
-        db_scan = DBSCAN(eps=self.eps, min_samples=self.min_samples, algorithm=self.algorithm)
+        db_scan = DBSCAN(eps=self._eps, min_samples=self._min_samples, algorithm=self._algorithm)
 
         # Select the data points that are non-zero and transform them in a time (x), channel (y) nd-array
         data = np.column_stack(np.where(beam.snr > 0.))
@@ -343,53 +350,48 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         filtered_cluster_labels = cluster_labels[cluster_labels > -1]
 
         # Group the data points in clusters
-        clusters = {}
+        clusters = []
         for label in np.unique(filtered_cluster_labels):
             cluster_data = data[np.where(cluster_labels == label)]
             cluster = DetectionCluster(cluster_data)
 
             # Add only those clusters that are linear
             if cluster.is_linear(threshold=0.90):
-                clusters[label] = cluster
+                clusters.append(cluster)
 
         return clusters
 
     def _merge_clusters(self, clusters):
-
-        return clusters
         """
         Merge clusters based on how similar the gradient and y-intercept are
 
-        :param clusters:
+        :param clusters: The clusters that will be evaluated for merge
+        :type clusters: list of DetectionCandidates
         :return:
         """
 
-        while True:
-            clusters_to_delete = []
-            clusters_not_merged = 0
-            for cluster_id in clusters:
-                cluster1 = clusters[cluster_id]
-                for cluster_id2 in clusters.iterkeys():
-                    if cluster_id is cluster_id2:
-                        continue
+        if not clusters:
+            log.debug("No clusters to merge")
+            return clusters
 
-                    cluster2 = clusters[cluster_id2]
-                    if self._clusters_are_similar(cluster1, cluster2):
-                        cluster1['data'] = self._merge_clusters_data(cluster1, cluster2)
-                        # recalculate equation of cluster
-                        m, c, r = self._get_line_equation(cluster1['data'])
-                        cluster1['m'] = m
-                        cluster1['c'] = c
-                        cluster1['r'] = r
+        done = False
+        while not done:
+            done = True
+            for cluster_1, cluster_2 in itertools.combinations(clusters, 2):
+                if cluster_1.is_cluster_similar(cluster_2, self._merge_threshold):
+                    # Create a new merged cluster if clusters are similar
+                    merged_cluster = cluster_1.merge(cluster_2)
 
-                        cluster2['m'] = None  # mark cluster for deletion
-                        clusters_to_delete.append(cluster_id2)
-                    else:
-                        clusters_not_merged += 1
-            count = len(clusters) * (len(clusters) - 1)
-            clusters = self._delete_clusters(clusters, clusters_to_delete)
+                    # Append the new cluster to the list
+                    clusters.append(merged_cluster)
 
-            if clusters_not_merged >= count:
-                break
+                    # Delete old clusters
+                    clusters = [cluster for cluster in clusters if cluster not in [cluster_1, cluster_2]]
+
+                    # Re-compare the cluster with the rest
+                    done = False
+
+                    # Break loop to re-compare
+                    break
 
         return clusters

@@ -15,7 +15,7 @@ class SpaceDebrisDetectorPipeline:
 
         # Load detection algorithm dynamically (specified in config file)
         self.detection_strategy = SpaceDebrisDetection(config.get('application', 'DETECTION_STRATEGY'))
-        log.info('Using %s algorithm', self.detection_strategy)
+        log.info('Using the %s algorithm', self.detection_strategy.name)
 
         self.beams_to_process = n_beams
 

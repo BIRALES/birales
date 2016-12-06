@@ -58,9 +58,9 @@ class DetectionCluster:
         """
 
         # The gradients of the clusters are similar
-        if self._percentage_difference(cluster.m, self.m) >= threshold:
+        if self._percentage_difference(cluster.m, self.m) <= threshold:
             # The intercept of the clusters are similar
-            if self._percentage_difference(cluster.c, self.c) >= threshold:
+            if self._percentage_difference(cluster.c, self.c) <= threshold:
                 return True
 
         return False
@@ -80,10 +80,10 @@ class DetectionCluster:
         return percentage_difference
 
     def merge(self, cluster):
-        merged_data = self.data + cluster.data
+        merged_data = np.concatenate((self.data, cluster.data))
 
         # Return a new Detection Cluster with the merged data
-        return DetectionCluster(self._model, merged_data)
+        return DetectionCluster(merged_data)
 
     def _visualise_cluster(self):
         if config.get_boolean('debug', 'DEBUG_CANDIDATES'):
