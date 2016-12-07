@@ -220,6 +220,68 @@ var MultiBeam = function (observation, data_set) {
         Plotly.newPlot(selector, data, layout);
     };
 
+    this._plot_beam_configuration_with_illumination = function (selector, beam_candidates, data_set) {
+        var title = 'Multi-Beam Illumination Time line';
+        var x_label = 'RA (deg)';
+        var y_label = 'DEC (deg)';
+        var z_label = 'Time (s)';
+        var beam_pointings = data_set['config']['pointings'];
+        var traces = [];
+        var _get = function (object, key) {
+            return $.map(object, function (a) {
+                return a[key];
+            });
+        };
+
+        $.each(beam_candidates, function (j, beam_candidate) {
+            var len = beam_candidate['detections'].length;
+            var beam_id = beam_candidate.beam_id;
+            var ra = beam_pointings[beam_id][0];
+            var dec = beam_pointings[beam_id][1];
+
+            var beam_candidates_trace = {
+                x: new Array(len).fill(ra),
+                y: new Array(len).fill(dec),
+                z: _get(beam_candidate['detections'], 'time_elapsed'),
+                type: 'scatter3d',
+                name: 'Candidate ' + beam_candidate.name
+            };
+            traces.push(beam_candidates_trace);
+        });
+
+        var layout = {
+            scene: {
+                xaxis: {
+                    title: x_label,
+                    range: [-2, 4]
+                },
+                yaxis: {
+                    title: y_label
+                },
+                zaxis: {
+                    title: z_label
+                }
+            },
+            title: title,
+            xaxis: {
+                autorange: true,
+                title: x_label
+            },
+            yaxis: {
+                autorange: true,
+                title: y_label
+            },
+            zaxis: {
+                autorange: true,
+                title: z_label
+            },
+            width: 700,
+            height: 700
+        };
+
+        Plotly.newPlot(selector, traces, layout);
+    };
+
     this.publish = function (observation_name, data_set_name) {
         this.observation_name = observation_name;
         this.data_set_name = data_set_name;
@@ -239,11 +301,11 @@ var MultiBeam = function (observation, data_set) {
         });
 
         $.when(data_set).done(function (data_set_data) {
-            // Display the beam plot configuration
-            self._plot_beam_configuration('multi-beam-configuration-plot', data_set_data);
-
             // Display the Data set information table
             self._display_data_set_info_table('data-set-info-table', data_set_data);
+
+            // Display the beam plot configuration
+            self._plot_beam_configuration('multi-beam-configuration-plot', data_set_data);
         });
 
         $.when(beam_candidates, data_set).done(function (beam_candidates_data, data_set_data) {
@@ -252,9 +314,12 @@ var MultiBeam = function (observation, data_set) {
 
             // Plot the beam candidates
             self._plot_beam_candidates('beam-candidates-plot', beam_candidates_data[0]['candidates'], data_set_data[0]);
+
+            // Display the beam plot configuration with illumination
+            self._plot_beam_configuration_with_illumination('multi-beam-configuration-illumination-timeline-plot', beam_candidates_data[0]['candidates'], data_set_data[0]);
         });
 
-        var beam_id = 27;
+        var beam_id = 6;
         var beam_raw_data = self._get_beam_raw_data(observation_name, data_set_name, beam_id);
         $.when(beam_raw_data).done(function (beam_raw_data) {
             // Plot the spectrograph of the raw beam data
@@ -375,7 +440,6 @@ var MultiBeam = function (observation, data_set) {
         var observations = $.ajax(data_url);
 
         $.when(observations).done(function (observations) {
-
             $.get(template_url, function (template) {
                 $('#' + selector).html(
                     Mustache.render(template, {

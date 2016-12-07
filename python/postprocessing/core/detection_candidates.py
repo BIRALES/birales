@@ -25,7 +25,7 @@ class BeamSpaceDebrisCandidate:
     def __init__(self, name, beam, detection_data):
         self.beam = beam
         self.name = name
-        self.id = self.beam.observation_name + '.' + str(self.beam.id) + '.' + str(name)
+        self.id = self.beam.observation_name + '.' + self.beam.data_set.name + '.' + str(self.beam.id) + '.' + str(name)
         self.detections = []
         self.illumination_time = np.min(detection_data[:, 1])  # get minimum time
 
@@ -72,4 +72,3 @@ class BeamSpaceDebrisCandidate:
         yield 'data_set_id', self.beam.data_set.id
         yield 'illumination_time', self.illumination_time
         yield 'created_at', datetime.now()
-

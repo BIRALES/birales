@@ -1,7 +1,9 @@
-from sklearn import linear_model
-from postprocessing.configuration.application import config
 import matplotlib.pyplot as plt
 import numpy as np
+import logging as log
+
+from sklearn import linear_model
+from postprocessing.configuration.application import config
 
 
 class DetectionCluster:
@@ -23,6 +25,7 @@ class DetectionCluster:
         self._model = linear_model.RANSACRegressor(linear_model.LinearRegression())
         x = cluster_data[:, [1]]
         y = cluster_data[:, 0]
+
         self._model.fit(x, y)
 
         # Create mask of inlier data points

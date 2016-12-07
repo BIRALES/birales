@@ -138,8 +138,12 @@ class BeamCandidateRepository(Repository):
             beam_candidates = [dict(candidate) for candidate in beam_candidates]
 
             # Insert candidates to the database
-            saved = self.database.beam_candidates.insert_many(beam_candidates)
-            log.info('%s beam candidates were saved to the database', len(saved.inserted_ids))
+            if len(beam_candidates) == 1:
+                self.database.beam_candidates.insert(beam_candidates[0])
+                log.info('1 beam candidate was saved to the database')
+            else:
+                saved = self.database.beam_candidates.insert_many(beam_candidates)
+                log.info('%s beam candidates were saved to the database', len(saved.inserted_ids))
         except mongo.errors.ServerSelectionTimeoutError:
             log.error('MongoDB is not running. Exiting.')
             sys.exit(1)

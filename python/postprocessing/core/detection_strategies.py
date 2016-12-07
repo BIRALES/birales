@@ -353,11 +353,15 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         clusters = []
         for label in np.unique(filtered_cluster_labels):
             cluster_data = data[np.where(cluster_labels == label)]
-            cluster = DetectionCluster(cluster_data)
 
-            # Add only those clusters that are linear
-            if cluster.is_linear(threshold=0.90):
-                clusters.append(cluster)
+            try:
+                cluster = DetectionCluster(cluster_data)
+
+                # Add only those clusters that are linear
+                if cluster.is_linear(threshold=0.90):
+                    clusters.append(cluster)
+            except ValueError:
+                log.debug('Linear interpolation failed. No inliers found.')
 
         return clusters
 
