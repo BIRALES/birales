@@ -4,6 +4,8 @@ import logging as log
 from core.pipeline import SpaceDebrisDetectorPipeline
 from core.repository import DataSetRepository, BeamDataRepository
 from visualization.api import app
+from postprocessing.configuration.application import config
+import os
 
 
 @click.group()
@@ -16,6 +18,27 @@ def cli(multiproc, client, port, file):
     log.debug('Using %s for client', client)
     log.debug('Using %s for port', port)
     log.debug('Using %s for file', file)
+
+
+def get_data_sets(observation, data_set):
+    data_sets = {}
+    observations = [observation]
+    if observation == '*':
+        observations = [x for x in os.listdir(config.get('io', 'DATA_FILE_PATH'))]
+        for obs in observations:
+            data_sets[obs] = [x for x in os.listdir(config.get('io', 'DATA_FILE_PATH') + '/' + obs)]
+        return data_sets
+
+    if data_set == '*':
+        for obs in observations:
+            data_sets[obs] = [x for x in os.listdir(config.get('io', 'DATA_FILE_PATH') + '/' + obs)]
+    else:
+        data_sets[observation] = data_set
+        if observation == '*':
+            for obs in observations:
+                data_sets[obs] = [x for x in os.listdir(config.get('io', 'DATA_FILE_PATH') + '/' + obs)]
+
+    return data_sets
 
 
 @cli.command()
@@ -33,11 +56,15 @@ def post_process(observation, data_set, n_beams):
     :return:
     """
 
-    before = time.time()
-    pipeline = SpaceDebrisDetectorPipeline(observation_name=observation, data_set_name=data_set, n_beams=n_beams)
-    pipeline.run()
+    data_sets = get_data_sets(observation, data_set)
 
-    log.info('Process finished in %s seconds', round(time.time() - before, 3))
+    for observation, data_sets in data_sets.iteritems():
+        for data_set in data_sets:
+            before = time.time()
+            pipeline = SpaceDebrisDetectorPipeline(observation_name=observation, data_set_name=data_set, n_beams=n_beams)
+            pipeline.run()
+
+            log.info('Process finished in %s seconds', round(time.time() - before, 3))
 
 
 @cli.command()

@@ -7,7 +7,6 @@ import numpy as np
 from beam import Beam
 from configuration.application import config
 from multiprocessing.dummy import Pool as ThreadPool
-from functools import partial
 
 
 class DataSet:
