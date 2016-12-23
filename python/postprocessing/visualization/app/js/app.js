@@ -237,11 +237,33 @@ var MultiBeam = function (observation, data_set) {
                 return a[key];
             });
         };
+
+        var min_time = 100;
+        $.each(beam_candidates, function (j, beam_candidate) {
+            var len = beam_candidate['detections'].length;
+            var beam_id = beam_candidate.beam_id;
+            var ra = beam_pointings[beam_id][0];
+            var dec = beam_pointings[beam_id][1];
+            var beam_candidates_trace = {
+                x: new Array(len).fill(ra),
+                y: new Array(len).fill(dec),
+                z: _get(beam_candidate['detections'], 'time_elapsed'),
+                type: 'scatter3d',
+                hoverinfo:'none',
+                name: 'Candidate ' + beam_candidate.name
+            };
+
+            if (beam_candidate.illumination_time < min_time){
+                min_time = beam_candidate.illumination_time;
+            }
+            traces.push(beam_candidates_trace);
+        });
+
         $.each(beam_pointings, function (i, beam_pointing) {
             var ra = beam_pointing[0];
             var dec = beam_pointing[1];
             var pointing = {
-                z: [1],
+                z: [min_time],
                 x: [ra],
                 y: [dec],
                 type: 'scatter3d',
@@ -261,22 +283,6 @@ var MultiBeam = function (observation, data_set) {
                 }
             };
             traces.push(pointing);
-        });
-
-        $.each(beam_candidates, function (j, beam_candidate) {
-            var len = beam_candidate['detections'].length;
-            var beam_id = beam_candidate.beam_id;
-            var ra = beam_pointings[beam_id][0];
-            var dec = beam_pointings[beam_id][1];
-            var beam_candidates_trace = {
-                x: new Array(len).fill(ra),
-                y: new Array(len).fill(dec),
-                z: _get(beam_candidate['detections'], 'time_elapsed'),
-                type: 'scatter3d',
-                hoverinfo:'none',
-                name: 'Candidate ' + beam_candidate.name
-            };
-            traces.push(beam_candidates_trace);
         });
 
 
