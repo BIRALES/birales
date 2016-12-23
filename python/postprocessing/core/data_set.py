@@ -115,9 +115,15 @@ class DataSet:
             data_set_config['n_sub_channels'] = data_set_config['nchans']
             data_set_config['sampling_rate'] = data_set_config['sampling_time']
             data_set_config['f_ch1'] = data_set_config['start_center_frequency']
-            data_set_config['f_off'] = data_set_config['channel_bandwidth']
             data_set_config['timestamp'] = 1464250387401        # Timestamp in ms
             data_set_config['human_timestamp'] = DataSet._get_human_timestamp(data_set_config['timestamp'])
+
+            if 'channel_bandwidth' in data_set_config:
+                data_set_config['f_off'] = data_set_config['channel_bandwidth']
+            elif 'bandwidth' in data_set_config:
+                data_set_config['f_off'] = data_set_config['bandwidth']
+            else:
+                raise Exception('Data configuration is incorrect')
 
             return data_set_config
 

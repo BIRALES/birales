@@ -33,7 +33,7 @@ def get_data_sets(observation, data_set):
         for obs in observations:
             data_sets[obs] = [x for x in os.listdir(config.get('io', 'DATA_FILE_PATH') + '/' + obs)]
     else:
-        data_sets[observation] = data_set
+        data_sets[observation] = [data_set]
         if observation == '*':
             for obs in observations:
                 data_sets[obs] = [x for x in os.listdir(config.get('io', 'DATA_FILE_PATH') + '/' + obs)]

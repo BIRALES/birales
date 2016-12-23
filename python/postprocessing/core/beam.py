@@ -6,6 +6,8 @@ from filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter,
 from helpers import LineGeneratorHelper
 from repository import BeamDataRepository
 from pyevtk.hl import pointsToVTK
+from postprocessing.visualization.api.common.plotters import BeamMatplotlibPlotter
+from postprocessing.configuration.application import config
 
 
 class Beam:
@@ -75,9 +77,6 @@ class Beam:
                     data={'snr': points[:, 2]})
 
     def visualize(self, title):
-        self.save_to_vtk()
-        exit(0)
-        """
         bp = BeamMatplotlibPlotter(fig_size=(16, 10),
                                    fig_title='Waterfall',
                                    plot_title=title,
@@ -88,8 +87,8 @@ class Beam:
                                    data=self.snr)
 
         file_path = os.path.join(config.get('visualization', 'FILE_PATH'), self.observation_name, self.data_set.name)
-        bp.save(file_path)
-        """
+        # bp.save(file_path)
+        bp.plot()
 
     def _get_human_name(self):
         return 'Observation ' + inf.humanize(self.observation_name) + ' - ' + inf.humanize(

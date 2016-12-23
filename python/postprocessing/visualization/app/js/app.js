@@ -185,18 +185,23 @@ var MultiBeam = function (observation, data_set) {
             var bw_ra = 1.75;
             var bw_dec = 0.5;
 
+            reference[0] = 0;
+            reference[1] = 0;
+
+            // Specify the Beam cross-sectional shapes
             var shape = {
                 type: 'circle',
                 xref: 'x',
                 yref: 'y',
-                x0: reference[0] + ra,
-                x1: reference[0] + ra + bw_ra,
-                y0: reference[1] + dec,
-                y1: reference[1] + dec + bw_dec
+                x0: reference[0] + ra - bw_ra / 2.,
+                x1: reference[0] + ra + bw_ra / 2.,
+                y0: reference[1] + dec - bw_dec / 2.,
+                y1: reference[1] + dec + bw_dec / 2.
             };
 
-            data[0].x.push(reference[0] + ra + (bw_ra * 0.5));
-            data[0].y.push(reference[1] + dec + (bw_dec * 0.5));
+            // Write Beam id at the centroid of the beam cross-section
+            data[0].x.push(reference[0] + ra);
+            data[0].y.push(reference[1] + dec);
             data[0].text.push(beam_id);
 
             shapes.push(shape);
@@ -205,12 +210,12 @@ var MultiBeam = function (observation, data_set) {
         var layout = {
             title: title,
             xaxis: {
-                autorange: true,
-                title: x_label
+                title: x_label,
+                zeroline: false
             },
             yaxis: {
-                autorange: true,
-                title: y_label
+                title: y_label,
+                zeroline: false
             },
             width: 500,
             height: 500,
@@ -232,28 +237,60 @@ var MultiBeam = function (observation, data_set) {
                 return a[key];
             });
         };
+        $.each(beam_pointings, function (i, beam_pointing) {
+            var ra = beam_pointing[0];
+            var dec = beam_pointing[1];
+            var pointing = {
+                z: [1],
+                x: [ra],
+                y: [dec],
+                type: 'scatter3d',
+                text: i,
+                mode: 'markers+text',
+                showlegend: false,
+                size: 30,
+                hoverinfo:'none',
+                line: {
+                    width: 20,
+                    color: '#666666'
+                },
+                textfont: {
+                    family: 'sans serif',
+                    size: 10,
+                    color: '#000000',
+                }
+            };
+            traces.push(pointing);
+        });
 
         $.each(beam_candidates, function (j, beam_candidate) {
             var len = beam_candidate['detections'].length;
             var beam_id = beam_candidate.beam_id;
             var ra = beam_pointings[beam_id][0];
             var dec = beam_pointings[beam_id][1];
-
             var beam_candidates_trace = {
                 x: new Array(len).fill(ra),
                 y: new Array(len).fill(dec),
                 z: _get(beam_candidate['detections'], 'time_elapsed'),
                 type: 'scatter3d',
+                hoverinfo:'none',
                 name: 'Candidate ' + beam_candidate.name
             };
             traces.push(beam_candidates_trace);
         });
 
+
         var layout = {
+            shapes: [],
             scene: {
+                aspectratio: {
+                    x: 1,
+                    y: 1,
+                    z: 1
+                },
                 xaxis: {
                     title: x_label,
-                    range: [-2, 4]
+                    range: [-4, 4]
                 },
                 yaxis: {
                     title: y_label
@@ -275,6 +312,7 @@ var MultiBeam = function (observation, data_set) {
                 autorange: true,
                 title: z_label
             },
+            font: {outlineColor: '#000000'},
             width: 700,
             height: 700
         };

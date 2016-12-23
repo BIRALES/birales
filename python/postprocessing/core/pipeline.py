@@ -89,7 +89,7 @@ class SpaceDebrisDetectorPipeline:
 
     def _detect_space_debris_candidates(self, beam):
         # Save raw beam data for post processing
-        if config.get_boolean('visualization', 'VISUALIZE_BEAM'):
+        if config.get_boolean('visualization', 'VISUALIZE_BEAM') and beam.id == 14:
             beam.visualize('raw beam ' + str(beam.id))
 
         # Apply the pre-processing filters to the beam data
@@ -100,7 +100,7 @@ class SpaceDebrisDetectorPipeline:
             beam.save_detections()
 
         # Save filtered beam data for post processing
-        if config.get_boolean('visualization', 'VISUALIZE_BEAM'):
+        if config.get_boolean('visualization', 'VISUALIZE_BEAM') and beam.id == 14:
             beam.visualize('filtered beam ' + str(beam.id))
 
         # Run detection algorithm on the beam data to extract possible candidates

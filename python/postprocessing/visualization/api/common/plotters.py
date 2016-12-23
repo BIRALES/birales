@@ -156,6 +156,12 @@ class MultiWaterfallMatplotlibPlotter(Plotter):
 
 
 class BeamMatplotlibPlotter(Plotter):
+    # Figure size in inches
+    _fig_size = (16, 9)
+
+    # Limits of the color map to aid in manual verification
+    _c_lim = (0.3, 0.7)
+
     def __init__(self, fig_size, fig_title, plot_title, x_limits, y_limits, x_label, y_label, data):
         Plotter.__init__(self)
 
@@ -174,7 +180,8 @@ class BeamMatplotlibPlotter(Plotter):
 
     def plot(self):
         fig = self._build()
-        fig.show()
+
+        plt.show()
 
     def save(self, base_dir):
         file_path = os.path.join(base_dir, self.file_name)
@@ -185,7 +192,7 @@ class BeamMatplotlibPlotter(Plotter):
         return file_path
 
     def _build(self):
-        fig = plt.figure(figsize=(8, 8))
+        fig = plt.figure(figsize=self._fig_size)
 
         ax = fig.add_subplot(1, 1, 1)
 
@@ -199,11 +206,13 @@ class BeamMatplotlibPlotter(Plotter):
 
         ax.set_title(self.plot_title)
         ax.tick_params(axis='both', which='major', labelsize=8)
-        ax.imshow(self.data,
-                  aspect='auto',
-                  origin='lower')
-
         ax.set_xlabel(self.x_label)
         ax.set_ylabel(self.y_label)
+
+        im = ax.imshow(self.data,
+                       aspect='auto',
+                       origin='lower',  clim=self._c_lim)
+
+        fig.colorbar(im, ax=ax)
 
         return fig
