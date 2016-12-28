@@ -54,6 +54,26 @@ class ApplicationConfiguration:
 
         return self.config_parser.getint(section, attribute)
 
+    def get_int_list(self, section, attribute):
+        """
+        Reads the corresponding 'attribute' parameter in the 'section' section from the INI
+        configuration file and returns a list of integers
+
+        :param section: The section fo the parameter
+        :param attribute: The parameter name
+        :return: A list of integers or and empty list
+        """
+        config_entry = self.config_parser.get(section, attribute)
+        env = self.get_env(section, attribute)
+        if env:
+            config_entry = env
+
+        try:
+            return [int(n) for n in config_entry.split(',')]
+        except ValueError:
+            # Return an empty array if the array is not valid
+            return []
+
     def get_env(self, section, attribute):
         env_variable_key = self.env_glue.join([self.env_prefix, section, attribute]).upper()
 
