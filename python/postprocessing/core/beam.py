@@ -6,8 +6,8 @@ from filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter,
 from helpers import LineGeneratorHelper
 from repository import BeamDataRepository
 from pyevtk.hl import pointsToVTK
-from postprocessing.visualization.api.common.plotters import BeamMatplotlibPlotter
-from postprocessing.configuration.application import config
+from visualization.api.common.plotters import BeamMatplotlibPlotter
+from configuration.application import config
 
 
 class Beam:

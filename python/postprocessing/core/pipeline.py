@@ -1,6 +1,6 @@
 import logging as log
 
-from postprocessing.configuration.application import config
+from configuration.application import config
 from data_set import DataSet
 from detection_strategies import SpaceDebrisDetection
 from repository import BeamCandidateRepository

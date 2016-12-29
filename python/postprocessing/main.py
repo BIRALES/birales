@@ -4,7 +4,7 @@ import logging as log
 from core.pipeline import SpaceDebrisDetectorPipeline
 from core.repository import DataSetRepository, BeamDataRepository
 from visualization.api import app
-from postprocessing.configuration.application import config
+from configuration.application import config
 import os
 
 

@@ -1,9 +1,9 @@
 from flask_restful import Resource
 from flask import send_file, abort
 from abc import abstractmethod
-from postprocessing.configuration.application import config
-from postprocessing.core.data_set import DataSet
-from postprocessing.core.repository import BeamCandidateRepository
+from configuration.application import config
+from core.data_set import DataSet
+from core.repository import BeamCandidateRepository
 from flask import jsonify, request
 
 import os

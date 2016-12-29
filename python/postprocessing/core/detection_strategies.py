@@ -7,9 +7,9 @@ import sys
 
 from abc import abstractmethod
 from sklearn.cluster import DBSCAN
-from postprocessing.configuration.application import config
+from configuration.application import config
 from detection_candidates import BeamSpaceDebrisCandidate
-from postprocessing.core.detection_clusters import DetectionCluster
+from core.detection_clusters import DetectionCluster
 
 
 class SpaceDebrisDetection(object):

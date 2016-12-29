@@ -4,7 +4,7 @@ import pymongo as mongo
 import numpy as np
 
 from abc import abstractmethod
-from postprocessing.configuration.application import config
+from configuration.application import config
 from pyevtk.hl import pointsToVTK
 
 

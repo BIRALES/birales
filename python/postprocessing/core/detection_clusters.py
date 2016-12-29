@@ -3,7 +3,7 @@ import numpy as np
 import logging as log
 
 from sklearn import linear_model
-from postprocessing.configuration.application import config
+from configuration.application import config
 
 
 class DetectionCluster:
