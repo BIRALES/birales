@@ -1,0 +1,5 @@
+flask
+cython
+ephem
+conda install -c anaconda gcc=4.8.5
+conda install -c astropy astroplan=0.2

@@ -35,7 +35,7 @@ class DataBlob(object):
         # Flags to determine whether a block in the blob is written or not
         self._block_has_data = []
 
-        for i in xrange(nof_blocks):
+        for i in range(nof_blocks):
             self._obs_info.append(ObservationInfo())
             self._block_has_data.append(False)
 

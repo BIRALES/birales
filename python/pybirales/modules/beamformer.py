@@ -135,8 +135,7 @@ class Pointing(Thread):
     def __init__(self, config, nsubs, nants):
 
         # Call superclass initialiser
-        super(Pointing, self).__init__()
-        self._set_daemon()
+        super(Pointing, self).__init__(daemon=True)
 
         # Make sure that we have enough antenna locations
         if len(config.antenna_locations) != nants:
@@ -191,7 +190,7 @@ class Pointing(Thread):
             # Get time once (so that all beams use the same time for pointing)
             pointing_time = Time(datetime.datetime.utcnow(), scale='utc', location=self._reference_location)
 
-            for beam in xrange(self._nbeams):
+            for beam in range(self._nbeams):
                 self.point_array(beam, self._reference_pointing[0], self._reference_pointing[1],
                                  self._pointings[beam][0], self._pointings[beam][1],
                                  pointing_time)
@@ -359,7 +358,7 @@ class AntennaArray(object):
         self._n_antennas = len(positions)
 
         # Convert file data to astropy format, and store lat, lon and height for each antenna
-        self._x = [positions[i][0] for i in xrange(len(positions))]
-        self._y = [positions[i][1] for i in xrange(len(positions))]
-        self._z = [positions[i][2] for i in xrange(len(positions))]
-        self._height = [0 for i in xrange(len(positions))]
+        self._x = [positions[i][0] for i in range(len(positions))]
+        self._y = [positions[i][1] for i in range(len(positions))]
+        self._z = [positions[i][2] for i in range(len(positions))]
+        self._height = [0] * len(positions)

@@ -107,7 +107,7 @@ class BEST2(object):
         # Check if pointing was successful
         curr_declination = self.get_current_declination()
         if type(curr_declination) is not float:
-            logging.warn("BEST2: Could not validate BEST2 movement")
+            logging.warning("BEST2: Could not validate BEST2 movement")
             return
 
         if abs(curr_declination - dec) < 0.5:

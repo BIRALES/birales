@@ -1,0 +1,46 @@
+Make a copy of the entire directory and subdirectories (I use some
+configuration file).
+Then just "./birales_start" and you will be able to get packets (with
+default setup, the IP of the roach should not be needed).
+If you have the 64x12b ADC you can snap some spectra using snap_birales.py
+Well...i suppose you need the ADC since the firmware gets the fpga
+clock from the ADC GPIO lines...
+
+
+oper@fahal:~$ cd Birales/
+oper@fahal:~/Birales$ ls
+ADCPWR                         birales_calib.py~
+birales_fftshift.py         birales_processing.py   calib_server.py~
+     log
+COEFF                          birales_calib2.py        birales_fw.mdl
+             birales_processing.py~  calib_source.py
+mad_conf_parse.pyc
+README.md                      birales_calib2.py~
+birales_get_temp.py         birales_read_coeff.py   calib_source.py~
+     med5673.py
+adc_curve.txt                  birales_conf_parse.py
+birales_get_temp.py~        birales_start.py
+configura_birales.conf  rx_map_best.txt
+amp_phase_coeff_from_jack.dat  birales_conf_parse.pyc
+birales_grab_jack_coeff.py  bitOperations.py        data
+     rx_network.txt
+birales.xml                    birales_eq.py
+birales_load_jack_coeff.py  bitOperations.pyc       dev
+     snap_birales.py
+birales_antenna_order.conf     birales_equalize_rx.py
+birales_plot_tools.py       calib_server.log        eq
+     test.py
+birales_calib.py               birales_equalize_rx.py~
+birales_plot_tools.pyc      calib_server.py         header.conf
+     test.py~
+oper@fahal:~/Birales$ ./birales_start.py --help
+Usage: birales_start.py <ROACH_HOSTNAME_or_IP> [options]
+
+Options:
+  -h, --help            show this help message and exit
+  -p, --skip_prog       Skip FPGA programming (assumes already programmed).
+                        Default: program the FPGAs
+  -c CONFIG_FILE, --config=CONFIG_FILE
+                        Select the Configuration file
+  -e, --skip_eq         Skip Default Equalization.  Default: Equalize Amp 3.5
+                        and Phase 0 to 18 ant

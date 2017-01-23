@@ -19,11 +19,10 @@ def apply_fir_filter(data, fir_filter, output, ntaps, nchans):
     :param output: Output data pointer
     :param ntaps: Number of taps
     :param nchans: Number of channels """
-
     nof_spectra = (len(data) - ntaps * nchans) / nchans
-    for n in xrange(nof_spectra):
+    for n in range(nof_spectra):
         temp = data[n * nchans: n * nchans + nchans * ntaps] * fir_filter
-        for j in xrange(1, ntaps):
+        for j in range(1, ntaps):
             temp[:nchans] += temp[j * nchans: (j + 1) * nchans]
         output[:, n] = temp[:nchans]
 
@@ -96,7 +95,7 @@ class PFB(ProcessingModule):
         self._generate_filter()
 
         # Create temporary array for filtered data
-        self._filtered = np.zeros((self._nbeams, self._nsubs, self._nchans, self._nsamp / self._nchans),
+        self._filtered = np.zeros((self._nbeams, self._nsubs, self._nchans, int(self._nsamp / self._nchans)),
                                   dtype=np.complex64)
 
         # Create temporary input array

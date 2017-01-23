@@ -1,4 +1,4 @@
-import ConfigParser
+import configparser
 import ast
 import re
 
@@ -57,7 +57,7 @@ class PipelineManager(object):
         """ Parse configuration file and set pipeline
         :param config_file: Configuration file path
         """
-        parser = ConfigParser.SafeConfigParser()
+        parser = configparser.ConfigParser()
         parser.read(config_file)
 
         # Temporary class to create section object in settings file
@@ -66,12 +66,12 @@ class PipelineManager(object):
                 return self.__dict__.keys()
 
         # Loop over all section in config file
-        for key, value in parser._sections.iteritems():
+        for key, value in parser._sections.items():
             # Create instance to inject into settings file
             instance = Section()
 
             # Loop over all config entries in section
-            for k, v in value.iteritems():
+            for k, v in value.items():
 
                 # Check if value is a number of boolean
                 if re.match(self._config_pattern, v) is not None:
