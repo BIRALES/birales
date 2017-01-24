@@ -1,5 +1,4 @@
 #!/usr/bin/python
-
 import logging
 import os
 
@@ -19,7 +18,6 @@ from pybirales.plotters.channel_plotter import ChannelisedDataPlotter
 from pybirales.plotters.raw_data_plotter import RawDataPlotter
 from pybirales.plotters.raw_data_grid_plotter import RawDataGridPlotter
 
-# ------------------------------------------- Pipelines ---------------------------------------------
 
 def aavs_correlator(manager):
     generator = DummyDataGenerator(settings.generator)
@@ -29,6 +27,7 @@ def aavs_correlator(manager):
     manager.add_module("generator", generator)
     manager.add_module("correlator", correlator)
     manager.add_module("terminator", terminator)
+
 
 def standalone_test(manager):
     generator = DummyDataGenerator(settings.generator)
@@ -53,8 +52,8 @@ def test_receiver(manager):
     manager.add_module("ppf", ppf)
     manager.add_module("terminator", terminator)
 
-    #manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
-    #manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
+    # manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
+    # manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
     manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
 
 
@@ -73,25 +72,25 @@ def birales_pipeline(manager):
 
     # Add plotters
     manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
-    #manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
+    # manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
 
 if __name__ == "__main__":
 
     # Use OptionParse to get command-line arguments
     from optparse import OptionParser
-    from sys import argv, stdout
+    from sys import argv
 
     # Define parameters
     parser = OptionParser(usage="usage: birales.py CONFIG_FILE [options]")
 
     # Check number of command-line arguments
     if len(argv) < 2:
-        print("Configuration file required. Uage: birales.py CONFIG_FILE [options]")
+        print("Configuration file required. Usage: birales.py CONFIG_FILE [options]")
         exit()
 
     # Check if configuration file was passed
     if not os.path.exists(argv[1]):
-        print("Configuration file required. Uage: birales.py CONFIG_FILE [options]")
+        print("Configuration file required. Usage: birales.py CONFIG_FILE [options]")
         exit()
 
     # Parse command-line arguments
@@ -102,9 +101,9 @@ if __name__ == "__main__":
 
     logging.info("Initialising")
 
-    #birales_pipeline(manager)
-    #test_receiver(manager)
-    #standalone_test(manager)
+    # birales_pipeline(manager)
+    # test_receiver(manager)
+    # standalone_test(manager)
     aavs_correlator(manager)
 
     logging.info("Started")
