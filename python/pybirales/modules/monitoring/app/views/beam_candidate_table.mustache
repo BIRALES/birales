@@ -1,0 +1,25 @@
+<table class="table table-striped table-sm">
+    <caption>Beam {{beam_id}} (DEC: {{beam_dec}}, RA: {{beam_ra}}), candidate {{ candidate_id }}</caption>
+    <thead>
+    <tr>
+        <th>Timestamp</th>
+        <th>MJD2000</th>
+        <th>Time Elapsed (s)</th>
+        <th>Doppler (Hz)</th>
+        <th>Frequency (MHz)</th>
+        <th>SNR (Db)</th>
+    </tr>
+    </thead>
+    <tbody>
+    {{#detections}}
+        <tr>
+            <td>{{time}}</td>
+            <td>{{mdj2000}}</td>
+            <td>{{time_elapsed}}</td>
+            <td>{{doppler_shift}}</td>
+            <td>{{frequency}}</td>
+            <td>{{snr}}</td>
+        </tr>
+    {{/detections}}
+    </tbody>
+</table>

@@ -7,8 +7,8 @@ from pybirales.modules.detection.pipeline import SpaceDebrisDetectorPipeline
 from pybirales.modules.detection.repository import DataSetRepository, BeamDataRepository
 # from pybirales.modules.monitoring.api import app
 from pybirales.base.pipeline_manager import PipelineManager
-# from pybirales.configuration.application import config
 from pybirales.base import settings
+
 
 @click.group()
 @click.option('--multiproc', help='Needed when running in parallel', type=click.STRING)
@@ -26,19 +26,19 @@ def get_data_sets(observation, data_set):
     data_sets = {}
     observations = [observation]
     if observation == '*':
-        observations = [x for x in os.listdir(config.get('io', 'DATA_FILE_PATH'))]
+        observations = [x for x in os.listdir(settings.io.data_file_path)]
         for obs in observations:
-            data_sets[obs] = [x for x in os.listdir(config.get('io', 'DATA_FILE_PATH') + '/' + obs)]
+            data_sets[obs] = [x for x in os.listdir(settings.io.data_file_path + '/' + obs)]
         return data_sets
 
     if data_set == '*':
         for obs in observations:
-            data_sets[obs] = [x for x in os.listdir(config.get('io', 'DATA_FILE_PATH') + '/' + obs)]
+            data_sets[obs] = [x for x in os.listdir(settings.io.data_file_path + '/' + obs)]
     else:
         data_sets[observation] = [data_set]
         if observation == '*':
             for obs in observations:
-                data_sets[obs] = [x for x in os.listdir(config.get('io', 'DATA_FILE_PATH') + '/' + obs)]
+                data_sets[obs] = [x for x in os.listdir(settings.io.data_file_path + '/' + obs)]
 
     return data_sets
 
