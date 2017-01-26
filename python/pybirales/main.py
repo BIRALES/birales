@@ -2,7 +2,7 @@
 import logging
 import os
 
-from modules.correlator import Correlator
+from pybirales.modules.correlator import Correlator
 from pybirales.modules.terminator import Terminator
 from pybirales.plotters.beam_plotter import BeamformedDataPlotter
 from pybirales.base.pipeline_manager import PipelineManager

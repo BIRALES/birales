@@ -1,12 +1,14 @@
-import click
-import time
 import logging as log
-from core.pipeline import SpaceDebrisDetectorPipeline
-from core.repository import DataSetRepository, BeamDataRepository
-from visualization.api import app
-from configuration.application import config
 import os
+import time
+import click
 
+from pybirales.modules.detection.pipeline import SpaceDebrisDetectorPipeline
+from pybirales.modules.detection.repository import DataSetRepository, BeamDataRepository
+# from pybirales.modules.monitoring.api import app
+from pybirales.base.pipeline_manager import PipelineManager
+# from pybirales.configuration.application import config
+from pybirales.base import settings
 
 @click.group()
 @click.option('--multiproc', help='Needed when running in parallel', type=click.STRING)
@@ -56,9 +58,10 @@ def post_process(observation, data_set, n_beams):
     :return:
     """
 
+    manager = PipelineManager('pybirales/configuration/birales.ini')
     data_sets = get_data_sets(observation, data_set)
 
-    for observation, data_sets in data_sets.iteritems():
+    for observation, data_sets in data_sets.items():
         for data_set in data_sets:
             before = time.time()
             pipeline = SpaceDebrisDetectorPipeline(observation_name=observation, data_set_name=data_set, n_beams=n_beams)
@@ -76,7 +79,7 @@ def run_dev_server(port):
     :param port The port that the server will run on
     :return:
     """
-    app.run_server(port)
+    # app.run_server(port)
 
 
 @cli.command()
@@ -94,12 +97,12 @@ def reset(observation, data_set):
     data_set_id = observation + '.' + data_set
 
     # Delete the beam data for this data_set from the database
-    beam_data_repository = BeamDataRepository()
-    beam_data_repository.destroy(data_set_id)
+    # beam_data_repository = BeamDataRepository()
+    # beam_data_repository.destroy(data_set_id)
 
     # Delete the data_set from the database
-    data_set_repository = DataSetRepository()
-    data_set_repository.destroy(data_set_id)
+    # data_set_repository = DataSetRepository()
+    # data_set_repository.destroy(data_set_id)
 
 
 if __name__ == '__main__':

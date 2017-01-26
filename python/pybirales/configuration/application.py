@@ -1,6 +1,6 @@
 import logging as log
 import os
-from ConfigParser import ConfigParser
+import configparser
 from logging.config import fileConfig
 
 

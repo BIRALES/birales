@@ -11,7 +11,7 @@ import time
 
 from pybirales.base.definitions import PipelineError
 from matplotlib import pyplot as plt
-
+from logging.config import fileConfig as set_log_config
 
 class PipelineManager(object):
     """ Class to manage the pipeline """
@@ -22,9 +22,6 @@ class PipelineManager(object):
         self._plotters = []
         self._module_names = []
 
-        # Initialise logging
-        self._initialise_logging()
-
         # Config patters
         self._config_pattern = re.compile("^True|False|[0-9]+(\.[0-9]*)?$")
 
@@ -33,6 +30,9 @@ class PipelineManager(object):
 
         # Check configuration
         self._check_configuration()
+
+        # Initialise logging
+        self._initialise_logging()
 
         # Get own configuration
         self._config = None
@@ -172,6 +172,8 @@ class PipelineManager(object):
         ch = logging.StreamHandler(stdout)
         ch.setFormatter(str_format)
         log.addHandler(ch)
+        set_log_config(settings.log.config_file_path)
+
 
     def wait_pipeline(self):
         """ Wait for modules to finish processing """

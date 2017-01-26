@@ -1,6 +1,6 @@
 import logging
 
-from blobs.correlated_data import CorrelatedBlob
+from pybirales.blobs.correlated_data import CorrelatedBlob
 from pybirales.base.definitions import PipelineError
 from pybirales.base.processing_module import ProcessingModule
 from pybirales.blobs.channelised_data import ChannelisedBlob
