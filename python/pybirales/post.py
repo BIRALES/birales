@@ -1,11 +1,13 @@
+#!/usr/bin/python
 import logging as log
 import os
 import time
 import click
 
 from pybirales.modules.detection.pipeline import SpaceDebrisDetectorPipeline
-from pybirales.modules.detection.repository import DataSetRepository, BeamDataRepository
-# from pybirales.modules.monitoring.api import app
+from pybirales.modules.detection.repository import DataSetRepository
+from pybirales.modules.detection.repository import BeamDataRepository
+from pybirales.modules.monitoring.api import app
 from pybirales.base.pipeline_manager import PipelineManager
 from pybirales.base import settings
 
@@ -79,7 +81,8 @@ def run_dev_server(port):
     :param port The port that the server will run on
     :return:
     """
-    # app.run_server(port)
+    manager = PipelineManager('pybirales/configuration/birales.ini')
+    app.run_server(port)
 
 
 @cli.command()
@@ -97,12 +100,12 @@ def reset(observation, data_set):
     data_set_id = observation + '.' + data_set
 
     # Delete the beam data for this data_set from the database
-    # beam_data_repository = BeamDataRepository()
-    # beam_data_repository.destroy(data_set_id)
+    beam_data_repository = BeamDataRepository()
+    beam_data_repository.destroy(data_set_id)
 
     # Delete the data_set from the database
-    # data_set_repository = DataSetRepository()
-    # data_set_repository.destroy(data_set_id)
+    data_set_repository = DataSetRepository()
+    data_set_repository.destroy(data_set_id)
 
 
 if __name__ == '__main__':

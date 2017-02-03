@@ -1,7 +1,6 @@
 from pybirales.modules.detection.repository import DataSetRepository
 from flask import jsonify
 from flask_restful import Resource
-# from pybirales.configuration.application import config
 from pybirales.base import settings
 
 
@@ -10,7 +9,7 @@ class DataSet(Resource):
     The beam parent class
     """
     beam_dir = None
-    image_ext = settings.monitoring.image_ext
+    # image_ext = settings.monitoring.image_ext
 
     @staticmethod
     def get(observation, data_set):

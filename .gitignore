@@ -1,4 +1,4 @@
 *.pyc
 .idea/
-data
+data/
 python/pybirales/modules/monitoring/app/node_modules
