@@ -12,6 +12,7 @@ from pybirales.modules.channeliser import PFB
 from pybirales.modules.generator import DummyDataGenerator
 from pybirales.modules.persister import Persister
 from pybirales.modules.receiver import Receiver
+from pybirales.modules.detector import Detector
 from pybirales.plotters.bandpass_plotter import BandpassPlotter
 from pybirales.plotters.antenna_plotter import AntennaPlotter
 from pybirales.plotters.channel_plotter import ChannelisedDataPlotter
@@ -74,6 +75,22 @@ def birales_pipeline(manager):
     manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
     # manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
 
+
+def birales_pipeline_with_post_processing(manager):
+    # Generate processing modules and data blobs
+    receiver = Receiver(settings.receiver)
+    beamformer = Beamformer(settings.beamformer, receiver.output_blob)
+    ppf = PFB(settings.channeliser, beamformer.output_blob)
+    persister = Persister(settings.persister, ppf.output_blob)
+    detector = Detector(settings.detection, ppf.output_blob)
+
+    # Add modules to pipeline manager
+    manager.add_module("receiver", receiver)
+    manager.add_module("beamformer", beamformer)
+    manager.add_module("ppf", ppf)
+    manager.add_module("persister", persister)
+    manager.add_module("detector", detector)
+
 if __name__ == "__main__":
 
     # Use OptionParse to get command-line arguments
@@ -97,16 +114,13 @@ if __name__ == "__main__":
     (conf, args) = parser.parse_args(argv[2:])
 
     # Create pipeline manager
-    manager = PipelineManager(argv[1])
+    pipeline_manager = PipelineManager(argv[1])
 
     logging.info("Initialising")
 
-    # birales_pipeline(manager)
-    # test_receiver(manager)
-    # standalone_test(manager)
-    aavs_correlator(manager)
+    birales_pipeline_with_post_processing(pipeline_manager)
 
     logging.info("Started")
 
     # Start pipeline
-    manager.start_pipeline()
+    pipeline_manager.start_pipeline()

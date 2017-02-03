@@ -13,7 +13,8 @@ from pybirales.blobs.dummy_data import DummyBlob
 from pybirales.blobs.receiver_data import ReceiverBlob
 
 
-class SpaceDebrisDetector(ProcessingModule):
+class Detector(ProcessingModule):
+
     def __init__(self, config, input_blob=None):
         self.name = "Detector"
 
@@ -26,7 +27,7 @@ class SpaceDebrisDetector(ProcessingModule):
         self.detection_strategy = SpaceDebrisDetection(settings.detection.detection_strategy)
         log.info('Using %s algorithm', self.detection_strategy.name)
 
-        super(SpaceDebrisDetector, self).__init__(config, input_blob)
+        super(Detector, self).__init__(config, input_blob)
 
     def generate_output_blob(self):
         pass
