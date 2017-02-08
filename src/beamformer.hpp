@@ -11,6 +11,6 @@ typedef struct complex64
 } complex64;
 
 extern "C" void beamform(complex64 *input, complex64 *weights, complex64 *output,
-                         int nsamp, int nchans, int nbeams, int nants, int nthreads);
+                         int nsamp, int nchans, int nbeams, int nants, int npols, int nthreads);
 
 #endif //BEAMFORMER_BEAMFORMER_H

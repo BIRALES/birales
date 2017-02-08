@@ -33,7 +33,6 @@ class PFB(ProcessingModule):
     def __init__(self, config, input_blob=None):
 
         # This module needs an input blob of type dummy
-        print(type(input_blob), ReceiverBlob)
         if type(input_blob) not in [BeamformedBlob, DummyBlob, ReceiverBlob]:
             raise PipelineError("PFB: Invalid input data type, should be BeamformedBlob, DummyBlob or ReceiverBlob")
 

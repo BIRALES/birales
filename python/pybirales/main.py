@@ -21,15 +21,6 @@ from pybirales.plotters.raw_data_grid_plotter import RawDataGridPlotter
 
 # ------------------------------------------- Pipelines ---------------------------------------------
 
-def aavs_correlator(manager):
-    generator = DummyDataGenerator(settings.generator)
-    correlator = Correlator(settings.correlator, generator.output_blob)
-    terminator = Terminator(settings.terminator, correlator.output_blob)
-
-    manager.add_module("generator", generator)
-    manager.add_module("correlator", correlator)
-    manager.add_module("terminator", terminator)
-
 def standalone_test(manager):
     generator = DummyDataGenerator(settings.generator)
     beamformer = Beamformer(settings.beamformer, generator.output_blob)
@@ -41,7 +32,7 @@ def standalone_test(manager):
     manager.add_module("pfb", pfb)
     manager.add_module("terminator", terminator)
 
-    manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, pfb.output_blob)
+    #manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, pfb.output_blob)
 
 
 def test_receiver(manager):
@@ -104,8 +95,7 @@ if __name__ == "__main__":
 
     #birales_pipeline(manager)
     #test_receiver(manager)
-    #standalone_test(manager)
-    aavs_correlator(manager)
+    standalone_test(manager)
 
     logging.info("Started")
 

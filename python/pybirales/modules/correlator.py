@@ -2,6 +2,7 @@ from multiprocessing.pool import ThreadPool
 
 import numpy as np
 import logging
+import numba
 
 from pybirales.blobs.correlated_data import CorrelatedBlob
 from pybirales.base.definitions import PipelineError
@@ -35,8 +36,13 @@ class Correlator(ProcessingModule):
         # Populate variables
         self._integration = config.integration
 
-        # Create thread pool for parallel PFB
-        self._thread_pool = ThreadPool(4)
+        # Define parameters
+        self._current_input = None
+        self._current_output = None
+        self._nsamp = None
+        self._nchans = None
+        self._nants = None
+        self._npols = None
 
     def generate_output_blob(self):
         """ Generate output data blob """
@@ -52,7 +58,7 @@ class Correlator(ProcessingModule):
                                               input_shape['nchans'] if self._after_channelizer else input_shape[
                                                   'nsubs']),
                                              ('nsamp', input_shape['nsamp'] / self._config.integration),
-                                             ('baselines', input_shape['nbeams'] ** 2),
+                                             ('baselines', (input_shape['nbeams'] ** 2) / 2),
                                              ('stokes', 4)],
                               datatype=datatype)
 
@@ -60,23 +66,26 @@ class Correlator(ProcessingModule):
         """ Perform channelisation """
 
         # Update parameters
-        nsamp = obs_info['nsamp']
-        nchans = obs_info['nchans']
-        nants = obs_info['nants']
-        npols = obs_info['npols']
+        self._nsamp = obs_info['nsamp']
+        self._nchans = obs_info['nchans']
+        self._nants = obs_info['nants']
+        self._npols = obs_info['npols']
 
         # TODO: Re-perform integration time check
 
         # Transpose the data so the we can parallelise over frequency
-        temp_data = np.transpose(input_data, (2, 1, 0, 3))
-        temp_data = np.transpose(temp_data, (0, 2, 1, 3))
+        self._current_input = np.transpose(input_data, (2, 1, 0, 3))
+        self._current_input = np.transpose(self._current_input, (0, 2, 1, 3))
+
+        # Point to output
+        self._current_output = output_data
 
         # Perform correlation
-        for c in range(nchans):
-            for p in range(npols):
-                for a1 in range(nants):
-                    for a2 in range(nants):
-                        np.correlate(temp_data[c, p, a1, :], temp_data[c, p, a2, :])
+        for c in range(self._nchans):
+            for p in range(self._npols):
+                for a1 in range(self._nants):
+                    for a2 in range(a1, self._nants):
+                        np.correlate(self._current_input[c, p, a1, :], self._current_input[c, p, a2, :])
 
         # Update observation information
         logging.info("Correlated data")
