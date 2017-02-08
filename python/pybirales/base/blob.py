@@ -26,7 +26,7 @@ class DataBlob(object):
         # The data blob as a numpy array
         data_shape = []
         for item in self._shape:
-            data_shape.append(item[1])
+            data_shape.append(int(item[1]))
         self._data = np.zeros((nof_blocks,) + tuple(data_shape), dtype=datatype)
 
         # Create observation info object for every data block

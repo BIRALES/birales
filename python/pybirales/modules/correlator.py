@@ -1,11 +1,12 @@
+from multiprocessing.pool import ThreadPool
+
+import numpy as np
 import logging
 
-from blobs.correlated_data import CorrelatedBlob
+from pybirales.blobs.correlated_data import CorrelatedBlob
 from pybirales.base.definitions import PipelineError
 from pybirales.base.processing_module import ProcessingModule
 from pybirales.blobs.channelised_data import ChannelisedBlob
-from pybirales.blobs.dummy_data import DummyBlob
-from pybirales.blobs.receiver_data import ReceiverBlob
 
 
 class Correlator(ProcessingModule):
@@ -14,7 +15,7 @@ class Correlator(ProcessingModule):
     def __init__(self, config, input_blob=None):
 
         # This module needs an input blob of type dummy, receiver or channeliser
-        if type(input_blob) not in [ChannelisedBlob, DummyBlob, ReceiverBlob]:
+        if type(input_blob) not in [ChannelisedBlob]:
             raise PipelineError("Correlator: Invalid input data type, should be ChannelisedBlob, "
                                 "DummyBlob or ReceiverBlob")
 
@@ -22,8 +23,8 @@ class Correlator(ProcessingModule):
         self._after_channelizer = True if type(input_blob) is ChannelisedBlob else False
 
         # Sanity checks on configuration
-        if {'integration_time'} - set(config.settings()) != set():
-            raise PipelineError("Correlator: Missing keys on configuration. (nchans, integration_time, nsamp)")
+        if {'integration'} - set(config.settings()) != set():
+            raise PipelineError("Correlator: Missing keys on configuration. (integration)")
 
         # Call superclass initialiser
         super(Correlator, self).__init__(config, input_blob)
@@ -32,10 +33,10 @@ class Correlator(ProcessingModule):
         self.name = "Correlator"
 
         # Populate variables
-        self._integration_time = config.integration_time
-        self._nants = None
-        self._nchans = None
-        self._nsamp = None
+        self._integration = config.integration
+
+        # Create thread pool for parallel PFB
+        self._thread_pool = ThreadPool(4)
 
     def generate_output_blob(self):
         """ Generate output data blob """
@@ -43,24 +44,39 @@ class Correlator(ProcessingModule):
         datatype = self._input.datatype
 
         # Check if integration time is a multiple of nsamp
-        if input_shape['nsamp'] % self._config.integration_time != 0:
+        if input_shape['nsamp'] % self._config.integration != 0:
             raise PipelineError("Correlator: integration time must be a multiple of nsamp")
 
         # Generate output blob
-        return CorrelatedBlob(self._config, [('nsamp', input_shape['nsamp'] / self._config.integration_time),
-                                             ('nchans', input_shape['nchans'] if self._after_channelizer else input_shape['nsubs']),
-                                             ('nants', input_shape['nants'])],
-                               datatype=datatype)
+        return CorrelatedBlob(self._config, [('nchans',
+                                              input_shape['nchans'] if self._after_channelizer else input_shape[
+                                                  'nsubs']),
+                                             ('nsamp', input_shape['nsamp'] / self._config.integration),
+                                             ('baselines', input_shape['nbeams'] ** 2),
+                                             ('stokes', 4)],
+                              datatype=datatype)
 
     def process(self, obs_info, input_data, output_data):
         """ Perform channelisation """
 
         # Update parameters
-        self._nsamp = obs_info['nsamp']
-        self._nchans = obs_info['nsubs']
-        self._nants = obs_info['nants']
+        nsamp = obs_info['nsamp']
+        nchans = obs_info['nchans']
+        nants = obs_info['nants']
+        npols = obs_info['npols']
 
-        # Re-perform integration time check
+        # TODO: Re-perform integration time check
+
+        # Transpose the data so the we can parallelise over frequency
+        temp_data = np.transpose(input_data, (2, 1, 0, 3))
+        temp_data = np.transpose(temp_data, (0, 2, 1, 3))
+
+        # Perform correlation
+        for c in range(nchans):
+            for p in range(npols):
+                for a1 in range(nants):
+                    for a2 in range(nants):
+                        np.correlate(temp_data[c, p, a1, :], temp_data[c, p, a2, :])
 
         # Update observation information
         logging.info("Correlated data")
