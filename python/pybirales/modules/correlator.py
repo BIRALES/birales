@@ -1,8 +1,5 @@
-from multiprocessing.pool import ThreadPool
-
 import numpy as np
 import logging
-import numba
 
 from pybirales.blobs.correlated_data import CorrelatedBlob
 from pybirales.base.definitions import PipelineError
