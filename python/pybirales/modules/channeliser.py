@@ -184,10 +184,11 @@ class PFB(ProcessingModule):
                     np.flipud(np.fft.fftshift(np.fft.fft(self._filtered[beam, c, :], axis=0), axes=0))
 
     def channelise_parallel(self):
-         """
-        Perform channelisation, parallel version
-        :return:
         """
+       Perform channelisation, parallel version
+       :return:
+       """
+
         self._thread_pool.map(self.channelise_thread, range(self._nbeams))
 
     def channelise(self):
