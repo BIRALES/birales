@@ -188,4 +188,4 @@ class PipelineManager(object):
             while module.isAlive() and module._stop is False:
                 module.join(2)
             if module.isAlive():
-                logging.warning("PipelineManager: Killing thread %s abruptly" % module.name)
+                logging.warning("PipelineManager: Killing thread %s abruptly", module.name)
