@@ -4,11 +4,11 @@ from threading import Thread
 
 
 class Module(Thread):
-
     def __init__(self, config=None, input_blob=None):
-        """ Class constructor
-        :param config: Configuration object
-        :param input_blob: Input data blob
+        """
+
+        :param config:
+        :param input_blob:
         """
 
         # Call superclass
@@ -57,15 +57,21 @@ class Module(Thread):
 
 
 class Generator(Module):
-
     @abstractmethod
     def generate_output_blob(self):
-        """ Create the output blob to be used by the next module in the pipeline
-        :return: Create data blob """
+        """
+        Create the output blob to be used by the next module in the pipeline's chain.
+        This method is to be overridden by the corresponding sub classes
+        :return:
+        """
+
         pass
 
     def run(self):
-        """ Thread body """
+        """
+        Thread body
+        :return:
+        """
         self._is_stopped = False
         while not self._stop:
             time.sleep(1)
@@ -73,12 +79,20 @@ class Generator(Module):
         self._is_stopped = True
 
     def request_output_blob(self):
-        """ Request a new output blob to write data into """
+        """
+        Request a new output blob to write data into
+        :return:
+        """
+
         return self._output.request_write()
 
     def release_output_blob(self, obs_info):
-        """ Release output blob
-        :param obs_info: Observation information object """
+        """
+        Release the output blob
+        :param obs_info: Observation information object
+        :return:
+        """
+
         self._output.release_write(obs_info)
 
 
@@ -133,6 +147,3 @@ class ProcessingModule(Module):
             time.sleep(0.001)
 
         self._is_stopped = True
-
-
-# ------------------------------------ Generator ----------------------------------------

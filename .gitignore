@@ -3,3 +3,5 @@
 data/
 python/pybirales/modules/monitoring/app/node_modules
 src/build
+*.dat
+*.dat.pkl
