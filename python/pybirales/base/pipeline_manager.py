@@ -13,6 +13,7 @@ from pybirales.base.definitions import PipelineError
 from matplotlib import pyplot as plt
 from logging.config import fileConfig as set_log_config
 
+
 class PipelineManager(object):
     """ Class to manage the pipeline """
 
@@ -45,13 +46,13 @@ class PipelineManager(object):
             if "plot_update_rate" in self._config.settings():
                 self._plot_update_rate = self._config.plot_update_rate
 
-        # Capturing interrupt signal
-        def signal_handler(sig, frame):
-            logging.info("Ctrl-C detected, stopping pipeline")
-            self.stop_pipeline()
-
         # Set interrupt signal handler
-        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGINT, self._signal_handler)
+
+    # Capturing interrupt signal
+    def _signal_handler(self):
+        logging.info("Ctrl-C detected, stopping pipeline")
+        self.stop_pipeline()
 
     def _configure_pipeline(self, config_file):
         """ Parse configuration file and set pipeline
@@ -88,7 +89,8 @@ class PipelineManager(object):
             # Add object instance to settings
             setattr(settings, key, instance)
 
-    def _check_configuration(self):
+    @staticmethod
+    def _check_configuration():
         """ Check that an observation entry is in the config file and it contains the required information """
         if "observation" not in settings.__dict__:
             raise PipelineError("PipelineManager: observation section not found in configuration file")
@@ -105,17 +107,19 @@ class PipelineManager(object):
         self._module_names.append(name)
         self._modules.append(module)
 
-    def add_plotter(self, name, classname, config, input_blob):
+    def add_plotter(self, name, class_name, config, input_blob):
         """ Add a new plotter instance to the pipeline
         :param name: Name of the plotter instance
-        :param plotter: Plotter instance
+        :param class_name:
+        :param config:
+        :param input_blob:
         :return:
         """
+
         # Add plotter if plotting is enabled
         if self._enable_plotting:
-
             # Create the plotter instance
-            plot = classname(config, input_blob, plt.figure() )
+            plot = class_name(config, input_blob, plt.figure())
 
             # Create plotter indexing
             plot.index = plot.create_index()
@@ -125,7 +129,11 @@ class PipelineManager(object):
             self._plotters.append(plot)
 
     def start_pipeline(self):
-        """ Start running pipeline """
+        """
+        Start running the pipeline
+        :return:
+        """
+
         try:
             # Start all modules
             for module in self._modules:
@@ -161,7 +169,7 @@ class PipelineManager(object):
             while not module.is_stopped and tries < 5:
                 time.sleep(0.5)
                 tries += 1
-        # All done
+                # All done
 
     @staticmethod
     def _initialise_logging():
