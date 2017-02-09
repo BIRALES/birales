@@ -19,14 +19,12 @@ class DataBlob(object):
         :param nof_blocks: Number of data blocks in DataBlob
         """
 
-        # Shape and datatype of the data
+        # Shape and data type of the data
         self._shape = shape
         self._data_type = datatype
 
         # The data blob as a numpy array
-        data_shape = []
-        for item in self._shape:
-            data_shape.append(item[1])
+        data_shape = [index[1] for index in self._shape]
         self._data = np.zeros((nof_blocks,) + tuple(data_shape), dtype=datatype)
 
         # Create observation info object for every data block
@@ -93,7 +91,10 @@ class DataBlob(object):
 
         # Test to see whether data is being overwritten
         if self._block_has_data[self._writer_index]:
-           logging.warning("Warning: Overwriting data [%s] %d %d" % (threading.current_thread().name, self._writer_index, self._reader_index))
+            logging.warning('Overwriting data [%s] %d %d',
+                            threading.current_thread().name,
+                            self._writer_index,
+                            self._reader_index)
 
         # Return data splice
         return self._data[self._writer_index, :]

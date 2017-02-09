@@ -5,7 +5,11 @@ import numpy as np
 from pybirales.modules.detection.filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter
 from pybirales.modules.detection.repository import BeamDataRepository
 from pybirales.modules.monitoring.api.common.plotters import BeamMatplotlibPlotter
-# from pybirales.configuration.application import config
+from pybirales.base import settings
+
+import warnings
+
+warnings.filterwarnings('error')
 
 
 class Beam:
@@ -13,7 +17,7 @@ class Beam:
     The Beam class from which beam object can be created.
     """
 
-    def __init__(self, beam_id, dec, ra, ha, top_frequency, frequency_offset, data_set, beam_data):
+    def __init__(self, beam_id, dec, ra, ha, top_frequency, frequency_offset, obs_info, beam_data):
         """
         Initialise the Beam class object
 
@@ -23,7 +27,7 @@ class Beam:
         :param ha:
         :param top_frequency:
         :param frequency_offset:
-        :param data_set: The DataSet object with which the beam is associated with
+        :param obs_info:
         :param beam_data:
         :return: void
         """
@@ -36,17 +40,16 @@ class Beam:
         self.top_frequency = top_frequency
         self.frequency_offset = frequency_offset
 
-        self.observation_name = data_set.observation_name
-        self.data_set = data_set
-        self.tx = data_set.config['transmitter_frequency']
-        self.n_beams = data_set.config['nbeams']
-        self.n_channels = data_set.config['nchans']
+        self.observation_name = settings.observation.name
+        self.tx = settings.observation.transmitter_frequency
+        self.n_beams = obs_info['nbeams']
+        self.n_channels = obs_info['nchans']
+        self.n_sub_channels = obs_info['nchans'] / 2
+        self.f_ch1 = obs_info['start_center_frequency']
+        self.f_off = obs_info['channel_bandwidth']
+        self.sampling_rate = settings.observation.samples_per_second
+        self.n_samples = obs_info['nsamp']
 
-        self.n_sub_channels = data_set.config['nchans'] / 2
-        self.f_ch1 = data_set.config['f_ch1']
-        self.f_off = data_set.config['f_off']
-        self.sampling_rate = data_set.config['sampling_rate']
-        self.n_samples = data_set.config['nsamp']
         self.name = self._get_human_name()
         self.time_samples = beam_data.shape[0]
         self.time = np.linspace(0, self.time_samples * self.sampling_rate, num=self.time_samples)
@@ -62,14 +65,10 @@ class Beam:
                                    x_label='Channel',
                                    y_label='Time Sample',
                                    data=self.snr)
-
-        file_path = os.path.join(config.get('monitoring', 'FILE_PATH'), self.observation_name, self.data_set.name)
-        # bp.save(file_path)
         bp.plot()
 
     def _get_human_name(self):
-        return 'Observation ' + inf.humanize(self.observation_name) + ' - ' + inf.humanize(
-            os.path.basename(self.data_set.name))
+        return 'Observation ' + inf.humanize(self.observation_name)
 
     def _set_data(self, beam_data):
         """
@@ -78,10 +77,10 @@ class Beam:
         :param beam_data: The raw beam data
         :return: void
         """
-        data = beam_data[:, :, self.id]
-        return self._get_snr(data)
+        data = beam_data[self.id, :, :]  # beam id, channels, time samples
+        # print(data)
+        return self._get_snr(np.abs(data))
 
-    # @staticmethod
     def _get_snr(self, data):
         """
         Calculate the Signal to Noise Ratio form the power data
@@ -99,7 +98,9 @@ class Beam:
         # Calculate the average noise in the subset
         noise = np.mean(data[:, range(0, subset_size)])
 
-        return np.log10(data / mean_noise_per_channel)
+        indices = np.where(mean_noise_per_channel > 0)
+        x = data[:, indices] / mean_noise_per_channel[indices]
+        return np.log10(x)
 
     def _apply_filter(self, beam_filter):
         beam_filter.apply(self)

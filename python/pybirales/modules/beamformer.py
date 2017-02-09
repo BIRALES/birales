@@ -217,7 +217,7 @@ class Pointing(Thread):
         :return: The phase shift in radians for each antenna
         """
 
-        for i in xrange(self._nsubs):
+        for i in range(self._nsubs):
             # Calculate complex coefficients
             frequency = Quantity(self._start_center_frequency + (i * self._bandwidth / self._nsubs), u.MHz)
             real, imag = self._phaseshifts_from_altitude_azimuth(altitude.rad, azimuth.rad, frequency, self._vectors_enu)
@@ -344,7 +344,7 @@ class AntennaArray(object):
     @property
     def height(self):
         """
-        Retern reference height
+        Return reference height
         :return: reference height
         """
         return self._ref_height

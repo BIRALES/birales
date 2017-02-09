@@ -5,8 +5,8 @@ class ChannelisedBlob(DataBlob):
     """ DataBlob representing channelised data """
 
     def __init__(self, config, shape, datatype, nof_blocks=4):
-        """ Class initialiser
+        """ Class initializer
         :param config: Configuration object """
 
-        # Call superclass initialiser
+        # Call superclass initializer
         super(ChannelisedBlob, self).__init__(config, shape, datatype, nof_blocks)

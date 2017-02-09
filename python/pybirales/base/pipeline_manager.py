@@ -172,8 +172,7 @@ class PipelineManager(object):
         ch = logging.StreamHandler(stdout)
         ch.setFormatter(str_format)
         log.addHandler(ch)
-        set_log_config(settings.log.config_file_path)
-
+        set_log_config(settings.manager.loggging_config_file_path)
 
     def wait_pipeline(self):
         """ Wait for modules to finish processing """

@@ -52,8 +52,8 @@ class DummyDataGenerator(ProcessingModule):
         time.sleep(0.05)
         # Perform operations
         output_data[:] = np.ones((self._nsubs, self._nsamp, self._nants), dtype=self._datatype)
-       # for i in xrange(self._nants):
-       #     output_data[:, :, i] = i
+        # for i in range(self._nants):
+        #     output_data[:, :, i] = i
         self._counter += 1
 
         # output_data[:] = np.ones((self._nsubs, self._nsamp, self._nants), dtype=self._datatype)

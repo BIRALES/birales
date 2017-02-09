@@ -56,6 +56,7 @@ class RemoveBackgroundNoiseFilter(BeamDataFilter):
         :param beam:
         :return: void
         """
+
         mean = np.mean(beam.snr)
         std = np.std(beam.snr)
         threshold = self.std_threshold * std + mean

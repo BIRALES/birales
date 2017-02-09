@@ -81,7 +81,7 @@ class PFB(ProcessingModule):
         # Generate output blob
         return ChannelisedBlob(self._config, [('nbeams', nstreams),
                                               ('nchans', self._nchans * input_shape['nsubs']),
-                                              ('nsamp', input_shape['nsamp'] / self._nchans)],
+                                              ('nsamp', int(input_shape['nsamp'] / self._nchans))],
                                datatype=datatype)
 
     def _initialise(self, nsamp, nbeams, nsubs):

@@ -1,4 +1,5 @@
 import logging as log
+import numpy as np
 
 from multiprocessing.dummy import Pool as ThreadPool
 from pybirales.modules.detection.detection_strategies import SpaceDebrisDetection
@@ -11,13 +12,11 @@ from pybirales.blobs.beamformed_data import BeamformedBlob
 from pybirales.blobs.channelised_data import ChannelisedBlob
 from pybirales.blobs.dummy_data import DummyBlob
 from pybirales.blobs.receiver_data import ReceiverBlob
+from pybirales.modules.detection.beam import Beam
 
 
 class Detector(ProcessingModule):
-
     def __init__(self, config, input_blob=None):
-        self.name = "Detector"
-
         log.info('Initialising the Space Debris Detector Module')
 
         if type(input_blob) not in [BeamformedBlob, DummyBlob, ReceiverBlob, ChannelisedBlob]:
@@ -28,9 +27,21 @@ class Detector(ProcessingModule):
         log.info('Using %s algorithm', self.detection_strategy.name)
 
         super(Detector, self).__init__(config, input_blob)
+        self.name = "Detector"
 
     def generate_output_blob(self):
         pass
+
+    def _create_beam(self, obs_info, n_beam, input_blob):
+        log.debug('Generating beam %s from data set %s', n_beam, self.name)
+        beam = Beam(beam_id=n_beam,
+                    dec=0.0,
+                    ra=0.0,
+                    ha=0.0,
+                    top_frequency=0.0,
+                    frequency_offset=0.0,
+                    obs_info=obs_info, beam_data=input_blob)
+        return beam
 
     def process(self, obs_info, input_data, output_data):
         """
@@ -39,11 +50,16 @@ class Detector(ProcessingModule):
         """
 
         # Extract beams from the data set we are processing
-        log.info('Extracting beam data from data set %s', self.data_set.name)
-        beams = self.data_set.create_beams(obs_info['nbeams'])
+        log.info('Extracting beam data')
+
+        beams = []
+
+        for n_beam in range(0, settings.beamformer.nbeams):
+            beams.append(self._create_beam(obs_info, n_beam, input_data))
+        # beams = [self._create_beam(obs_info, n_beam, input_blob) for (n_beam, input_blob) in enumerate(input_data)]
 
         # Process the beam data to detect the beam candidates
-        if settings.detection.parallel:
+        if settings.detection.nthreads > 1:
             log.info('Running space debris detection algorithm on %s beams in parallel', len(beams))
             beam_candidates = self._get_beam_candidates_parallel(beams)
         else:
@@ -52,9 +68,9 @@ class Detector(ProcessingModule):
 
         log.info('Data processed, saving %s beam candidates to database', len(beam_candidates))
 
-        self._save_data_set()
+        # self._save_data_set()
 
-        self._save_beam_candidates(beam_candidates)
+        # self._save_beam_candidates(beam_candidates)
 
     def _get_beam_candidates_single(self, beams):
         """
@@ -74,7 +90,7 @@ class Detector(ProcessingModule):
         """
 
         # Initialise thread pool with
-        pool = ThreadPool(16)
+        pool = ThreadPool(settings.detection.nthreads)
 
         # Run N threads
         beam_candidates = pool.map(self._detect_space_debris_candidates, beams)
@@ -89,13 +105,13 @@ class Detector(ProcessingModule):
         return beam_candidates
 
     def _save_beam_candidates(self, beam_candidates):
-        if settings.io.save_candidates:
+        if settings.monitoring.save_candidates:
             # Persist beam candidates to database
             beam_candidates_repository = BeamCandidateRepository(self.data_set)
             beam_candidates_repository.persist(beam_candidates)
 
     def _save_data_set(self):
-        if settings.io.save_data_set:
+        if settings.detection.save_data_set:
             # Persist data_set to database
             data_set_repository = DataSetRepository()
             data_set_repository.persist(self.data_set)

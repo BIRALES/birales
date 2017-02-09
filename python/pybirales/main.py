@@ -78,18 +78,18 @@ def birales_pipeline(manager):
 
 def birales_pipeline_with_post_processing(manager):
     # Generate processing modules and data blobs
-    receiver = Receiver(settings.receiver)
+    receiver = DummyDataGenerator(settings.generator)
+
     beamformer = Beamformer(settings.beamformer, receiver.output_blob)
     ppf = PFB(settings.channeliser, beamformer.output_blob)
-    persister = Persister(settings.persister, ppf.output_blob)
+    # persister = Persister(settings.persister, ppf.output_blob)
     detector = Detector(settings.detection, ppf.output_blob)
 
     # Add modules to pipeline manager
     manager.add_module("receiver", receiver)
     manager.add_module("beamformer", beamformer)
     manager.add_module("ppf", ppf)
-    manager.add_module("persister", persister)
-    manager.add_module("detector", detector)
+    # manager.add_module("detector", detector)
 
 if __name__ == "__main__":
 
