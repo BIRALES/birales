@@ -1,35 +1,29 @@
-from numpy import ctypeslib
 import numpy as np
 import ctypes
-import os
-
 import datetime
 import logging
-from threading import Thread, Lock
 import time
+import warnings
+
+from threading import Thread, Lock
+from numpy import ctypeslib
 
 from astropy.coordinates import Angle, EarthLocation, SkyCoord, AltAz
 from astropy.units import Quantity
 from astropy import constants
 from astropy import units as u
 from astropy.time import Time
+from astropy.utils.exceptions import AstropyWarning
 
 from pybirales.base import settings
 from pybirales.base.definitions import PipelineError
 from pybirales.base.processing_module import ProcessingModule
 from pybirales.blobs.beamformed_data import BeamformedBlob
 from pybirales.blobs.dummy_data import DummyBlob
-
-# Mute astropy warning
-import warnings
-from astropy.utils.exceptions import AstropyWarning
-
 from pybirales.blobs.receiver_data import ReceiverBlob
 
+# Mute Astropy Warnings
 warnings.simplefilter('ignore', category=AstropyWarning)
-
-# Required for IERS tables and what not
-import astroplan
 
 
 class Beamformer(ProcessingModule):
@@ -71,7 +65,7 @@ class Beamformer(ProcessingModule):
                                               ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32]
         self._beamformer.beamform.restype = None
 
-        # Call superclass initialiser
+        # Call superclass initializer
         super(Beamformer, self).__init__(config, input_blob)
 
         # Processing module name
@@ -220,7 +214,8 @@ class Pointing(Thread):
         for i in range(self._nsubs):
             # Calculate complex coefficients
             frequency = Quantity(self._start_center_frequency + (i * self._bandwidth / self._nsubs), u.MHz)
-            real, imag = self._phaseshifts_from_altitude_azimuth(altitude.rad, azimuth.rad, frequency, self._vectors_enu)
+            real, imag = self._phaseshifts_from_altitude_azimuth(altitude.rad, azimuth.rad, frequency,
+                                                                 self._vectors_enu)
 
             # Apply to weights file
             self._temp_weights[i, beam, :].real = real
@@ -283,7 +278,7 @@ class Pointing(Thread):
         :return: The phaseshift angles in radians
         """
         scale = np.array(
-                [-np.sin(azimuth) * np.cos(altitude), -np.cos(azimuth) * np.cos(altitude), -np.sin(altitude)])
+            [-np.sin(azimuth) * np.cos(altitude), -np.cos(azimuth) * np.cos(altitude), -np.sin(altitude)])
 
         path_length = np.dot(scale, displacements.transpose())
 

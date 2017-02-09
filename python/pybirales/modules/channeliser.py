@@ -103,7 +103,14 @@ class PFB(ProcessingModule):
                                     dtype=np.complex64)
 
     def process(self, obs_info, input_data, output_data):
-        """ Perform channelisation """
+        """
+        Perform the channelisation
+
+        :param obs_info:
+        :param input_data:
+        :param output_data:
+        :return:
+        """
 
         # Check if initialised, if not initialise
         nstreams = obs_info['nbeams'] if self._after_beamformer else obs_info['nants']
@@ -140,17 +147,26 @@ class PFB(ProcessingModule):
     # ------------------------------------------- HELPER FUNCTIONS ---------------------------------------
 
     def _generate_filter(self):
-        """ Generate FIR filter (Hanning window) for PFB """
+        """
+        Generate FIR filter (Hanning window) for PFB
+        :return:
+        """
+
         dx = math.pi / self._nchans
-        X = np.array([n * dx - self._ntaps * math.pi / 2 for n in range(self._ntaps * self._nchans)])
-        self._filter = np.sinc(self._bin_width_scale * X / math.pi) * np.hanning(self._ntaps * self._nchans)
+        x = np.array([n * dx - self._ntaps * math.pi / 2 for n in range(self._ntaps * self._nchans)])
+        self._filter = np.sinc(self._bin_width_scale * x / math.pi) * np.hanning(self._ntaps * self._nchans)
 
         # Reverse filter to ease fast computation
         self._filter = self._filter[::-1]
 
     def channelise_thread(self, beam):
-        """ Perform channelisation, to be used with ThreadPool
-        :param beam: Beam number associated with call  """
+        """
+        Perform channelisation, to be used with ThreadPool
+
+        :param beam: Beam number associated with call
+        :return:
+        """
+
         for c in range(self._nsubs):
             # Apply filter
             apply_fir_filter(self._temp_input[beam, c, :], self._filter,
@@ -161,17 +177,24 @@ class PFB(ProcessingModule):
                 np.flipud(np.fft.fftshift(np.fft.fft(self._filtered[beam, c, :], axis=0), axes=0))
 
     def channelise_parallel(self):
-        """ Perform channelisation, parallel version """
+        """
+        Perform channelisation, parallel version
+        :return:
+        """
+
         self._thread_pool.map(self.channelise_thread, range(self._nbeams))
 
     def channelise(self):
-        """ Perform channelisation, serial version """
+        """
+        Perform channelisation, serial version
+        :return:
+        """
+
         for b in range(self._nbeams):
             for c in range(self._nsubs):
                 # Apply filter
                 apply_fir_filter(self._temp_input[b, c, :], self._filter,
                                  self._filtered[b, c, :], self._ntaps, self._nchans)
-               # self._filtered[b, c, :] = self._temp_input[b, c, :]
 
                 # Fourier transform and save output
                 self._current_output[b, c * self._nchans: (c + 1) * self._nchans] = \
