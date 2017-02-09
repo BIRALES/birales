@@ -17,12 +17,13 @@ class DummyDataGenerator(ProcessingModule):
             raise PipelineError("DummyDataGenerator: Invalid input data type, should be None")
 
         # Sanity checks on configuration
-        if {'nants', 'nsamp', 'nsubs', 'nbits', 'complex'} - set(config.settings()) != set():
+        if {'nants', 'nsamp', 'nsubs', 'npols', 'nbits', 'complex'} - set(config.settings()) != set():
             raise PipelineError("DummyDataGenerator: Missing keys on configuration "
-                                "(nants, nsamp, nsub, nbits, complex")
+                                "(nants, nsamp, nsub, 'npols', 'nbits', complex")
         self._nants = config.nants
         self._nsamp = config.nsamp
         self._nsubs = config.nsubs
+        self._npols = config.npols
         self._nbits = config.nbits
         self._complex = config.complex
 
@@ -43,23 +44,18 @@ class DummyDataGenerator(ProcessingModule):
     def generate_output_blob(self):
         """ Generate output data blob """
         # Generate blob
-        return DummyBlob(self._config, [('nsubs', self._nsubs),
+        return DummyBlob(self._config, [('npols', self._npols),
+                                        ('nsubs', self._nsubs),
                                         ('nsamp', self._nsamp),
                                         ('nants', self._nants)],
                          datatype=self._datatype)
 
     def process(self, obs_info, input_data, output_data):
         time.sleep(0.05)
+
         # Perform operations
         output_data[:] = np.ones((self._nsubs, self._nsamp, self._nants), dtype=self._datatype)
-        # for i in range(self._nants):
-        #     output_data[:, :, i] = i
         self._counter += 1
-
-        # output_data[:] = np.ones((self._nsubs, self._nsamp, self._nants), dtype=self._datatype)
-        # for i in xrange(self._nants):
-        #     output_data[:, :, i] = np.sin(2**np.logspace(0.0001, 4, num=self._nsamp, base=2))
-        # self._counter += 1
 
         # Create observation information
         obs_info = ObservationInfo()
@@ -68,6 +64,7 @@ class DummyDataGenerator(ProcessingModule):
         obs_info['nsubs'] = self._nsubs
         obs_info['nsamp'] = self._nsamp
         obs_info['nants'] = self._nants
+        obs_info['npols'] = self._npols
         obs_info['channel_bandwidth'] = 1
         obs_info['start_center_frequency'] = 1000
 

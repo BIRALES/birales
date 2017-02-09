@@ -91,7 +91,7 @@ class ChannelisedDataPlotter(Plotter):
         im = None
         for index, beam in enumerate(self._beams_to_plot):
             self._axes[index].cla()
-            input_data[index, self._nchans / 2 - 1, :] = input_data[index, self._nchans / 2, :]
+            input_data[index, int(self._nchans / 2) - 1, :] = input_data[index, self._nchans / 2, :]
             im = self._axes[index].imshow(np.abs(input_data[index, :, :]),
                                           aspect='auto', interpolation='none')
             self._axes[index].set_xlabel("Time")

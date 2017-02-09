@@ -62,7 +62,7 @@ class Beamformer(ProcessingModule):
         self._beamformer = ctypes.CDLL("libbeamformer.so")
         complex_p = ctypeslib.ndpointer(np.complex64, ndim=1, flags='C')
         self._beamformer.beamform.argtypes = [complex_p, complex_p, complex_p, ctypes.c_uint32, ctypes.c_uint32,
-                                              ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32]
+                                              ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32]
         self._beamformer.beamform.restype = None
 
         # Call superclass initializer
@@ -80,7 +80,8 @@ class Beamformer(ProcessingModule):
         self._initialise(input_shape['nsubs'], input_shape['nants'])
 
         # Create output blob
-        return BeamformedBlob(self._config, [('nbeams', self._nbeams),
+        return BeamformedBlob(self._config, [('npols', input_shape['npols']),
+                                             ('nbeams', self._nbeams),
                                              ('nsubs', input_shape['nsubs']),
                                              ('nsamp', input_shape['nsamp'])],
                               datatype=datatype)
@@ -98,6 +99,7 @@ class Beamformer(ProcessingModule):
         nsamp = obs_info['nsamp']
         nsubs = obs_info['nsubs']
         nants = obs_info['nants']
+        npols = obs_info['npols']
 
         # If pointing is not initialise, initialise
         if self._pointing is None:
@@ -108,7 +110,7 @@ class Beamformer(ProcessingModule):
 
         # Apply pointing coefficients
         self._beamformer.beamform(input_data.ravel(), self._pointing.weights.ravel(), output_data.ravel(),
-                                  nsamp, nsubs, self._nbeams, nants, self._nthreads)
+                                  nsamp, nsubs, self._nbeams, nants, npols, self._nthreads)
 
         # Done using weights
         self._pointing.stop_reading_weights()
