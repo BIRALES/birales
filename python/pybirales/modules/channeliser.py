@@ -13,12 +13,14 @@ from pybirales.blobs.receiver_data import ReceiverBlob
 
 @numba.jit(nopython=True, nogil=True)
 def apply_fir_filter(data, fir_filter, output, ntaps, nchans):
-    """ Optimised filter function using numpy and numba
+    """
+    Optimised filter function using numpy and numba
     :param data: Input data pointer
     :param fir_filter: Filter coefficients pointer
     :param output: Output data pointer
     :param ntaps: Number of taps
-    :param nchans: Number of channels """
+    :param nchans: Number of channels
+    """
     nof_spectra = (len(data) - ntaps * nchans) / nchans
     for n in range(nof_spectra):
         temp = data[n * nchans: n * nchans + nchans * ntaps] * fir_filter

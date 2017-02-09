@@ -31,7 +31,7 @@ class DummyDataGenerator(ProcessingModule):
         if self._nbits == 64 and self._complex:
             self._datatype = np.complex64
         else:
-            raise PipelineError("DummyDataGenerator: Unsupported datatype (bits, complex)")
+            raise PipelineError("DummyDataGenerator: Unsupported data type (bits, complex)")
 
         # Call superclass initialiser
         super(DummyDataGenerator, self).__init__(config, input_blob)
@@ -42,8 +42,10 @@ class DummyDataGenerator(ProcessingModule):
         self.name = "Generator"
 
     def generate_output_blob(self):
-        """ Generate output data blob """
-        # Generate blob
+        """
+        Generate the output blob
+        :return:
+        """
         return DummyBlob(self._config, [('npols', self._npols),
                                         ('nsubs', self._nsubs),
                                         ('nsamp', self._nsamp),

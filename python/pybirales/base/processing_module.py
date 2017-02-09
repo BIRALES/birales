@@ -101,17 +101,21 @@ class ProcessingModule(Module):
 
     @abstractmethod
     def generate_output_blob(self):
-        """ Create the output blob to be used by the next module in the pipeline
-        :return: Create data blob """
+        """
+        Create the output blob to be used by the next module in the pipeline
+        :return:
+        """
         pass
 
     @abstractmethod
     def process(self, obs_info, input_data, output_data):
-        """ Abstract function which must be implemented by all subclasses which will be called in the
-            thread's run loop
+        """
+        Abstract function which must be implemented by all subclasses
+        which will be called in the thread's run loop
         :param obs_info: Observation information
         :param input_data: Input data block
         :param output_data: Output data block
+        :return:
         """
         pass
 
@@ -143,7 +147,7 @@ class ProcessingModule(Module):
             if self._input is not None:
                 self._input.release_read()
 
-            # A short sleep tp force a context switch (since locks do not force one)
+            # A short sleep to force a context switch (since locks do not force one)
             time.sleep(0.001)
 
         self._is_stopped = True

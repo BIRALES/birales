@@ -30,7 +30,6 @@ class Receiver(Generator):
     """ Receiver """
 
     def __init__(self, config, input_blob=None):
-
         # This module does not need an input block
         if input_blob is not None:
             raise PipelineError("Receiver: Receiver does not need an input block")
