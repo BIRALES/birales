@@ -1,12 +1,12 @@
 from pybirales.base.processing_module import ProcessingModule
 import time
+import logging
 
 
 class Terminator(ProcessingModule):
     """ Dummy data generator """
 
     def __init__(self, config, input_blob=None):
-
         # Call superclass initialiser
         super(Terminator, self).__init__(config, input_blob)
 
@@ -21,6 +21,7 @@ class Terminator(ProcessingModule):
 
     def process(self, obs_info, input_data, output_data):
         # Calculate processed seconds
-        print("Processed {0} samples in {1:.2f}s".format(obs_info['nsamp'], time.time() - self._prev_time))
+        logging.debug('Processed %s samples in %1.2fs', obs_info['nsamp'], time.time() - self._prev_time)
+
         self._prev_time = time.time()
         return obs_info
