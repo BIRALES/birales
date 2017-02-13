@@ -1,20 +1,18 @@
-import copy
 import ctypes
 import logging
 import numpy as np
 from enum import Enum
-
-np.set_printoptions(threshold=np.nan)
-
 from pybirales.base import settings
 from pybirales.base.definitions import PipelineError, ObservationInfo
 from pybirales.base.processing_module import Generator
 from pybirales.blobs.receiver_data import ReceiverBlob
 
+np.set_printoptions(threshold=np.nan)
+
 
 class Complex64t(ctypes.Structure):
-     _fields_ = [("x", ctypes.c_float),
-                 ("y", ctypes.c_float)]
+    _fields_ = [("x", ctypes.c_float),
+                ("y", ctypes.c_float)]
 
 
 class Result(Enum):
@@ -51,7 +49,7 @@ class Receiver(Generator):
         if self._nbits == 64 and self._complex:
             self._datatype = np.complex64
         else:
-            raise PipelineError("Receiver: Unsupported datatype (bits, complex)")
+            raise PipelineError("Receiver: Unsupported data type (bits, complex)")
 
         # Call superclass initialiser
         super(Receiver, self).__init__(config, input_blob)
