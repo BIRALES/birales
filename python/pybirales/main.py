@@ -72,14 +72,15 @@ def birales_pipeline_with_post_processing(manager):
 
     beamformer = Beamformer(settings.beamformer, receiver.output_blob)
     ppf = PFB(settings.channeliser, beamformer.output_blob)
-    # persister = Persister(settings.persister, ppf.output_blob)
     detector = Detector(settings.detection, ppf.output_blob)
+    terminator = Terminator(None, ppf.output_blob)
 
     # Add modules to pipeline manager
     manager.add_module("receiver", receiver)
     manager.add_module("beamformer", beamformer)
     manager.add_module("ppf", ppf)
     # manager.add_module("detector", detector)
+    manager.add_module("terminator", terminator)
 
 if __name__ == "__main__":
 
