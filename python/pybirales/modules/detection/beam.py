@@ -77,13 +77,14 @@ class Beam:
         :param beam_data: The raw beam data
         :return: void
         """
-        data = beam_data[self.id, :, :]  # beam id, channels, time samples
+
+        data = beam_data[0, self.id, :, :]  # beam id, channels, time samples
         # print(data)
         return self._get_snr(np.abs(data))
 
     def _get_snr(self, data):
         """
-        Calculate the Signal to Noise Ratio form the power data
+        Calculate the Signal to Noise Ratio from the power data
 
         :param data:
         :return:
@@ -93,13 +94,14 @@ class Beam:
         mean_noise_per_channel = np.mean(data, axis=0)
 
         # Calculate the noise from the first 25% of the available channels
-        subset_size = int(self.n_channels * 0.25)
+        # subset_size = int(self.n_channels * 0.25)
 
         # Calculate the average noise in the subset
-        noise = np.mean(data[:, range(0, subset_size)])
+        # noise = np.mean(data[:, range(0, subset_size)])
 
         indices = np.where(mean_noise_per_channel > 0)
         x = data[:, indices] / mean_noise_per_channel[indices]
+
         return np.log10(x)
 
     def _apply_filter(self, beam_filter):

@@ -120,9 +120,8 @@ class Beamformer(ProcessingModule):
         obs_info['reference_pointing'] = self._config.reference_pointing
         obs_info['pointings'] = self._config.pointings
         logging.info("Beamformed data")
-
-
-# ------------------------------------------------------------------------------------------------
+        logging.debug("beamformer in: %s", np.sum(input_data))
+        logging.debug("beamformer out: %s", np.sum(output_data))
 
 
 class Pointing(Thread):
@@ -358,4 +357,4 @@ class AntennaArray(object):
         self._x = [positions[i][0] for i in range(len(positions))]
         self._y = [positions[i][1] for i in range(len(positions))]
         self._z = [positions[i][2] for i in range(len(positions))]
-        self._height = [0] * len(positions)
+        self._height = [0 for i in range(len(positions))]

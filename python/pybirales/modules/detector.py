@@ -48,15 +48,17 @@ class Detector(ProcessingModule):
         Run the Space Debris Detector pipeline
         :return void
         """
+        # Checks if input data is empty
+        if not input_data.any():
+            log.warning('Input data is empty')
+            return
 
         # Extract beams from the data set we are processing
         log.info('Extracting beam data')
 
         beams = []
-
         for n_beam in range(0, settings.beamformer.nbeams):
             beams.append(self._create_beam(obs_info, n_beam, input_data))
-        # beams = [self._create_beam(obs_info, n_beam, input_blob) for (n_beam, input_blob) in enumerate(input_data)]
 
         # Process the beam data to detect the beam candidates
         if settings.detection.nthreads > 1:
@@ -67,6 +69,8 @@ class Detector(ProcessingModule):
             beam_candidates = self._get_beam_candidates_single(beams)
 
         log.info('Data processed, saving %s beam candidates to database', len(beam_candidates))
+        log.debug("Input data: %s", np.sum(input_data))
+        log.debug("Output data: %s", np.sum(output_data))
 
         # self._save_data_set()
 
