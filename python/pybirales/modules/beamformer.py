@@ -120,8 +120,8 @@ class Beamformer(ProcessingModule):
         obs_info['reference_pointing'] = self._config.reference_pointing
         obs_info['pointings'] = self._config.pointings
         logging.info("Beamformed data")
-        logging.debug("beamformer in: %s", np.sum(input_data))
-        logging.debug("beamformer out: %s", np.sum(output_data))
+        logging.debug("Input data: %s", np.sum(input_data))
+        logging.debug("Output data: %s", np.sum(output_data))
 
 
 class Pointing(Thread):
