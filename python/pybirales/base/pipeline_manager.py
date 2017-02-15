@@ -145,7 +145,8 @@ class PipelineManager(object):
             else:
                 self.wait_pipeline()
 
-        except Exception:
+        except Exception as exception:
+            logging.exception('Pipeline error: %s', exception.__class__.__name__)
             # An error occurred, force stop all modules
             self.stop_pipeline()
 

@@ -252,6 +252,9 @@ class ObservationRepository(Repository):
             log.error('MongoDB is not running. Exiting.')
             sys.exit(1)
 
+    def persist(self, entity):
+        pass
+
 
 class SpaceDebrisRepository(Repository):
     def __init__(self):

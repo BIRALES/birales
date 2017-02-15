@@ -1,4 +1,5 @@
 import time
+import logging
 from abc import abstractmethod
 from threading import Thread
 
@@ -44,6 +45,7 @@ class Module(Thread):
     def stop(self):
         """ Stops the current thread """
         self._stop = True
+        logging.info('Stopping %s module', self.name)
 
     @property
     def is_stopped(self):

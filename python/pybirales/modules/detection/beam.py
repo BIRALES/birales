@@ -8,7 +8,7 @@ from pybirales.modules.monitoring.api.common.plotters import BeamMatplotlibPlott
 from pybirales.base import settings
 
 import warnings
-
+import logging as log
 warnings.filterwarnings('error')
 
 
@@ -78,8 +78,8 @@ class Beam:
         :return: void
         """
 
-        data = beam_data[0, self.id, :, :]  # beam id, channels, time samples
-        # print(data)
+        data = beam_data[0, self.id, :, :]  # polarisation, beam id, channels, time samples
+
         return self._get_snr(np.abs(data))
 
     def _get_snr(self, data):
@@ -99,9 +99,8 @@ class Beam:
         # Calculate the average noise in the subset
         # noise = np.mean(data[:, range(0, subset_size)])
 
-        indices = np.where(mean_noise_per_channel > 0)
+        indices,  = np.where(mean_noise_per_channel > 0)
         x = data[:, indices] / mean_noise_per_channel[indices]
-
         return np.log10(x)
 
     def _apply_filter(self, beam_filter):

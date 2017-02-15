@@ -81,9 +81,12 @@ def birales_pipeline_with_post_processing(manager):
     manager.add_module("ppf", ppf)
     manager.add_module("detector", detector)
     # manager.add_module("terminator", terminator)
+    manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
+
+    # manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
+
 
 if __name__ == "__main__":
-
     # Use OptionParse to get command-line arguments
     from optparse import OptionParser
     from sys import argv

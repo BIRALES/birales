@@ -72,5 +72,5 @@ class DummyDataGenerator(ProcessingModule):
 
         logging.info("Generated data")
         logging.debug("Input data: %s", np.sum(input_data))
-        logging.debug("Output data: %s", np.sum(output_data))
+        logging.debug("Output data: %s shape: %s", np.sum(output_data), output_data.shape)
         return obs_info

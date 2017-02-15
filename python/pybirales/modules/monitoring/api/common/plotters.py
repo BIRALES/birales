@@ -5,7 +5,7 @@ from abc import abstractmethod
 import matplotlib.pyplot as plt
 import numpy as np
 
-# from pybirales.configuration.application import config
+from pybirales.base import settings
 
 
 class Plotter:
@@ -177,7 +177,7 @@ class BeamMatplotlibPlotter(Plotter):
         self.y_label = y_label
         self.data = data
 
-        self.file_name = plot_title.replace(' ', '_') + config.get('monitoring', 'IMAGE_EXT')
+        self.file_name = plot_title.replace(' ', '_') + settings.monitoring.image_ext
 
     def plot(self):
         fig = self._build()

@@ -24,7 +24,7 @@ class Detector(ProcessingModule):
 
         # Load detection algorithm dynamically (specified in config file)
         self.detection_strategy = SpaceDebrisDetection(settings.detection.detection_strategy)
-        log.info('Using %s algorithm', self.detection_strategy.name)
+        log.info('Using the %s algorithm', self.detection_strategy.name)
 
         super(Detector, self).__init__(config, input_blob)
         self.name = "Detector"
@@ -32,8 +32,9 @@ class Detector(ProcessingModule):
     def generate_output_blob(self):
         pass
 
-    def _create_beam(self, obs_info, n_beam, input_blob):
-        log.debug('Generating beam %s from data set %s', n_beam, self.name)
+    @staticmethod
+    def _create_beam(obs_info, n_beam, input_blob):
+        log.debug('Generating beam %s from the input data', n_beam)
         beam = Beam(beam_id=n_beam,
                     dec=0.0,
                     ra=0.0,
@@ -59,7 +60,7 @@ class Detector(ProcessingModule):
         beams = []
         for n_beam in range(0, settings.beamformer.nbeams):
             beams.append(self._create_beam(obs_info, n_beam, input_data))
-
+        log.debug(input_data.shape)
         # Process the beam data to detect the beam candidates
         if settings.detection.nthreads > 1:
             log.info('Running space debris detection algorithm on %s beams in parallel', len(beams))
@@ -69,8 +70,8 @@ class Detector(ProcessingModule):
             beam_candidates = self._get_beam_candidates_single(beams)
 
         log.info('Data processed, saving %s beam candidates to database', len(beam_candidates))
-        log.debug("Input data: %s", np.sum(input_data))
-        log.debug("Output data: %s", np.sum(output_data))
+        log.debug("Input data: %s shape: %s", np.sum(input_data),  input_data.shape)
+
 
         # self._save_data_set()
 
