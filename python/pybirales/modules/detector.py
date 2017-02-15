@@ -69,8 +69,8 @@ class Detector(ProcessingModule):
             beam_candidates = self._get_beam_candidates_single(beams)
 
         log.info('Data processed, saving %s beam candidates to database', len(beam_candidates))
-        log.debug("Input data: %s", np.sum(input_data))
-        log.debug("Output data: %s", np.sum(output_data))
+        log.debug("Input data: %s shape: %s", np.sum(input_data), input_data.shape)
+        log.debug("Output data: %s shape: %s", np.sum(output_data), output_data.shape)
 
         # self._save_data_set()
 

@@ -79,8 +79,11 @@ def birales_pipeline_with_post_processing(manager):
     manager.add_module("receiver", receiver)
     manager.add_module("beamformer", beamformer)
     manager.add_module("ppf", ppf)
-    manager.add_module("detector", detector)
+    # manager.add_module("detector", detector)
     # manager.add_module("terminator", terminator)
+
+    manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
+
 
 if __name__ == "__main__":
 

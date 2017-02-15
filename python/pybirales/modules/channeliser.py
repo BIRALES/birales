@@ -119,8 +119,6 @@ class PFB(ProcessingModule):
         :param output_data:
         :return:
         """
-
-
         # Check if initialised, if not initialise
         nstreams = obs_info['nbeams'] if self._after_beamformer else obs_info['nants']
         npols = 1 if 'npols' not in obs_info.keys() else obs_info['npols']
@@ -153,8 +151,8 @@ class PFB(ProcessingModule):
         obs_info['channel_bandwidth'] /= self._nchans
         obs_info['start_center_frequency'] -= obs_info['channel_bandwidth'] * self._nchans / 2.0
         logging.info("Channelised data")
-        logging.debug("Input data: %s", np.sum(input_data))
-        logging.debug("Output data: %s", np.sum(output_data))
+        logging.debug("Input data: %s shape: %s", np.sum(input_data), input_data.shape)
+        logging.debug("Output data: %s shape: %s", np.sum(output_data), output_data.shape)
 
     # ------------------------------------------- HELPER FUNCTIONS ---------------------------------------
 
