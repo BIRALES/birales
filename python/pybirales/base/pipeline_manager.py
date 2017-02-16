@@ -175,12 +175,6 @@ class PipelineManager(object):
     @staticmethod
     def _initialise_logging():
         """ Initialise logging functionality """
-        log = logging.getLogger('')
-        log.setLevel(logging.INFO)
-        str_format = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-        ch = logging.StreamHandler(stdout)
-        ch.setFormatter(str_format)
-        log.addHandler(ch)
         set_log_config(settings.manager.loggging_config_file_path)
 
     def wait_pipeline(self):

@@ -56,7 +56,11 @@ class DummyDataGenerator(ProcessingModule):
         time.sleep(0.05)
 
         # Perform operations
-        output_data[:] = np.ones((self._nsubs, self._nsamp, self._nants), dtype=self._datatype)
+        # output_data[:] = np.ones((self._nsubs, self._nsamp, self._nants), dtype=self._datatype)
+        # self._counter += 1
+
+        for i in range(self._nants):
+            output_data[:, :, :, i] = np.random.rand() * np.sin(2**np.logspace(0.0001, 4, num=self._nsamp, base=2))
         self._counter += 1
 
         # Create observation information
