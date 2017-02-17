@@ -52,9 +52,12 @@ class BandpassPlotter(Plotter):
             if 'nof_samples' in self._config.settings():
                 nof_samples = self._config.nof_samples
 
-        return slice(self._beams_to_plot[0], self._beams_to_plot[-1] + 1), \
-               slice(self._channels_to_plot[0], self._channels_to_plot[-1] + 1), \
-               slice(nof_samples)
+        polarization = 0
+        beams_range = slice(self._beams_to_plot[0], self._beams_to_plot[-1] + 1)
+        channels_range = slice(self._channels_to_plot[0], self._channels_to_plot[-1] + 1)
+        samples_range = slice(nof_samples)
+
+        return polarization, beams_range, channels_range, samples_range
 
     def initialise_plot(self):
         """ Initialise plot """
@@ -76,7 +79,7 @@ class BandpassPlotter(Plotter):
         plt.title("Bandpass plot")
 
         for index, beam in enumerate(self._beams_to_plot):
-            input_data[index, self._nchans / 2 - 1, :] = input_data[index, self._nchans / 2, :]
+            # input_data[index, self._nchans / 2 - 1, :] = input_data[index, self._nchans / 2, :]
             values = np.sum(np.abs(input_data[index, :, :]), axis=1)
             plt.plot(values, label="Beam %d" % beam)
             plt.xlabel("Frequency")

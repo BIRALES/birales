@@ -46,7 +46,7 @@ class BeamformedDataPlotter(Plotter):
             if 'nof_samples' in self._config.settings():
                 nof_samples = self._config.nof_samples
 
-        return slice(self._beams_to_plot[0], self._beams_to_plot[-1] + 1), slice(0, 1), slice(nof_samples)
+        return 0, slice(self._beams_to_plot[0], self._beams_to_plot[-1] + 1), slice(0, 1), slice(nof_samples)
 
     def initialise_plot(self):
         """ Initialise plot """
@@ -63,7 +63,7 @@ class BeamformedDataPlotter(Plotter):
         self._figure.clf()
         plt.title("Beamformer plot")
         for index, beam in enumerate(self._beams_to_plot):
-            plt.plot(np.abs(input_data[beam, 0, :]), label="Beam %d" % beam)
+            plt.plot(np.abs(input_data[index, :, :]), label="Beam %d" % beam)
             plt.xlabel("Time")
             plt.ylabel("Power")
             plt.xlim([0, input_data.shape[2]])

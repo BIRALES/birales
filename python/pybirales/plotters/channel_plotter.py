@@ -1,7 +1,7 @@
 import logging
 import math
 import numpy as np
-
+import logging as log
 from matplotlib import pyplot as plt
 
 from pybirales.base.definitions import PipelineError
@@ -43,20 +43,23 @@ class ChannelisedDataPlotter(Plotter):
                 if type(self._config.channel_range) is list:
                     self._channels_to_plot = range(self._config.channel_range[0], self._config.channel_range[1] + 1)
                 else:
-                    self._channels_to_plot = range(self._config.channel_range, self._config.channel_range + 1)
+                    self._channels_to_plot = range(self._config.channel_range, self._config.channel_range)
 
             if 'beam_range' in self._config.settings():
                 if type(self._config.beam_range) is list:
-                    self._beams_to_plot = range(self._config.beam_range[0], self._config.beam_range[1] + 1)
+                    self._beams_to_plot = range(self._config.beam_range[0], self._config.beam_range[1])
                 else:
                     self._beams_to_plot = range(self._config.beam_range, self._config.beam_range + 1)
 
             if 'nof_samples' in self._config.settings():
                 nof_samples = self._config.nof_samples
 
-        return slice(self._beams_to_plot[0], self._beams_to_plot[-1] + 1), \
-               slice(self._channels_to_plot[0], self._channels_to_plot[-1] + 1), \
-               slice(nof_samples)
+        polarization = 0
+        beams_range = slice(self._beams_to_plot[0], self._beams_to_plot[-1] + 1)
+        channels_range = slice(self._channels_to_plot[0], self._channels_to_plot[-1] + 1)
+        samples_range = slice(0, nof_samples)
+
+        return polarization, beams_range, channels_range, samples_range
 
     def initialise_plot(self):
         """ Initialise plot """
@@ -87,11 +90,19 @@ class ChannelisedDataPlotter(Plotter):
         :param input_data: Input data to plot
         :param obs_info: Observation information """
 
+        log.debug("Input data: %s shape: %s", np.sum(input_data), input_data.shape)
+        if not input_data.any():
+            log.warning('Nothing to plot. Input data is empty')
+            return
+
         # Loop over all beams to plot
         im = None
         for index, beam in enumerate(self._beams_to_plot):
             self._axes[index].cla()
             input_data[index, int(self._nchans / 2) - 1, :] = input_data[index, int(self._nchans / 2), :]
+
+            # input_data[index, 255, :] = input_data[index, 255, :]
+
             im = self._axes[index].imshow(np.abs(input_data[index, :, :]),
                                           aspect='auto', interpolation='none')
             self._axes[index].set_xlabel("Time")
