@@ -25,6 +25,9 @@ class Detector(ProcessingModule):
         # Load detection algorithm dynamically (specified in config file)
         self.detection_strategy = SpaceDebrisDetection(settings.detection.detection_strategy)
 
+        # Initialise thread pool with N threads
+        self._thread_pool = ThreadPool(settings.detection.nthreads)
+
         super(Detector, self).__init__(config, input_blob)
         self.name = "Detector"
 
@@ -93,18 +96,15 @@ class Detector(ProcessingModule):
         :return: beam_candidates Beam candidates detected across the 32 beams
         """
 
-        # Initialise thread pool with
-        pool = ThreadPool(settings.detection.nthreads)
-
         # Run N threads
-        beam_candidates = pool.map(self._detect_space_debris_candidates, beams)
+        beam_candidates = self._thread_pool.map(self._detect_space_debris_candidates, beams)
 
         # Flatten list of beam candidates returned by the N threads
         beam_candidates = [candidate for sub_list in beam_candidates for candidate in sub_list]
 
         # Close thread pool upon completion
-        pool.close()
-        pool.join()
+        # self.pool.close()
+        # self.pool.join()
 
         return beam_candidates
 
