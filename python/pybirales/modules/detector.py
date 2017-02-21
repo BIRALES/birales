@@ -24,7 +24,6 @@ class Detector(ProcessingModule):
 
         # Load detection algorithm dynamically (specified in config file)
         self.detection_strategy = SpaceDebrisDetection(settings.detection.detection_strategy)
-        log.info('Using the %s algorithm', self.detection_strategy.name)
 
         super(Detector, self).__init__(config, input_blob)
         self.name = "Detector"

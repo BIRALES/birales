@@ -1,5 +1,3 @@
-import os.path
-import inflection as inf
 import numpy as np
 
 from pybirales.modules.detection.filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter
@@ -8,7 +6,6 @@ from pybirales.modules.monitoring.api.common.plotters import BeamMatplotlibPlott
 from pybirales.base import settings
 
 import warnings
-import logging as log
 warnings.filterwarnings('error')
 
 
@@ -68,7 +65,7 @@ class Beam:
         bp.plot()
 
     def _get_human_name(self):
-        return 'Observation ' + inf.humanize(self.observation_name)
+        return 'Observation ' + self.observation_name
 
     def _set_data(self, beam_data):
         """
