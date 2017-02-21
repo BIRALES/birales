@@ -4,8 +4,9 @@ from pybirales.modules.detection.filters import RemoveBackgroundNoiseFilter, Rem
 from pybirales.modules.detection.repository import BeamDataRepository
 from pybirales.modules.monitoring.api.common.plotters import BeamMatplotlibPlotter
 from pybirales.base import settings
-
+import logging as log
 import warnings
+
 warnings.filterwarnings('error')
 
 
@@ -90,15 +91,16 @@ class Beam:
         # @todo - check if the mean can be used as an estimate for the noise
         mean_noise_per_channel = np.mean(data, axis=0)
 
-        # Calculate the noise from the first 25% of the available channels
-        # subset_size = int(self.n_channels * 0.25)
+        # Normalised the data by the mean noise at each channel
+        normalised_data = np.where(data > 0., data, np.nan) / mean_noise_per_channel
 
-        # Calculate the average noise in the subset
-        # noise = np.mean(data[:, range(0, subset_size)])
+        # Take the log value of the power
+        log_data = np.log10(normalised_data)
 
-        indices,  = np.where(mean_noise_per_channel > 0)
-        x = data[:, indices] / mean_noise_per_channel[indices]
-        return np.log10(x)
+        # Replace nan values with 0.
+        log_data[np.isnan(log_data)] = 0.
+
+        return log_data
 
     def _apply_filter(self, beam_filter):
         beam_filter.apply(self)

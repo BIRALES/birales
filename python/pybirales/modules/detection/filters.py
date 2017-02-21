@@ -60,8 +60,11 @@ class RemoveBackgroundNoiseFilter(BeamDataFilter):
         mean = np.mean(beam.snr)
         std = np.std(beam.snr)
         threshold = self.std_threshold * std + mean
-        beam.snr[beam.snr < threshold] = 0.
 
+        try:
+            beam.snr[beam.snr < threshold] = 0.
+        except Exception:
+            print(beam.snr)
         log.debug('Filter: Background noise removed from input beam %s', beam.id)
 
 

@@ -62,7 +62,7 @@ class Detector(ProcessingModule):
         beams = []
         for n_beam in range(0, settings.beamformer.nbeams):
             beams.append(self._create_beam(obs_info, n_beam, input_data))
-        log.debug(input_data.shape)
+
         # Process the beam data to detect the beam candidates
         if settings.detection.nthreads > 1:
             log.info('Running space debris detection algorithm on %s beams in parallel', len(beams))

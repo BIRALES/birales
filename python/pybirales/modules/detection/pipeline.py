@@ -61,7 +61,7 @@ class SpaceDebrisDetectorPipeline:
         """
 
         # Initialise thread pool with
-        pool = ThreadPool(16)
+        pool = ThreadPool(settings.detector.nthreads)
 
         # Run N threads
         beam_candidates = pool.map(self._detect_space_debris_candidates, beams)
