@@ -29,7 +29,8 @@ setup(
                       "numba",
                       "pymongo",
                       "scipy",
-                      "scikit-learn"],
+                      "scikit-learn",
+                      "click"],
 )
 
 # TODO: Create /var/log/birales logging directory
