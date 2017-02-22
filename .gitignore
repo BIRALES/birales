@@ -5,3 +5,6 @@ python/pybirales/modules/monitoring/app/node_modules
 src/build
 *.dat
 *.dat.pkl
+python/build
+python/dist
+python/pybirales.egg-info
