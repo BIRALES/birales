@@ -110,11 +110,11 @@ if __name__ == "__main__":
     # Create pipeline manager
     pipeline_manager = PipelineManager(argv[1])
 
-    logging.info("Initialising")
+    logging.info("PyBIRALES: Initialising")
 
     birales_pipeline_with_post_processing(pipeline_manager)
 
-    logging.info("Started")
+    logging.info("PyBIRALES: Starting")
 
     # Start pipeline
     pipeline_manager.start_pipeline()
