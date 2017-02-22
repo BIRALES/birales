@@ -44,6 +44,7 @@ class Module(Thread):
 
     def stop(self):
         """ Stops the current thread """
+        logging.info('Stopping %s module', self.name)
         self._stop = True
         logging.info('Stopping %s module', self.name)
 

@@ -119,8 +119,6 @@ class PFB(ProcessingModule):
         :param output_data:
         :return:
         """
-
-
         # Check if initialised, if not initialise
         nstreams = obs_info['nbeams'] if self._after_beamformer else obs_info['nants']
         npols = 1 if 'npols' not in obs_info.keys() else obs_info['npols']

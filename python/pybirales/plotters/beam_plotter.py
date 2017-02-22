@@ -31,7 +31,7 @@ class BeamformedDataPlotter(Plotter):
     def create_index(self):
         """ Create data index to get from blob """
 
-        # Check whether config file has any indexing defined
+        # Check whether config file has any indexing definedrange(self._config.beam_range, self._config.beam_range + 1)
         nof_samples = None
         self._beams_to_plot = range(self._nbeams)
 
@@ -41,6 +41,7 @@ class BeamformedDataPlotter(Plotter):
                 if type(self._config.beam_range) is list:
                     self._beams_to_plot = range(self._config.beam_range[0], self._config.beam_range[1] + 1)
                 else:
+                    print(range(self._config.beam_range, self._config.beam_range + 1))
                     self._beams_to_plot = range(self._config.beam_range, self._config.beam_range + 1)
 
             if 'nof_samples' in self._config.settings():

@@ -1,14 +1,12 @@
 import configparser
 import ast
 import re
-
+import logging
+import time
 import signal
 
 from pybirales.base import settings
 from sys import stdout
-import logging
-import time
-
 from pybirales.base.definitions import PipelineError
 from matplotlib import pyplot as plt
 from logging.config import fileConfig as set_log_config
