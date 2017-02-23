@@ -36,6 +36,7 @@ class Module(Thread):
         self._stop = False
         self._is_stopped = True
 
+
     @abstractmethod
     def generate_output_blob(self):
         """ Create the output blob to be used by the next module in the pipeline
@@ -101,6 +102,10 @@ class Generator(Module):
 
 class ProcessingModule(Module):
     """ Processing module """
+
+    def __init__(self, config, input_blob):
+        super(ProcessingModule, self).__init__(config, input_blob)
+        logging.info('Initialised the %s module', self.__class__.__name__)
 
     @abstractmethod
     def generate_output_blob(self):

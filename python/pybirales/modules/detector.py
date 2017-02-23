@@ -17,10 +17,8 @@ from pybirales.modules.detection.beam import Beam
 
 class Detector(ProcessingModule):
     def __init__(self, config, input_blob=None):
-        log.info('Initialising the Space Debris Detector Module')
-
         if type(input_blob) not in [BeamformedBlob, DummyBlob, ReceiverBlob, ChannelisedBlob]:
-            raise PipelineError("PFB: Invalid input data type, should be BeamformedBlob, DummyBlob or ReceiverBlob")
+            raise PipelineError("Detector: Invalid input data type, should be BeamformedBlob, DummyBlob or ReceiverBlob")
 
         # Load detection algorithm dynamically (specified in config file)
         self.detection_strategy = SpaceDebrisDetection(settings.detection.detection_strategy)
@@ -29,6 +27,7 @@ class Detector(ProcessingModule):
         self._thread_pool = ThreadPool(settings.detection.nthreads)
 
         super(Detector, self).__init__(config, input_blob)
+
         self.name = "Detector"
 
     def generate_output_blob(self):

@@ -15,7 +15,9 @@ from logging.config import fileConfig as set_log_config
 class PipelineManager(object):
     """ Class to manage the pipeline """
 
-    def __init__(self, config_file):
+    def __init__(self, config_file, debug=False):
+        logging.info("PyBIRALES: Initialising")
+
         """ Class constructor """
         self._modules = []
         self._plotters = []
@@ -31,7 +33,7 @@ class PipelineManager(object):
         self._check_configuration()
 
         # Initialise logging
-        self._initialise_logging()
+        self._initialise_logging(debug)
 
         # Get own configuration
         self._config = None
@@ -133,6 +135,8 @@ class PipelineManager(object):
         """
 
         try:
+            logging.info("PyBIRALES: Starting")
+
             # Start all modules
             for module in self._modules:
                 module.start()
@@ -171,9 +175,15 @@ class PipelineManager(object):
                 # All done
 
     @staticmethod
-    def _initialise_logging():
+    def _initialise_logging(debug):
         """ Initialise logging functionality """
         set_log_config(settings.manager.loggging_config_file_path)
+        log = logging.getLogger()
+        # Logging level should be INFO by default
+        log.setLevel(logging.INFO)
+        if debug:
+            # Change Logging level to DEBUG
+            log.setLevel(logging.DEBUG)
 
     def wait_pipeline(self):
         """ Wait for modules to finish processing """
