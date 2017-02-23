@@ -21,7 +21,7 @@ def cli():
 
 @cli.command()
 @click.argument('configuration')
-@click.option('--debug/--no-debug', default=True, help='Specify whether (or not) you\'d like to log debug messages.')
+@click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
 def detection_pipeline(configuration, debug):
     """
     This script runs the BIRALES pipeline with post processing enabled,
@@ -51,7 +51,7 @@ def detection_pipeline(configuration, debug):
 
 @cli.command()
 @click.argument('configuration', default='config/birales.ini')
-@click.option('--debug/--no-debug', default=True, help='Specify whether (or not) you\'d like to log debug messages.')
+@click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
 def standalone_test(configuration, debug):
     """
      This script runs the standalone test pipeline,
@@ -76,7 +76,7 @@ def standalone_test(configuration, debug):
 
 @cli.command()
 @click.argument('configuration', default='config/birales.ini')
-@click.option('--debug/--no-debug', default=True, help='Specify whether (or not) you\'d like to log debug messages.')
+@click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
 def test_receiver(configuration, debug):
     """
     This script runs the test receiver pipeline,
@@ -101,7 +101,7 @@ def test_receiver(configuration, debug):
 
 @cli.command()
 @click.argument('configuration', default='config/birales.ini')
-@click.option('--debug/--no-debug', default=True, help='Specify whether (or not) you\'d like to log debug messages.')
+@click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
 def birales_pipeline(configuration, debug):
     """
     This script runs the default BIRALES pipeline,
