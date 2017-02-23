@@ -20,16 +20,15 @@ def cli():
 
 
 @cli.command()
-@click.argument('configuration', default='config/birales.ini')
-@click.option('--debug/--no-debug', default=True)
+@click.argument('configuration')
+@click.option('--debug/--no-debug', default=True, help='Specify whether (or not) you\'d like to log debug messages.')
 def birales_pipeline_with_post_processing(configuration, debug):
     """
-    The BIRALES pipeline with post processing enabled
-    @todo this will eventually be integrated to the default BIRALES pipeline
+    This script runs the BIRALES pipeline with post processing enabled,
+    using the specified CONFIGURATION.
 
-    :param configuration: The configuration file
-    :param debug: If specified, debug messages will be logged
-    :return:
+    \b
+    This will eventually be integrated into the default BIRALES pipeline
     """
 
     # Initialise the Pipeline Manager
@@ -52,14 +51,11 @@ def birales_pipeline_with_post_processing(configuration, debug):
 
 @cli.command()
 @click.argument('configuration', default='config/birales.ini')
-@click.option('--debug/--no-debug', default=True)
+@click.option('--debug/--no-debug', default=True, help='Specify whether (or not) you\'d like to log debug messages.')
 def standalone_test(configuration, debug):
     """
-    The standalone_test pipeline
-
-    :param configuration: The configuration file
-    :param debug: If specified, debug messages will be logged
-    :return:
+     This script runs the standalone test pipeline,
+     using the specified CONFIGURATION.
     """
 
     # Initialise the Pipeline Manager
@@ -80,14 +76,11 @@ def standalone_test(configuration, debug):
 
 @cli.command()
 @click.argument('configuration', default='config/birales.ini')
-@click.option('--debug/--no-debug', default=True)
+@click.option('--debug/--no-debug', default=True, help='Specify whether (or not) you\'d like to log debug messages.')
 def test_receiver(configuration, debug):
     """
-    The test receiver pipeline
-
-    :param configuration: The configuration file
-    :param debug: If specified, debug messages will be logged
-    :return:
+    This script runs the test receiver pipeline,
+    using the specified CONFIGURATION.
     """
 
     # Initialise the Pipeline Manager
@@ -108,15 +101,13 @@ def test_receiver(configuration, debug):
 
 @cli.command()
 @click.argument('configuration', default='config/birales.ini')
-@click.option('--debug/--no-debug', default=True)
+@click.option('--debug/--no-debug', default=True, help='Specify whether (or not) you\'d like to log debug messages.')
 def birales_pipeline(configuration, debug):
     """
-    The default BIRALES pipeline
-
-    :param configuration: The configuration file
-    :param debug: If specified, debug messages will be logged
-    :return:
+    This script runs the default BIRALES pipeline,
+    using the specified CONFIGURATION.
     """
+
     # Initialise the Pipeline Manager
     manager = PipelineManager(configuration, debug)
 

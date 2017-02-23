@@ -1,8 +1,29 @@
-BIRALES processing backend
+# BIRALES processing backend
+
+## Installation
+TBD
+
+## Deployment
+TBD
+
+## Usage
+List available pipelines
+`birales.py --help`
+
+Help on how to run a given [Pipeline Name] 
+`birales.py [Pipeline Name] --help`
+
+Running a [Pipeline Name] 
+`birales.py [Pipeline Name] [OPTIONS] CONFIGURATION`
+
+Options:
+* `--debug / --no-debug` Specify whether (or not) you'd like to log debug messages.
+
+Arguments:
+* `CONFIGURATION` The path of the configuration file that the pipeline should use.     
 
 
-# BIRALES Post-processing
-## Documentation
+## Post-processing
 Start the Flask server on port 9000
 `python post.py run_dev_server --port 9000`
 
