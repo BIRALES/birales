@@ -22,7 +22,7 @@ def cli():
 @cli.command()
 @click.argument('configuration')
 @click.option('--debug/--no-debug', default=True, help='Specify whether (or not) you\'d like to log debug messages.')
-def birales_pipeline_with_post_processing(configuration, debug):
+def detection_pipeline(configuration, debug):
     """
     This script runs the BIRALES pipeline with post processing enabled,
     using the specified CONFIGURATION.
