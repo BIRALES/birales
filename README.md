@@ -8,7 +8,9 @@ TBD
 
 ## Usage
 List available pipelines
-```birales.py --help```
+```
+birales.py --help
+```
 
 Help on how to run a given [Pipeline Name] 
 ```birales.py [Pipeline Name] --help```
