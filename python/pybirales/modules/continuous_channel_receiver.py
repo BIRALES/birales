@@ -87,14 +87,16 @@ class ContinuousChannelReceiver(Generator):
 
             buffer_from_memory = ctypes.pythonapi.PyBuffer_FromMemory
             buffer_from_memory.restype = ctypes.py_object
-            values = buffer_from_memory(data, complex_8t.itemsize.itemsize * nof_values)
+            values = buffer_from_memory(data, complex_8t.itemsize * nof_values)
             values = np.frombuffer(values, complex_8t)
+            #values = memoryview(data)
 
             obs_info = ObservationInfo()
             obs_info['sampling_time'] = 1.0 / settings.observation.samples_per_second
             obs_info['start_center_frequency'] = settings.observation.start_center_frequency
             obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
             obs_info['timestamp'] = timestamp
+            obs_info['npols'] = self._npols
             obs_info['nsubs'] = self._nsubs
             obs_info['nsamp'] = self._nsamp
             obs_info['nants'] = self._nants
@@ -132,6 +134,7 @@ class ContinuousChannelReceiver(Generator):
         if self._daq.addReceiverPort(self._config.port) != Result.Success.value:
             raise PipelineError("Receiver: Failed to set receiver port %d" % self._config.port)
 
+        # Start consumer
         if self._daq.startContinuousChannelConsumer(self._nsamp, 16, 32) != Result.Success.value:
             raise Exception("Failed to start continuous channel data consumer")
 
@@ -139,14 +142,14 @@ class ContinuousChannelReceiver(Generator):
         self._callback = self._get_callback_function()
         if self._daq.setContinuousChannelConsumerCallback(self._callback) != Result.Success.value:
             raise PipelineError("Receiver: Failed to set consumer callback")
-
+        
         logging.info("Waiting for incoming data")
 
     def _initialise_library(self):
         """ Initialise DAQ library """
 
         # Load library
-        self._daq = ctypes.CDLL("/usr/local/libaavsdaq.so")
+        self._daq = ctypes.CDLL("/opt/aavs/lib/libaavsdaq.so")
 
         # Define setReceiverConfiguration function
         self._daq.setReceiverConfiguration.argtypes = [ctypes.c_uint16, ctypes.c_uint16,

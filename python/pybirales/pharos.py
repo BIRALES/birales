@@ -6,6 +6,7 @@ import os
 from pybirales.base import settings
 from pybirales.base.pipeline_manager import PipelineManager
 from pybirales.modules.continuous_channel_receiver import ContinuousChannelReceiver
+from pybirales.modules.beamformer import Beamformer
 from pybirales.modules.terminator import Terminator
 
 
@@ -13,9 +14,11 @@ from pybirales.modules.terminator import Terminator
 
 def pharos_pipeline(manager):
     receiver = ContinuousChannelReceiver(settings.continuous_channel_receiver)
-    terminator = Terminator(settings.terminator, receiver.output_blob)
+    beamformer = Beamformer(settings.beamformer, receiver.output_blob)
+    terminator = Terminator(settings.terminator, beamformer.output_blob)
 
     manager.add_module("reader", receiver)
+    manager.add_module("beamformer", beamformer)
     manager.add_module("terminator", terminator)
 
 
