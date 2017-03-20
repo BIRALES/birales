@@ -79,8 +79,7 @@ class Persister(ProcessingModule):
             obs_info['nof_beams_in_file'] = obs_info['nbeams'] if self._beam_range.start is None else \
                 self._beam_range.stop - self._beam_range.start
 
-            obs_info[
-                'start_channel_in_file'] = self._channel_range.start if self._channel_range.start is not None else 0
+            obs_info['start_channel_in_file'] = self._channel_range.start if self._channel_range.start is not None else 0
 
             obs_info['nof_channels_in_file'] = obs_info['nchans'] if self._channel_range.start is None else \
                 self._channel_range.stop - self._channel_range.start

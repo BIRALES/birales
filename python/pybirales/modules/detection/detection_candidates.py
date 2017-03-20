@@ -1,5 +1,5 @@
 import numpy as np
-from datetime import datetime
+import datetime
 from astropy.time import Time
 
 
@@ -25,7 +25,7 @@ class BeamSpaceDebrisCandidate:
     def __init__(self, name, beam, detection_data):
         self.beam = beam
         self.name = name
-        self.id = self.beam.observation_name + '.' + self.beam.data_set.name + '.' + str(self.beam.id) + '.' + str(name)
+        self.id = datetime.datetime.now().isoformat() + '.' + str(self.beam.id) + '.' + str(name)
         self.detections = []
         self.illumination_time = np.min(detection_data[:, 1])  # get minimum time
 
@@ -52,9 +52,9 @@ class BeamSpaceDebrisCandidate:
         return elapsed_time
 
     def _time(self, time):
-        ref_time = self.beam.data_set.config['timestamp'] / 1000.
+        # ref_time = self.beam.data_set.config['timestamp'] / 1000.
 
-        return Time(time + ref_time, format='unix')
+        return Time(time, format='unix')
 
     def _timestamp(self, elapsed_time):
         time = self._time(elapsed_time)
@@ -71,4 +71,4 @@ class BeamSpaceDebrisCandidate:
         yield 'beam_id', self.beam.id
         yield 'data_set_id', self.beam.data_set.id
         yield 'illumination_time', self.illumination_time
-        yield 'created_at', datetime.now()
+        yield 'created_at', datetime.datetime.now().isoformat()

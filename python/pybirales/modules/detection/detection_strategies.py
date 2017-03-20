@@ -316,7 +316,8 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
     def __init__(self):
         SpaceDebrisDetectionStrategy.__init__(self)
-        pass
+        # Initialise the clustering algorithm
+        self.db_scan = DBSCAN(eps=self._eps, min_samples=self._min_samples, algorithm=self._algorithm)
 
     def detect(self, beam):
         clusters = self._create_clusters(beam)
@@ -337,14 +338,18 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         :return:
         """
 
-        # Initialise the clustering algorithm
-        db_scan = DBSCAN(eps=self._eps, min_samples=self._min_samples, algorithm=self._algorithm)
-
         # Select the data points that are non-zero and transform them in a time (x), channel (y) nd-array
-        data = np.column_stack(np.where(beam.snr > 0.))
+        data = np.column_stack(np.where(beam.snr > 0))
+
+        if not np.any(data):
+            return []
 
         # Perform clustering on the data and returns cluster labels the points are associated with
-        cluster_labels = db_scan.fit_predict(data)
+        try:
+            cluster_labels = self.db_scan.fit_predict(data)
+        except ValueError:
+            log.warning('DBSCAN failed. Beam data is empty')
+            return []
 
         # Select only those labels which were not classified as noise (-1)
         filtered_cluster_labels = cluster_labels[cluster_labels > -1]
@@ -358,10 +363,14 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
                 cluster = DetectionCluster(cluster_data)
 
                 # Add only those clusters that are linear
-                if cluster.is_linear(threshold=0.90):
+                if cluster.is_linear(threshold=0.9):
                     clusters.append(cluster)
             except ValueError:
                 log.debug('Linear interpolation failed. No inliers found.')
+
+        log.debug('DBSCAN detected %s clusters in beam %s, of which %s are linear',
+                  len(np.unique(filtered_cluster_labels)),
+                  beam.id, len(clusters))
 
         return clusters
 

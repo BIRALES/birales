@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from sklearn import linear_model
-# from pybirales.configuration.application import config
+import logging as log
 
 
 class DetectionCluster:
@@ -45,6 +45,7 @@ class DetectionCluster:
         :type threshold: float
         :return:
         """
+
         if self._score < threshold:
             return False
         return True
@@ -77,7 +78,10 @@ class DetectionCluster:
         """
         diff = a - b
         mean = np.mean([a, b])
-        percentage_difference = abs(diff / mean)
+        try:
+            percentage_difference = abs(diff / mean)
+        except RuntimeWarning:
+            percentage_difference = 1.0
 
         return percentage_difference
 
@@ -91,7 +95,7 @@ class DetectionCluster:
         if config.get_boolean('debug', 'DEBUG_CANDIDATES'):
             # cluster_equation = 'm=' + cluster['m'] + ', c=' + cluster['c'] + ', r=' + cluster['r']
             plt.plot(self.data, 'o', label='')
-            plt.legend(loc='best', fancybox=True, framealpha=0.5)
+            plt.legend(loc='best', fancybox=True, framealpha=0.9)
             plt.xlabel('Channel')
             plt.title('Detection Cluster')
             plt.ylabel('Time')

@@ -13,6 +13,7 @@ from pybirales.blobs.channelised_data import ChannelisedBlob
 from pybirales.blobs.dummy_data import DummyBlob
 from pybirales.blobs.receiver_data import ReceiverBlob
 from pybirales.modules.detection.beam import Beam
+from pybirales.plotters.spectrogram_plotter import plotter
 
 
 class Detector(ProcessingModule):
@@ -43,6 +44,7 @@ class Detector(ProcessingModule):
                     top_frequency=0.0,
                     frequency_offset=0.0,
                     obs_info=obs_info, beam_data=input_blob)
+
         return beam
 
     def process(self, obs_info, input_data, output_data):
@@ -72,7 +74,6 @@ class Detector(ProcessingModule):
 
         log.info('Data processed, saving %s beam candidates to database', len(beam_candidates))
         log.debug("Input data: %s shape: %s", np.sum(input_data),  input_data.shape)
-
 
         # self._save_data_set()
 
@@ -125,7 +126,13 @@ class Detector(ProcessingModule):
             beam.visualize('raw beam ' + str(beam.id))
 
         # Apply the pre-processing filters to the beam data
+        plotter.plot(beam.snr, 'beam_6_before_filtering', beam.id == 6)
+
+        log.debug('Sum of data before filtering: %s', np.sum(beam.snr))
         beam.apply_filters()
+        log.debug('Sum of data after filtering: %s', np.sum(beam.snr))
+
+        plotter.plot(beam.snr, 'beam_6_after_filtering', beam.id == 6)
 
         # Save the filtered beam data to the database
         if settings.monitoring.save_filtered_beam_data:

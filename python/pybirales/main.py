@@ -31,7 +31,7 @@ def standalone_test(manager):
     manager.add_module("pfb", pfb)
     manager.add_module("terminator", terminator)
 
-    #manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, pfb.output_blob)
+    # manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, pfb.output_blob)
 
 
 def test_receiver(manager):
@@ -43,8 +43,8 @@ def test_receiver(manager):
     manager.add_module("ppf", ppf)
     manager.add_module("terminator", terminator)
 
-    #manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
-    #manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
+    # manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
+    # manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
     manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
 
 

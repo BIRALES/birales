@@ -12,6 +12,7 @@ from pybirales.modules.receiver import Receiver
 from pybirales.modules.detector import Detector
 from pybirales.plotters.bandpass_plotter import BandpassPlotter
 from pybirales.plotters.antenna_plotter import AntennaPlotter
+from pybirales.plotters.channel_plotter import ChannelisedDataPlotter
 
 
 @click.group()
@@ -45,6 +46,8 @@ def detection_pipeline(configuration, debug):
     manager.add_module("beamformer", beamformer)
     manager.add_module("ppf", ppf)
     manager.add_module("detector", detector)
+
+    # manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
 
     manager.start_pipeline()
 

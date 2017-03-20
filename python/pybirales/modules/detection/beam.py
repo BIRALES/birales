@@ -49,7 +49,7 @@ class Beam:
         self.n_samples = obs_info['nsamp']
 
         self.name = self._get_human_name()
-        self.time_samples = beam_data.shape[0]
+        self.time_samples = beam_data.shape[3]
         self.time = np.linspace(0, self.time_samples * self.sampling_rate, num=self.time_samples)
         self.channels = np.arange(self.f_ch1, self.f_ch1 + self.f_off * self.n_channels, self.f_off)
         self.snr = self._set_data(beam_data)
@@ -76,9 +76,9 @@ class Beam:
         :return: void
         """
 
-        data = beam_data[0, self.id, :, :]  # polarisation, beam id, channels, time samples
+        data = np.abs(beam_data[0, self.id, :, :])  # polarisation, beam id, channels, time samples
 
-        return self._get_snr(np.abs(data))
+        return self._get_snr(data)
 
     def _get_snr(self, data):
         """
@@ -100,14 +100,18 @@ class Beam:
         # Replace nan values with 0.
         log_data[np.isnan(log_data)] = 0.
 
-        return log_data
+        log.info('Sum of beam %s: %s', self.id, np.sum(log_data))
+
+        return log_data.T
 
     def _apply_filter(self, beam_filter):
         beam_filter.apply(self)
 
     def apply_filters(self):
+        # Remove background noise
         self._apply_filter(RemoveBackgroundNoiseFilter(std_threshold=2.))
 
+        # Remove transmitter frequency
         self._apply_filter(RemoveTransmitterChannelFilter())
 
         return self
