@@ -9,6 +9,7 @@ from pybirales.blobs.beamformed_data import BeamformedBlob
 from pybirales.blobs.channelised_data import ChannelisedBlob
 from pybirales.blobs.dummy_data import DummyBlob
 from pybirales.blobs.receiver_data import ReceiverBlob
+from pybirales.plotters.spectrogram_plotter import plotter
 
 
 @numba.jit(nopython=True, nogil=True)
@@ -153,6 +154,8 @@ class PFB(ProcessingModule):
         logging.info("Channelised data")
         logging.debug("Input data: %s shape: %s", np.sum(input_data), input_data.shape)
         logging.debug("Output data: %s shape: %s", np.sum(output_data), output_data.shape)
+
+        plotter.plot(np.abs(output_data[0, 6, :, :]), 'channeliser_output_data_6', True)
 
     # ------------------------------------------- HELPER FUNCTIONS ---------------------------------------
 

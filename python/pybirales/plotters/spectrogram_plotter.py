@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import logging as log
 
 
 class SpectrogramPlotter:
@@ -10,14 +11,20 @@ class SpectrogramPlotter:
 
     def plot(self, data, filename, condition=True):
         if condition:
-            self.fig.clf()
-            plt.imshow(data, aspect='auto', interpolation='none', origin='lower')
-            self.fig.savefig(self._plot_dir + filename + '.png')
+            try:
+                self.fig.clf()
+                plt.imshow(data, aspect='auto', interpolation='none', origin='lower')
+
+                self.fig.savefig(self._plot_dir + filename + '.png')
+            except Exception:
+                exit()
 
     def scatter(self, x, y, filename, condition=True):
         if condition:
-            self.fig.clf()
-            plt.plot(np.abs(x[:100]), "-")
-            self.fig.savefig(self._plot_dir + filename + '.png')
-
+            try:
+                self.fig.clf()
+                plt.plot(x[:100], "-")
+                self.fig.savefig(self._plot_dir + filename + '.png')
+            except Exception:
+                exit()
 plotter = SpectrogramPlotter()

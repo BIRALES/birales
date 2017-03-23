@@ -76,7 +76,8 @@ class Beam:
         :return: void
         """
 
-        data = np.abs(beam_data[0, self.id, :, :])  # polarisation, beam id, channels, time samples
+        # polarisation, beam id, channels, time samples
+        data = np.abs(beam_data[0, self.id, 0:int(self.n_channels / 2), :])
 
         return self._get_snr(data)
 
@@ -87,6 +88,8 @@ class Beam:
         :param data:
         :return:
         """
+
+        return data.T
 
         # @todo - check if the mean can be used as an estimate for the noise
         mean_noise_per_channel = np.mean(data, axis=0)
@@ -100,9 +103,7 @@ class Beam:
         # Replace nan values with 0.
         log_data[np.isnan(log_data)] = 0.
 
-        log.info('Sum of beam %s: %s', self.id, np.sum(log_data))
-
-        return log_data.T
+        return log_data
 
     def _apply_filter(self, beam_filter):
         beam_filter.apply(self)

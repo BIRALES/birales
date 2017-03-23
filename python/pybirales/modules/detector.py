@@ -6,6 +6,7 @@ from pybirales.modules.detection.detection_strategies import SpaceDebrisDetectio
 from pybirales.modules.detection.repository import BeamCandidateRepository
 from pybirales.modules.detection.repository import DataSetRepository
 from pybirales.base.definitions import PipelineError
+
 from pybirales.base.processing_module import ProcessingModule
 from pybirales.base import settings
 from pybirales.blobs.beamformed_data import BeamformedBlob
@@ -14,6 +15,7 @@ from pybirales.blobs.dummy_data import DummyBlob
 from pybirales.blobs.receiver_data import ReceiverBlob
 from pybirales.modules.detection.beam import Beam
 from pybirales.plotters.spectrogram_plotter import plotter
+import time
 
 
 class Detector(ProcessingModule):
@@ -126,13 +128,11 @@ class Detector(ProcessingModule):
             beam.visualize('raw beam ' + str(beam.id))
 
         # Apply the pre-processing filters to the beam data
-        plotter.plot(beam.snr, 'beam_6_before_filtering', beam.id == 6)
+        plotter.plot(beam.snr, 'detection/input_beam_6_' + str(time.time()), beam.id == 6)
 
-        log.debug('Sum of data before filtering: %s', np.sum(beam.snr))
         beam.apply_filters()
-        log.debug('Sum of data after filtering: %s', np.sum(beam.snr))
 
-        plotter.plot(beam.snr, 'beam_6_after_filtering', beam.id == 6)
+        # plotter.plot(beam.snr, 'detection/beam_6_after_filtering', beam.id == 6)
 
         # Save the filtered beam data to the database
         if settings.monitoring.save_filtered_beam_data:

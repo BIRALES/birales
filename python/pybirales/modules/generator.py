@@ -55,39 +55,25 @@ class DummyDataGenerator(ProcessingModule):
                          datatype=self._datatype)
 
     def process(self, obs_info, input_data, output_data):
-        # time.sleep(0.05)
+        # Sampling rate
+        frame_rate = 10e3
+        n = self._nsamp
 
-        # Perform operations
-        # output_data[:] = np.ones((self._nsubs, self._nsamp, self._nants), dtype=self._datatype)
-        # self._counter += 1
+        start = n / frame_rate * self._counter
+
+        ts = start + np.arange(n) / frame_rate
+        f1 = 446.02233885
+        f2 = 200.60375975
+        noise_power = 0.1*frame_rate / 2
+        # Doppler shifted signal (from f1 to f2)
+        freq = np.linspace(f1, f2, len(ts))
+        ys = 100*np.sin(2 * np.pi * freq * ts)
+        ys += 10*np.random.normal(scale=np.sqrt(noise_power), size=ts.shape)
 
         for i in range(self._nants):
-            # output_data[:, :, :, i] = np.random.rand() * np.sin(2**np.logspace(0.0001, 4, num=self._nsamp, base=2))
-            # output_data[:, :, :, i] = np.sin(2**np.logspace(0.001, 4, num=self._nsamp, base=2))
-            samples = np.linspace(0, self._nsamp, num=self._nsamp)
+            output_data[:, :, :, i] = ys
 
-            d1 = chirp(samples,
-                       f0=410.00102776367186,
-                       f1=410.00082749206540,
-                       t1=1, method='linear')
-            #
-            # d2 = 1j * chirp(samples,
-            #                 f0=410.00102776367186,
-            #                 f1=410.00082749206540,
-            #                 t1=1, method='linear')
-
-            noise = np.random.rand(self._nsamp)
-
-            # d2 = 10 * np.random.rand() * chirp(samples,
-            #                                    f0=390e6,
-            #                                    f1=400e6,
-            #                                    t1=1, method='linear')
-            d = d1
-            output_data[:, :, :, i] = d
-
-            plotter.scatter(d + noise, samples, 'antenna_6_signal', i == 6)
-
-        # output_data[:] = np.ones((self._npols, self._nsubs, self._nsamp, self._nants), dtype=self._datatype)
+            plotter.scatter(ys, ts, 'antenna_6_signal', i == 6)
 
         self._counter += 1
 
