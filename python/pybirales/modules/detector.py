@@ -66,15 +66,13 @@ class Detector(ProcessingModule):
         else:
             new_beam_candidates = self._get_beam_candidates_single(beams)
 
-        log.info('Data processed. Adding %s beam candidates to the queue', len(new_beam_candidates))
+        log.info('Data processed. Adding %s beam candidates to the beam queue', len(new_beam_candidates))
 
         if new_beam_candidates:
             for beam_candidate in new_beam_candidates:
                 self._debris_queue.enqueue(beam_candidate)
 
             self._save_beam_candidates(self._debris_queue)
-
-            self._debris_queue.dequeue()
 
     def _get_beam_candidates_single(self, beams):
         """
@@ -83,7 +81,7 @@ class Detector(ProcessingModule):
         :return: beam_candidates Beam candidates detected across the 32 beams
         """
 
-        log.info('Running space debris detection algorithm on %s beams in parallel', len(beams))
+        log.info('Running space debris detection algorithm on %s beams in serial', len(beams))
 
         return [self._detect_space_debris_candidates(beam) for beam in beams]
 
@@ -94,19 +92,17 @@ class Detector(ProcessingModule):
         :return: beam_candidates Beam candidates detected across the 32 beams
         """
 
-        log.info('Running space debris detection algorithm on %s beams in serial mode', len(beams))
+        log.info('Running space debris detection algorithm on %s beams in parallel', len(beams))
 
         # Run using N threads
         beam_candidates = self._thread_pool.map(self._detect_space_debris_candidates, beams)
 
         # Flatten list of beam candidates returned by the N threads
-        beam_candidates = [candidate for sub_list in beam_candidates for candidate in sub_list]
+        return [candidate for sub_list in beam_candidates for candidate in sub_list]
 
-        # Close thread pool upon completion
-        self._thread_pool.close()
-        self._thread_pool.join()
-
-        return beam_candidates
+        # # Close thread pool upon completion
+        # self._thread_pool.close()
+        # self._thread_pool.join()
 
     def _save_beam_candidates(self, beam_candidates):
         if settings.monitoring.save_candidates:

@@ -42,7 +42,7 @@ class Beam:
         self.sampling_rate = settings.observation.samples_per_second
         self.n_samples = obs_info['nsamp']
 
-        self.name = self._get_human_name()
+        self.name = 'Observation ' + self.observation_name
         self.time_samples = beam_data.shape[3]
         self.time = np.linspace(0, self.time_samples * self.sampling_rate, num=self.time_samples)
         self.channels = np.arange(self.f_ch1, self.f_ch1 + self.f_off * self.n_channels, self.f_off)
@@ -58,9 +58,6 @@ class Beam:
                                    y_label='Time Sample',
                                    data=self.snr)
         bp.plot()
-
-    def _get_human_name(self):
-        return 'Observation ' + self.observation_name
 
     def _set_snr(self, data):
         """
