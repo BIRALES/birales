@@ -15,16 +15,22 @@ from pybirales.blobs.dummy_data import DummyBlob
 from pybirales.blobs.receiver_data import ReceiverBlob
 from pybirales.modules.detection.beam import Beam
 from pybirales.plotters.spectrogram_plotter import plotter
+from pybirales.modules.detection.queue import BeamCandidatesQueue
+
 import time
 
 
 class Detector(ProcessingModule):
     def __init__(self, config, input_blob=None):
         if type(input_blob) not in [BeamformedBlob, DummyBlob, ReceiverBlob, ChannelisedBlob]:
-            raise PipelineError("Detector: Invalid input data type, should be BeamformedBlob, DummyBlob or ReceiverBlob")
+            raise PipelineError(
+                "Detector: Invalid input data type, should be BeamformedBlob, DummyBlob or ReceiverBlob")
 
         # Load detection algorithm dynamically (specified in config file)
         self.detection_strategy = SpaceDebrisDetection(settings.detection.detection_strategy)
+
+        # Data structure that hold the detected debris (for merging)
+        self._debris_queue = BeamCandidatesQueue(config['nbeams'])
 
         # Initialise thread pool with N threads
         self._thread_pool = ThreadPool(settings.detection.nthreads)
@@ -36,24 +42,12 @@ class Detector(ProcessingModule):
     def generate_output_blob(self):
         pass
 
-    @staticmethod
-    def _create_beam(obs_info, n_beam, input_blob):
-        log.debug('Generating beam %s from the input data', n_beam)
-        beam = Beam(beam_id=n_beam,
-                    dec=0.0,
-                    ra=0.0,
-                    ha=0.0,
-                    top_frequency=0.0,
-                    frequency_offset=0.0,
-                    obs_info=obs_info, beam_data=input_blob)
-
-        return beam
-
     def process(self, obs_info, input_data, output_data):
         """
         Run the Space Debris Detector pipeline
         :return void
         """
+
         # Checks if input data is empty
         if not input_data.any():
             log.warning('Input data is empty')
@@ -62,51 +56,55 @@ class Detector(ProcessingModule):
         # Extract beams from the data set we are processing
         log.info('Extracting beam data')
 
-        beams = []
-        for n_beam in range(0, settings.beamformer.nbeams):
-            beams.append(self._create_beam(obs_info, n_beam, input_data))
+        # Create the beams
+        beams = [Beam(beam_id=n_beam, obs_info=obs_info, beam_data=input_data)
+                 for n_beam in range(settings.beamformer.nbeams)]
 
         # Process the beam data to detect the beam candidates
         if settings.detection.nthreads > 1:
-            log.info('Running space debris detection algorithm on %s beams in parallel', len(beams))
-            beam_candidates = self._get_beam_candidates_parallel(beams)
+            new_beam_candidates = self._get_beam_candidates_parallel(beams)
         else:
-            log.info('Running space debris detection algorithm on %s beams in serial mode', len(beams))
-            beam_candidates = self._get_beam_candidates_single(beams)
+            new_beam_candidates = self._get_beam_candidates_single(beams)
 
-        log.info('Data processed, saving %s beam candidates to database', len(beam_candidates))
-        log.debug("Input data: %s shape: %s", np.sum(input_data),  input_data.shape)
+        log.info('Data processed. Adding %s beam candidates to the queue', len(new_beam_candidates))
 
-        # self._save_data_set()
+        if new_beam_candidates:
+            for beam_candidate in new_beam_candidates:
+                self._debris_queue.enqueue(beam_candidate)
 
-        # self._save_beam_candidates(beam_candidates)
+            self._save_beam_candidates(self._debris_queue)
+
+            self._debris_queue.dequeue()
 
     def _get_beam_candidates_single(self, beams):
         """
         Run the detection algorithm using 1 process
+
         :return: beam_candidates Beam candidates detected across the 32 beams
         """
-        beam_candidates = []
-        for beam in beams:
-            beam_candidates += self._detect_space_debris_candidates(beam)
 
-        return beam_candidates
+        log.info('Running space debris detection algorithm on %s beams in parallel', len(beams))
+
+        return [self._detect_space_debris_candidates(beam) for beam in beams]
 
     def _get_beam_candidates_parallel(self, beams):
         """
+        Run the detection algorithm using N threads
 
         :return: beam_candidates Beam candidates detected across the 32 beams
         """
 
-        # Run N threads
+        log.info('Running space debris detection algorithm on %s beams in serial mode', len(beams))
+
+        # Run using N threads
         beam_candidates = self._thread_pool.map(self._detect_space_debris_candidates, beams)
 
         # Flatten list of beam candidates returned by the N threads
         beam_candidates = [candidate for sub_list in beam_candidates for candidate in sub_list]
 
         # Close thread pool upon completion
-        # self.pool.close()
-        # self.pool.join()
+        self._thread_pool.close()
+        self._thread_pool.join()
 
         return beam_candidates
 
@@ -116,31 +114,11 @@ class Detector(ProcessingModule):
             beam_candidates_repository = BeamCandidateRepository(self.data_set)
             beam_candidates_repository.persist(beam_candidates)
 
-    def _save_data_set(self):
-        if settings.detection.save_data_set:
-            # Persist data_set to database
-            data_set_repository = DataSetRepository()
-            data_set_repository.persist(self.data_set)
-
     def _detect_space_debris_candidates(self, beam):
-        # Save raw beam data for post processing
-        if beam.id in settings.monitoring.visualize_beams:
-            beam.visualize('raw beam ' + str(beam.id))
-
-        # Apply the pre-processing filters to the beam data
         plotter.plot(beam.snr, 'detection/input_beam_6_' + str(time.time()), beam.id == 6)
 
+        # Apply the pre-processing filters to the beam data
         beam.apply_filters()
-
-        # plotter.plot(beam.snr, 'detection/beam_6_after_filtering', beam.id == 6)
-
-        # Save the filtered beam data to the database
-        if settings.monitoring.save_filtered_beam_data:
-            beam.save_detections()
-
-        # Save filtered beam data for post processing
-        if beam.id in settings.monitoring.visualize_beams:
-            beam.visualize('filtered beam ' + str(beam.id))
 
         # Run detection algorithm on the beam data to extract possible candidates
         candidates = self.detection_strategy.detect(beam)

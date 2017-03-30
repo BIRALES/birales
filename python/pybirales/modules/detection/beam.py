@@ -4,7 +4,6 @@ from pybirales.modules.detection.filters import RemoveBackgroundNoiseFilter, Rem
 from pybirales.modules.detection.repository import BeamDataRepository
 from pybirales.modules.monitoring.api.common.plotters import BeamMatplotlibPlotter
 from pybirales.base import settings
-import logging as log
 import warnings
 
 warnings.filterwarnings('error')
@@ -15,16 +14,11 @@ class Beam:
     The Beam class from which beam object can be created.
     """
 
-    def __init__(self, beam_id, dec, ra, ha, top_frequency, frequency_offset, obs_info, beam_data):
+    def __init__(self, beam_id, obs_info, beam_data):
         """
         Initialise the Beam class object
 
         :param beam_id: The beam data id
-        :param dec: declination
-        :param ra:
-        :param ha:
-        :param top_frequency:
-        :param frequency_offset:
         :param obs_info:
         :param beam_data:
         :return: void
@@ -32,11 +26,11 @@ class Beam:
         self.id = beam_id
         self.name = 'Beam ' + str(beam_id)
 
-        self.dec = dec
-        self.ra = ra
-        self.ha = ha
-        self.top_frequency = top_frequency
-        self.frequency_offset = frequency_offset
+        self.dec = 0.0
+        self.ra = 0.0
+        self.ha = 0.0
+        self.top_frequency = 0.0
+        self.frequency_offset = 0.0
 
         self.observation_name = settings.observation.name
         self.tx = settings.observation.transmitter_frequency
@@ -52,7 +46,7 @@ class Beam:
         self.time_samples = beam_data.shape[3]
         self.time = np.linspace(0, self.time_samples * self.sampling_rate, num=self.time_samples)
         self.channels = np.arange(self.f_ch1, self.f_ch1 + self.f_off * self.n_channels, self.f_off)
-        self.snr = self._set_data(beam_data)
+        self.snr = self._set_snr(beam_data)
 
     def visualize(self, title):
         bp = BeamMatplotlibPlotter(fig_size=(16, 10),
@@ -68,20 +62,7 @@ class Beam:
     def _get_human_name(self):
         return 'Observation ' + self.observation_name
 
-    def _set_data(self, beam_data):
-        """
-        Set the beam properties (time, snr, channels) from the raw beam data (as read from data set)
-
-        :param beam_data: The raw beam data
-        :return: void
-        """
-
-        # polarisation, beam id, channels, time samples
-        data = np.abs(beam_data[0, self.id, 0:int(self.n_channels / 2), :])
-
-        return self._get_snr(data)
-
-    def _get_snr(self, data):
+    def _set_snr(self, data):
         """
         Calculate the Signal to Noise Ratio from the power data
 
@@ -89,21 +70,22 @@ class Beam:
         :return:
         """
 
-        return data.T
+        return np.abs(data[0, self.id, 0:int(self.n_channels / 2), :]).T
 
-        # @todo - check if the mean can be used as an estimate for the noise
-        mean_noise_per_channel = np.mean(data, axis=0)
-
-        # Normalised the data by the mean noise at each channel
-        normalised_data = np.where(data > 0., data, np.nan) / mean_noise_per_channel
-
-        # Take the log value of the power
-        log_data = np.log10(normalised_data)
-
-        # Replace nan values with 0.
-        log_data[np.isnan(log_data)] = 0.
-
-        return log_data
+        #
+        # # @todo - check if the mean can be used as an estimate for the noise
+        # mean_noise_per_channel = np.mean(data, axis=0)
+        #
+        # # Normalised the data by the mean noise at each channel
+        # normalised_data = np.where(data > 0., data, np.nan) / mean_noise_per_channel
+        #
+        # # Take the log value of the power
+        # log_data = np.log10(normalised_data)
+        #
+        # # Replace nan values with 0.
+        # log_data[np.isnan(log_data)] = 0.
+        #
+        # return log_data
 
     def _apply_filter(self, beam_filter):
         beam_filter.apply(self)

@@ -3,6 +3,8 @@ import numpy as np
 
 from sklearn import linear_model
 import logging as log
+import datetime
+from astropy.time import Time
 
 
 class DetectionCluster:
@@ -13,7 +15,7 @@ class DetectionCluster:
     _score = None
     _model = None
 
-    def __init__(self, cluster_data):
+    def __init__(self, beam, name, cluster_data):
         """
         Initialisation of the Detection cluster Object
 
@@ -38,9 +40,23 @@ class DetectionCluster:
         self.m = self._model.estimator_.coef_[0]
         self.c = self._model.estimator_.intercept_
 
+        # ---------------
+        self.beam = beam
+        self.name = name
+        self.id = datetime.datetime.now().isoformat() + '.' + str(self.beam.id) + '.' + str(name)
+        self.detections = []
+        self.illumination_time = np.min(x)  # get minimum time
+
+        self.to_delete = False
+        self.to_save = True
+
+        # todo - This function can be called lazily, since it is only for visualisation
+        self.set_data(self.data)
+
     def is_linear(self, threshold):
         """
         Determine if cluster is a linear cluster (Shaped as a line)
+
         :param threshold:
         :type threshold: float
         :return:
@@ -50,9 +66,10 @@ class DetectionCluster:
             return False
         return True
 
-    def is_cluster_similar(self, cluster, threshold):
+    def is_similar_to(self, cluster, threshold):
         """
         Determine if two clusters are similar
+
         :param cluster: The cluster we are comparing to
         :param threshold:
         :type cluster: DetectionCluster
@@ -91,12 +108,79 @@ class DetectionCluster:
         # Return a new Detection Cluster with the merged data
         return DetectionCluster(merged_data)
 
-    def _visualise_cluster(self):
-        if config.get_boolean('debug', 'DEBUG_CANDIDATES'):
-            # cluster_equation = 'm=' + cluster['m'] + ', c=' + cluster['c'] + ', r=' + cluster['r']
-            plt.plot(self.data, 'o', label='')
-            plt.legend(loc='best', fancybox=True, framealpha=0.9)
-            plt.xlabel('Channel')
-            plt.title('Detection Cluster')
-            plt.ylabel('Time')
-            plt.show()
+    def delete(self):
+        """
+        Mark this detection cluster for deletion
+        :return: void
+        """
+
+        self.to_delete = True
+
+    def saved(self):
+        """
+        Mark this cluster as already saved to the database
+        :return: void
+        """
+
+        self.to_save = False
+
+    # --------------
+    def set_data(self, detection_data):
+        for frequency, elapsed_time, snr in detection_data:
+            self.detections.append({
+                'time': self._timestamp(elapsed_time),
+                'mdj2000': self._get_mjd2000(elapsed_time),
+                'time_elapsed': self._time_elapsed(elapsed_time),
+                'frequency': frequency,
+                'doppler_shift': self._get_doppler_shift(self.beam.tx, frequency),
+                'snr': snr,
+            })
+
+    def get_detections(self):
+        """
+        Returns the detection data of the beam cluster in a list that can be
+        easily converted to json
+
+        :return:
+        """
+        return [
+            {
+                'time': self._timestamp(elapsed_time),
+                'mdj2000': self._get_mjd2000(elapsed_time),
+                'time_elapsed': self._time_elapsed(elapsed_time),
+                'frequency': frequency,
+                'doppler_shift': self._get_doppler_shift(self.beam.tx, frequency),
+                'snr': snr,
+            } for frequency, elapsed_time, snr in self.data
+            ]
+
+    @staticmethod
+    def _get_doppler_shift(transmission_frequency, reflected_frequency):
+        return (reflected_frequency - transmission_frequency) * 1e6
+
+    @staticmethod
+    def _time_elapsed(elapsed_time):
+        return elapsed_time
+
+    @staticmethod
+    def _time(time):
+        # ref_time = self.beam.data_set.config['timestamp'] / 1000.
+
+        return Time(time, format='unix')
+
+    def _timestamp(self, elapsed_time):
+        time = self._time(elapsed_time)
+        return time.iso
+
+    def _get_mjd2000(self, elapsed_time):
+        time = self._time(elapsed_time)
+        return time.mjd
+
+    def __iter__(self):
+        yield '_id', self.id
+        yield 'name', self.name
+        yield 'detections', self.get_detections()
+        yield 'beam_id', self.beam.id
+        # yield 'data_set_id', self.beam.data_set.id
+        yield 'illumination_time', self.illumination_time
+        yield 'created_at', datetime.datetime.now().isoformat()

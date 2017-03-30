@@ -326,10 +326,12 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         merged_clusters = self._merge_clusters(clusters)
         log.debug("%s detection clusters remain after merging in beam %s", len(merged_clusters), beam.id)
 
-        space_debris_candidates = self._create_space_debris_candidates(beam, merged_clusters)
-        log.debug("%s space debris candidates detected", len(space_debris_candidates))
+        return merged_clusters
 
-        return space_debris_candidates
+        # space_debris_candidates = self._create_space_debris_candidates(beam, merged_clusters)
+        # log.debug("%s space debris candidates detected", len(space_debris_candidates))
+        #
+        # return space_debris_candidates
 
     def _create_clusters(self, beam):
         """

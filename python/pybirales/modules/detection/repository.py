@@ -118,7 +118,7 @@ class DataSetRepository(Repository):
             sys.exit(1)
 
 
-class BeamCandidateRepository(Repository):
+class BeamCandidate2Repository(Repository):
     def __init__(self, data_set=None):
         Repository.__init__(self)
         self.collection = 'beam_candidates'
@@ -262,3 +262,61 @@ class SpaceDebrisRepository(Repository):
 
     def persist(self, space_debris_candidates):
         pass
+
+
+class BeamCandidateRepository(Repository):
+    def __init__(self):
+        Repository.__init__(self)
+        self.collection = 'beam_candidates'
+
+    def persist(self, beam_candidates):
+        if not beam_candidates:
+            log.warning('No beam space debris candidates were found.')
+            return False
+
+        try:
+            # Convert beam objects to a dict representation
+            beam_candidates = [dict(candidate) for candidate in beam_candidates]
+
+            # Save candidates to the database
+            if len(beam_candidates) is 1:
+                self.database.beam_candidates.insert(beam_candidates[0])
+            else:
+                self.database.beam_candidates.insert_many(beam_candidates)
+
+        except mongo.errors.ServerSelectionTimeoutError:
+            log.error('MongoDB is not running. Detected beam candidates could not be saved.')
+        else:
+            log.info('%s beam candidates were persisted', len(beam_candidates))
+
+    def get(self, beam_id, max_freq=None, min_freq=None, max_time=None, min_time=None):
+        query = {"$and": [
+            {'beam_id': beam_id}
+        ]}
+
+        if max_freq and min_freq:
+            query['$and'].append({'detections.frequency': {'$gte': float(min_freq)}})
+            query['$and'].append({'detections.frequency': {'$lte': float(max_freq)}})
+
+        if max_time and min_time:
+            query['$and'].append({'detections.time_elapsed': {'$gte': float(min_time)}})
+            query['$and'].append({'detections.time_elapsed': {'$lte': float(max_time)}})
+
+        try:
+            beam_candidates = self.database.beam_candidates.find(query)
+        except mongo.errors.ServerSelectionTimeoutError:
+            log.error('MongoDB is not running. Could not retrieve candidates.')
+        else:
+            return list(beam_candidates)
+
+    def delete(self, beam_candidates):
+        query = {
+            '$or': [{'_id': beam_candidate.id} for beam_candidate in beam_candidates]
+        }
+        try:
+            result = self.database.beam_candidates.delete_many(query)
+
+        except mongo.errors.ServerSelectionTimeoutError:
+            log.error('MongoDB is not running. Could not delete %s candidates.', len(beam_candidates))
+        else:
+            log.info('Deleted %s beam candidates', result.deleted_count)
