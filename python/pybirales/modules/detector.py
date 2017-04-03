@@ -29,8 +29,11 @@ class Detector(ProcessingModule):
         # Load detection algorithm dynamically (specified in config file)
         self.detection_strategy = SpaceDebrisDetection(settings.detection.detection_strategy)
 
+        # Repository Layer for saving the beam candidates to the Data store
+        self._candidates_repository = BeamCandidateRepository()
+
         # Data structure that hold the detected debris (for merging)
-        self._debris_queue = BeamCandidatesQueue(config['nbeams'])
+        self._debris_queue = BeamCandidatesQueue(settings.beamformer.nbeams)
 
         # Initialise thread pool with N threads
         self._thread_pool = ThreadPool(settings.detection.nthreads)
@@ -47,6 +50,7 @@ class Detector(ProcessingModule):
         Run the Space Debris Detector pipeline
         :return void
         """
+        s = time.time()
 
         # Checks if input data is empty
         if not input_data.any():
@@ -54,11 +58,13 @@ class Detector(ProcessingModule):
             return
 
         # Extract beams from the data set we are processing
-        log.info('Extracting beam data')
+        log.debug('Extracting beam data')
 
         # Create the beams
         beams = [Beam(beam_id=n_beam, obs_info=obs_info, beam_data=input_data)
                  for n_beam in range(settings.beamformer.nbeams)]
+
+        log.info('beams extracted in %0.3f seconds', time.time() - s)
 
         # Process the beam data to detect the beam candidates
         if settings.detection.nthreads > 1:
@@ -66,13 +72,21 @@ class Detector(ProcessingModule):
         else:
             new_beam_candidates = self._get_beam_candidates_single(beams)
 
-        log.info('Data processed. Adding %s beam candidates to the beam queue', len(new_beam_candidates))
+        log.info('new candidates found in %0.3f seconds', time.time() - s)
 
-        if new_beam_candidates:
-            for beam_candidate in new_beam_candidates:
-                self._debris_queue.enqueue(beam_candidate)
+        # log.info('Data processed. Adding %s beam candidates to the beam queue', len(new_beam_candidates))
 
-            self._save_beam_candidates(self._debris_queue)
+        for new_beam_candidate in new_beam_candidates:
+            if new_beam_candidate:
+                self._debris_queue.enqueue(new_beam_candidate)
+
+        log.info('new candidates processed in %0.3f seconds', time.time() - s)
+
+        if settings.detection.save_candidates:
+            # Persist beam candidates to database
+            self._debris_queue.save()
+
+        log.info('new candidates saved in %0.3f seconds', time.time() - s)
 
     def _get_beam_candidates_single(self, beams):
         """
@@ -81,9 +95,13 @@ class Detector(ProcessingModule):
         :return: beam_candidates Beam candidates detected across the 32 beams
         """
 
-        log.info('Running space debris detection algorithm on %s beams in serial', len(beams))
+        log.debug('Running space debris detection algorithm on %s beams in serial', len(beams))
 
-        return [self._detect_space_debris_candidates(beam) for beam in beams]
+        # Get the detected beam candidates
+        beam_candidates = [self._detect_space_debris_candidates(beam) for beam in beams]
+
+        # Do not add beam candidates that a
+        return [candidate for candidate in beam_candidates if candidate]
 
     def _get_beam_candidates_parallel(self, beams):
         """
@@ -92,33 +110,28 @@ class Detector(ProcessingModule):
         :return: beam_candidates Beam candidates detected across the 32 beams
         """
 
-        log.info('Running space debris detection algorithm on %s beams in parallel', len(beams))
+        log.debug('Running space debris detection algorithm on %s beams in parallel', len(beams))
 
         # Run using N threads
         beam_candidates = self._thread_pool.map(self._detect_space_debris_candidates, beams)
 
-        # Flatten list of beam candidates returned by the N threads
-        return [candidate for sub_list in beam_candidates for candidate in sub_list]
-
-        # # Close thread pool upon completion
+        # Close thread pool upon completion
         # self._thread_pool.close()
         # self._thread_pool.join()
 
-    def _save_beam_candidates(self, beam_candidates):
-        if settings.monitoring.save_candidates:
-            # Persist beam candidates to database
-            beam_candidates_repository = BeamCandidateRepository(self.data_set)
-            beam_candidates_repository.persist(beam_candidates)
+        # Flatten list of beam candidates returned by the N threads
+        return [candidate for sub_list in beam_candidates for candidate in sub_list if candidate]
 
     def _detect_space_debris_candidates(self, beam):
-        plotter.plot(beam.snr, 'detection/input_beam_6_' + str(time.time()), beam.id == 6)
+        # plotter.plot(beam.snr, 'detection/input_beam_6_' + str(time.time()), beam.id == 6)
 
         # Apply the pre-processing filters to the beam data
         beam.apply_filters()
 
         # Run detection algorithm on the beam data to extract possible candidates
+        log.debug('Running detection algorithm on beam %s', beam.id)
         candidates = self.detection_strategy.detect(beam)
 
-        log.info('%s candidates were detected in beam %s', len(candidates), beam.id)
+        log.debug('%s candidates were detected in beam %s', len(candidates), beam.id)
 
         return candidates

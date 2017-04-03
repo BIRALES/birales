@@ -1,10 +1,9 @@
-import matplotlib.pyplot as plt
 import numpy as np
+import datetime
 
 from sklearn import linear_model
-import logging as log
-import datetime
 from astropy.time import Time
+from pybirales.base import settings
 
 
 class DetectionCluster:
@@ -15,7 +14,7 @@ class DetectionCluster:
     _score = None
     _model = None
 
-    def __init__(self, beam, name, cluster_data):
+    def __init__(self, beam_id, cluster_data):
         """
         Initialisation of the Detection cluster Object
 
@@ -41,9 +40,9 @@ class DetectionCluster:
         self.c = self._model.estimator_.intercept_
 
         # ---------------
-        self.beam = beam
-        self.name = name
-        self.id = datetime.datetime.now().isoformat() + '.' + str(self.beam.id) + '.' + str(name)
+        self.beam_id = beam_id
+        self._processed_time = datetime.datetime.utcnow()
+        self.id = str(self.beam_id) + '.' + self._processed_time.isoformat()
         self.detections = []
         self.illumination_time = np.min(x)  # get minimum time
 
@@ -132,7 +131,7 @@ class DetectionCluster:
                 'mdj2000': self._get_mjd2000(elapsed_time),
                 'time_elapsed': self._time_elapsed(elapsed_time),
                 'frequency': frequency,
-                'doppler_shift': self._get_doppler_shift(self.beam.tx, frequency),
+                'doppler_shift': self._get_doppler_shift(settings.observation.transmitter_frequency, frequency),
                 'snr': snr,
             })
 
@@ -149,7 +148,7 @@ class DetectionCluster:
                 'mdj2000': self._get_mjd2000(elapsed_time),
                 'time_elapsed': self._time_elapsed(elapsed_time),
                 'frequency': frequency,
-                'doppler_shift': self._get_doppler_shift(self.beam.tx, frequency),
+                'doppler_shift': self._get_doppler_shift(settings.observation.transmitter_frequency, frequency),
                 'snr': snr,
             } for frequency, elapsed_time, snr in self.data
             ]
@@ -180,7 +179,7 @@ class DetectionCluster:
         yield '_id', self.id
         yield 'name', self.name
         yield 'detections', self.get_detections()
-        yield 'beam_id', self.beam.id
+        yield 'beam_id', self.beam_id
         # yield 'data_set_id', self.beam.data_set.id
         yield 'illumination_time', self.illumination_time
         yield 'created_at', datetime.datetime.now().isoformat()

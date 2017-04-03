@@ -119,11 +119,9 @@ class Beamformer(ProcessingModule):
         obs_info['nbeams'] = self._nbeams
         obs_info['reference_pointing'] = self._config.reference_pointing
         obs_info['pointings'] = self._config.pointings
-        logging.info("Beamformed data")
+
         logging.debug("Input data: %s shape: %s", np.sum(input_data), input_data.shape)
         logging.debug("Output data: %s shape: %s", np.sum(output_data), output_data.shape)
-
-
 
 
 class Pointing(Thread):

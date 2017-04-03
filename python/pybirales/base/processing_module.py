@@ -2,6 +2,8 @@ import time
 import logging
 from abc import abstractmethod
 from threading import Thread
+import time
+import logging as log
 
 
 class Module(Thread):
@@ -143,7 +145,9 @@ class ProcessingModule(Module):
                 output_data = self._output.request_write()
 
             # Perform required processing
+            s = time.time()
             res = self.process(obs_info, input_data, output_data)
+            log.info('%s finished in %0.3f seconds', self.name, time.time() - s)
             if res is not None:
                 obs_info = res
 

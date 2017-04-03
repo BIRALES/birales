@@ -10,6 +10,7 @@ from pybirales.modules.detection.detection_clusters import DetectionCluster
 from pybirales.modules.detection.detection_candidates import BeamSpaceDebrisCandidate
 from sklearn.cluster import DBSCAN
 from pybirales.base import settings
+from pybirales.plotters.spectrogram_plotter import plotter
 
 
 class SpaceDebrisDetection(object):
@@ -346,6 +347,7 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         if not np.any(data):
             return []
 
+        plotter.plot(beam.snr, 'detection/detection_db_scan', beam.id == 6)
         # Perform clustering on the data and returns cluster labels the points are associated with
         try:
             cluster_labels = self.db_scan.fit_predict(data)
@@ -362,7 +364,8 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
             cluster_data = data[np.where(cluster_labels == label)]
 
             try:
-                cluster = DetectionCluster(cluster_data)
+                # Create a Detection Cluster from the cluster data
+                cluster = DetectionCluster(beam_id=beam.id, cluster_data=cluster_data)
 
                 # Add only those clusters that are linear
                 if cluster.is_linear(threshold=0.9):

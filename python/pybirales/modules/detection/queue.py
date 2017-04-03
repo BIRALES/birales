@@ -11,6 +11,7 @@ class BeamCandidatesQueue:
     def enqueue(self, new_cluster):
         # Check if beam candidate is similar to candidate that was already added to the queue
         beam_queue = self.queue[new_cluster.beam_id]
+
         for old_cluster in beam_queue:
             if new_cluster.is_similar_to(old_cluster, threshold=0.1):
                 # mark old cluster as 'to delete'
@@ -38,18 +39,20 @@ class BeamCandidatesQueue:
             self.queue[beam_id].pop()
 
     def save(self):
-        # get all clusters in queue which have 'not saved'
-        candidates_to_save = [candidate for candidate in self.queue if candidate.to_save]
+        # get all clusters, across all queues, which have 'not saved'
+        candidates_to_save = [candidate for queue in self.queue for candidate in queue if candidate.to_save]
 
-        # get all clusters in queue which have 'to delete'
-        candidates_to_delete = [candidate for candidate in self.queue if candidate.to_delete]
+        # get all clusters, across all queues, which have 'to delete'
+        candidates_to_delete = [candidate for queue in self.queue for candidate in queue if candidate.to_delete]
 
         # delete old clusters that were merged
-        self.repository.delete(candidates_to_delete)
+        if candidates_to_delete:
+            self.repository.delete(candidates_to_delete)
 
         # add new clusters
-        self.repository.persist(candidates_to_save)
+        if candidates_to_save:
+            self.repository.persist(candidates_to_save)
 
-        log.info('Added %s candidates, Deleted %s candidates',
-                 len(candidates_to_save),
-                 len(candidates_to_delete))
+        log.debug('Added %s candidates, Deleted %s candidates',
+                  len(candidates_to_save),
+                  len(candidates_to_delete))

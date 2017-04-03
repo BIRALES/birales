@@ -151,11 +151,9 @@ class PFB(ProcessingModule):
         obs_info['sampling_time'] *= self._nchans
         obs_info['channel_bandwidth'] /= self._nchans
         obs_info['start_center_frequency'] -= obs_info['channel_bandwidth'] * self._nchans / 2.0
-        logging.info("Channelised data")
+
         logging.debug("Input data: %s shape: %s", np.sum(input_data), input_data.shape)
         logging.debug("Output data: %s shape: %s", np.sum(output_data), output_data.shape)
-
-        plotter.plot(np.abs(output_data[0, 6, :, :]), 'channeliser_output_data_6', True)
 
     # ------------------------------------------- HELPER FUNCTIONS ---------------------------------------
 

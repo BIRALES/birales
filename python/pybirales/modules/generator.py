@@ -88,7 +88,7 @@ class DummyDataGenerator(ProcessingModule):
         obs_info['channel_bandwidth'] = 0.1
         obs_info['start_center_frequency'] = 400.
 
-        logging.info("Generated data")
         logging.debug("Input data: %s", np.sum(input_data))
         logging.debug("Output data: %s shape: %s", np.sum(output_data), output_data.shape)
+
         return obs_info

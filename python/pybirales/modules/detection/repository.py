@@ -9,8 +9,8 @@ from pybirales.base import settings
 
 class Repository:
     def __init__(self):
-        self.host = settings.database.host
-        self.port = settings.database.port
+        self.host = settings.detection.db_host
+        self.port = settings.detection.db_port
         self.client = mongo.MongoClient(self.host, self.port)
         self.database = self.client['birales']
 
