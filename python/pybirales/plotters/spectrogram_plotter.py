@@ -15,7 +15,7 @@ class SpectrogramPlotter:
         ]
 
     def plot(self, data, filename, condition=True, cluster_labels=None):
-        if not settings.detection.save_candidates:
+        if not settings.detection.debug_candidates:
             return
 
         categories = [self.colors[c] for c in cluster_labels]
@@ -33,7 +33,7 @@ class SpectrogramPlotter:
                 exit()
 
     def scatter(self, x, y, filename, condition=True):
-        if not settings.detection.save_candidates:
+        if not settings.detection.debug_candidates:
             return
 
         if condition:

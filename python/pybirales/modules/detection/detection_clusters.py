@@ -28,9 +28,9 @@ class DetectionCluster:
         self.channel_data = channels
         self.snr_data = snr
 
-        self.m = None
-        self.c = None
-        self._score = None
+        self.m = 0.0
+        self.c = 0.0
+        self._score = 0.0
 
         # todo - this needs to be converted to the absolute illumination time (not relative)
         self.illumination_time = np.min(self.time_data)

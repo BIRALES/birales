@@ -74,8 +74,10 @@ class Detector(ProcessingModule):
                 self._debris_queue.enqueue(new_beam_candidate)
 
         if settings.detection.save_candidates:
-            # Persist beam candidates to database
+            # Persist beam candidates
             self._debris_queue.save()
+
+        log.info('Detected %s beam candidates', len(new_beam_candidates))
 
     def _get_beam_candidates_single(self, beams):
         """
@@ -86,11 +88,8 @@ class Detector(ProcessingModule):
 
         log.debug('Running space debris detection algorithm on %s beams in serial', len(beams))
 
-
         # Get the detected beam candidates
-        s = time.time()
         beam_candidates = [self._detect_space_debris_candidates(beam) for beam in beams]
-        log.info('detections in %0.4f seconds', time.time() - s)
 
         # Do not add beam candidates that a
         return [candidate for sub_list in beam_candidates for candidate in sub_list if candidate]

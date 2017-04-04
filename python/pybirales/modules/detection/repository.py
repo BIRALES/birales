@@ -286,8 +286,6 @@ class BeamCandidateRepository(Repository):
 
         except mongo.errors.ServerSelectionTimeoutError:
             log.error('MongoDB is not running. Detected beam candidates could not be saved.')
-        except Exception:
-            a = 's'
         else:
             log.info('%s beam candidates were persisted', len(beam_candidates))
 
