@@ -1,9 +1,9 @@
 import numpy as np
 import datetime
 
-from sklearn import linear_model
 from astropy.time import Time
 from pybirales.base import settings
+import logging as log
 
 
 class DetectionCluster:
@@ -14,56 +14,59 @@ class DetectionCluster:
     _score = None
     _model = None
 
-    def __init__(self, beam_id, cluster_data):
+    def __init__(self, beam_id, time, channels, snr):
         """
         Initialisation of the Detection cluster Object
 
-        :param cluster_data:
-        :type cluster_data: numpy.dtype
+        :param beam_id:
+        :param time:
+        :param channels:
+        :param snr:
         """
 
-        self._model = linear_model.RANSACRegressor(linear_model.LinearRegression())
-        x = cluster_data[:, [1]]
-        y = cluster_data[:, 0]
-
-        self._model.fit(x, y)
-
-        # Create mask of inlier data points
-        inlier_mask = self._model.inlier_mask_
-
-        # Remove outliers - select data points that are inliers
-        self.data = cluster_data[inlier_mask]
-
-        # Set public properties of cluster
-        self._score = self._model.estimator_.score(x, y)
-        self.m = self._model.estimator_.coef_[0]
-        self.c = self._model.estimator_.intercept_
-
-        # ---------------
         self.beam_id = beam_id
         self._processed_time = datetime.datetime.utcnow()
         self.id = str(self.beam_id) + '.' + self._processed_time.isoformat()
-        self.detections = []
-        self.illumination_time = np.min(x)  # get minimum time
-
         self.to_delete = False
         self.to_save = True
 
-        # todo - This function can be called lazily, since it is only for visualisation
-        self.set_data(self.data)
+        self.time_data = time
+        self.channel_data = channels
+        self.snr_data = snr
 
-    def is_linear(self, threshold):
+        # todo - this needs to be converted to the absolute illumination time (not relative)
+        self.illumination_time = np.min(self.time_data)
+
+    def is_linear(self, model, threshold):
         """
         Determine if cluster is a linear cluster (Shaped as a line)
 
+        :param model: The model which will determine if cluster is linear as expected
         :param threshold:
         :type threshold: float
         :return:
         """
 
-        if self._score < threshold:
-            return False
-        return True
+        try:
+            channels = [[channel] for channel in self.channel_data]
+            model.fit(channels, self.time_data)
+        except ValueError:
+            log.debug('Linear interpolation failed. No inliers found.')
+        else:
+            # todo - check what you are going to do about the inliers mask
+            # Create mask of inlier data points
+            # inlier_mask = self._model.inlier_mask_
+
+            # Remove outliers - select data points that are inliers
+            # self.data = cluster_data[inlier_mask]
+
+            self._score = model.estimator_.score(channels, self.time_data)
+            self.m = model.estimator_.coef_[0]
+            self.c = model.estimator_.intercept_
+
+            if self._score < threshold:
+                return False
+            return True
 
     def is_similar_to(self, cluster, threshold):
         """
@@ -102,10 +105,11 @@ class DetectionCluster:
         return percentage_difference
 
     def merge(self, cluster):
-        merged_data = np.concatenate((self.data, cluster.data))
-
         # Return a new Detection Cluster with the merged data
-        return DetectionCluster(merged_data)
+        return DetectionCluster(beam_id=cluster.beam_id,
+                                time=np.concatenate([self.time_data, cluster.time_data]),
+                                channels=np.concatenate([self.channel_data, cluster.channel_data]),
+                                snr=np.concatenate([self.snr_data, cluster.snr_data]))
 
     def delete(self):
         """
@@ -123,18 +127,6 @@ class DetectionCluster:
 
         self.to_save = False
 
-    # --------------
-    def set_data(self, detection_data):
-        for frequency, elapsed_time, snr in detection_data:
-            self.detections.append({
-                'time': self._timestamp(elapsed_time),
-                'mdj2000': self._get_mjd2000(elapsed_time),
-                'time_elapsed': self._time_elapsed(elapsed_time),
-                'frequency': frequency,
-                'doppler_shift': self._get_doppler_shift(settings.observation.transmitter_frequency, frequency),
-                'snr': snr,
-            })
-
     def get_detections(self):
         """
         Returns the detection data of the beam cluster in a list that can be
@@ -149,8 +141,8 @@ class DetectionCluster:
                 'time_elapsed': self._time_elapsed(elapsed_time),
                 'frequency': frequency,
                 'doppler_shift': self._get_doppler_shift(settings.observation.transmitter_frequency, frequency),
-                'snr': snr,
-            } for frequency, elapsed_time, snr in self.data
+                'snr': float(snr),
+            } for frequency, elapsed_time, snr in zip(self.channel_data, self.time_data, self.snr_data)
             ]
 
     @staticmethod
@@ -177,9 +169,7 @@ class DetectionCluster:
 
     def __iter__(self):
         yield '_id', self.id
-        yield 'name', self.name
         yield 'detections', self.get_detections()
         yield 'beam_id', self.beam_id
-        # yield 'data_set_id', self.beam.data_set.id
         yield 'illumination_time', self.illumination_time
-        yield 'created_at', datetime.datetime.now().isoformat()
+        yield 'created_at', datetime.datetime.utcnow().isoformat()

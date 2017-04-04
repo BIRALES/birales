@@ -50,7 +50,6 @@ class Detector(ProcessingModule):
         Run the Space Debris Detector pipeline
         :return void
         """
-        s = time.time()
 
         # Checks if input data is empty
         if not input_data.any():
@@ -64,29 +63,19 @@ class Detector(ProcessingModule):
         beams = [Beam(beam_id=n_beam, obs_info=obs_info, beam_data=input_data)
                  for n_beam in range(settings.beamformer.nbeams)]
 
-        log.info('beams extracted in %0.3f seconds', time.time() - s)
-
         # Process the beam data to detect the beam candidates
         if settings.detection.nthreads > 1:
             new_beam_candidates = self._get_beam_candidates_parallel(beams)
         else:
             new_beam_candidates = self._get_beam_candidates_single(beams)
 
-        log.info('new candidates found in %0.3f seconds', time.time() - s)
-
-        # log.info('Data processed. Adding %s beam candidates to the beam queue', len(new_beam_candidates))
-
         for new_beam_candidate in new_beam_candidates:
             if new_beam_candidate:
                 self._debris_queue.enqueue(new_beam_candidate)
 
-        log.info('new candidates processed in %0.3f seconds', time.time() - s)
-
         if settings.detection.save_candidates:
             # Persist beam candidates to database
             self._debris_queue.save()
-
-        log.info('new candidates saved in %0.3f seconds', time.time() - s)
 
     def _get_beam_candidates_single(self, beams):
         """
@@ -97,11 +86,14 @@ class Detector(ProcessingModule):
 
         log.debug('Running space debris detection algorithm on %s beams in serial', len(beams))
 
+
         # Get the detected beam candidates
+        s = time.time()
         beam_candidates = [self._detect_space_debris_candidates(beam) for beam in beams]
+        log.info('detections in %0.4f seconds', time.time() - s)
 
         # Do not add beam candidates that a
-        return [candidate for candidate in beam_candidates if candidate]
+        return [candidate for sub_list in beam_candidates for candidate in sub_list if candidate]
 
     def _get_beam_candidates_parallel(self, beams):
         """

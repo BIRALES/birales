@@ -10,7 +10,9 @@ from pybirales.modules.detection.detection_clusters import DetectionCluster
 from pybirales.modules.detection.detection_candidates import BeamSpaceDebrisCandidate
 from sklearn.cluster import DBSCAN
 from pybirales.base import settings
+import time
 from pybirales.plotters.spectrogram_plotter import plotter
+from sklearn import linear_model
 
 
 class SpaceDebrisDetection(object):
@@ -320,6 +322,8 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         # Initialise the clustering algorithm
         self.db_scan = DBSCAN(eps=self._eps, min_samples=self._min_samples, algorithm=self._algorithm)
 
+        self._linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
+
     def detect(self, beam):
         clusters = self._create_clusters(beam)
         log.debug("%s detection clusters detected in beam %s", len(clusters), beam.id)
@@ -328,11 +332,6 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         log.debug("%s detection clusters remain after merging in beam %s", len(merged_clusters), beam.id)
 
         return merged_clusters
-
-        # space_debris_candidates = self._create_space_debris_candidates(beam, merged_clusters)
-        # log.debug("%s space debris candidates detected", len(space_debris_candidates))
-        #
-        # return space_debris_candidates
 
     def _create_clusters(self, beam):
         """
@@ -347,13 +346,15 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         if not np.any(data):
             return []
 
-        plotter.plot(beam.snr, 'detection/detection_db_scan', beam.id == 6)
         # Perform clustering on the data and returns cluster labels the points are associated with
         try:
             cluster_labels = self.db_scan.fit_predict(data)
         except ValueError:
-            log.warning('DBSCAN failed. Beam data is empty')
+            log.warning('DBSCAN failed')
             return []
+
+        plotter.plot(beam.snr, 'detection/detection_db_scan_' + str(time.time()), beam.id == 6,
+                     cluster_labels=cluster_labels)
 
         # Select only those labels which were not classified as noise (-1)
         filtered_cluster_labels = cluster_labels[cluster_labels > -1]
@@ -361,17 +362,20 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         # Group the data points in clusters
         clusters = []
         for label in np.unique(filtered_cluster_labels):
-            cluster_data = data[np.where(cluster_labels == label)]
+            data_indices = data[np.where(cluster_labels == label)]
 
-            try:
-                # Create a Detection Cluster from the cluster data
-                cluster = DetectionCluster(beam_id=beam.id, cluster_data=cluster_data)
+            channel_indices = data_indices[:, 1]
+            time_indices = data_indices[:, 0]
 
-                # Add only those clusters that are linear
-                if cluster.is_linear(threshold=0.9):
-                    clusters.append(cluster)
-            except ValueError:
-                log.debug('Linear interpolation failed. No inliers found.')
+            # Create a Detection Cluster from the cluster data
+            cluster = DetectionCluster(beam_id=beam.id,
+                                       time=beam.time[time_indices],
+                                       channels=beam.channels[channel_indices],
+                                       snr=beam.snr[(time_indices, channel_indices)])
+
+            # Add only those clusters that are linear
+            if cluster.is_linear(model=self._linear_model, threshold=0.9):
+                clusters.append(cluster)
 
         log.debug('DBSCAN detected %s clusters in beam %s, of which %s are linear',
                   len(np.unique(filtered_cluster_labels)),
