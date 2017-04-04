@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import logging as log
 from matplotlib import colors
+from pybirales.base import settings
 
 
 class SpectrogramPlotter:
@@ -14,6 +15,9 @@ class SpectrogramPlotter:
         ]
 
     def plot(self, data, filename, condition=True, cluster_labels=None):
+        if not settings.detection.save_candidates:
+            return
+
         categories = [self.colors[c] for c in cluster_labels]
 
         if condition:
@@ -29,6 +33,9 @@ class SpectrogramPlotter:
                 exit()
 
     def scatter(self, x, y, filename, condition=True):
+        if not settings.detection.save_candidates:
+            return
+
         if condition:
             try:
                 self.fig.clf()
