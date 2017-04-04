@@ -107,10 +107,6 @@ class Detector(ProcessingModule):
         # Run using N threads
         beam_candidates = self._thread_pool.map(self._detect_space_debris_candidates, beams)
 
-        # Close thread pool upon completion
-        # self._thread_pool.close()
-        # self._thread_pool.join()
-
         # Flatten list of beam candidates returned by the N threads
         return [candidate for sub_list in beam_candidates for candidate in sub_list if candidate]
 
@@ -121,9 +117,6 @@ class Detector(ProcessingModule):
         beam.apply_filters()
 
         # Run detection algorithm on the beam data to extract possible candidates
-        log.debug('Running detection algorithm on beam %s', beam.id)
         candidates = self.detection_strategy.detect(beam)
-
-        log.debug('%s candidates were detected in beam %s', len(candidates), beam.id)
 
         return candidates
