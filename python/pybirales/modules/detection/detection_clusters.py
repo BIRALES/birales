@@ -7,12 +7,6 @@ import logging as log
 
 
 class DetectionCluster:
-    m = None
-    c = None
-    data = None
-
-    _score = None
-    _model = None
 
     def __init__(self, beam_id, time, channels, snr):
         """
@@ -33,6 +27,10 @@ class DetectionCluster:
         self.time_data = time
         self.channel_data = channels
         self.snr_data = snr
+
+        self.m = None
+        self.c = None
+        self._score = None
 
         # todo - this needs to be converted to the absolute illumination time (not relative)
         self.illumination_time = np.min(self.time_data)
