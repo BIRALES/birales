@@ -100,4 +100,3 @@ class Persister(ProcessingModule):
         temp_array = np.abs(input_data[self._beam_range, self._channel_range, :].T).ravel()
         self._file.write(struct.pack('f' * len(temp_array), *temp_array))
         self._file.flush()
-        logging.info("Persisted data")

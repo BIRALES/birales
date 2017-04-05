@@ -34,13 +34,14 @@ class Receiver(Generator):
 
         # Sanity checks on configuration
         if {'nsamp', 'nants', 'nsubs', 'port', 'interface', 'frame_size',
-            'frames_per_block', 'nblocks', 'nbits', 'complex'} - set(config.settings()) != set():
+            'frames_per_block', 'nblocks', 'nbits', 'complex', 'npols'} - set(config.settings()) != set():
             raise PipelineError("Receiver: Missing keys on configuration "
-                                "(nsamp, nants, nsubs, ports, interface, frame_size, frames_per_block, nblocks)")
+                                "(nsamp, nants, nsubs, npols, ports, interface, frame_size, frames_per_block, nblocks)")
         self._nsamp = config.nsamp
         self._nants = config.nants
         self._nsubs = config.nsubs
         self._nbits = config.nbits
+        self._npols = config.npols
         self._complex = config.complex
         self._samples_per_second = settings.observation.samples_per_second
         self._start_time = 0
@@ -70,7 +71,8 @@ class Receiver(Generator):
     def generate_output_blob(self):
         """ Generate output data blob """
         # Generate blob
-        return ReceiverBlob(self._config, [('nsubs', self._nsubs),
+        return ReceiverBlob(self._config, [('npols', self._npols),
+                                           ('nsubs', self._nsubs),
                                            ('nsamp', self._nsamp),
                                            ('nants', self._nants)],
                             datatype=self._datatype)
@@ -97,6 +99,7 @@ class Receiver(Generator):
             obs_info['nsubs'] = self._nsubs
             obs_info['nsamp'] = self._nsamp
             obs_info['nants'] = self._nants
+            obs_info['npols'] = self._npols
 
             # Get output blob
             output_data = self.request_output_blob()
@@ -142,11 +145,11 @@ class Receiver(Generator):
         """ Initialise DAQ library """
 
         # Load library
-        self._daq = ctypes.CDLL("libaavsdaq.so")
+        self._daq = ctypes.CDLL("/opt/aavs/lib/libaavsdaq.so")
 
         # Define setReceiverConfiguration function
-        self._daq.setReceiverConfiguration.argtypes = [ctypes.c_uint16, ctypes.c_uint16, ctypes.c_uint8, ctypes.c_uint8,
-                                                       ctypes.c_uint16, ctypes.c_uint8, ctypes.c_uint16]
+        self._daq.setReceiverConfiguration.argtypes = [ctypes.c_uint16, ctypes.c_uint16, ctypes.c_uint16, ctypes.c_uint8,
+                                                       ctypes.c_uint8, ctypes.c_uint8]
         self._daq.setReceiverConfiguration.restype = None
 
         # Define startReceiver function

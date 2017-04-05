@@ -6,7 +6,7 @@ from pybirales.base.definitions import PipelineError, ObservationInfo
 from pybirales.base.processing_module import ProcessingModule
 from pybirales.blobs.dummy_data import DummyBlob
 from scipy.signal import chirp
-from pybirales.plotters.spectrogram_plotter import plotter
+#from pybirales.plotters.spectrogram_plotter import plotter
 
 
 class DummyDataGenerator(ProcessingModule):
@@ -73,7 +73,7 @@ class DummyDataGenerator(ProcessingModule):
         for i in range(self._nants):
             output_data[:, :, :, i] = ys
 
-            plotter.scatter(ys, ts, 'antenna_6_signal', i == 6)
+            #plotter.scatter(ys, ts, 'antenna_6_signal', i == 6)
 
         self._counter += 1
 

@@ -50,7 +50,7 @@ class PipelineManager(object):
         signal.signal(signal.SIGINT, self._signal_handler)
 
     # Capturing interrupt signal
-    def _signal_handler(self):
+    def _signal_handler(self, signum, frame):
         logging.info("Ctrl-C detected, stopping pipeline")
         self.stop_pipeline()
 
@@ -59,7 +59,7 @@ class PipelineManager(object):
         :param config_file: Configuration file path
         """
         parser = configparser.ConfigParser()
-        parser.read(config_file)
+        parser.read(unicode(config_file))
 
         # Temporary class to create section object in settings file
         class Section(object):

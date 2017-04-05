@@ -76,6 +76,7 @@ def standalone_test(configuration, debug):
     manager.add_module("pfb", pfb)
     manager.add_module("terminator", terminator)
 
+    manager.start_pipeline()
 
 @cli.command()
 @click.argument('configuration', default='config/birales.ini')
@@ -99,8 +100,9 @@ def test_receiver(configuration, debug):
     manager.add_module("ppf", ppf)
     manager.add_module("terminator", terminator)
 
-    manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
+    # manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
 
+    manager.start_pipeline()
 
 @cli.command()
 @click.argument('configuration', default='config/birales.ini')
@@ -127,8 +129,10 @@ def birales_pipeline(configuration, debug):
     manager.add_module("persister", persister)
 
     # Add plotters
-    manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
+    # manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
+    # manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
 
+    manager.start_pipeline()
 
 if __name__ == "__main__":
     cli()

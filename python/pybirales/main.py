@@ -45,7 +45,7 @@ def test_receiver(manager):
 
     # manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
     # manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
-    manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
+   # manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
 
 
 def birales_pipeline(manager):
@@ -62,7 +62,7 @@ def birales_pipeline(manager):
     manager.add_module("persister", persister)
 
     # Add plotters
-    manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
+    # manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
     # manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
 
 
@@ -112,7 +112,8 @@ if __name__ == "__main__":
 
     logging.info("PyBIRALES: Initialising")
 
-    birales_pipeline_with_post_processing(pipeline_manager)
+    #birales_pipeline_with_post_processing(pipeline_manager)
+    birales_pipeline(pipeline_manager)
 
     logging.info("PyBIRALES: Starting")
 

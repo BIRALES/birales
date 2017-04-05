@@ -130,7 +130,8 @@ class Pointing(Thread):
     def __init__(self, config, nsubs, nants):
 
         # Call superclass initialiser
-        super(Pointing, self).__init__(daemon=True)
+        super(Pointing, self).__init__()
+        self.daemon = True
 
         # Make sure that we have enough antenna locations
         if len(config.antenna_locations) != nants:
@@ -177,6 +178,9 @@ class Pointing(Thread):
         # Create initial weights
         self.weights = np.zeros((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
         self._temp_weights = np.zeros((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
+ 
+        # Ignore AstropyWarning
+        warnings.simplefilter('ignore', category=AstropyWarning)
 
     def run(self):
         """ Run thread """
