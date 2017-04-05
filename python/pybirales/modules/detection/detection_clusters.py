@@ -7,7 +7,6 @@ import logging as log
 
 
 class DetectionCluster:
-
     def __init__(self, beam_id, time, channels, snr):
         """
         Initialisation of the Detection cluster Object
@@ -32,7 +31,6 @@ class DetectionCluster:
         self.c = 0.0
         self._score = 0.0
 
-        # todo - this needs to be converted to the absolute illumination time (not relative)
         self.illumination_time = np.min(self.time_data)
 
     def is_linear(self, model, threshold):
@@ -141,7 +139,7 @@ class DetectionCluster:
                 'doppler_shift': self._get_doppler_shift(settings.observation.transmitter_frequency, frequency),
                 'snr': float(snr),
             } for frequency, elapsed_time, snr in zip(self.channel_data, self.time_data, self.snr_data)
-            ]
+        ]
 
     @staticmethod
     def _get_doppler_shift(transmission_frequency, reflected_frequency):
@@ -154,7 +152,6 @@ class DetectionCluster:
     @staticmethod
     def _time(time):
         # ref_time = self.beam.data_set.config['timestamp'] / 1000.
-
         return Time(time, format='unix')
 
     def _timestamp(self, elapsed_time):
@@ -165,9 +162,16 @@ class DetectionCluster:
         time = self._time(elapsed_time)
         return time.mjd
 
-    def __iter__(self):
-        yield '_id', self.id
-        yield 'detections', self.get_detections()
-        yield 'beam_id', self.beam_id
-        yield 'illumination_time', self.illumination_time
-        yield 'created_at', datetime.datetime.utcnow().isoformat()
+    def to_json(self):
+        return {
+            '_id': self.id,
+            'beam_id': self.beam_id,
+            'tx': settings.observation.transmitter_frequency,
+            'illumination_time': self.illumination_time,
+            'created_at': datetime.datetime.utcnow().isoformat(),
+            'data': {
+                'time': self.time_data.tolist(),
+                'channel': self.channel_data.tolist(),
+                'snr': self.snr_data.tolist(),
+            }
+        }

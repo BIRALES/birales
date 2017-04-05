@@ -1,6 +1,6 @@
 from pybirales.modules.detection.repository import BeamCandidateRepository
 import logging as log
-
+import time
 
 class BeamCandidatesQueue:
     def __init__(self, n_beams):
@@ -39,6 +39,8 @@ class BeamCandidatesQueue:
             self.queue[beam_id].pop()
 
     def save(self):
+        s = time.time()
+
         # get all clusters, across all queues, which have 'not saved'
         candidates_to_save = [candidate for queue in self.queue for candidate in queue if candidate.to_save]
 
@@ -47,12 +49,16 @@ class BeamCandidatesQueue:
 
         # delete old clusters that were merged
         if candidates_to_delete:
+            t1 = time.time()
             self.repository.delete(candidates_to_delete)
+            log.debug('%s candidates deleted in %0.4f s', len(candidates_to_delete), time.time() - t1)
 
         # add new clusters
         if candidates_to_save:
+            t2 = time.time()
             self.repository.persist(candidates_to_save)
+            log.debug('%s candidates saved in %0.4f s', len(candidates_to_save), time.time() - t2)
 
-        log.debug('Added %s candidates, Deleted %s candidates',
-                  len(candidates_to_save),
-                  len(candidates_to_delete))
+        log.info('Added %s candidates, Deleted %s candidates in %0.4f s',
+                 len(candidates_to_save),
+                 len(candidates_to_delete), time.time() - s)

@@ -5,7 +5,7 @@ import pymongo as mongo
 
 from abc import abstractmethod
 from pybirales.base import settings
-
+import time
 
 class Repository:
     def __init__(self):
@@ -276,18 +276,25 @@ class BeamCandidateRepository(Repository):
 
         try:
             # Convert beam objects to a dict representation
-            beam_candidates = [dict(candidate) for candidate in beam_candidates]
+            t1 = time.time()
+            to_save = [candidate.to_json() for candidate in beam_candidates]
+            log.debug('t1 in %0.4f s', time.time() - t1)
 
             # Save candidates to the database
             if len(beam_candidates) is 1:
-                self.database.beam_candidates.insert(beam_candidates[0])
+                self.database.beam_candidates.insert(to_save[0])
             else:
-                self.database.beam_candidates.insert_many(beam_candidates)
+                t2 = time.time()
+                self.database.beam_candidates.insert_many(to_save)
+                log.debug('t2 in %0.4f s', time.time() - t2)
 
         except mongo.errors.ServerSelectionTimeoutError:
             log.error('MongoDB is not running. Detected beam candidates could not be saved.')
         else:
             log.info('%s beam candidates were persisted', len(beam_candidates))
+
+            for beam_candidate in beam_candidates:
+                beam_candidate.to_save = False
 
     def get(self, beam_id, max_freq=None, min_freq=None, max_time=None, min_time=None):
         query = {"$and": [

@@ -80,7 +80,10 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
     def __init__(self):
         SpaceDebrisDetectionStrategy.__init__(self)
         # Initialise the clustering algorithm
-        self.db_scan = DBSCAN(eps=self._eps, min_samples=self._min_samples, algorithm=self._algorithm)
+        self.db_scan = DBSCAN(eps=self._eps,
+                              min_samples=self._min_samples,
+                              algorithm=self._algorithm,
+                              n_jobs=1)
 
         self._linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
 

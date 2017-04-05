@@ -56,9 +56,6 @@ class Detector(ProcessingModule):
             log.warning('Input data is empty')
             return
 
-        # Extract beams from the data set we are processing
-        log.debug('Extracting beam data')
-
         # Create the beams
         beams = [Beam(beam_id=n_beam, obs_info=obs_info, beam_data=input_data)
                  for n_beam in range(settings.beamformer.nbeams)]
@@ -114,7 +111,6 @@ class Detector(ProcessingModule):
 
         # Apply the pre-processing filters to the beam data
         beam.apply_filters()
-
         # Run detection algorithm on the beam data to extract possible candidates
         candidates = self.detection_strategy.detect(beam)
 
