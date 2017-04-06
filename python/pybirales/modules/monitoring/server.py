@@ -1,0 +1,45 @@
+from flask import Flask, render_template, jsonify, request
+import logging as log
+from logging.config import fileConfig
+from pybirales.modules.detection.repository import BeamCandidateRepository
+
+# Initialize the Flask application
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'secret!'
+app.config['DEBUG'] = True
+
+# Set logging configuration
+log.config.fileConfig('../../../configuration/logging.ini')
+beam_candidates_repo = BeamCandidateRepository()
+
+
+@app.route('/monitoring')
+def index():
+    """
+    Serve the client-side application
+
+    :return:
+    """
+    return render_template('index.html')
+
+
+@app.route('/monitoring/beam_candidates', methods=['GET', 'POST'])
+def get_beam_candidates():
+    beam_id = request.args.get('beam_id', type=int)
+    max_channel = request.args.get('max_channel', type=float)
+    min_channel = request.args.get('min_channel', type=float)
+
+    max_time = request.args.get('max_time', type=float)
+    min_time = request.args.get('min_time', type=float)
+
+    data = beam_candidates_repo.get(beam_id, max_channel, min_channel, max_time, min_time)
+
+    return jsonify(data)
+
+
+def run_server(port=5000):
+    app.run(debug=True, port=port)
+
+
+if __name__ == '__main__':
+    run_server()
