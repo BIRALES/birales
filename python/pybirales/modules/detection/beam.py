@@ -2,7 +2,6 @@ import numpy as np
 
 from pybirales.modules.detection.filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter
 from pybirales.modules.detection.repository import BeamDataRepository
-from pybirales.modules.monitoring.api.common.plotters import BeamMatplotlibPlotter
 from pybirales.base import settings
 import warnings
 
@@ -47,17 +46,6 @@ class Beam:
         self.time = np.linspace(0, self.time_samples * self.sampling_rate, num=self.time_samples)
         self.channels = np.arange(self.f_ch1, self.f_ch1 + self.f_off * self.n_channels, self.f_off)
         self.snr = self._set_snr(beam_data)
-
-    def visualize(self, title):
-        bp = BeamMatplotlibPlotter(fig_size=(16, 10),
-                                   fig_title='Waterfall',
-                                   plot_title=title,
-                                   x_limits='auto',
-                                   y_limits='auto',
-                                   x_label='Channel',
-                                   y_label='Time Sample',
-                                   data=self.snr)
-        bp.plot()
 
     def _set_snr(self, data):
         """

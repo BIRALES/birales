@@ -301,18 +301,23 @@ class BeamCandidateRepository(Repository):
         query = {"$and": []}
 
         if beam_id:
-            query['$and'].append({'beam_id': beam_id})
+            query["$and"].append({'beam_id': beam_id})
 
         if max_channel and min_channel:
-            query['$and'].append({'detections.frequency': {'$gte': float(min_channel)}})
-            query['$and'].append({'detections.frequency': {'$lte': float(max_channel)}})
+            query['$and'].append({'data.channel': {'$gte': float(min_channel)}})
+            query['$and'].append({'data.channel': {'$lte': float(max_channel)}})
 
         if max_time and min_time:
-            query['$and'].append({'detections.time_elapsed': {'$gte': float(min_time)}})
-            query['$and'].append({'detections.time_elapsed': {'$lte': float(max_time)}})
+            query = {
+                'created_at':
+                    {
+                        '$gte': min_time,
+                        '$lte': max_time
+                    }
+            }
 
         try:
-            beam_candidates = self.database.beam_candidates.find(query)
+            beam_candidates = self.database['beam_candidates'].find(query)
         except mongo.errors.ServerSelectionTimeoutError:
             log.error('MongoDB is not running. Could not retrieve candidates.')
         else:

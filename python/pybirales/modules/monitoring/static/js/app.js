@@ -5,7 +5,7 @@ var MultiBeam = function (observation, data_set) {
     this.data_set_name = undefined;
 
     this._plot_beam_illumination_order = function (selector, beam_firing_order) {
-        var template_url = 'views/beam_firing_order.mustache';
+        var template_url = 'templates/includes/beam_firing_order.mustache';
         $.get(template_url, function (template) {
             $('#' + selector).html(
                 Mustache.render(template, {
@@ -128,7 +128,7 @@ var MultiBeam = function (observation, data_set) {
     };
 
     this._plot_orbit_determination_data_table = function (selector, beam_candidates, data_set) {
-        var template_url = 'views/beam_candidate_table.mustache';
+        var template_url = 'templates/includes/beam_candidate_table.mustache';
 
         $.get(template_url, function (template) {
             $('#' + selector).empty();
@@ -148,7 +148,7 @@ var MultiBeam = function (observation, data_set) {
     };
 
     this._display_data_set_info_table = function (selector, data_set) {
-        var template_url = 'views/data_set_info_table.mustache';
+        var template_url = 'templates/includes/data_set_info_table.mustache';
         $.get(template_url, function (template) {
             $('#' + selector).html(
                 Mustache.render(template, {
@@ -418,7 +418,7 @@ var MultiBeam = function (observation, data_set) {
     };
 
     this._update_heading = function (observation_name, data_set_name) {
-        var template_url = 'views/main_heading.mustache';
+        var template_url = 'templates/includes/main_heading.mustache';
         var selector = 'observation-heading';
         $.get(template_url, function (template) {
             $('#' + selector).html(
@@ -477,7 +477,7 @@ var MultiBeam = function (observation, data_set) {
     };
 
     this.init = function () {
-        var template_url = 'views/data_sets_dropdown.mustache';
+        var template_url = 'templates/includes/data_sets_dropdown.mustache';
         var data_url = self.host + "/monitoring/observations";
         var selector = 'observations-drop_down';
         var observation_drop_down_selector = '.observation-drop-down';
