@@ -42,7 +42,7 @@ def get_beam_candidates():
     data = beam_candidates_repo.get(beam_id, max_channel, min_channel, max_time, min_time)
 
     # return jsonify(data[:10])
-    return Response(json.dumps(data[:10], default=json_util.default), mimetype='application/json; charset=utf-8')
+    return Response(json.dumps(data[:100], default=json_util.default), mimetype='application/json; charset=utf-8')
 
 
 def run_server(port=5000):
