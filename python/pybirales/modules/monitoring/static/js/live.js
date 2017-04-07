@@ -11,8 +11,8 @@ var LivePlotter = function (observation, data_set) {
     this._max_channel = 410.99;
     this._min_channel = 390.99;
 
-    this._max_time = 9000.0;
-    this._min_time = 3500.0;
+    this._max_time = '2017-04-08 10:00:00';
+    this._min_time = '2017-04-07 12:00:00';
 
     this._plot_beam_candidates = function (selector, beam_candidates) {
         var title = 'Detected Beam Candidates';
@@ -22,7 +22,7 @@ var LivePlotter = function (observation, data_set) {
         var traces = [];
 
         var min_time = new Date().toUTCString();
-        var max_time = new Date().toUTCString();
+        var max_time = new Date('2017-01-01');
         $.each(beam_candidates, function (j, beam_candidate) {
             var beam_candidates_trace = {
                 x: beam_candidate['data']['channel'],
@@ -121,7 +121,7 @@ var LivePlotter = function (observation, data_set) {
         });
     };
 
-    this.update = function() {
+    this.update = function () {
         self.publish(self._max_channel, self._min_channel, self._max_time, self._min_time);
     };
 

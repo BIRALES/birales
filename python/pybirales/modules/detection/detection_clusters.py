@@ -7,17 +7,18 @@ import logging as log
 
 
 class DetectionCluster:
-    def __init__(self, beam_id, time, channels, snr):
+    def __init__(self, beam, time, channels, snr):
         """
         Initialisation of the Detection cluster Object
 
-        :param beam_id:
+        :param beam:
         :param time:
         :param channels:
         :param snr:
         """
 
-        self.beam_id = beam_id
+        self.beam = beam
+        self.beam_id = beam.id
         self._processed_time = datetime.datetime.utcnow()
         self.id = str(self.beam_id) + '.' + self._processed_time.isoformat()
         self.to_delete = False
@@ -102,7 +103,7 @@ class DetectionCluster:
 
     def merge(self, cluster):
         # Return a new Detection Cluster with the merged data
-        return DetectionCluster(beam_id=cluster.beam_id,
+        return DetectionCluster(beam=cluster.beam,
                                 time=np.concatenate([self.time_data, cluster.time_data]),
                                 channels=np.concatenate([self.channel_data, cluster.channel_data]),
                                 snr=np.concatenate([self.snr_data, cluster.snr_data]))
@@ -139,7 +140,7 @@ class DetectionCluster:
                 'doppler_shift': self._get_doppler_shift(settings.observation.transmitter_frequency, frequency),
                 'snr': float(snr),
             } for frequency, elapsed_time, snr in zip(self.channel_data, self.time_data, self.snr_data)
-        ]
+            ]
 
     @staticmethod
     def _get_doppler_shift(transmission_frequency, reflected_frequency):
@@ -152,7 +153,9 @@ class DetectionCluster:
     @staticmethod
     def _time(time):
         # ref_time = self.beam.data_set.config['timestamp'] / 1000.
-        return Time(time, format='unix')
+
+        return time
+        # return Time(time, format='unix')
 
     def _timestamp(self, elapsed_time):
         time = self._time(elapsed_time)
@@ -163,6 +166,7 @@ class DetectionCluster:
         return time.mjd
 
     def to_json(self):
+        dt = datetime.timedelta(seconds=self.beam.dt)
         return {
             '_id': self.id,
             'beam_id': self.beam_id,
@@ -170,7 +174,7 @@ class DetectionCluster:
             'illumination_time': self.illumination_time,
             'created_at': datetime.datetime.utcnow(),
             'data': {
-                'time': self.time_data.tolist(),
+                'time': [str(self.beam.t_0 + dt*t) for t in self.time_data],
                 'channel': self.channel_data.tolist(),
                 'snr': self.snr_data.tolist(),
             }

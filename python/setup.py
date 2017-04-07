@@ -32,6 +32,7 @@ setup(
                       "pymongo",
                       "scipy",
                       "scikit-learn",
+                      "h5py",
                       "click"],
 )
 

@@ -123,6 +123,8 @@ class Beamformer(ProcessingModule):
         logging.debug("Input data: %s shape: %s", np.sum(input_data), input_data.shape)
         logging.debug("Output data: %s shape: %s", np.sum(output_data), output_data.shape)
 
+        return obs_info
+
 
 class Pointing(Thread):
     """ Pointing class which periodically updates pointing weights """

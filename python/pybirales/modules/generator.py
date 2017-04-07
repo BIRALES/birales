@@ -1,12 +1,15 @@
 import logging
 import numpy as np
 import time
+import datetime
 
 from pybirales.base.definitions import PipelineError, ObservationInfo
 from pybirales.base.processing_module import ProcessingModule
 from pybirales.blobs.dummy_data import DummyBlob
 from scipy.signal import chirp
-#from pybirales.plotters.spectrogram_plotter import plotter
+from pybirales.base import settings
+
+# from pybirales.plotters.spectrogram_plotter import plotter
 
 
 class DummyDataGenerator(ProcessingModule):
@@ -80,8 +83,8 @@ class DummyDataGenerator(ProcessingModule):
 
         # Create observation information
         obs_info = ObservationInfo()
-        obs_info['sampling_time'] = 0.0
-        obs_info['timestamp'] = 0.0
+        obs_info['sampling_time'] = 1. / settings.observation.samples_per_second
+        obs_info['timestamp'] = datetime.datetime.utcnow()
         obs_info['nsubs'] = self._nsubs
         obs_info['nsamp'] = self._nsamp
         obs_info['nants'] = self._nants

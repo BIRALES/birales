@@ -131,7 +131,7 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
             time_indices = data_indices[:, 0]
 
             # Create a Detection Cluster from the cluster data
-            cluster = DetectionCluster(beam_id=beam.id,
+            cluster = DetectionCluster(beam=beam,
                                        time=beam.time[time_indices],
                                        channels=beam.channels[channel_indices],
                                        snr=beam.snr[(time_indices, channel_indices)])
