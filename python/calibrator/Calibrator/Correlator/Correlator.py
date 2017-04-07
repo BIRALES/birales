@@ -37,7 +37,7 @@ class Correlator:
 
     def run_cross_corr(self):
 
-        self.corr_m = np.zeros((self.nchans, self.nbasl, self.ncross))
+        self.corr_m = np.zeros((self.nchans, self.nbasl, self.ncross), dtype=np.complex)
         
         if self.npol == 1:
             for c in range(self.nchans):
@@ -81,10 +81,9 @@ class Correlator:
 
         if self.time == 0:
             f = h5py.File(filename, "w")
-            tripleDig = [format(x, "04d") for x in [self.time]]
-            name = "Vis_" + str(tripleDig[0])
-            dset = f.create_dataset(name, (self.nchans, self.nbasl, self.ncross)) 
-            dset[:,:,:] = self.corr_m[:,:,:]
+            name = "Vis"
+            dset = f.create_dataset(name, (self.obstime, self.nchans, self.nbasl, self.ncross), dtype='c16') 
+            dset[self.time,:,:,:] = self.corr_m[:,:,:]
             dset2 = f.create_dataset("Baselines", (len(self.antenna2), 3))
             dset2[:,:] = np.transpose([self.basl_no, self.antenna1, self.antenna2])
             f.flush()
@@ -92,10 +91,8 @@ class Correlator:
 
         if self.time > 0:
             f = h5py.File(filename, "a")
-            tripleDig = [format(x, "04d") for x in [self.time]]
-            name = "Vis_" + str(tripleDig[0])
-            dset = f.create_dataset(name, (self.nchans, self.nbasl, self.ncross))
-            dset[:,:,:] = self.corr_m[:,:,:]
+            dset = f["Vis"]
+            dset[self.time,:,:,:] = self.corr_m[:,:,:]
             f.flush()
             f.close()
 
