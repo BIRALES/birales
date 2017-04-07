@@ -195,5 +195,31 @@ def correlator_test(configuration, debug):
     manager.start_pipeline()
 
 
+@cli.command()
+@click.argument('configuration', default='config/birales.ini')
+@click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
+def correlator_pipeline(configuration, debug):
+    """
+    This script runs the correlator test pipeline,
+    using the specified CONFIGURATION.
+    """
+
+    # Initialise the Pipeline Manager
+    manager = PipelineManager(configuration, debug)
+
+    # Generate processing modules and data blobs
+    receiver = DummyDataGenerator(settings.receiver)
+    correlator = Correlator(settings.correlator, receiver.output_blob)
+    persister = CorrMatrixPersister(settings.corrmatrixpersister, correlator.output_blob)
+
+    # Add modules to pipeline manager
+    manager.add_module("receiver", receiver)
+    manager.add_module("correlator", correlator)
+    manager.add_module("persister", persister)
+
+    manager.start_pipeline()
+
+
+
 if __name__ == "__main__":
     cli()
