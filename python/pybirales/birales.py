@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import click
 
+from pybirales.modules.corr_matrix_persister import CorrMatrixPersister
 from pybirales.modules.correlator import Correlator
 from pybirales.modules.terminator import Terminator
 from pybirales.base.pipeline_manager import PipelineManager
@@ -184,12 +185,12 @@ def correlator_test(configuration, debug):
     # Generate processing modules and data blobs
     generator = DummyDataGenerator(settings.generator)
     correlator = Correlator(settings.correlator, generator.output_blob)
-    terminator = Terminator(settings.terminator, correlator.output_blob)
+    persister = CorrMatrixPersister(settings.corrmatrixpersister, correlator.output_blob)
 
     # Add modules to pipeline manager
     manager.add_module("generator", generator)
     manager.add_module("correlator", correlator)
-    manager.add_module("terminator", terminator)
+    manager.add_module("persister", persister)
 
     manager.start_pipeline()
 

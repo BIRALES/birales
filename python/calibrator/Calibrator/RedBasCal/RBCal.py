@@ -4,9 +4,8 @@ import h5py
 
 
 class RBCal:
-
     def __init__(self):
-         
+
         self.data = None
         self.reals = []
         self.imags = []
@@ -21,7 +20,7 @@ class RBCal:
 
     def load_RBs(self, filename):
 
-        RBs = np.loadtxt(filename)
+        RBs = np.loadtxt(filename, dtype=np.int)
         self.RB_index = RBs[:, 0]
         self.RB_ants1 = RBs[:, 1]
         self.RB_ants2 = RBs[:, 2]
@@ -31,23 +30,23 @@ class RBCal:
 
         f = h5py.File(filename, "r")
         data = f["Vis"]
-        data_out = np.zeros((1,len(self.RB_index),1), dtype=np.complex)
+        data_out = np.zeros((1, len(self.RB_index), 1), dtype=np.complex)
 
         # Per-Baseline Integration in Time
         for i in range(len(self.RB_index)):
-            data_out[0,i,0] = (sum(data[:,0,i,0]))
+            data_out[0, i, 0] = (sum(data[:, 0, i, 0]))
         self.data = data_out
-        
+
         # Forming A Configuration Matrix
         ant_no = max(self.RB_ants2) + 1
         bas_no = max(self.RB_index) + 1
 
-        A = np.zeros((len(self.RB_index),(ant_no + bas_no)))
+        A = np.zeros((len(self.RB_index), int(ant_no + bas_no)))
 
         for i in range(len(self.RB_index)):
-            A[i,(self.RB_ants1[i])] = 1
-            A[i,(self.RB_ants2[i])] = 1
-            A[i,(ant_no + self.RB_index[i])] = 1
+            A[i, (self.RB_ants1[i])] = 1
+            A[i, (self.RB_ants2[i])] = 1
+            A[i, (ant_no + self.RB_index[i])] = 1
 
         # Forming Real and Imag Data
 
@@ -57,25 +56,25 @@ class RBCal:
         self.imag_data = []
 
         for i in range(len(self.RB_index)):
-            reals = self.data[0,int(self.RB_index[i]),0].real
-            imags = self.data[0,int(self.RB_index[i]),0].imag
+            reals = self.data[0, int(self.RB_index[i]), 0].real
+            imags = self.data[0, int(self.RB_index[i]), 0].imag
 
             self.reals.append(reals)
             self.imags.append(imags)
             self.real_data.append(np.log((ma.pow((np.float(reals)), 2)) + (ma.pow((np.float(imags)), 2))))
-            self.imag_data.append(np.degrees(np.arctan(np.float(imags)/np.float(reals))))
+            self.imag_data.append(np.degrees(np.arctan(np.float(imags) / np.float(reals))))
 
         self.real_data = np.array(self.real_data)
         self.imag_data = np.array(self.imag_data)
 
-        #self.reals = np.array(self.reals)
-        #self.imags = np.array(self.imags)
+        # self.reals = np.array(self.reals)
+        # self.imags = np.array(self.imags)
 
         # Forming N Cov Matrix
 
         N_R = np.zeros((len(self.RB_index), len(self.RB_index)))
-	N_I = np.zeros((len(self.RB_index), len(self.RB_index)))
-	for i in range(len(self.RB_index)):
+        N_I = np.zeros((len(self.RB_index), len(self.RB_index)))
+        for i in range(len(self.RB_index)):
             self.RB_group = np.array(self.RB_group)
             indices = np.where(self.RB_group == self.RB_group[int(self.RB_index[i])])[0]
             redbasl_data_r = []
@@ -91,29 +90,31 @@ class RBCal:
             redbasl_diff_r = []
             redbasl_diff_i = []
             for k in indices:
-                redbasl_diff_r.append((self.real_data[int(self.RB_index[k])] - redbasl_mean_r)**2)
-                redbasl_diff_i.append((self.imag_data[int(self.RB_index[k])] - redbasl_mean_i)**2)
+                redbasl_diff_r.append((self.real_data[int(self.RB_index[k])] - redbasl_mean_r) ** 2)
+                redbasl_diff_i.append((self.imag_data[int(self.RB_index[k])] - redbasl_mean_i) ** 2)
             redbasl_diff_total_r = np.sum(redbasl_diff_r)
             redbasl_diff_total_i = np.sum(redbasl_diff_i)
-            spread_r = (1/np.float(len(indices))) * redbasl_diff_total_r
-            spread_i = (1/np.float(len(indices))) * redbasl_diff_total_i  
-            N_R[i,i] = spread_r/(self.real_data[int(self.RB_index[i])]**2)
-            N_I[i,i] = spread_i/(self.imag_data[int(self.RB_index[i])]**2)
+            spread_r = (1 / np.float(len(indices))) * redbasl_diff_total_r
+            spread_i = (1 / np.float(len(indices))) * redbasl_diff_total_i
+            N_R[i, i] = spread_r / (self.real_data[int(self.RB_index[i])] ** 2)
+            N_I[i, i] = spread_i / (self.imag_data[int(self.RB_index[i])] ** 2)
 
         print(N_I)
-        
+
         # Solving for x_coeff with Least Squares Estimation
         A_trans = [list(i) for i in zip(*A)]
         A_trans = np.array(A_trans)
-	N_inv_R = np.linalg.pinv(N_R)
-	N_inv_I = np.linalg.pinv(N_I)
+        N_inv_R = np.linalg.pinv(N_R)
+       # N_inv_I = np.linalg.pinv(N_I)
 
-        gain_coeff = (np.dot((np.linalg.pinv(np.dot((np.dot(A_trans,N_inv_R)),A))),(np.dot((np.dot(A_trans,N_inv_R)),self.real_data))))
-	phase_coeff = (np.dot((np.linalg.pinv(np.dot((np.dot(A_trans,N_inv_I)),A))),(np.dot((np.dot(A_trans,N_inv_I)),self.imag_data))))
+        gain_coeff = (np.dot((np.linalg.pinv(np.dot((np.dot(A_trans, N_inv_R)), A))),
+                             (np.dot((np.dot(A_trans, N_inv_R)), self.real_data))))
+        # phase_coeff = (np.dot((np.linalg.pinv(np.dot((np.dot(A_trans, N_inv_I)), A))),
+        #                       (np.dot((np.dot(A_trans, N_inv_I)), self.imag_data))))
 
-        #gain_coeff=(np.dot((np.dot((np.dot((np.linalg.pinv(np.dot((np.dot(A_trans,N_inv_R)),A))),A_trans)),N_inv_R)),self.real_data))
-	#phase_coeff=(np.dot((np.dot((np.dot((np.linalg.pinv(np.dot((np.dot(A_trans,N_inv_I)),A))),A_trans)),N_inv_I)),self.imag_data))
-        
+        # gain_coeff=(np.dot((np.dot((np.dot((np.linalg.pinv(np.dot((np.dot(A_trans,N_inv_R)),A))),A_trans)),N_inv_R)),self.real_data))
+        # phase_coeff=(np.dot((np.dot((np.dot((np.linalg.pinv(np.dot((np.dot(A_trans,N_inv_I)),A))),A_trans)),N_inv_I)),self.imag_data))
+
         gains = gain_coeff[0:ant_no]
         minimum_pv = min(gains)
         maximum_pv = max(gains)
@@ -123,26 +124,20 @@ class RBCal:
             if gains[i] >= 0:
                 gains[i] = (np.float(gains[i] - minimum_pv) / np.float(maximum_pv - minimum_pv)) * 2.0
             if gains[i] < 0:
-                gains[i] = (np.float(gains[i] - minimum_nv) / np.float(maximum_nv - minimum_nv)) - 1.0     
+                gains[i] = (np.float(gains[i] - minimum_nv) / np.float(maximum_nv - minimum_nv)) - 1.0
         self.gain_coeff = gains
 
-        self.phase_coeff = phase_coeff[0:ant_no]
-        print(self.gain_coeff)         
-        
+      #  self.phase_coeff = phase_coeff[0:ant_no]
+        print(self.gain_coeff)
+
     def parse_coeff(self, filename1, filename2):
 
         text_file = open(filename1, "w")
-        for i in range(len(self.gain_coeff)):   
+        for i in range(len(self.gain_coeff)):
             text_file.write(str(i) + ' ' + str(self.gain_coeff[i]) + '\n')
         text_file.close()
 
-        text_file = open(filename2, "w")
-        for i in range(len(self.phase_coeff)):   
-            text_file.write(str(i) + ' ' + str(self.phase_coeff[i]) + '\n')
-        text_file.close()          
-        
-
-        
-        
-        
-        
+        # text_file = open(filename2, "w")
+        # for i in range(len(self.phase_coeff)):
+        #     text_file.write(str(i) + ' ' + str(self.phase_coeff[i]) + '\n')
+        # text_file.close()
