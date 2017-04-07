@@ -7,13 +7,15 @@ from pybirales.base.definitions import PipelineError
 from pybirales.base.plotter import Plotter
 from pybirales.blobs.receiver_data import ReceiverBlob
 
+from pybirales.blobs.dummy_data import DummyBlob
+
 
 class AntennaPlotter(Plotter):
     def __init__(self, config, input_blob, figure):
 
         # Make sure that the input data blob is what we're expecting
-        if type(input_blob) is not ReceiverBlob:
-            raise PipelineError("AntennaPlotter: Invalid input data type, should be ChannelisedBlob")
+        if type(input_blob) not in [ReceiverBlob, DummyBlob]:
+            raise PipelineError("AntennaPlotter: Invalid input data type, should be ReceiverBlob or DummyBlob")
 
         # Call superclass initialiser
         super(AntennaPlotter, self).__init__(config, input_blob, figure)
@@ -51,7 +53,8 @@ class AntennaPlotter(Plotter):
             if 'nof_samples' in self._config.settings():
                 nof_samples = self._config.nof_samples
 
-        return slice(self._subbands_to_plot[0], self._subbands_to_plot[-1] + 1), \
+        return slice(0, 1, None), \
+               slice(self._subbands_to_plot[0], self._subbands_to_plot[-1] + 1), \
                slice(nof_samples), \
                slice(self._antennas_to_plot[0], self._antennas_to_plot[-1] + 1)
 
@@ -66,19 +69,17 @@ class AntennaPlotter(Plotter):
         :param input_data: Input data to plot
         :param obs_info: Observation information """
 
-        # Loop over all beams to plot
+        # Loop over all antennas to plot
         self._figure.clf()
         plt.title("Antena plot")
 
         for index, antenna in enumerate(self._antennas_to_plot):
-            plt.plot(np.absolute(input_data[0, :, index]), label="Antenna %d" % antenna)
+            plt.plot(np.absolute(input_data[0, 0, :, index]), label="Antenna %d" % antenna)
             plt.xlabel("Time")
             plt.ylabel("Power")
-            plt.xlim([0, input_data.shape[1]])
+            plt.xlim([0, input_data.shape[2]])
 
         plt.legend()
         self._figure.canvas.draw()
         self._figure.canvas.flush_events()
         plt.show(block=False)
-
-        logging.info("AntennaPlotter: Updated plot")

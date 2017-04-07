@@ -168,7 +168,7 @@ class DetectionCluster:
             'beam_id': self.beam_id,
             'tx': settings.observation.transmitter_frequency,
             'illumination_time': self.illumination_time,
-            'created_at': datetime.datetime.utcnow().isoformat(),
+            'created_at': datetime.datetime.utcnow(),
             'data': {
                 'time': self.time_data.tolist(),
                 'channel': self.channel_data.tolist(),

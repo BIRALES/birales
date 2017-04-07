@@ -1,15 +1,15 @@
-import configparser
 import ast
-import re
 import logging
-import time
+import re
 import signal
+import time
+from logging.config import fileConfig as set_log_config
+
+import configparser
+from matplotlib import pyplot as plt
 
 from pybirales.base import settings
-from sys import stdout
 from pybirales.base.definitions import PipelineError
-from matplotlib import pyplot as plt
-from logging.config import fileConfig as set_log_config
 
 
 class PipelineManager(object):
@@ -18,7 +18,7 @@ class PipelineManager(object):
     def __init__(self, config_file, debug=False):
         logging.info("PyBIRALES: Initialising")
 
-        """ Class constructor """
+        # Class constructor
         self._modules = []
         self._plotters = []
         self._module_names = []
@@ -157,6 +157,7 @@ class PipelineManager(object):
         while True:
             for plotter in self._plotters:
                 plotter.update_plot()
+                logging.info("{} updated".format(plotter.__class__.__name__))
             time.sleep(self._plot_update_rate)
 
     def stop_pipeline(self):

@@ -1,15 +1,15 @@
-import numpy as np
-import logging
-from multiprocessing.pool import ThreadPool
-import numba
-import math
 from pybirales.base.definitions import PipelineError
 from pybirales.base.processing_module import ProcessingModule
 from pybirales.blobs.beamformed_data import BeamformedBlob
 from pybirales.blobs.channelised_data import ChannelisedBlob
 from pybirales.blobs.dummy_data import DummyBlob
 from pybirales.blobs.receiver_data import ReceiverBlob
-from pybirales.plotters.spectrogram_plotter import plotter
+
+from multiprocessing.pool import ThreadPool
+import numpy as np
+import logging
+import numba
+import math
 
 
 @numba.jit(nopython=True, nogil=True)
@@ -104,7 +104,7 @@ class PFB(ProcessingModule):
         self._generate_filter()
 
         # Create temporary array for filtered data
-        self._filtered = np.zeros((self._nbeams, self._nsubs, self._nchans, int(self._nsamp / self._nchans)),
+        self._filtered = np.zeros((self._npols, self._nbeams, self._nsubs, self._nchans, int(self._nsamp / self._nchans)),
                                   dtype=np.complex64)
 
         # Create temporary input array
@@ -135,7 +135,7 @@ class PFB(ProcessingModule):
         self._current_output = output_data
 
         # Update temporary input array
-        self._temp_input[:, :, :self._nchans * self._ntaps] = self._temp_input[:, :, -self._nchans * self._ntaps:]
+        self._temp_input[:, :, :, :self._nchans * self._ntaps] = self._temp_input[:, :, :, -self._nchans * self._ntaps:]
 
         # Format channeliser input depending on where it was placed in pipeline
         if self._after_beamformer:
@@ -181,31 +181,31 @@ class PFB(ProcessingModule):
             for c in range(self._nsubs):
                 # Apply filter
                 apply_fir_filter(self._temp_input[p, beam, c, :], self._filter,
-                                 self._filtered[beam, c, :], self._ntaps, self._nchans)
+                                 self._filtered[p, beam, c, :], self._ntaps, self._nchans)
 
                 # Fourier transform and save output
                 self._current_output[p, beam, c * self._nchans: (c + 1) * self._nchans] = \
-                    np.flipud(np.fft.fftshift(np.fft.fft(self._filtered[beam, c, :], axis=0), axes=0))
+                    np.flipud(np.fft.fftshift(np.fft.fft(self._filtered[p, beam, c, :], axis=0), axes=0))
 
     def channelise_parallel(self):
         """
        Perform channelisation, parallel version
        :return:
        """
-
         self._thread_pool.map(self.channelise_thread, range(self._nbeams))
 
-    def channelise(self):
+    def channelise_serial(self):
         """
         Perform channelisation, serial version
         :return:
         """
-        for b in range(self._nbeams):
-            for c in range(self._nsubs):
-                # Apply filter
-                apply_fir_filter(self._temp_input[b, c, :], self._filter,
-                                 self._filtered[b, c, :], self._ntaps, self._nchans)
+        for p in range(self._npols):
+            for b in range(self._nbeams):
+                for c in range(self._nsubs):
+                    # Apply filter
+                    apply_fir_filter(self._temp_input[p, b, c, :], self._filter,
+                                     self._filtered[p, b, c, :], self._ntaps, self._nchans)
 
-                # Fourier transform and save output
-                self._current_output[b, c * self._nchans: (c + 1) * self._nchans] = \
-                    np.abs(np.fft.fft(self._filtered[b, c, :], axis=0))
+                    # Fourier transform and save output
+                    self._current_output[b, c * self._nchans: (c + 1) * self._nchans] = \
+                        np.abs(np.fft.fft(self._filtered[p, b, c, :], axis=0))

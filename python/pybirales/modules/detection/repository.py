@@ -7,10 +7,11 @@ from abc import abstractmethod
 from pybirales.base import settings
 import time
 
+
 class Repository:
     def __init__(self):
-        self.host = settings.detection.db_host
-        self.port = settings.detection.db_port
+        self.host = 'localhost'
+        self.port = 27017
         self.client = mongo.MongoClient(self.host, self.port)
         self.database = self.client['birales']
 
@@ -296,21 +297,27 @@ class BeamCandidateRepository(Repository):
             for beam_candidate in beam_candidates:
                 beam_candidate.to_save = False
 
-    def get(self, beam_id, max_freq=None, min_freq=None, max_time=None, min_time=None):
-        query = {"$and": [
-            {'beam_id': beam_id}
-        ]}
+    def get(self, beam_id=None, max_channel=None, min_channel=None, max_time=None, min_time=None):
+        query = {"$and": []}
 
-        if max_freq and min_freq:
-            query['$and'].append({'detections.frequency': {'$gte': float(min_freq)}})
-            query['$and'].append({'detections.frequency': {'$lte': float(max_freq)}})
+        if beam_id:
+            query["$and"].append({'beam_id': beam_id})
+
+        if max_channel and min_channel:
+            query['$and'].append({'data.channel': {'$gte': float(min_channel)}})
+            query['$and'].append({'data.channel': {'$lte': float(max_channel)}})
 
         if max_time and min_time:
-            query['$and'].append({'detections.time_elapsed': {'$gte': float(min_time)}})
-            query['$and'].append({'detections.time_elapsed': {'$lte': float(max_time)}})
+            query = {
+                'created_at':
+                    {
+                        '$gte': min_time,
+                        '$lte': max_time
+                    }
+            }
 
         try:
-            beam_candidates = self.database.beam_candidates.find(query)
+            beam_candidates = self.database['beam_candidates'].find(query)
         except mongo.errors.ServerSelectionTimeoutError:
             log.error('MongoDB is not running. Could not retrieve candidates.')
         else:

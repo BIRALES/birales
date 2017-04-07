@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import click
 
+from pybirales.modules.correlator import Correlator
 from pybirales.modules.terminator import Terminator
 from pybirales.base.pipeline_manager import PipelineManager
 from pybirales.base import settings
@@ -12,7 +13,9 @@ from pybirales.modules.receiver import Receiver
 from pybirales.modules.detector import Detector
 from pybirales.plotters.bandpass_plotter import BandpassPlotter
 from pybirales.plotters.antenna_plotter import AntennaPlotter
+from pybirales.plotters.beam_plotter import BeamformedDataPlotter
 from pybirales.plotters.channel_plotter import ChannelisedDataPlotter
+from pybirales.plotters.raw_data_grid_plotter import RawDataGridPlotter
 
 
 @click.group()
@@ -47,8 +50,6 @@ def detection_pipeline(configuration, debug):
     manager.add_module("ppf", ppf)
     manager.add_module("detector", detector)
 
-    # manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
-
     manager.start_pipeline()
 
 
@@ -76,7 +77,10 @@ def standalone_test(configuration, debug):
     manager.add_module("pfb", pfb)
     manager.add_module("terminator", terminator)
 
+    manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, pfb.output_blob)
+
     manager.start_pipeline()
+
 
 @cli.command()
 @click.argument('configuration', default='config/birales.ini')
@@ -103,6 +107,36 @@ def test_receiver(configuration, debug):
     # manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
 
     manager.start_pipeline()
+
+
+@cli.command()
+@click.argument('configuration', default='config/birales.ini')
+@click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
+def channeliser_test(configuration, debug):
+    """
+    This script runs the test receiver pipeline,
+    using the specified CONFIGURATION.
+    """
+
+    # Initialise the Pipeline Manager
+    manager = PipelineManager(configuration, debug)
+
+    # Initialise the modules
+    generator = DummyDataGenerator(settings.generator)
+    beamformer = Beamformer(settings.beamformer, generator.output_blob)
+    ppf = PFB(settings.channeliser, beamformer.output_blob)
+    persister = Persister(settings.persister, ppf.output_blob)
+
+    # Add modules to pipeline manager
+    manager.add_module("generator", generator)
+    manager.add_module("ppf", ppf)
+    manager.add_module("beamformer", beamformer)
+    manager.add_module("persister", persister)
+
+    manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
+
+    manager.start_pipeline()
+
 
 @cli.command()
 @click.argument('configuration', default='config/birales.ini')
@@ -133,6 +167,32 @@ def birales_pipeline(configuration, debug):
     # manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
 
     manager.start_pipeline()
+
+
+@cli.command()
+@click.argument('configuration', default='config/birales.ini')
+@click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
+def correlator_test(configuration, debug):
+    """
+    This script runs the correlator test pipeline,
+    using the specified CONFIGURATION.
+    """
+
+    # Initialise the Pipeline Manager
+    manager = PipelineManager(configuration, debug)
+
+    # Generate processing modules and data blobs
+    generator = DummyDataGenerator(settings.generator)
+    correlator = Correlator(settings.correlator, generator.output_blob)
+    terminator = Terminator(settings.terminator, correlator.output_blob)
+
+    # Add modules to pipeline manager
+    manager.add_module("generator", generator)
+    manager.add_module("correlator", correlator)
+    manager.add_module("terminator", terminator)
+
+    manager.start_pipeline()
+
 
 if __name__ == "__main__":
     cli()

@@ -115,5 +115,3 @@ class ChannelisedDataPlotter(Plotter):
         self._figure.canvas.draw()
         self._figure.canvas.flush_events()
         plt.show(block=False)
-
-        logging.info("ChannelisedDataPlotter: Updated plot")

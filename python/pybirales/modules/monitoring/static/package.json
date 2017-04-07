@@ -1,0 +1,18 @@
+{
+  "name": "BIRALES",
+  "version": "1.0.0",
+  "description": "front-end app for the birales post processing pipeline",
+  "main": "index.js",
+  "scripts": {
+    "test": ""
+  },
+  "author": "Denis Cutajar",
+  "license": "ISC",
+  "dependencies": {
+    "bootstrap": "^3.3.7",
+    "font-awesome": "^4.7.0",
+    "jquery": "^3.1.1",
+    "mustache": "^2.3.0",
+    "plotly.js": "^1.19.2"
+  }
+}

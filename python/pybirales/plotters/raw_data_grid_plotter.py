@@ -44,7 +44,7 @@ class RawDataGridPlotter(Plotter):
             if 'nof_samples' in self._config.settings():
                 nof_samples = self._config.nof_samples
 
-        return slice(None), slice(nof_samples), slice(self._antennas_to_plot[0], self._antennas_to_plot[-1] + 1)
+        return slice(0, 1, None), slice(None), slice(nof_samples), slice(self._antennas_to_plot[0], self._antennas_to_plot[-1] + 1)
 
     def initialise_plot(self):
         """ Initialise plot """
@@ -78,8 +78,8 @@ class RawDataGridPlotter(Plotter):
         # Loop over all antennas to plot
         for index, antenna in enumerate(self._antennas_to_plot):
             self._axes[index].cla()
-            self._axes[index].plot(np.abs(input_data[0, :, index]))
-            self._axes[index].set_xlim([0, input_data.shape[1]])
+            self._axes[index].plot(np.abs(input_data[0, 0, :, index]))
+            self._axes[index].set_xlim([0, input_data.shape[2]])
             self._axes[index].set_xlabel("Time")
             self._axes[index].set_ylabel("Channel")
             self._axes[index].set_title("Antenna %d" % antenna)
@@ -88,5 +88,3 @@ class RawDataGridPlotter(Plotter):
         self._figure.canvas.draw()
         self._figure.canvas.flush_events()
         plt.show(block=False)
-
-        logging.info("RawDataGridPlotter: Updated plot")
