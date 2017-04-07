@@ -5,8 +5,8 @@ var LivePlotter = function (observation, data_set) {
     this._beam_candidates_url = this.host + '/monitoring/beam_candidates';
     this._tx = 400.5;
 
-    this._beam_candidates_plot_selector = 'beam-candidates-plot';
-    this._orbit_dermination_table_selector = 'orbit-determination-data-table';
+    this._beam_candidates_plot_selector = 'live-beam-candidates-plot';
+    this._orbit_dermination_table_selector = 'live-beam-candidates-od-table';
 
     this._max_channel = 410.99;
     this._min_channel = 390.99;
@@ -25,9 +25,9 @@ var LivePlotter = function (observation, data_set) {
         var max_time = new Date().toUTCString();
         $.each(beam_candidates, function (j, beam_candidate) {
             var beam_candidates_trace = {
-                x: self._get(beam_candidate['detections'], 'frequency'),
-                y: self._get(beam_candidate['detections'], 'time'),
-                z: self._get(beam_candidate['detections'], 'snr'),
+                x: beam_candidate['data']['channel'],
+                y: beam_candidate['data']['time'],
+                z: beam_candidate['data']['snr'],
                 mode: 'markers',
                 name: 'beam ' + beam_candidate.beam_id + ' candidate ' + beam_candidate.name
             };
@@ -99,12 +99,12 @@ var LivePlotter = function (observation, data_set) {
     this.publish = function (max_channel, min_channel, max_time, min_time) {
         var beam_candidates = self._get_beam_candidates_data(max_channel, min_channel, max_time, min_time);
 
-        $.when(beam_candidates).done(function (beam_candidates_data) {
+        $.when(beam_candidates).done(function (beam_candidates) {
             // Build the beam candidates data table
             // self._plot_orbit_determination_data_table(self._orbit_dermination_table_selector, beam_candidates_data[0]['candidates']);
 
             // Plot the beam candidates
-            self._plot_beam_candidates(self._beam_candidates_plot_selector, beam_candidates_data[0]['candidates']);
+            self._plot_beam_candidates(self._beam_candidates_plot_selector, beam_candidates);
         });
     };
 
