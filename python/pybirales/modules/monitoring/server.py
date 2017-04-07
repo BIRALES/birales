@@ -24,7 +24,7 @@ def index():
 
     :return:
     """
-    return render_template('index2.html')
+    return render_template('index.html')
 
 
 @app.route('/monitoring/beam_candidates', methods=['GET', 'POST'])

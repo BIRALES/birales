@@ -1,90 +1,127 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Space Debris Dashboard</title>
+    <title>BIRALES | Monitoring</title>
 
-    <link rel="stylesheet" href="/static/node_modules/bootstrap/dist/css/bootstrap.min.css" media="all">
-    <link rel="stylesheet" href="/static/node_modules/bootstrap/dist/css/bootstrap-theme.css">
-
-    <script src="/static/node_modules/jquery/dist/jquery.min.js"></script>
-    <script src="/static/node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
-    <script src="/static/node_modules/plotly.js/dist/plotly.min.js"></script>
-    <script src="/static/node_modules/mustache/mustache.min.js"></script>
-    <script src="/static/js/app.js"></script>
+    <!-- Bootstrap core CSS -->
+    <link rel="stylesheet" href="/static/node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <!--  Light Bootstrap Table core CSS -->
+    <link href="/static/themes/lbd/assets/css/light-bootstrap-dashboard.css" rel="stylesheet"/>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="/static/node_modules/font-awesome/css/font-awesome.min.css">
+    <link href='http://fonts.googleapis.com/css?family=Roboto:400,700,300' rel='stylesheet' type='text/css'>
+    <link href="/static/themes/lbd/assets/css/pe-icon-7-stroke.css" rel="stylesheet"/>
 </head>
 
 <body>
-<div id="wrapper">
-    <nav class="navbar navbar-default navbar-static-top">
-        <div class="navbar-header">
-            <a class="navbar-brand">BIRALES</a>
-            <div class="navbar-nav navbar-btn">
-                <div id="observations-drop_down"></div>
+
+<div class="wrapper">
+    <div class="sidebar" data-color="blue" data-image="static/img/josef.png">
+        <div class="sidebar-wrapper">
+            <div class="logo">
+                <a href="/" class="simple-text">
+                    BIRALES 1.1
+                </a>
             </div>
+
+            <ul class="nav">
+                <li class="active">
+                    <a href="index.html">
+                        <i class="pe-7s-graph"></i>
+                        <p>Dashboard</p>
+                    </a>
+                </li>
+                <li>
+                    <a href="archive.html">
+                        <i class="pe-7s-note2"></i>
+                        <p>Archive</p>
+                    </a>
+                </li>
+            </ul>
         </div>
-    </nav>
-    <div id="page-wrapper" class="container">
-        <div class="row">
-            <div class="col-md-12">
-                <div id="observation-heading"></div>
-            </div>
-        </div>
+    </div>
 
-
-        <div class="row">
-            <div class="col-md-8">
-                <h3>Beam candidates</h3>
-                <div id="beam-candidates-plot"></div>
+    <div class="main-panel">
+        <nav class="navbar navbar-default navbar-fixed">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse"
+                            data-target="#navigation-example-2">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="#">Monitoring</a>
+                </div>
             </div>
-            <div class="col-md-4">
-                <div id="data-set-info-table"></div>
-            </div>
-        </div>
+        </nav>
 
-        <div class="row">
-            <div class="col-md-8">
-                <div id="beam-firing-order"></div>
-                <div id="beam-illumination-time-line-plot"></div>
-            </div>
+        <div class="content">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="header">
+                                <h4 class="title">Beam Candidates</h4>
+                                <p class="category">Live</p>
+                            </div>
+                            <div class="content">
+                                <div id="live-beam-candidates"></div>
+                                <div class="footer"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-            <div class="row">
-                <div class="col-md-4">
-                    <h3>Beam configuration</h3>
-                    <div id="multi-beam-configuration-plot"></div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="header">
+                                <h4 class="title">Orbit Determination Data</h4>
+                                <p class="category">Live</p>
+                            </div>
+                            <div class="content">
+                                <div id="live-raw-data-table"></div>
+                                <div class="footer"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-md-12">
-                <h3>Beam configuration with Illumination</h3>
-                <div id="multi-beam-configuration-illumination-timeline-plot"></div>
-            </div>
-        </div>
+        <footer class="footer">
+            <div class="container-fluid">
 
-        <div class="row">
-            <div class="col-md-12">
-                <div id="beam-raw-data-plot"></div>
+                <p class="copyright pull-right">
+                    &copy;
+                    <script>document.write(new Date().getFullYear())</script>
+                    <a href="">TeamMT</a>
+                </p>
             </div>
-        </div>
+        </footer>
 
-        <div class="row">
-            <div class="col-md-12">
-                <h3>Orbit determination data table</h3>
-                <div id="orbit-determination-data-table">
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 
 </body>
 
+
+<!-- Bootstrap -->
+<!--<script src="/static/node_modules/loglevel/dist/loglevel.min.js"></script>-->
+<script src="/static/node_modules/jquery/dist/jquery.min.js"></script>
+<script src="/static/node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+<script src="/static/themes/lbd/assets/js/light-bootstrap-dashboard.js"></script>
+<script src="/static/node_modules/plotly.js/dist/plotly.min.js"></script>
+<script src="/static/js/live.js"></script>
+<!--<script src="/static/js/plots.js"></script>-->
+
 <script>
     $(document).ready(function () {
-        var multi_beam = new MultiBeam();
-        multi_beam.init();
+        var live_plotter = new LivePlotter();
+        live_plotter.update();
     });
 </script>
+
 </html>
