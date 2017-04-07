@@ -283,7 +283,7 @@ class BeamCandidateRepository(Repository):
 
             # Save candidates to the database
             if len(beam_candidates) is 1:
-                self.database.beam_candidates.insert(to_save[0])
+                self.database.beam_candidates.insert_one(to_save[0])
             else:
                 t2 = time.time()
                 self.database.beam_candidates.insert_many(to_save)

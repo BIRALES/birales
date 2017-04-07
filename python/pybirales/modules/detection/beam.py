@@ -44,10 +44,7 @@ class Beam:
         self.name = 'Observation ' + self.observation_name
 
         self.t_0 = obs_info['timestamp']
-        self.time_samples = self.n_samples
-        self.dt = np.timedelta64(int(self.time_samples / float(self.sampling_rate) * 1e9), 'ns')
         self.dt = obs_info['sampling_time']
-        # self.time = np.linspace(0, self.time_samples * self.sampling_rate, num=self.time_samples)
         self.time = np.arange(0, beam_data.shape[3])
 
         self.channels = np.arange(self.f_ch1, self.f_ch1 + self.f_off * self.n_channels, self.f_off)

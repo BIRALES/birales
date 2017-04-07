@@ -2,6 +2,7 @@ from pybirales.modules.detection.repository import BeamCandidateRepository
 import logging as log
 import time
 
+
 class BeamCandidatesQueue:
     def __init__(self, n_beams):
         self.queue = [[] for _ in range(n_beams)]

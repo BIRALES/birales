@@ -17,7 +17,7 @@ var LivePlotter = function (observation, data_set) {
     this._plot_beam_candidates = function (selector, beam_candidates) {
         var title = 'Detected Beam Candidates';
         var x_label = 'Channel (MHz)';
-        var y_label = 'Time (s)';
+        var y_label = 'Date';
 
         var traces = [];
 
@@ -29,7 +29,7 @@ var LivePlotter = function (observation, data_set) {
                 y: beam_candidate['data']['time'],
                 z: beam_candidate['data']['snr'],
                 mode: 'markers',
-                name: 'beam ' + beam_candidate.beam_id + ' candidate ' + beam_candidate._id
+                name: 'beam ' + beam_candidate.beam_id + ' candidate '
             };
 
             var min = beam_candidates_trace.y.reduce(function (a, b) {

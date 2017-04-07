@@ -58,7 +58,7 @@ class Detector(ProcessingModule):
 
         # Create the beams
         beams = [Beam(beam_id=n_beam, obs_info=obs_info, beam_data=input_data)
-                 for n_beam in range(settings.beamformer.nbeams)]
+                 for n_beam in range(1)]
 
         # Process the beam data to detect the beam candidates
         if settings.detection.nthreads > 1:

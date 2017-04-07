@@ -4,15 +4,16 @@ import datetime
 from astropy.time import Time
 from pybirales.base import settings
 import logging as log
+import time
 
 
 class DetectionCluster:
-    def __init__(self, beam, time, channels, snr):
+    def __init__(self, beam, time_data, channels, snr):
         """
         Initialisation of the Detection cluster Object
 
         :param beam:
-        :param time:
+        :param time_data:
         :param channels:
         :param snr:
         """
@@ -24,16 +25,21 @@ class DetectionCluster:
         self.to_delete = False
         self.to_save = True
 
-        self.time_data = time
+        ref_time = time.mktime(self.beam.t_0.timetuple()) * 1e3 + self.beam.t_0.microsecond / 1e3
+        # self.time_human = [str(self.beam.t_0 + (datetime.timedelta(seconds=self.beam.dt) * t)) for t in time_data]
+        self.time_data = [ref_time + t * self.beam.dt*1000 for t in time_data]
         self.channel_data = channels
         self.snr_data = snr
+
+        self.min_time = np.min(time_data)
+        self.max_time = np.max(time_data)
 
         self.m = 0.0
         self.c = 0.0
         self._score = 0.0
 
-        self.min_time = self.beam.t_0 + np.min(self.time_data) * datetime.timedelta(seconds=self.beam.dt)
-        self.max_time = self.beam.t_0 + np.max(self.time_data) * datetime.timedelta(seconds=self.beam.dt)
+    def fit_linear(self):
+        pass
 
     def is_linear(self, model, threshold):
         """
@@ -105,7 +111,7 @@ class DetectionCluster:
     def merge(self, cluster):
         # Return a new Detection Cluster with the merged data
         return DetectionCluster(beam=cluster.beam,
-                                time=np.concatenate([self.time_data, cluster.time_data]),
+                                time_data=np.concatenate([self.time_data, cluster.time_data]),
                                 channels=np.concatenate([self.channel_data, cluster.channel_data]),
                                 snr=np.concatenate([self.snr_data, cluster.snr_data]))
 
@@ -167,7 +173,6 @@ class DetectionCluster:
         return time.mjd
 
     def to_json(self):
-        dt = datetime.timedelta(seconds=self.beam.dt)
         return {
             '_id': self.id,
             'beam_id': self.beam_id,
@@ -176,7 +181,7 @@ class DetectionCluster:
             'max_time': self.max_time,
             'created_at': datetime.datetime.utcnow(),
             'data': {
-                'time': [str(self.beam.t_0 + dt*t) for t in self.time_data],
+                'time': self.time_data,
                 'channel': self.channel_data.tolist(),
                 'snr': self.snr_data.tolist(),
             }
