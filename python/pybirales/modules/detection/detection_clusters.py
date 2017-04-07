@@ -32,7 +32,8 @@ class DetectionCluster:
         self.c = 0.0
         self._score = 0.0
 
-        self.illumination_time = np.min(self.time_data)
+        self.min_time = self.beam.t_0 + np.min(self.time_data) * datetime.timedelta(seconds=self.beam.dt)
+        self.max_time = self.beam.t_0 + np.max(self.time_data) * datetime.timedelta(seconds=self.beam.dt)
 
     def is_linear(self, model, threshold):
         """
@@ -171,7 +172,8 @@ class DetectionCluster:
             '_id': self.id,
             'beam_id': self.beam_id,
             'tx': settings.observation.transmitter_frequency,
-            'illumination_time': self.illumination_time,
+            'min_time': self.min_time,
+            'max_time': self.max_time,
             'created_at': datetime.datetime.utcnow(),
             'data': {
                 'time': [str(self.beam.t_0 + dt*t) for t in self.time_data],

@@ -29,7 +29,7 @@ var LivePlotter = function (observation, data_set) {
                 y: beam_candidate['data']['time'],
                 z: beam_candidate['data']['snr'],
                 mode: 'markers',
-                name: 'beam ' + beam_candidate.beam_id + ' candidate ' + beam_candidate.name
+                name: 'beam ' + beam_candidate.beam_id + ' candidate ' + beam_candidate._id
             };
 
             var min = beam_candidates_trace.y.reduce(function (a, b) {
