@@ -1,5 +1,6 @@
 import numpy as np
 import logging
+import struct
 import numba
 
 from pybirales.blobs.correlated_data import CorrelatedBlob
