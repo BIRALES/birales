@@ -5,6 +5,8 @@ from pybirales.blobs.correlated_data import CorrelatedBlob
 from pybirales.base.definitions import PipelineError
 from pybirales.base.processing_module import ProcessingModule
 from pybirales.blobs.channelised_data import ChannelisedBlob
+from pybirales.blobs.receiver_data import ReceiverBlob
+from pybirales.blobs.dummy_data import DummyBlob
 
 
 class Correlator(ProcessingModule):
@@ -13,7 +15,7 @@ class Correlator(ProcessingModule):
     def __init__(self, config, input_blob=None):
 
         # This module needs an input blob of type dummy, receiver or channeliser
-        if type(input_blob) not in [ChannelisedBlob]:
+        if type(input_blob) not in [ReceiverBlob, DummyBlob, ChannelisedBlob]:
             raise PipelineError("Correlator: Invalid input data type, should be ChannelisedBlob, "
                                 "DummyBlob or ReceiverBlob")
 
