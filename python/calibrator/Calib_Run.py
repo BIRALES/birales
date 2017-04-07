@@ -4,7 +4,7 @@ from Calibrator import RBCal
 from datetime import datetime
 
 user_defined_name = 'BEST_2'
-h5file = 'I_O/' + user_defined_name + '.h5' 
+h5file = 'I_O/' + user_defined_name + '.h5'
 gainfile = 'I_O/' + user_defined_name + '_gain.txt'
 phasefile = 'I_O/' + user_defined_name + '_phase.txt'
 RBname = 'I_O/redbas.txt'
