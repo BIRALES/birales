@@ -313,7 +313,7 @@ class BeamCandidateRepository(Repository):
 
         print(query)
         try:
-            beam_candidates = self.database['beam_candidates'].find(query)
+            beam_candidates = self.database['beam_candidates'].find(query).sort("min_time", mongo.ASCENDING)
         except mongo.errors.ServerSelectionTimeoutError:
             log.error('MongoDB is not running. Could not retrieve candidates.')
         else:
