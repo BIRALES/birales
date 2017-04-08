@@ -11,7 +11,7 @@ var BeamCandidatesPlotter = function () {
     this._min_channel = 398.99;
 
     this._max_time = new Date();
-    this._min_time = new Date(new Date().setHours(this._max_time.getHours() - 5));
+    this._min_time = new Date(new Date().setHours(this._max_time.getHours() - 10));
 
     this._title = 'Detected Beam Candidates';
     this._x_label = 'Channel (MHz)';

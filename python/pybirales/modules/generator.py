@@ -63,7 +63,7 @@ class DummyDataGenerator(ProcessingModule):
         frame_rate = 10e3
         n = self._nsamp
 
-        start = n / frame_rate * 5
+        start = n / frame_rate * self._counter
 
         ts = start + np.arange(n) / frame_rate
         f1 = 446.02233885
@@ -80,7 +80,7 @@ class DummyDataGenerator(ProcessingModule):
             # output_data[:, :, :, i] = 10*np.sin(np.arange(self._nsamp) * 0.5)
             # plotter.scatter(ys, ts, 'antenna_6_signal', i == 6)
 
-        # self._counter = 5
+        self._counter += 1
 
         # Create observation information
         obs_info = ObservationInfo()
