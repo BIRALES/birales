@@ -68,7 +68,14 @@
                             </div>
                             <div class="content">
                                 <div id="live-beam-candidates-plot"></div>
-                                <div class="footer"></div>
+                                <div class="footer">
+                                    <hr/>
+                                    <div class="stats">
+                                        <i class="fa fa-history"></i> <span id="beam-candidates-last-updated"></span>
+                                    </div>
+                                </div>
+
+
                             </div>
                         </div>
                     </div>
@@ -119,8 +126,22 @@
 
 <script>
     $(document).ready(function () {
-        var live_plotter = new LivePlotter();
-        live_plotter.update();
+        var poll = false;
+        var interval = 2;
+        var plotters = [
+            new BeamCandidatesPlotter()
+        ];
+
+        // Initialise the plotters
+        $.each(plotters, function (i, plotter) {
+            console.log('Initialising plotter', plotter.name);
+            plotter.publish();
+
+            if (poll){
+                // Poll for updates
+                setInterval(function () {plotter.update()} , interval*1000);
+            }
+        });
     });
 </script>
 

@@ -33,8 +33,8 @@ def get_beam_candidates():
     max_channel = request.args.get('max_channel', type=float)
     min_channel = request.args.get('min_channel', type=float)
 
-    max_time = datetime.strptime(request.args.get('max_time'), "%Y-%m-%d %H:%M:%S")
-    min_time = datetime.strptime(request.args.get('min_time'), "%Y-%m-%d %H:%M:%S")
+    max_time = datetime.strptime(request.args.get('max_time'), '%a, %d %b %Y %H:%M:%S %Z')
+    min_time = datetime.strptime(request.args.get('min_time'), '%a, %d %b %Y %H:%M:%S %Z')
 
     data = beam_candidates_repo.get(beam_id, max_channel, min_channel, max_time, min_time)
 
