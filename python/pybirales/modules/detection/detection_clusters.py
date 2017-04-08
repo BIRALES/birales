@@ -1,28 +1,28 @@
 import numpy as np
 import datetime
-
-from astropy.time import Time, TimeDelta
-from pybirales.base import settings
 import logging as log
-import time
+from pybirales.base import settings
 
 
 class DetectionCluster:
-    def __init__(self, beam, time_data, channels, snr):
+
+    def __init__(self, model, beam, time_data, channels, snr):
         """
         Initialisation of the Detection cluster Object
 
+        :param model: The model which will determine if cluster is linear as expected
         :param beam:
         :param time_data:
         :param channels:
         :param snr:
 
-        :type time_data: Time
+        :type time_data: numpy.array of Time
         :type beam: Beam
-        :type channels: numpy.array
-        :type snr: numpy.array
+        :type channels: numpy.array of floats
+        :type snr: numpy.array of floats
         """
 
+        self._model = model
         self.beam = beam
         self.beam_id = beam.id
         self._processed_time = datetime.datetime.utcnow()
@@ -37,29 +37,26 @@ class DetectionCluster:
         self.min_time = np.min(self.time_data)
         self.max_time = np.max(self.time_data)
 
-        self.m = 0.0
-        self.c = 0.0
-        self._score = 0.0
+        self.m = None
+        self.c = None
+        self._score = None
 
-    def fit_linear(self):
-        pass
+        # Compare the detection cluster's data against a (linear) model
+        self.fit_model(model=self._model, channel_data=self.channel_data, time_data=self.time_data)
 
-    def is_linear(self, model, threshold):
+    def fit_model(self, model, channel_data, time_data):
         """
-        Determine if cluster is a linear cluster (Shaped as a line)
+        Compare the detections cluster data against a model
 
-        :param model: The model which will determine if cluster is linear as expected
-        :param threshold:
-        :type threshold: float
         :return:
         """
 
-        # todo - apply filter to only compare 1 channel (center of cluster) per time sample
-        channels = [[channel] for channel in self.channel_data]
-        time_data = [t.unix for t in self.time_data]
+        # todo - apply filter to only compare 1 channel (highest snr) per time sample
+        channels = [[channel] for channel in channel_data]
+        time_data = [t.unix for t in time_data]
 
         try:
-            model.fit(channels, time_data)
+            self._model.fit(channels, time_data)
         except ValueError:
             log.debug('Linear interpolation failed. No inliers found.')
         else:
@@ -74,9 +71,17 @@ class DetectionCluster:
             self.m = model.estimator_.coef_[0]
             self.c = model.estimator_.intercept_
 
-            if self._score < threshold:
-                return False
-            return True
+    def is_linear(self, threshold):
+        """
+        Determine if cluster is a linear cluster up to a certain threshold
+
+        :param threshold:
+        :type threshold: float
+
+        :return:
+        """
+
+        return self._score > threshold
 
     def is_similar_to(self, cluster, threshold):
         """
@@ -89,18 +94,13 @@ class DetectionCluster:
         :return:
         """
 
-        # The gradients of the clusters are similar
-        if self._percentage_difference(cluster.m, self.m) <= threshold:
-            # The intercept of the clusters are similar
-            if self._percentage_difference(cluster.c, self.c) <= threshold:
-                return True
-
-        return False
+        # Check if the gradients and the intercepts of the two clusters are similar
+        return self._pd(cluster.m, self.m) <= threshold and self._pd(cluster.c, self.c) <= threshold
 
     @staticmethod
-    def _percentage_difference(a, b):
+    def _pd(a, b):
         """
-        Calculate the difference between two values
+        Calculate the percentage difference between two values
         :param a:
         :param b:
         :return:
@@ -115,8 +115,16 @@ class DetectionCluster:
         return percentage_difference
 
     def merge(self, cluster):
-        # Return a new Detection Cluster with the merged data
-        return DetectionCluster(beam=cluster.beam,
+        """
+        Create a new Cluster from the (merged) data of this cluster and that of a new cluster.
+
+        :param cluster:
+        :type cluster: DetectionCluster
+        :return: DetectionCluster
+        """
+
+        return DetectionCluster(model=self._model,
+                                beam=cluster.beam,
                                 time_data=np.concatenate([self.time_data, cluster.time_data]),
                                 channels=np.concatenate([self.channel_data, cluster.channel_data]),
                                 snr=np.concatenate([self.snr_data, cluster.snr_data]))
@@ -171,12 +179,10 @@ class DetectionCluster:
         # return Time(time, format='unix')
 
     def _timestamp(self, elapsed_time):
-        time = self._time(elapsed_time)
-        return time.iso
+        return self._time(elapsed_time).iso
 
     def _get_mjd2000(self, elapsed_time):
-        time = self._time(elapsed_time)
-        return time.mjd
+        return self._time(elapsed_time).mjd
 
     def to_json(self):
         return {

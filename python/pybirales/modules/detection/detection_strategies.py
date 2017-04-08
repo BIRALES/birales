@@ -135,13 +135,14 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
             time_indices = data_indices[:, 0]
 
             # Create a Detection Cluster from the cluster data
-            cluster = DetectionCluster(beam=beam,
+            cluster = DetectionCluster(model=self._linear_model,
+                                       beam=beam,
                                        time_data=[ref_time + t * dt for t in beam.time[time_indices]],
                                        channels=beam.channels[channel_indices],
                                        snr=beam.snr[(time_indices, channel_indices)])
 
             # Add only those clusters that are linear
-            if cluster.is_linear(model=self._linear_model, threshold=0.9):
+            if cluster.is_linear(threshold=0.9):
                 clusters.append(cluster)
 
         log.debug('DBSCAN detected %s clusters in beam %s, of which %s are linear',
