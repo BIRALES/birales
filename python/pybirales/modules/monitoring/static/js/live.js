@@ -1,7 +1,6 @@
 var BeamCandidatesPlotter = function () {
     var self = this;
-    this.name = "Beam Candidates Plotter";
-    this._debug = true;
+    this.name = "Beam Candidates";
     this.host = "http://localhost:5000";
     this._beam_candidates_url = this.host + '/monitoring/beam_candidates';
 
@@ -73,9 +72,7 @@ var BeamCandidatesPlotter = function () {
         var beam_candidates = self._get_beam_candidates_data(self._max_channel, self._min_channel, self._max_time.toUTCString(), self._min_time.toUTCString());
 
         $.when(beam_candidates).done(function (beam_candidates) {
-            if (self._debug) {
-                console.log('Publishing ', self.name);
-            }
+            log.debug('Publishing the', self.name, 'plotter');
             var traces = self._get_trace(beam_candidates);
 
             var layout = self._get_layout();
@@ -90,9 +87,7 @@ var BeamCandidatesPlotter = function () {
         var beam_candidates = self._get_beam_candidates_data(self._max_channel, self._min_channel, self._max_time.toUTCString(), self._min_time.toUTCString());
 
         $.when(beam_candidates).done(function (beam_candidates) {
-            if (self._debug) {
-                console.log('Updating ', self.name);
-            }
+            log.debug('Updating the', self.name, 'plotter');
             var traces = self._get_trace(beam_candidates);
 
             var layout = self._get_layout();

@@ -116,23 +116,23 @@
 
 
 <!-- Bootstrap -->
-<!--<script src="/static/node_modules/loglevel/dist/loglevel.min.js"></script>-->
+<script src="/static/node_modules/loglevel/dist/loglevel.min.js"></script>
 <script src="/static/node_modules/jquery/dist/jquery.min.js"></script>
 <script src="/static/node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
 <script src="/static/themes/lbd/assets/js/light-bootstrap-dashboard.js"></script>
 <script src="/static/node_modules/plotly.js/dist/plotly.min.js"></script>
 <script src="/static/js/live.js"></script>
-<!--<script src="/static/js/plots.js"></script>-->
 
 <script>
     $(document).ready(function () {
         var poll = false;
+        log.setLevel('debug');
         var interval = 2;
         var plotters = [
             new BeamCandidatesPlotter()
         ];
 
-        // Initialise the plotters
+        log.info('Initialise the plotters');
         $.each(plotters, function (i, plotter) {
             plotter.publish();
 
