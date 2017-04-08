@@ -18,7 +18,8 @@ class SpectrogramPlotter:
         if not settings.detection.debug_candidates:
             return
 
-        categories = [self.colors[c] for c in cluster_labels]
+        if cluster_labels is not None:
+            categories = [self.colors[c] for c in cluster_labels]
 
         if condition:
             try:

@@ -58,7 +58,7 @@ class Detector(ProcessingModule):
 
         # Create the beams
         beams = [Beam(beam_id=n_beam, obs_info=obs_info, beam_data=input_data)
-                 for n_beam in range(1)]
+                 for n_beam in range(settings.detection.nbeams)]
 
         # Process the beam data to detect the beam candidates
         if settings.detection.nthreads > 1:
@@ -107,7 +107,7 @@ class Detector(ProcessingModule):
         return [candidate for sub_list in beam_candidates for candidate in sub_list if candidate]
 
     def _detect_space_debris_candidates(self, beam):
-        # plotter.plot(beam.snr, 'detection/input_beam_6_' + str(time.time()), beam.id == 6)
+        # plotter.plot(beam.snr, 'detection/input_beam_6_' + str(time.time()), beam.id == 0)
 
         # Apply the pre-processing filters to the beam data
         beam.apply_filters()

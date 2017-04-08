@@ -9,6 +9,7 @@ from pybirales.blobs.dummy_data import DummyBlob
 from scipy.signal import chirp
 from pybirales.base import settings
 
+
 # from pybirales.plotters.spectrogram_plotter import plotter
 
 
@@ -62,7 +63,7 @@ class DummyDataGenerator(ProcessingModule):
         frame_rate = 10e3
         n = self._nsamp
 
-        start = n / frame_rate * self._counter
+        start = n / frame_rate * 5
 
         ts = start + np.arange(n) / frame_rate
         f1 = 446.02233885
@@ -79,7 +80,7 @@ class DummyDataGenerator(ProcessingModule):
             # output_data[:, :, :, i] = 10*np.sin(np.arange(self._nsamp) * 0.5)
             # plotter.scatter(ys, ts, 'antenna_6_signal', i == 6)
 
-        self._counter += 1
+        # self._counter = 5
 
         # Create observation information
         obs_info = ObservationInfo()
