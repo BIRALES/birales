@@ -134,12 +134,13 @@
 
         // Initialise the plotters
         $.each(plotters, function (i, plotter) {
-            console.log('Initialising plotter', plotter.name);
             plotter.publish();
 
             if (poll){
                 // Poll for updates
-                setInterval(function () {plotter.update()} , interval*1000);
+                setInterval(function () {
+                    plotter.update()
+                } , interval*1000);
             }
         });
     });
