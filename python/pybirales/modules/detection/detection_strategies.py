@@ -12,6 +12,7 @@ from pybirales.base import settings
 import time
 from pybirales.plotters.spectrogram_plotter import plotter
 from sklearn import linear_model
+from astropy.time import Time, TimeDelta
 
 
 class SpaceDebrisDetection(object):
@@ -122,6 +123,9 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         # Select only those labels which were not classified as noise (-1)
         filtered_cluster_labels = cluster_labels[cluster_labels > -1]
 
+        ref_time = Time(beam.t_0)
+        dt = TimeDelta(beam.dt, format='sec')
+
         # Group the data points in clusters
         clusters = []
         for label in np.unique(filtered_cluster_labels):
@@ -132,7 +136,7 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
             # Create a Detection Cluster from the cluster data
             cluster = DetectionCluster(beam=beam,
-                                       time_data=beam.time[time_indices],
+                                       time_data=[ref_time + t * dt for t in beam.time[time_indices]],
                                        channels=beam.channels[channel_indices],
                                        snr=beam.snr[(time_indices, channel_indices)])
 

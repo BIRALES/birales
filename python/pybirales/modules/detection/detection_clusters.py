@@ -1,7 +1,7 @@
 import numpy as np
 import datetime
 
-from astropy.time import Time
+from astropy.time import Time, TimeDelta
 from pybirales.base import settings
 import logging as log
 import time
@@ -16,23 +16,26 @@ class DetectionCluster:
         :param time_data:
         :param channels:
         :param snr:
+
+        :type time_data: Time
+        :type beam: Beam
+        :type channels: numpy.array
+        :type snr: numpy.array
         """
 
         self.beam = beam
         self.beam_id = beam.id
         self._processed_time = datetime.datetime.utcnow()
-        self.id = str(self.beam_id) + '.' + self._processed_time.isoformat()
+        self.id = str(self.beam_id) + '_' + self._processed_time.isoformat()
         self.to_delete = False
         self.to_save = True
 
-        ref_time = time.mktime(self.beam.t_0.timetuple()) * 1e3 + self.beam.t_0.microsecond / 1e3
-        # self.time_human = [str(self.beam.t_0 + (datetime.timedelta(seconds=self.beam.dt) * t)) for t in time_data]
-        self.time_data = [ref_time + t * self.beam.dt*1000 for t in time_data]
+        self.time_data = time_data
         self.channel_data = channels
         self.snr_data = snr
 
-        self.min_time = np.min(time_data)
-        self.max_time = np.max(time_data)
+        self.min_time = np.min(self.time_data)
+        self.max_time = np.max(self.time_data)
 
         self.m = 0.0
         self.c = 0.0
@@ -51,9 +54,12 @@ class DetectionCluster:
         :return:
         """
 
+        # todo - apply filter to only compare 1 channel (center of cluster) per time sample
+        channels = [[channel] for channel in self.channel_data]
+        time_data = [t.unix for t in self.time_data]
+
         try:
-            channels = [[channel] for channel in self.channel_data]
-            model.fit(channels, self.time_data)
+            model.fit(channels, time_data)
         except ValueError:
             log.debug('Linear interpolation failed. No inliers found.')
         else:
@@ -64,7 +70,7 @@ class DetectionCluster:
             # Remove outliers - select data points that are inliers
             # self.data = cluster_data[inlier_mask]
 
-            self._score = model.estimator_.score(channels, self.time_data)
+            self._score = model.estimator_.score(channels, time_data)
             self.m = model.estimator_.coef_[0]
             self.c = model.estimator_.intercept_
 
@@ -177,11 +183,11 @@ class DetectionCluster:
             '_id': self.id,
             'beam_id': self.beam_id,
             'tx': settings.observation.transmitter_frequency,
-            'min_time': self.min_time,
-            'max_time': self.max_time,
+            'min_time': self.min_time.iso,
+            'max_time': self.max_time.iso,
             'created_at': datetime.datetime.utcnow(),
             'data': {
-                'time': self.time_data,
+                'time': [b.iso for b in self.time_data],
                 'channel': self.channel_data.tolist(),
                 'snr': self.snr_data.tolist(),
             }
