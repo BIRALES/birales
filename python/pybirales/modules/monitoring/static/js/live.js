@@ -11,7 +11,7 @@ var LivePlotter = function (observation, data_set) {
     this._max_channel = 410.99;
     this._min_channel = 390.99;
 
-    this._max_time = '2017-04-08 10:00:00';
+    this._max_time = '2017-04-09 10:00:00';
     this._min_time = '2017-04-07 12:00:00';
 
     this._plot_beam_candidates = function (selector, beam_candidates) {

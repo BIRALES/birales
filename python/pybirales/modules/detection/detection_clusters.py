@@ -53,10 +53,10 @@ class DetectionCluster:
 
         # todo - apply filter to only compare 1 channel (highest snr) per time sample
         channels = [[channel] for channel in channel_data]
-        time_data = [t.unix for t in time_data]
+        time = [t.unix for t in time_data]
 
         try:
-            self._model.fit(channels, time_data)
+            self._model.fit(channels, time)
         except ValueError:
             log.debug('Linear interpolation failed. No inliers found.')
         else:
@@ -67,7 +67,7 @@ class DetectionCluster:
             # Remove outliers - select data points that are inliers
             # self.data = cluster_data[inlier_mask]
 
-            self._score = model.estimator_.score(channels, time_data)
+            self._score = model.estimator_.score(channels, time)
             self.m = model.estimator_.coef_[0]
             self.c = model.estimator_.intercept_
 
