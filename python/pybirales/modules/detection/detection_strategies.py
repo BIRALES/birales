@@ -39,36 +39,6 @@ class SpaceDebrisDetectionStrategy(object):
     def detect(self, beam):
         pass
 
-    @staticmethod
-    def _create_space_debris_candidates(beam, clusters):
-        """
-        Create space debris candidates from the clusters data
-
-        :param beam:
-        :param clusters:
-        :return:
-        """
-        candidates = []
-        beam_candidates_counter = {}
-
-        for cluster in clusters:
-            channel_mask = cluster.data[:, 1]
-            time_mask = cluster.data[:, 0]
-
-            channels = beam.channels[channel_mask]
-            time = beam.time[time_mask]
-            snr = beam.snr[time_mask, channel_mask]
-
-            detection_data = np.column_stack((channels, time, snr))
-            if beam.id not in beam_candidates_counter:
-                beam_candidates_counter[beam.id] = 0
-            beam_candidates_counter[beam.id] += 1
-
-            candidate_name = str(beam.id) + '.' + str(beam_candidates_counter[beam.id])
-            candidate = BeamSpaceDebrisCandidate(candidate_name, beam, detection_data)
-            candidates.append(candidate)
-        return candidates
-
 
 class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
     name = 'Spirit'
@@ -168,7 +138,7 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         while not done:
             done = True
             for cluster_1, cluster_2 in itertools.combinations(clusters, 2):
-                if cluster_1.is_cluster_similar(cluster_2, self._merge_threshold):
+                if cluster_1.is_similar_to(cluster_2, self._merge_threshold):
                     # Create a new merged cluster if clusters are similar
                     merged_cluster = cluster_1.merge(cluster_2)
 
