@@ -294,24 +294,24 @@ class BeamCandidateRepository(Repository):
                 beam_candidate.to_save = False
 
     def get(self, beam_id=None, max_channel=None, min_channel=None, max_time=None, min_time=None):
-        query = {"$and": []}
+        query = {}
 
         if beam_id:
-            query["$and"].append({'beam_id': beam_id})
+            query['beam_id'] = beam_id
 
-        if max_channel and min_channel:
-            query['$and'].append({'data.channel': {'$gte': float(min_channel)}})
-            query['$and'].append({'data.channel': {'$lte': float(max_channel)}})
+        if min_time:
+            query['min_time'] = {'$gte': min_time}
 
-        if max_time and min_time:
-            query = {
-                'created_at':
-                    {
-                        '$gte': min_time,
-                        '$lte': max_time
-                    }
-            }
+        if max_time:
+            query['max_time'] = {'$lte': max_time}
 
+        if min_channel:
+            query['min_channel'] = {'$gte': min_channel}
+
+        if max_channel:
+            query['max_channel'] = {'$lte': max_channel}
+
+        print(query)
         try:
             beam_candidates = self.database['beam_candidates'].find(query)
         except mongo.errors.ServerSelectionTimeoutError:

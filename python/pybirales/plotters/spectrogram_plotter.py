@@ -18,14 +18,12 @@ class SpectrogramPlotter:
         if not settings.detection.debug_candidates:
             return
 
-        if cluster_labels is not None:
-            categories = [self.colors[c] for c in cluster_labels if c in self.colors]
-
         if condition:
             try:
                 self.fig.clf()
                 plt.imshow(data, aspect='auto', interpolation='none', origin='lower')
                 if cluster_labels is not None:
+                    categories = [self.colors[c] for c in cluster_labels if c in self.colors]
                     d = np.column_stack(np.where(data > 0))
                     plt.scatter(d[:, 1], d[:, 0], c=categories)
                 self.fig.savefig(self._plot_dir + filename + '.png')

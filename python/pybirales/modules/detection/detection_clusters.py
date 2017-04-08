@@ -36,6 +36,8 @@ class DetectionCluster:
 
         self.min_time = np.min(self.time_data)
         self.max_time = np.max(self.time_data)
+        self.min_channel = np.min(self.channel_data)
+        self.max_channel = np.max(self.channel_data)
 
         self.m = None
         self.c = None
@@ -190,8 +192,10 @@ class DetectionCluster:
             '_id': self.id,
             'beam_id': self.beam_id,
             'tx': settings.observation.transmitter_frequency,
-            'min_time': self.min_time.iso,
-            'max_time': self.max_time.iso,
+            'min_time': self.min_time.datetime,
+            'max_time': self.max_time.datetime,
+            'min_channel': self.min_channel,
+            'max_channel': self.max_channel,
             'created_at': datetime.datetime.utcnow(),
             'data': {
                 'time': [b.iso for b in self.time_data],
