@@ -19,7 +19,7 @@ class SpectrogramPlotter:
             return
 
         if cluster_labels is not None:
-            categories = [self.colors[c] for c in cluster_labels]
+            categories = [self.colors[c] for c in cluster_labels if c in self.colors]
 
         if condition:
             try:
