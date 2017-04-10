@@ -102,7 +102,9 @@ def test_receiver(configuration, debug):
     manager.add_module("ppf", ppf)
     manager.add_module("terminator", terminator)
 
-    manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
+  #  manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
+    manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
+  #  manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
 
     manager.start_pipeline()
 
@@ -163,6 +165,7 @@ def birales_pipeline(configuration, debug):
     # Add plotters
     # manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
     # manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
+    manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
 
     manager.start_pipeline()
 

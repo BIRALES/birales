@@ -74,7 +74,7 @@ int main()
     long mtime, seconds, useconds;
     gettimeofday(&start, NULL);
 
-    beamform(input, weights, output, nsamp, nchans, nbeams, nants, npols, 8);
+    beamform(input, weights, output, nsamp, nchans, nbeams, nants, npols, 2);
 
     gettimeofday(&end, NULL);
     seconds  = end.tv_sec  - start.tv_sec;

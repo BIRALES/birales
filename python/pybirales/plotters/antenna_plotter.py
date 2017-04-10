@@ -2,6 +2,7 @@ import logging
 import numpy as np
 
 from matplotlib import pyplot as plt
+import matplotlib
 
 from pybirales.base.definitions import PipelineError
 from pybirales.base.plotter import Plotter
@@ -28,6 +29,10 @@ class AntennaPlotter(Plotter):
         # Figure and axes placeholders
         self._subbands_to_plot = None
         self._antennas_to_plot = None
+
+        self._markers = matplotlib.markers.MarkerStyle.markers.keys()
+        self._markers = [marker for marker in self._markers if marker is not 'None']
+        logging.info(self._markers)
 
     def create_index(self):
         """ Create data index to get from blob """
@@ -74,7 +79,8 @@ class AntennaPlotter(Plotter):
         plt.title("Antena plot")
 
         for index, antenna in enumerate(self._antennas_to_plot):
-            plt.plot(np.absolute(input_data[0, 0, :, index]), label="Antenna %d" % antenna)
+            plt.plot(np.absolute(input_data[0, 0, :, index]), label="Antenna %d" % antenna,
+                     marker=self._markers[antenna])
             plt.xlabel("Time")
             plt.ylabel("Power")
             plt.xlim([0, input_data.shape[2]])
