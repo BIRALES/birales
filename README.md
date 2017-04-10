@@ -15,6 +15,7 @@ python setup.py install
 
 
 ## Dependencies
+* Python 2.7
 * MongoDB
 
 
