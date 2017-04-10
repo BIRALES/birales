@@ -43,9 +43,9 @@ Arguments:
 
 
 ## Post-processing
-Start the Flask server on port 9000
+Start the Flask server on port 5000
 ```
-python birales/python/pybirales/modules/monitoring/server.py run_dev_server --port 5000
+python birales.py start_server --port=5000 --debug
 ```
 
 *Deprecated:* Post-Process a data set XXX in observation YYY (32 beams)
