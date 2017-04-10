@@ -226,7 +226,7 @@ def correlator_pipeline(configuration, debug):
 def start_server(port, debug):
     app.config['SECRET_KEY'] = 'secret!'
     app.config['DEBUG'] = debug
-    app.run(debug=debug, port=port)
+    app.run(host='0.0.0.0', debug=debug, port=port)
 
 
 if __name__ == "__main__":
