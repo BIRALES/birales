@@ -118,7 +118,7 @@ class Receiver(Generator):
         """ Initialise the receiver """
 
         # Configure receiver
-        self._daq.setReceiverConfiguration(self._nants, 1, 1, 1, 1, 1, 0)
+        self._daq.setReceiverConfiguration(self._nants, 1, 1, 1, 1, 1, 1)
 
         # Start receiver
         if self._daq.startReceiver(self._config.interface,

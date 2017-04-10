@@ -58,6 +58,10 @@ class DummyDataGenerator(ProcessingModule):
                                         ('nants', self._nants)],
                          datatype=self._datatype)
 
+    def generate_corrdata(self):
+
+        return np.ones((1,1,32,70000), dtype = np.complex64)
+
     def process(self, obs_info, input_data, output_data):
         # Sampling rate
         frame_rate = 10e3
@@ -82,6 +86,8 @@ class DummyDataGenerator(ProcessingModule):
 
         self._counter += 1
 
+        
+        output_data = self.generate_corrdata()
         # Create observation information
         obs_info = ObservationInfo()
         obs_info['sampling_time'] = 1. / settings.observation.samples_per_second
