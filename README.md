@@ -1,7 +1,18 @@
 # BIRALES processing backend
 
 ## Installation
-TBD
+
+Clone repository
+```
+git clone https://xxx@bitbucket.org/lessju/birales.git
+```
+
+Install PyBirales
+```
+cd python/
+python setup.py install 
+```
+
 
 ## Dependencies
 TBD
