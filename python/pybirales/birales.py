@@ -12,11 +12,8 @@ from pybirales.modules.generator import DummyDataGenerator
 from pybirales.modules.persister import Persister
 from pybirales.modules.receiver import Receiver
 from pybirales.modules.detector import Detector
-from pybirales.plotters.bandpass_plotter import BandpassPlotter
-from pybirales.plotters.antenna_plotter import AntennaPlotter
-from pybirales.plotters.beam_plotter import BeamformedDataPlotter
 from pybirales.plotters.channel_plotter import ChannelisedDataPlotter
-from pybirales.plotters.raw_data_grid_plotter import RawDataGridPlotter
+from pybirales.modules.monitoring.server import app
 
 
 @click.group()
@@ -219,6 +216,14 @@ def correlator_pipeline(configuration, debug):
 
     manager.start_pipeline()
 
+
+@cli.command()
+@click.option('--port', default=5000)
+@click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
+def start_server(port, debug):
+    app.config['SECRET_KEY'] = 'secret!'
+    app.config['DEBUG'] = debug
+    app.run(debug=debug, port=port)
 
 
 if __name__ == "__main__":

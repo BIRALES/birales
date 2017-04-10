@@ -1,19 +1,13 @@
+import json
+
 from flask import Flask, render_template, Response, request
-import logging as log
-from logging.config import fileConfig
 from pybirales.modules.detection.repository import BeamCandidateRepository
 from datetime import datetime
-
-import json
 from bson import json_util
 
 # Initialize the Flask application
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!'
-app.config['DEBUG'] = True
 
-# Set logging configuration
-log.config.fileConfig('../../configuration/logging.ini')
 beam_candidates_repo = BeamCandidateRepository()
 
 
@@ -39,12 +33,4 @@ def get_beam_candidates():
     data = beam_candidates_repo.get(beam_id, max_channel, min_channel, max_time, min_time)
 
     # return jsonify(data[:10])
-    return Response(json.dumps(data[:100], default=json_util.default), mimetype='application/json; charset=utf-8')
-
-
-def run_server(port=5000):
-    app.run(debug=True, port=port)
-
-
-if __name__ == '__main__':
-    run_server()
+    return Response(json.dumps(data, default=json_util.default), mimetype='application/json; charset=utf-8')
