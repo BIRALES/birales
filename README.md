@@ -15,10 +15,8 @@ python setup.py install
 
 
 ## Dependencies
-TBD
+* MongoDB
 
-## Deployment
-TBD
 
 ## Usage
 List available pipelines
