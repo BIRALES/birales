@@ -1,7 +1,7 @@
 var BeamCandidatesPlotter = function () {
     var self = this;
     this.name = "Beam Candidates";
-    this.host = "http://localhost:5000";
+    this.host = "";
     this._beam_candidates_url = this.host + '/monitoring/beam_candidates';
 
     this._beam_candidates_plot_selector = 'live-beam-candidates-plot';
