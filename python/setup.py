@@ -33,7 +33,8 @@ setup(
                       "scipy",
                       "scikit-learn",
                       "h5py",
-                      "click"],
+                      "click",
+                      "flask"],
 )
 
 # TODO: Create /var/log/birales logging directory

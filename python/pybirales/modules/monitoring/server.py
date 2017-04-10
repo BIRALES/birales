@@ -34,3 +34,8 @@ def get_beam_candidates():
 
     # return jsonify(data[:10])
     return Response(json.dumps(data, default=json_util.default), mimetype='application/json; charset=utf-8')
+
+
+if __name__ == '__main__':
+    app.config['SECRET_KEY'] = 'secret!'
+    app.run(host='0.0.0.0', debug=True, port=5000)
