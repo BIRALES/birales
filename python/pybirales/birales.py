@@ -105,7 +105,7 @@ def test_receiver(configuration, debug):
     manager.add_module("ppf", ppf)
     manager.add_module("terminator", terminator)
 
-    # manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
+    manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
 
     manager.start_pipeline()
 
@@ -208,7 +208,7 @@ def correlator_pipeline(configuration, debug):
     manager = PipelineManager(configuration, debug)
 
     # Generate processing modules and data blobs
-    receiver = DummyDataGenerator(settings.receiver)
+    receiver = Receiver(settings.receiver)
     correlator = Correlator(settings.correlator, receiver.output_blob)
     persister = CorrMatrixPersister(settings.corrmatrixpersister, correlator.output_blob)
 
