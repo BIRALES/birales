@@ -1,0 +1,10 @@
+.footer nav > ul.nav-footer-logos a.nav-footer-logo {
+    margin: 0;
+    padding: 0;
+}
+
+.footer nav > ul.nav-footer-logos a.nav-footer-logo img {
+    height: 45px;
+    padding: 0 5px;
+    margin: 10px 0;
+}

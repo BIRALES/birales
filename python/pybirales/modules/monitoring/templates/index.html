@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="/static/node_modules/font-awesome/css/font-awesome.min.css">
     <link href='http://fonts.googleapis.com/css?family=Roboto:400,700,300' rel='stylesheet' type='text/css'>
     <link href="/static/themes/lbd/assets/css/pe-icon-7-stroke.css" rel="stylesheet"/>
+
+    <link rel="stylesheet" href="/static/css/app.css">
 </head>
 
 <body>
@@ -37,6 +39,7 @@
                         <p>Archive</p>
                     </a>
                 </li>
+
             </ul>
         </div>
     </div>
@@ -100,6 +103,20 @@
 
         <footer class="footer">
             <div class="container-fluid">
+                <nav class="pull-left">
+                    <ul class="nav-footer-logos">
+                        <li>
+                            <a class="nav-footer-logo" href="#">
+                                <img src="static/img/inaf_logo.svg"/>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-footer-logo" href="#">
+                                <img src="static/img/uom_logo.svg"/>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
 
                 <p class="copyright pull-right">
                     &copy;
@@ -136,11 +153,11 @@
         $.each(plotters, function (i, plotter) {
             plotter.publish();
 
-            if (poll){
+            if (poll) {
                 // Poll for updates
                 setInterval(function () {
                     plotter.update()
-                } , interval*1000);
+                }, interval * 1000);
             }
         });
     });
