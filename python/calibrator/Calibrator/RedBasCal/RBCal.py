@@ -36,7 +36,7 @@ class RBCal:
 
         # Per-Baseline Integration in Time
         for i in range(len(self.RB_index)):
-            data_out[0, i, 0] = (sum(data[:, 0, i, 0]))/(len(data[:,0,i,0]))
+            data_out[0, i, 0] = (sum(data[:, 0, i, 0]))#/(len(data[:,0,i,0]))
         self.data = data_out
 
         # Forming A Configuration Matrix
