@@ -13,7 +13,7 @@ var BeamCandidatesPlotter = function () {
     this._max_time = new Date();
     this._min_time = new Date(new Date().setHours(this._max_time.getHours() - 10));
 
-    this._title = 'Detected Beam Candidates';
+    this._title = '';
     this._x_label = 'Channel (MHz)';
     this._y_label = 'Date';
 
@@ -51,6 +51,13 @@ var BeamCandidatesPlotter = function () {
             },
             yaxis: {
                 title: self._y_label
+            },
+            margin: {
+                l: 120,
+                r: 50,
+                b: 50,
+                t: 20,
+                pad: 10
             },
             shapes: [
                 {
