@@ -60,7 +60,7 @@ class Beam:
         :return:
         """
 
-        return np.abs(data[0, self.id, 0:int(self.n_channels / 2), :]).T
+        return np.abs(data[0, self.id, int(self.n_channels / 2):, :]).T
 
         #
         # # @todo - check if the mean can be used as an estimate for the noise
