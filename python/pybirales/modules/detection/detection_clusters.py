@@ -5,7 +5,6 @@ from pybirales.base import settings
 
 
 class DetectionCluster:
-
     def __init__(self, model, beam, time_data, channels, snr):
         """
         Initialisation of the Detection cluster Object
@@ -190,6 +189,11 @@ class DetectionCluster:
     def to_json(self):
         return {
             '_id': self.id,
+            'beam': {
+                'id': self.beam_id,
+                'ra': self.beam.ra,
+                'dec': self.beam.dec,
+            },
             'beam_id': self.beam_id,
             'tx': settings.observation.transmitter_frequency,
             'min_time': self.min_time.datetime,

@@ -25,14 +25,16 @@ class Beam:
         self.id = beam_id
         self.name = 'Beam ' + str(beam_id)
 
-        self.dec = 0.0
-        self.ra = 0.0
+        self.ra = settings.beamformer.pointings[self.id][0] if settings.beamformer.pointings[self.id] else 0.0
+        self.dec = settings.beamformer.pointings[self.id][1] if settings.beamformer.pointings[self.id] else 0.0
+
         self.ha = 0.0
         self.top_frequency = 0.0
         self.frequency_offset = 0.0
 
         self.observation_name = settings.observation.name
         self.tx = settings.observation.transmitter_frequency
+        self.configuration_id = obs_info['configuration_id']
         self.n_beams = obs_info['nbeams']
         self.n_channels = obs_info['nchans']
         self.n_sub_channels = obs_info['nchans'] / 2
