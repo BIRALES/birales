@@ -6,7 +6,7 @@ var BeamCandidatesPlotter = function () {
 
     this._beam_candidates_plot_selector = 'live-beam-candidates-plot';
 
-    this._tx = 411.0;
+    this._tx = 410.0703125;
     this._max_channel = 410.0703125;
     this._min_channel = 409.9921875;
 
