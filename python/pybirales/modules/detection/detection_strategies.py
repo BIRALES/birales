@@ -87,22 +87,34 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
             log.warning('DBSCAN failed')
             return []
 
-        plotter.plot(beam.snr, 'detection/detection_db_scan_' + str(time.time()), beam.id == 6,
+        plotter.plot(beam.snr, 'detection/detection_db_scan_' + str(time.time()), beam.id == 0,
                      cluster_labels=cluster_labels)
 
         # Select only those labels which were not classified as noise (-1)
         filtered_cluster_labels = cluster_labels[cluster_labels > -1]
 
+        log.debug('%s out of %s data points was considered to be noise',
+                  len(cluster_labels) - len(filtered_cluster_labels), len(cluster_labels))
+
         ref_time = Time(beam.t_0)
         dt = TimeDelta(beam.dt, format='sec')
+
+        log.debug('%s unique clusters were detected', len(np.unique(filtered_cluster_labels)))
 
         # Group the data points in clusters
         clusters = []
         for label in np.unique(filtered_cluster_labels):
             data_indices = data[np.where(cluster_labels == label)]
 
+            log.debug('cluster %s contains %s data points', label, len(data_indices[:, 1]))
+
             channel_indices = data_indices[:, 1]
             time_indices = data_indices[:, 0]
+
+            # If cluster is 'small' do not consider it
+            if len(channel_indices) < self._min_samples:
+                log.debug('Ignoring small cluster with %s data points', len(channel_indices))
+                continue
 
             # Create a Detection Cluster from the cluster data
             cluster = DetectionCluster(model=self._linear_model,
@@ -113,6 +125,7 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
 
             # Add only those clusters that are linear
             if cluster.is_linear(threshold=0.9):
+                log.debug('Cluster with m:%3.2f, c:%3.2f and r:%0.2f is considered to be linear.', cluster.m, cluster.c, cluster._score)
                 clusters.append(cluster)
 
         log.debug('DBSCAN detected %s clusters in beam %s, of which %s are linear',

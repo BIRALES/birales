@@ -82,7 +82,7 @@ class Detector(ProcessingModule):
             # Persist beam candidates
             self._debris_queue.save()
 
-        log.info('Detected %s beam candidates', len(new_beam_candidates))
+        log.info('%s beam candidates, were found', len(new_beam_candidates))
 
     def _get_beam_candidates_single(self, beams):
         """

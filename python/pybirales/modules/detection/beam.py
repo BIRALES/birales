@@ -60,22 +60,22 @@ class Beam:
         :return:
         """
 
-        return np.abs(data[0, self.id, int(self.n_channels / 2):, :]).T
-
+        # return np.abs(data[0, self.id, int(self.n_channels / 2):, :]).T
+        data = np.abs(data[0, self.id, int(self.n_channels / 2):, :]).T
         #
         # # @todo - check if the mean can be used as an estimate for the noise
-        # mean_noise_per_channel = np.mean(data, axis=0)
+        mean_noise_per_channel = np.mean(data, axis=0)
         #
         # # Normalised the data by the mean noise at each channel
-        # normalised_data = np.where(data > 0., data, np.nan) / mean_noise_per_channel
+        normalised_data = np.where(data > 0., data, np.nan) / mean_noise_per_channel
         #
         # # Take the log value of the power
-        # log_data = np.log10(normalised_data)
+        log_data = np.log10(normalised_data)
         #
         # # Replace nan values with 0.
-        # log_data[np.isnan(log_data)] = 0.
+        log_data[np.isnan(log_data)] = 0.
         #
-        # return log_data
+        return log_data
 
     def _apply_filter(self, beam_filter):
         beam_filter.apply(self)

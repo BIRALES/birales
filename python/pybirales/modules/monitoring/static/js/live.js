@@ -8,10 +8,10 @@ var BeamCandidatesPlotter = function () {
 
     this._tx = 410.0703125;
     this._max_channel = 410.0703125;
-    this._min_channel = 409.9921875;
+    this._min_channel = 398.9921875;
 
     this._max_time = new Date();
-    this._min_time = new Date(new Date().setHours(this._max_time.getHours() - 10));
+    this._min_time = new Date(new Date().setHours(this._max_time.getHours() - 0.2));
 
     this._title = '';
     this._x_label = 'Channel (MHz)';

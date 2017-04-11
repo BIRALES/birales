@@ -15,6 +15,7 @@ class BeamCandidatesQueue:
 
         for old_cluster in beam_queue:
             if new_cluster.is_similar_to(old_cluster, threshold=0.1):
+                log.debug('Merging cluster with another cluster present in queue')
                 # mark old cluster as 'to delete'
                 old_cluster.delete()
 
@@ -37,6 +38,7 @@ class BeamCandidatesQueue:
         :return:
         """
         if len(self.queue[beam_id]) > self._max_size:
+            log.debug('Popping last candidate from queue')
             self.queue[beam_id].pop()
 
     def save(self):

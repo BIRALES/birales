@@ -61,7 +61,7 @@ class DummyDataGenerator(ProcessingModule):
 
     def generate_corrdata(self):
 
-        return np.ones((1,1,32,70000), dtype = np.complex64)
+        return np.ones((1, 1, 32, 70000), dtype=np.complex64)
 
     def process(self, obs_info, input_data, output_data):
         # Sampling rate
@@ -78,18 +78,16 @@ class DummyDataGenerator(ProcessingModule):
         # Doppler shifted signal (from f1 to f2)
         freq = np.linspace(f1, f2, len(ts))
         ys = 100 * np.sin(2 * np.pi * freq * ts)
-        ys += 10 * np.random.normal(scale=np.sqrt(noise_power), size=ts.shape)
+        # ys = 100 * np.random.normal(scale=np.sqrt(noise_power), size=ts.shape)
 
         for i in range(self._nants):
             output_data[:, :, :, i] = ys
             # output_data[:, :, :, i] = 10*np.sin(np.arange(self._nsamp) * 0.5)
             # plotter.scatter(ys, ts, 'antenna_6_signal', i == 6)
 
-	sleep(2)
         self._counter += 1
 
-        
-        output_data = self.generate_corrdata()
+        # output_data = self.generate_corrdata()
         # Create observation information
         obs_info = ObservationInfo()
         obs_info['sampling_time'] = 1. / settings.observation.samples_per_second
