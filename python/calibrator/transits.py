@@ -25,8 +25,8 @@ o.add_option('-s', '--sort_key', dest='sort_key', type='string', default='transi
         help='Key by which to sort sources. Choices: transit, flux, name, ra, dec, ha. Default: transit')
 o.add_option('-d', '--descending', dest='descending', action='store_true', default=False,
         help='Use this flag to sort sources in descending order')
-o.add_option('-c', '--cat', dest='cat', default='/home/lessju/Code/medicina/poxy/scripts/analysis/VIII_1A_3cr-120303b.csv', type='string',
-    help='Catalogue to load. Default is 3CR at /home/lessju/Code/medicina/poxy/scripts/analysis/VIII_1A_3cr-120303b.csv')
+o.add_option('-c', '--cat', dest='cat', default='VIII_1A_3cr-120303b.csv', type='string',
+    help='Catalogue to load. Default is 3CR at VIII_1A_3cr-120303b.csv')
 o.add_option('-v', '--verbose', dest='verbose', action='store_true', default=False,
     help='Be verbose (mainly about reading the catalogue file).')
 opts, args = o.parse_args(sys.argv[1:])
@@ -76,7 +76,7 @@ epoch = 1950
 body_list = []
 if opts.verbose:
     print '######################################################################################################'
-for rn,row in enumerate(catlist):
+for rn,row in enumerate(catlist[:-1]):
     if opts.verbose:
         print 'Parsing object %d of %d:'%(rn+1,n_entries),
     cells = row.split(',')

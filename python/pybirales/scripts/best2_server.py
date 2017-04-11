@@ -322,7 +322,7 @@ class SdebTCPServer(SocketServer.TCPServer):
 
 
 #Setting up logging    
-log_filename = "log/dataserver.log"
+log_filename = "dataserver.log"
 logger = logging.getLogger('DataLogger')
 logger.setLevel(logging.INFO)
 formatter = logging.Formatter("%(asctime)s - %(levelname)s: %(message)s", "%Y/%m/%d_%H:%M:%S")
