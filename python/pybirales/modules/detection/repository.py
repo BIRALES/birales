@@ -4,8 +4,8 @@ import numpy as np
 import pymongo as mongo
 
 from abc import abstractmethod
-from pybirales.base import settings
 import time
+from astropy.time import Time
 
 
 class Repository:
@@ -79,23 +79,23 @@ class BeamDataRepository(Repository):
             sys.exit(1)
 
 
-class DataSetRepository(Repository):
+class ConfigurationRepository(Repository):
     def __init__(self):
         Repository.__init__(self)
 
-    def persist(self, data_set):
+    def persist(self, configuration):
         try:
-            self.database.data_sets.update_one({'_id': data_set.id},
-                                               {"$set": dict(data_set)},
-                                               upsert=True)
-            log.info('Data set %s meta data was saved to the database', data_set.name)
+            self.database.configurations.update_one({'_id': configuration['configuration_id']},
+                                                    {"$set": configuration},
+                                                    upsert=True)
+            log.info('Configuration data was saved to the database')
         except mongo.errors.ServerSelectionTimeoutError:
             log.error('MongoDB is not running. Exiting.')
             sys.exit(1)
 
     def get(self, data_set_id):
         try:
-            return self.database.data_sets.find_one({
+            return self.database.configurations.find_one({
                 '_id': data_set_id
             })
 
@@ -111,87 +111,8 @@ class DataSetRepository(Repository):
         :return:
         """
         try:
-            result = self.database.data_sets.delete_many({"_id": data_set_id})
+            result = self.database.configurations.delete_many({"_id": data_set_id})
             log.info('Deleted %s data sets', result.deleted_count)
-
-        except mongo.errors.ServerSelectionTimeoutError:
-            log.error('MongoDB is not running. Exiting.')
-            sys.exit(1)
-
-
-class BeamCandidate2Repository(Repository):
-    def __init__(self, data_set=None):
-        Repository.__init__(self)
-        self.collection = 'beam_candidates'
-        self.data_set = data_set
-
-    def persist(self, beam_candidates):
-        if not beam_candidates:
-            log.warning('No beam space debris candidates were found.')
-            return False
-
-        try:
-            # Clear the database of old beam data candidates
-            self.destroy(self.data_set.id)
-
-            # Convert beam objects to a dict representation
-            beam_candidates = [dict(candidate) for candidate in beam_candidates]
-
-            # Insert candidates to the database
-            if len(beam_candidates) == 1:
-                self.database.beam_candidates.insert(beam_candidates[0])
-                log.info('1 beam candidate was saved to the database')
-            else:
-                saved = self.database.beam_candidates.insert_many(beam_candidates)
-                log.info('%s beam candidates were saved to the database', len(saved.inserted_ids))
-        except mongo.errors.ServerSelectionTimeoutError:
-            log.error('MongoDB is not running. Exiting.')
-            sys.exit(1)
-
-    @staticmethod
-    def save_to_vtk(beam_candidates):
-        for candidate in beam_candidates:
-            time = []
-            frequencies = []
-            snr = []
-            for detection in candidate.detections:
-                time.append(detection['time_elapsed'])
-                frequencies.append(detection['frequency'])
-                snr.append(detection['snr'])
-
-            pointsToVTK('beam_candidate_' + candidate.id,
-                        x=np.array(time),
-                        y=np.array(frequencies),
-                        z=np.linspace(1., 1., len(frequencies)),
-                        data={'snr': np.array(snr)})
-
-    def get(self, beam_id, data_set_id, max_freq=None, min_freq=None, max_time=None, min_time=None):
-        try:
-            query = {"$and": [
-                {'beam_id': beam_id},
-                {'data_set_id': data_set_id}
-            ]}
-
-            if max_freq and min_freq:
-                query['$and'].append({'detections.frequency': {'$gte': float(min_freq)}})
-                query['$and'].append({'detections.frequency': {'$lte': float(max_freq)}})
-
-            if max_time and min_time:
-                query['$and'].append({'detections.time_elapsed': {'$gte': float(min_time)}})
-                query['$and'].append({'detections.time_elapsed': {'$lte': float(max_time)}})
-
-            beam_candidates = self.database.beam_candidates.find(query)
-
-            return list(beam_candidates)
-
-        except mongo.errors.ServerSelectionTimeoutError:
-            log.error('MongoDB is not running. Exiting.')
-            sys.exit(1)
-
-    def destroy(self, data_set_id):
-        try:
-            result = self.database.beam_candidates.delete_many({"data_set_id": data_set_id})
-            log.info('Deleted %s beam candidates', result.deleted_count)
 
         except mongo.errors.ServerSelectionTimeoutError:
             log.error('MongoDB is not running. Exiting.')
@@ -254,14 +175,6 @@ class ObservationRepository(Repository):
             sys.exit(1)
 
     def persist(self, entity):
-        pass
-
-
-class SpaceDebrisRepository(Repository):
-    def __init__(self):
-        Repository.__init__(self)
-
-    def persist(self, space_debris_candidates):
         pass
 
 

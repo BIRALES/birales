@@ -197,6 +197,7 @@ class DetectionCluster:
             'min_channel': self.min_channel,
             'max_channel': self.max_channel,
             'created_at': datetime.datetime.utcnow(),
+            'configuration_id': self.beam.configuration_id,
             'data': {
                 'time': [b.iso for b in self.time_data],
                 'channel': self.channel_data.tolist(),

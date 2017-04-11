@@ -1,4 +1,6 @@
 import collections
+from astropy.time import Time
+from pybirales.base import settings
 
 
 class ObservationInfo(collections.MutableMapping):
@@ -15,6 +17,11 @@ class ObservationInfo(collections.MutableMapping):
         self['timestamp'] = 0.0
         self['nchans'] = 0
         self['nsamp'] = 0
+        self['configuration_id'] = Time.now().unix
+        self['created_at'] = Time.now().iso
+
+        self['settings'] = {a: settings.__dict__[a].__dict__ for a in settings.__dict__.keys() if
+                            not a.startswith('__')}
 
     def get_dict(self):
         return self.store

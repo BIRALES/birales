@@ -4,7 +4,7 @@ import numpy as np
 from multiprocessing.dummy import Pool as ThreadPool
 from pybirales.modules.detection.detection_strategies import SpaceDebrisDetection
 from pybirales.modules.detection.repository import BeamCandidateRepository
-from pybirales.modules.detection.repository import DataSetRepository
+from pybirales.modules.detection.repository import ConfigurationRepository
 from pybirales.base.definitions import PipelineError
 
 from pybirales.base.processing_module import ProcessingModule
@@ -16,8 +16,6 @@ from pybirales.blobs.receiver_data import ReceiverBlob
 from pybirales.modules.detection.beam import Beam
 from pybirales.plotters.spectrogram_plotter import plotter
 from pybirales.modules.detection.queue import BeamCandidatesQueue
-
-import time
 
 
 class Detector(ProcessingModule):
@@ -32,11 +30,17 @@ class Detector(ProcessingModule):
         # Repository Layer for saving the beam candidates to the Data store
         self._candidates_repository = BeamCandidateRepository()
 
+        # Repository Layer for saving the configuration to the Data store
+        self._configurations_repository = ConfigurationRepository()
+
         # Data structure that hold the detected debris (for merging)
         self._debris_queue = BeamCandidatesQueue(settings.beamformer.nbeams)
 
         # Initialise thread pool with N threads
         self._thread_pool = ThreadPool(settings.detection.nthreads)
+
+        # Flag that indicates whether the configuration was persisted
+        self._config_persisted = False
 
         super(Detector, self).__init__(config, input_blob)
 
@@ -55,6 +59,10 @@ class Detector(ProcessingModule):
         if not input_data.any():
             log.warning('Input data is empty')
             return
+
+        if not self._config_persisted:
+            self._configurations_repository.persist(obs_info)
+            self._config_persisted = True
 
         # Create the beams
         beams = [Beam(beam_id=n_beam, obs_info=obs_info, beam_data=input_data)
