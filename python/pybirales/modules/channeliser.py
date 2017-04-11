@@ -120,6 +120,7 @@ class PFB(ProcessingModule):
         :param output_data:
         :return:
         """
+
         # Check if initialised, if not initialise
         nstreams = obs_info['nbeams'] if self._after_beamformer else obs_info['nants']
         npols = 1 if 'npols' not in obs_info.keys() else obs_info['npols']
@@ -141,6 +142,7 @@ class PFB(ProcessingModule):
         if self._after_beamformer:
             self._temp_input[:, :, :, self._nchans * self._ntaps:] = input_data
         else:
+            # TODO: Fix this transpose
             self._temp_input[:, :, :, self._nchans * self._ntaps:] = np.transpose(input_data, (0, 3, 1, 2))
 
         # Channelise

@@ -13,6 +13,8 @@ from pybirales.modules.persister import Persister
 from pybirales.modules.receiver import Receiver
 from pybirales.modules.detector import Detector
 from pybirales.plotters.channel_plotter import ChannelisedDataPlotter
+from pybirales.plotters.antenna_plotter import AntennaPlotter
+from pybirales.plotters.bandpass_plotter import BandpassPlotter
 from pybirales.modules.monitoring.server import app
 
 
@@ -102,8 +104,8 @@ def test_receiver(configuration, debug):
     manager.add_module("ppf", ppf)
     manager.add_module("terminator", terminator)
 
-  #  manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
-    manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
+    manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
+  #  manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
   #  manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
 
     manager.start_pipeline()
@@ -216,6 +218,39 @@ def correlator_pipeline(configuration, debug):
     manager.add_module("receiver", receiver)
     manager.add_module("correlator", correlator)
     manager.add_module("persister", persister)
+
+    manager.start_pipeline()
+
+
+@cli.command()
+@click.argument('configuration', default='config/birales.ini')
+@click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
+def multipipeline(configuration, debug):
+    """
+    This script runs the test receiver pipeline,
+    using the specified CONFIGURATION.
+    """
+
+    # Initialise the Pipeline Manager
+    manager = PipelineManager(configuration, debug)
+
+    # Initialise the modules
+    receiver = Receiver(settings.receiver)
+
+    beamformer = Beamformer(settings.beamformer, receiver.output_blob)
+    ppf = PFB(settings.channeliser, beamformer.output_blob)    
+    persister = Persister(settings.persister, ppf.output_blob)    
+
+    correlator = Correlator(settings.correlator, receiver.output_blob)
+    corr_persister = CorrMatrixPersister(settings.corrmatrixpersister, correlator.output_blob)
+
+    # Add modules to pipeline manager
+    manager.add_module("receiver", receiver)
+    manager.add_module("beamformer", beamformer)
+    manager.add_module("ppf", ppf)
+    manager.add_module("persister", persister)
+    manager.add_module("correlator", correlator)
+    manager.add_module("corr_persister", corr_persister)
 
     manager.start_pipeline()
 

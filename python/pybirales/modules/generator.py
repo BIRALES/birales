@@ -1,6 +1,7 @@
 import logging
 import numpy as np
 import time
+from time import sleep
 import datetime
 
 from pybirales.base.definitions import PipelineError, ObservationInfo
@@ -84,6 +85,7 @@ class DummyDataGenerator(ProcessingModule):
             # output_data[:, :, :, i] = 10*np.sin(np.arange(self._nsamp) * 0.5)
             # plotter.scatter(ys, ts, 'antenna_6_signal', i == 6)
 
+	sleep(2)
         self._counter += 1
 
         

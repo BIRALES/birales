@@ -159,7 +159,7 @@ def plot(opts):
       #  fig.subplots_adjust(right=0.9)
       #  fig.colorbar(im, cax)
 
-        fig.tight_layout()
+    #    fig.tight_layout()
         plt.show()
         f.close()
 
@@ -211,8 +211,10 @@ def plot(opts):
         fig = plt.figure(figsize=(8,8))
         ax = fig.add_subplot(1, 1, 1)
 
+        print data.shape
         data = np.sum(data, axis = 1)
-        data = data[: math.floor(data.shape[0] / opts.samples) * opts.samples, :]
+        print data.shape
+#        data = data[: math.floor(data.shape[0] / opts.samples) * opts.samples, :]
         data = np.reshape(data, (len(data) / opts.samples, opts.samples, nbeams))
         data = 20*np.log10(np.sum(data, axis=1))
 
