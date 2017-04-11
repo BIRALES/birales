@@ -6,9 +6,9 @@ var BeamCandidatesPlotter = function () {
 
     this._beam_candidates_plot_selector = 'live-beam-candidates-plot';
 
-    this._tx = 400.5;
-    this._max_channel = 405.99;
-    this._min_channel = 398.99;
+    this._tx = 411.0;
+    this._max_channel = 410.0703125;
+    this._min_channel = 409.9921875;
 
     this._max_time = new Date();
     this._min_time = new Date(new Date().setHours(this._max_time.getHours() - 10));
