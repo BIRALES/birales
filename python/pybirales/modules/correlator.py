@@ -95,7 +95,7 @@ class Correlator(ProcessingModule):
         self._nbaselines = int(0.5 * ((obs_info['nants'] ** 2) - obs_info['nants']))
         self._nstokes = obs_info['npols'] ** 2
 
-        # Integration check
+        # Integration check 
         if self._nsamp % self._integrations != 0:
             logging.warning("Number of integration not factor of number of samples, skipping buffer")
             return

@@ -35,6 +35,10 @@ class DataBlob(object):
         # Flags to determine whether a block in the blob is written or not
         self._block_has_data = []
 
+        # Keep track of how many modules have read the blob
+        self._nof_readers = 0
+        self._readers = {}
+
         for i in range(nof_blocks):
             self._obs_info.append(ObservationInfo())
             self._block_has_data.append(False)
@@ -50,15 +54,21 @@ class DataBlob(object):
         self._writer_lock = Lock()
         self._writer_index = 0
 
-    def request_read(self):
+    def register_reader(self, id):
+        """ Add a new reader to the data blob """
+        self._nof_readers += 1
+        self._readers[id] = False
+
+    def request_read(self, id):
         """ Wait while reader and writer are not pointing to the same block, then return read block
         :return: Data splice associated with current block and associated observation information
         """
-
         # The reader must wait for the writer to insert data into the blob. When the reader and writer have the
         # same index it means that the reader is waiting for data to be available (the writer must be ahead of reader)
         self._writer_lock.acquire()
-        while self._reader_index == self._writer_index and not self._block_has_data[self._reader_index]:
+
+        while (self._reader_index == self._writer_index) and (self._block_has_data[self._reader_index] is False) or (self._readers[id]):
+
             self._writer_lock.release()
             time.sleep(0.001)  # Wait for data to become available
             self._writer_lock.acquire()
@@ -71,12 +81,20 @@ class DataBlob(object):
         self._block_has_data[self._reader_index] = None
 
         # Return data splice
-        return self._data[self._reader_index, :], copy.copy(self._obs_info[self._reader_index])
+        return self._data[self._reader_index, :], copy.deepcopy(self._obs_info[self._reader_index])
 
-    def release_read(self):
+    def release_read(self, id):
         """ Finished reading data block, increment reader index and release lock """
-        self._block_has_data[self._reader_index] = False
-        self._reader_index = (self._reader_index + 1) % self._nof_blocks
+
+        self._readers[id] = True
+        if all(self._readers.values()):
+            self._block_has_data[self._reader_index] = False
+            self._reader_index = (self._reader_index + 1) % self._nof_blocks
+
+            for k in self._readers.keys():
+                self._readers[k] = False    
+
+        # Release lock
         self._reader_lock.release()
 
     def request_write(self):
@@ -107,7 +125,7 @@ class DataBlob(object):
 
         # Copy updated observation information to placeholder associated with written block
         if obs_info is not None:
-            self._obs_info[self._writer_index] = copy.copy(obs_info)
+            self._obs_info[self._writer_index] = copy.deepcopy(obs_info)
 
         # Set block as written
         self._block_has_data[self._writer_index] = True
@@ -127,7 +145,7 @@ class DataBlob(object):
             time.sleep(0.001)
 
         # Required required segment of data
-        to_return = self._data[snapshot_index][index].copy(), copy.copy(self._obs_info[snapshot_index])
+        to_return = self._data[snapshot_index][index].copy(), copy.deepcopy(self._obs_info[snapshot_index])
 
         # All done, return data segment and associated obs_info
         return to_return
@@ -141,3 +159,4 @@ class DataBlob(object):
     def datatype(self):
         """ Return the datatype of underlying data """
         return self._data_type
+

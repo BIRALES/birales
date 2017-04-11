@@ -27,7 +27,7 @@ class Persister(ProcessingModule):
 
         # Create file
         if config.use_timestamp:
-            filepath = os.path.join(config.directory, "%s_%s" % (config.filename, str(time.now())))
+            filepath = os.path.join(config.directory, "%s_%s" % (config.filename, str(time.time())))
         else:
             if 'filename' not in config.settings():
                 raise PipelineError("Persister: filename required when not using timestamp")

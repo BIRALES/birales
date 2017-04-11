@@ -95,6 +95,7 @@ class Beamformer(ProcessingModule):
             self._pointing.start()
 
     def process(self, obs_info, input_data, output_data):
+
         # Get data information
         nsamp = obs_info['nsamp']
         nsubs = obs_info['nsubs']

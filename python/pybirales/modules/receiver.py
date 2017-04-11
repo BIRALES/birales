@@ -1,3 +1,4 @@
+import time
 import ctypes
 import logging
 import numpy as np
@@ -44,7 +45,7 @@ class Receiver(Generator):
         self._npols = config.npols
         self._complex = config.complex
         self._samples_per_second = settings.observation.samples_per_second
-        self._start_time = 0
+        self._start_time = int(time.time())
 
         # Define data type
         if self._nbits == 64 and self._complex:
@@ -161,7 +162,7 @@ class Receiver(Generator):
         self._daq.addReceiverPort.restype = ctypes.c_int
 
         # Define startBeamConsumer function
-        self._daq.startBiralesConsumer.argtypes = [ctypes.c_uint32]
+        self._daq.startBiralesConsumer.argtypes = [ctypes.c_uint32, ctypes.c_float, ctypes.c_float]
         self._daq.startBiralesConsumer.restype = ctypes.c_int
 
         # Define setBeamConsumerCallback function
