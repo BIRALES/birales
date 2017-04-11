@@ -300,7 +300,7 @@ def integrate(opts):
     """ Integrate samples """
     
     print "Time samples:       %d" % opts.samples
-    print args[0]
+    print args[0], glob.glob(args[0])
     print "===== Generating time series ====="
 
     for filename in glob.glob(args[0]):
@@ -317,8 +317,8 @@ def integrate(opts):
 
         # Get file size to calculate number of time spectra
         filesize = os.path.getsize(filename)    
-        iterations = filesize / (opts.nchans * opts.samples)
-
+        iterations = filesize / (opts.nchans * opts.samples * 4)
+ 
         # Process file
         for i in range(iterations):
             data = f.read(opts.nchans * opts.samples * 4)
@@ -327,7 +327,7 @@ def integrate(opts):
             data = np.reshape(data, (nsamp, opts.nchans))
 
             w.write(struct.pack('f', np.sum(np.sum(data, axis = 1) / opts.nchans) / nsamp))
-
+            
             sys.stdout.write("===== Processing %d of %d [%.2f%%]   \r" % 
                             (i, iterations, (i / float(iterations) * 100)))
             sys.stdout.flush()
