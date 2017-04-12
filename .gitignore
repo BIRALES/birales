@@ -10,3 +10,8 @@ python/dist
 python/pybirales.egg-info
 python/calibrator/I_O
 python/calibrator/*.log
+
+*.log
+*.swp
+python/pybirales/plots/*
+python/pybirales/pybirales.egg-info
