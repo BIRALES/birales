@@ -4,6 +4,8 @@
     {% block head %}
         <title>BIRALES | {% block title %}{% endblock %}</title>
 
+        <link rel="shortcut icon" href="{{ url_for('static', filename='img/birales_logo.png') }}">
+
         <!-- Bootstrap core CSS -->
          <link rel="stylesheet" href="{{ url_for('static', filename='node_modules/bootstrap/dist/css/bootstrap.min.css') }}">
         <!--  Light Bootstrap Table core CSS -->
