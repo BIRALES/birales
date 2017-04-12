@@ -15,7 +15,7 @@
                         <p class="category">Live</p>
                     </div>
                     <div class="content">
-                        <div id="live-beam-candidates-plot"></div>
+                        <div class="chart plotly" id="live-beam-candidates-plot"></div>
                         <div class="footer">
                             <hr/>
                             <div class="stats">
@@ -46,6 +46,8 @@
 
 {% block scripts %}
     {{ super() }}
+
+
     <script src="{{ url_for('static', filename='js/live.js') }}"></script>
 
     <script>
