@@ -80,29 +80,41 @@ var BeamCandidatesPlotter = function () {
         var beam_candidates = self._get_beam_candidates_data(self._max_channel, self._min_channel, self._max_time, self._min_time);
 
         $.when(beam_candidates).done(function (beam_candidates) {
-            log.debug('Publishing the', self.name, 'plotter');
-            var traces = self._get_trace(beam_candidates);
+            if(beam_candidates){
+                log.debug('Publishing the', self.name, 'plotter with', beam_candidates.length,'candidates');
+                var traces = self._get_trace(beam_candidates);
 
-            var layout = self._get_layout();
+                var layout = self._get_layout();
 
-            Plotly.newPlot(self._beam_candidates_plot_selector, traces, layout);
+                Plotly.newPlot(self._beam_candidates_plot_selector, traces, layout);
 
-            self._update_html();
+                self._update_html();
+            }
+            else{
+                log.debug('No candidates were detected');
+            }
         });
     };
 
     this.update = function () {
-        var beam_candidates = self._get_beam_candidates_data(self._max_channel, self._min_channel, self._max_time, self._min_time);
+        var from = self._max_time;
+        var beam_candidates = self._get_beam_candidates_data(self._max_channel, self._min_channel, undefined, from);
 
         $.when(beam_candidates).done(function (beam_candidates) {
-            log.debug('Updating the', self.name, 'plotter');
-            var traces = self._get_trace(beam_candidates);
+            if(beam_candidates){
+                var traces = self._get_trace(beam_candidates);
 
-            var layout = self._get_layout();
+                var layout = self._get_layout();
 
-            Plotly.update(self._beam_candidates_plot_selector, traces, layout);
+                Plotly.update(self._beam_candidates_plot_selector, traces, layout);
 
-            self._update_html();
+                self._update_html();
+
+                log.debug('Updating the', self.name, 'plotter with', beam_candidates.length, 'new candidates');
+            }
+            else {
+                log.debug('Nothing to update. No new candidates were detected');
+            }
         });
     };
 
