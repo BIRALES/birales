@@ -1,10 +1,6 @@
 {% extends "includes/layout.html" %}
 {% block title %}Monitoring{% endblock %}
 
-{% block head %}
-    {{ super() }}
-{% endblock %}
-
 {% block content %}
     <div class="container-fluid">
         <div class="row">
@@ -46,8 +42,6 @@
 
 {% block scripts %}
     {{ super() }}
-
-
     <script src="{{ url_for('static', filename='js/live.js') }}"></script>
 
     <script>

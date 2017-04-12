@@ -12,3 +12,7 @@
 .chart.plotly{
     height: 450px
 }
+
+caption {
+    padding-left: 15px;
+}
