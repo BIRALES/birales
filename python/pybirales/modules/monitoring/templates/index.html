@@ -1,10 +1,6 @@
 {% extends "includes/layout.html" %}
 {% block title %}Monitoring{% endblock %}
 
-{% block head %}
-    {{ super() }}
-{% endblock %}
-
 {% block content %}
     <div class="container-fluid">
         <div class="row">
@@ -15,7 +11,7 @@
                         <p class="category">Live</p>
                     </div>
                     <div class="content">
-                        <div id="live-beam-candidates-plot"></div>
+                        <div class="chart plotly" id="live-beam-candidates-plot"></div>
                         <div class="footer">
                             <hr/>
                             <div class="stats">
@@ -35,7 +31,10 @@
                         <p class="category">Live</p>
                     </div>
                     <div class="content">
-                        <div id="live-beam-candidates-od-table"></div>
+                        <div id="live-beam-candidates-od-table">
+                            <p>Click <a href="od_input.html">here</a> for the orbit determination table</p>
+                        </div>
+
                         <div class="footer"></div>
                     </div>
                 </div>

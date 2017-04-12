@@ -15,41 +15,48 @@
                         <p class="category">Channel: {{ min_channel }} Mhz to {{ max_channel }} Mhz |
                             Time {{ min_time }}
                             to {{ max_time }}</p>
+                        <p class="category">Detected {{ candidates|length }} candidates</p>
                     </div>
-                    {% for candidate in candidates %}
-                        <div class="content table-responsive table-full-width">
-                            <table class="table table-hover table-striped">
-                                <caption>
-                                    Beam {{ candidate['beam']['id'] }}
-                                    (DEC: {{ candidate['beam']['dec'] }},
-                                    RA: {{ candidate['beam']['ra'] }}),
-                                    candidate {{ candidate['_id'] }}
-                                </caption>
-                                <thead>
-                                <tr>
-                                    <th>Timestamp</th>
-                                    <th>MJD2000</th>
-                                    <th>Time Elapsed (s)</th>
-                                    <th>Doppler (Hz)</th>
-                                    <th>Frequency (MHz)</th>
-                                    <th>SNR (Db)</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {% for i in range(0, candidate['data']['time'] | length) %}
+                    {% if candidates|length> 0 %}
+                        {% for candidate in candidates %}
+                            <div class="content table-responsive table-full-width">
+                                <table class="table table-hover table-striped">
+                                    <caption>
+                                        Beam {{ candidate['beam']['id'] }}
+                                        (DEC: {{ candidate['beam']['dec'] }},
+                                        RA: {{ candidate['beam']['ra'] }}) |
+                                        candidate {{ candidate['_id'] }}
+                                    </caption>
+                                    <thead>
                                     <tr>
-                                        <td>{{ candidate['data']['time'][i].iso }}</td>
-                                        <td>{{ candidate['data']['time'][i].mjd }}</td>
-                                        <td>{{ '-' }}</td>
-                                        <td>{{ candidate['data']['doppler_shift'][i] }}</td>
-                                        <td>{{ candidate['data']['channel'][i] }}</td>
-                                        <td>{{ candidate['data']['snr'][i] }}</td>
+                                        <th>Timestamp</th>
+                                        <th>MJD2000</th>
+                                        <th>Time Elapsed (s)</th>
+                                        <th>Doppler (Hz)</th>
+                                        <th>Frequency (MHz)</th>
+                                        <th>SNR (Db)</th>
                                     </tr>
-                                {% endfor %}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                    {% for i in range(0, candidate['data']['time'] | length) %}
+                                        <tr>
+                                            <td>{{ candidate['data']['time'][i].iso }}</td>
+                                            <td>{{ candidate['data']['time'][i].mjd }}</td>
+                                            <td>{{ '-' }}</td>
+                                            <td>{{ candidate['data']['doppler_shift'][i] }}</td>
+                                            <td>{{ candidate['data']['channel'][i] }}</td>
+                                            <td>{{ candidate['data']['snr'][i] }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="content">
+                            <p>No beam candidates were found in this range.</p>
                         </div>
-                    {% endfor %}
+                    {% endif %}
                 </div>
             </div>
         </div>
