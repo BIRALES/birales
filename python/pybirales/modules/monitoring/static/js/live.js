@@ -11,8 +11,8 @@ var BeamCandidatesPlotter = function () {
     this._max_channel = $(this._beam_candidates_plot_selector_id).data('chart-max_channel') || 410.0703125;
     this._min_channel = $(this._beam_candidates_plot_selector_id).data('chart-min_channel') || 398.9921875;
 
-    this._max_time = new Date($(this._beam_candidates_plot_selector_id).data('chart-max_time')) || new Date();
-    this._min_time = new Date($(this._beam_candidates_plot_selector_id).data('chart-min_time')) || new Date(new Date().setHours(this._max_time.getHours() - 0.2));
+    this._max_time = $(this._beam_candidates_plot_selector_id).data('chart-max_time');
+    this._min_time = $(this._beam_candidates_plot_selector_id).data('chart-min_time');
 
     this._title = '';
     this._x_label = 'Channel (MHz)';
@@ -31,11 +31,11 @@ var BeamCandidatesPlotter = function () {
             };
 
             if (beam_candidate['min_time'] < self._min_time) {
-                self._min_time = min;
+                self._min_time = beam_candidate['min_time'];
             }
 
             if (beam_candidate['max_time'] > self._max_time) {
-                self._max_time = max;
+                self._max_time = beam_candidate['max_time'];
             }
 
             traces.push(beam_candidates_trace);
@@ -77,7 +77,7 @@ var BeamCandidatesPlotter = function () {
     };
 
     this.publish = function () {
-        var beam_candidates = self._get_beam_candidates_data(self._max_channel, self._min_channel, self._max_time.toISOString(), self._min_time.toISOString());
+        var beam_candidates = self._get_beam_candidates_data(self._max_channel, self._min_channel, self._max_time, self._min_time);
 
         $.when(beam_candidates).done(function (beam_candidates) {
             log.debug('Publishing the', self.name, 'plotter');
@@ -92,7 +92,7 @@ var BeamCandidatesPlotter = function () {
     };
 
     this.update = function () {
-        var beam_candidates = self._get_beam_candidates_data(self._max_channel, self._min_channel, self._max_time.toISOString(), self._min_time.toISOString());
+        var beam_candidates = self._get_beam_candidates_data(self._max_channel, self._min_channel, self._max_time, self._min_time);
 
         $.when(beam_candidates).done(function (beam_candidates) {
             log.debug('Updating the', self.name, 'plotter');
@@ -107,7 +107,7 @@ var BeamCandidatesPlotter = function () {
     };
 
     this._update_html = function () {
-        $('#beam-candidates-last-updated').html('Detections since ' + self._min_time.toUTCString())
+        $('#beam-candidates-last-updated').html('Detections since ' + self._min_time)
     };
 
     this._get_beam_candidates_data = function (max_channel, min_channel, max_time, min_time) {
