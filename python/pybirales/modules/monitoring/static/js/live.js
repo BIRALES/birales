@@ -76,7 +76,7 @@ var BeamCandidatesPlotter = function () {
     };
 
     this.publish = function () {
-        var beam_candidates = self._get_beam_candidates_data(self._max_channel, self._min_channel, self._max_time.toUTCString(), self._min_time.toUTCString());
+        var beam_candidates = self._get_beam_candidates_data(self._max_channel, self._min_channel, self._max_time.toISOString(), self._min_time.toISOString());
 
         $.when(beam_candidates).done(function (beam_candidates) {
             log.debug('Publishing the', self.name, 'plotter');
@@ -91,7 +91,7 @@ var BeamCandidatesPlotter = function () {
     };
 
     this.update = function () {
-        var beam_candidates = self._get_beam_candidates_data(self._max_channel, self._min_channel, self._max_time.toUTCString(), self._min_time.toUTCString());
+        var beam_candidates = self._get_beam_candidates_data(self._max_channel, self._min_channel, self._max_time.toISOString(), self._min_time.toISOString());
 
         $.when(beam_candidates).done(function (beam_candidates) {
             log.debug('Updating the', self.name, 'plotter');

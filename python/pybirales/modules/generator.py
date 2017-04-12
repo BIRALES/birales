@@ -78,7 +78,7 @@ class DummyDataGenerator(ProcessingModule):
         # Doppler shifted signal (from f1 to f2)
         freq = np.linspace(f1, f2, len(ts))
         ys = 100 * np.sin(2 * np.pi * freq * ts)
-        # ys = 100 * np.random.normal(scale=np.sqrt(noise_power), size=ts.shape)
+        ys += 10 * np.random.normal(scale=np.sqrt(noise_power), size=ts.shape)
 
         for i in range(self._nants):
             output_data[:, :, :, i] = ys
