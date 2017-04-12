@@ -17,9 +17,6 @@ beam_candidates_repo = BeamCandidateRepository()
 MIN_CHANNEL = 409.9921875
 MAX_CHANNEL = 410.0703125
 
-MIN_CHANNEL = 4
-MAX_CHANNEL = 410.0703125
-
 
 @app.route('/monitoring')
 def index():
