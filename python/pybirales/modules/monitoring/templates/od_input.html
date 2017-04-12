@@ -15,8 +15,9 @@
                         <p class="category">Channel: {{ min_channel }} Mhz to {{ max_channel }} Mhz |
                             Time {{ min_time }}
                             to {{ max_time }}</p>
+                        <p class="category">Detected {{ candidates|length }} candidates</p>
                     </div>
-                    {% if candidates|length > 0 %}
+                    {% if candidates|length> 0 %}
                         {% for candidate in candidates %}
                             <div class="content table-responsive table-full-width">
                                 <table class="table table-hover table-striped">
