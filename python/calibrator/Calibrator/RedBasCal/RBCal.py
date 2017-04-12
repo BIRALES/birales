@@ -1,6 +1,7 @@
 import numpy as np
 import math as ma
 import h5py
+import matplotlib.pyplot as plt
 
 
 class RBCal:
@@ -33,10 +34,10 @@ class RBCal:
         f = h5py.File(filename, "r")
         data = f["Vis"]
         data_out = np.zeros((1, len(self.RB_index), 1), dtype=np.complex)
-
+                
         # Per-Baseline Integration in Time
         for i in range(len(self.RB_index)):
-            data_out[0, i, 0] = (sum(data[:, 0, i, 0]))#/(len(data[:,0,i,0]))
+            data_out[0, i, 0] = (np.sum(data[:, 0, i, 0]))#/(len(data[:,0,i,0]))
         self.data = data_out
 
         # Forming A Configuration Matrix
@@ -44,7 +45,7 @@ class RBCal:
         bas_no = max(self.RB_group) + 1
 
         A = np.zeros((len(self.RB_index), int(ant_no + bas_no)))
-
+    
         for i in range(len(self.RB_index)):
             A[i, (self.RB_ants1[i])] = 1
             A[i, (self.RB_ants2[i])] = 1
@@ -52,7 +53,6 @@ class RBCal:
 
         # Forming Real and Imag Data
 
-        self.reals = []
         self.imags = []
         self.real_data = []
         self.imag_data = []
@@ -102,8 +102,8 @@ class RBCal:
         #    N_I[i, i] = spread_i / (self.imag_data[int(self.RB_index[i])] ** 2)
 
         for i in range(len(self.RB_index)):
-            N_R[i,i] = 1/((np.sqrt((ma.pow((np.float(self.reals[i])), 2)) + (ma.pow((np.float(self.imags[i])), 2))))**2)
-            N_I[i,i] = -1/((np.sqrt((ma.pow((np.float(self.reals[i])), 2)) + (ma.pow((np.float(self.imags[i])), 2))))**2)
+             N_R[i,i] = 1/((np.sqrt((ma.pow((np.float(self.reals[i])), 2)) + (ma.pow((np.float(self.imags[i])), 2))))**2)
+             N_I[i,i] = -1/((np.sqrt((ma.pow((np.float(self.reals[i])), 2)) + (ma.pow((np.float(self.imags[i])), 2))))**2)
 
         #print(N_R)
         #print(N_I)
@@ -115,29 +115,32 @@ class RBCal:
         N_inv_I = np.linalg.pinv(N_I)
 
         gain_coeff = (np.dot((np.linalg.pinv(np.dot((np.dot(A_trans, N_inv_R)), A))),
-                             (np.dot((np.dot(A_trans, N_inv_R)), self.real_data))))
+                         (np.dot((np.dot(A_trans, N_inv_R)), self.real_data))))
         phase_coeff = (np.dot((np.linalg.pinv(np.dot((np.dot(A_trans, N_inv_I)), A))),
-                               (np.dot((np.dot(A_trans, N_inv_I)), self.imag_data))))
+                           (np.dot((np.dot(A_trans, N_inv_I)), self.imag_data))))
 
         #gain_coeff=(np.dot((np.dot((np.dot((np.linalg.pinv(np.dot((np.dot(A_trans,N_inv_R)),A))),A_trans)),N_inv_R)),self.real_data))
         #phase_coeff=(np.dot((np.dot((np.dot((np.linalg.pinv(np.dot((np.dot(A_trans,N_inv_I)),A))),A_trans)),N_inv_I)),self.imag_data))
 
         gains = gain_coeff[0:ant_no]
-        minimum_pv = np.round(np.min(gains), 4) 
-        maximum_pv = np.round(np.max(gains), 4) 
+        gains = gains / gains[4]
+        #minimum_pv = np.round(np.min(gains), 4) 
+        #maximum_pv = np.round(np.max(gains), 4) 
         #minimum_nv = np.round(np.min(gains), 4)
         #maximum_nv = 0
-        if minimum_pv == maximum_pv:
-            gains = gains/gains
-        if minimum_pv != maximum_pv:
-            for i in range(len(gains)):
-                if gains[i] >= 0:
-                    gains[i] = (np.float(gains[i] - minimum_pv) / np.float(maximum_pv - minimum_pv)) * 2
+        #if minimum_pv == maximum_pv:
+        #    gains = gains/gains
+        #if minimum_pv != maximum_pv:
+        #    for i in range(len(gains)):
+        #        if gains[i] >= 0:
+        #            gains[i] = (np.float(gains[i] - minimum_pv) / np.float(maximum_pv - minimum_pv))
         #        if gains[i] < 0:
         #            gains[i] = (np.float(gains[i] - minimum_nv) / np.float(maximum_nv - minimum_nv))
         self.gain_coeff = gains
 
-        self.phase_coeff = phase_coeff[0:ant_no]
+        phases = phase_coeff[0:ant_no]
+        phases = phases - phases[4]
+        self.phase_coeff = phases
 
         print("Gain_coeff " + str(self.gain_coeff))
         print("Phase_coeff " + str(self.phase_coeff))
@@ -146,10 +149,10 @@ class RBCal:
 
         text_file = open(filename1, "w")
         for i in range(len(self.gain_coeff)):
-            text_file.write(str(i) + ' ' + str(self.gain_coeff[i]) + '\n')
+            text_file.write('a' + str(i) + ' ' + str(self.gain_coeff[i]) + '\n')
         text_file.close()
 
         text_file = open(filename2, "w")
         for i in range(len(self.phase_coeff)):
-             text_file.write(str(i) + ' ' + str(self.phase_coeff[i]) + '\n')
+             text_file.write('a' + str(i) + ' ' + str(self.phase_coeff[i]) + '\n')
         text_file.close()
