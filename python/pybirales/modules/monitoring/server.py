@@ -1,6 +1,7 @@
 import json
 
 from flask import Flask, render_template, Response, request
+from flask_compress import Compress
 from pybirales.modules.detection.repository import BeamCandidateRepository
 from datetime import datetime
 from bson import json_util
@@ -8,6 +9,8 @@ from astropy.time import Time, TimeDelta
 
 # Initialize the Flask application
 app = Flask(__name__)
+
+Compress(app)
 
 beam_candidates_repo = BeamCandidateRepository()
 
