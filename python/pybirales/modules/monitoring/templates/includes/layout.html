@@ -5,15 +5,15 @@
         <title>BIRALES | {% block title %}{% endblock %}</title>
 
         <!-- Bootstrap core CSS -->
-        <link rel="stylesheet" href="/static/node_modules/bootstrap/dist/css/bootstrap.min.css">
+         <link rel="stylesheet" href="{{ url_for('static', filename='node_modules/bootstrap/dist/css/bootstrap.min.css') }}">
         <!--  Light Bootstrap Table core CSS -->
-        <link href="/static/themes/lbd/assets/css/light-bootstrap-dashboard.css" rel="stylesheet"/>
+        <link rel="stylesheet" href="{{ url_for('static', filename='themes/lbd/assets/css/light-bootstrap-dashboard.css') }}">
         <!-- Font Awesome -->
-        <link rel="stylesheet" href="/static/node_modules/font-awesome/css/font-awesome.min.css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='node_modules/font-awesome/css/font-awesome.min.css') }}">
         <link href='http://fonts.googleapis.com/css?family=Roboto:400,700,300' rel='stylesheet' type='text/css'>
-        <link href="/static/themes/lbd/assets/css/pe-icon-7-stroke.css" rel="stylesheet"/>
+        <link rel="stylesheet" href="{{ url_for('static', filename='themes/lbd/assets/css/pe-icon-7-stroke.css') }}"/>
 
-        <link rel="stylesheet" href="/static/css/app.css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}"/>
     {% endblock %}
 </head>
 <body>
@@ -28,13 +28,13 @@
 
             <ul class="nav">
                 <li class="active">
-                    <a href="index.html">
+                    <a href="">
                         <i class="pe-7s-graph"></i>
                         <p>Dashboard</p>
                     </a>
                 </li>
                 <li>
-                    <a href="archive.html">
+                    <a href="">
                         <i class="pe-7s-note2"></i>
                         <p>Archive</p>
                     </a>
@@ -92,11 +92,11 @@
 
 {% block scripts %}
     <!-- Bootstrap -->
-    <script src="/static/node_modules/loglevel/dist/loglevel.min.js"></script>
-    <script src="/static/node_modules/jquery/dist/jquery.min.js"></script>
-    <script src="/static/node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
-    <script src="/static/themes/lbd/assets/js/light-bootstrap-dashboard.js"></script>
-    <script src="/static/node_modules/plotly.js/dist/plotly.min.js"></script>
+    <script src="{{ url_for('static', filename='node_modules/loglevel/dist/loglevel.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='node_modules/bootstrap/dist/js/bootstrap.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='themes/lbd/assets/js/light-bootstrap-dashboard.js') }}"></script>
+    <script src="{{ url_for('static', filename='node_modules/plotly.js/dist/plotly.min.js') }}"></script>
 {% endblock %}
 </body>
 </html>
