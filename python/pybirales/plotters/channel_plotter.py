@@ -103,7 +103,7 @@ class ChannelisedDataPlotter(Plotter):
 
             # input_data[index, 255, :] = input_data[index, 255, :]
 
-            im = self._axes[index].imshow(np.abs(input_data[index, :, :]),
+            im = self._axes[index].imshow(10*np.log10(np.abs(input_data[index, :, :])),
                                           aspect='auto', interpolation='none')
             self._axes[index].set_xlabel("Time")
             self._axes[index].set_ylabel("Channel")

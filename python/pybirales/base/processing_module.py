@@ -174,4 +174,3 @@ class ProcessingModule(Module):
             time.sleep(0.001)
 
         self._is_stopped = True
-

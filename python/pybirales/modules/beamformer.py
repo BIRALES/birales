@@ -181,7 +181,7 @@ class Pointing(Thread):
         # Create initial weights
         self.weights = np.ones((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
         self._temp_weights = np.ones((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
- 
+
         # Ignore AstropyWarning
         warnings.simplefilter('ignore', category=AstropyWarning)
 

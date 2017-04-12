@@ -38,6 +38,7 @@ if __name__ == "__main__":
     nsamp = np.where(data[:, 0, 0, 0] == 0)[0][0]
 
     # Plot
-    plt.plot(data[:nsamp, 0, baselines[opts.baseline], 0])
-    # plt.imshow(np.abs(data[:nsamp, 0, :, 0]), aspect='auto')
+    for to_plot in opts.baseline.split(','):
+        plt.plot(data[:nsamp, 0, baselines[to_plot], 0], label=to_plot)
+    plt.legend()
     plt.show()

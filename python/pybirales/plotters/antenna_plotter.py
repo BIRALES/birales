@@ -31,7 +31,6 @@ class AntennaPlotter(Plotter):
         self._antennas_to_plot = None
 
         self._markers = matplotlib.markers.MarkerStyle.markers.keys()
-        self._markers = [marker for marker in self._markers if marker is not 'None']
 
     def create_index(self):
         """ Create data index to get from blob """

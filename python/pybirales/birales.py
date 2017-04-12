@@ -39,7 +39,7 @@ def detection_pipeline(configuration, debug):
     manager = PipelineManager(configuration, debug)
 
     # Initialise the modules
-    receiver = DummyDataGenerator(settings.generator)
+    receiver = Receiver(settings.receiver)
     beamformer = Beamformer(settings.beamformer, receiver.output_blob)
     ppf = PFB(settings.channeliser, beamformer.output_blob)
     detector = Detector(settings.detection, ppf.output_blob)
@@ -49,6 +49,9 @@ def detection_pipeline(configuration, debug):
     manager.add_module("beamformer", beamformer)
     manager.add_module("ppf", ppf)
     manager.add_module("detector", detector)
+
+#    manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
+#    manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
 
     manager.start_pipeline()
 
@@ -77,7 +80,8 @@ def standalone_test(configuration, debug):
     manager.add_module("pfb", pfb)
     manager.add_module("terminator", terminator)
 
-    manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, pfb.output_blob)
+#    manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, pfb.output_blob)
+    manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
 
     manager.start_pipeline()
 
@@ -96,12 +100,12 @@ def test_receiver(configuration, debug):
 
     # Initialise the modules
     receiver = Receiver(settings.receiver)
-    ppf = PFB(settings.channeliser, receiver.output_blob)
-    terminator = Terminator(None, ppf.output_blob)
+    #ppf = PFB(settings.channeliser, receiver.output_blob)
+    terminator = Terminator(None, receiver.output_blob)
 
     # Add modules to pipeline manager
     manager.add_module("receiver", receiver)
-    manager.add_module("ppf", ppf)
+#    manager.add_module("ppf", ppf)
     manager.add_module("terminator", terminator)
 
     manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
@@ -165,9 +169,9 @@ def birales_pipeline(configuration, debug):
     manager.add_module("persister", persister)
 
     # Add plotters
-    # manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
+    manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
     # manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
-    manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
+    # manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
 
     manager.start_pipeline()
 
@@ -238,8 +242,8 @@ def multipipeline(configuration, debug):
     receiver = Receiver(settings.receiver)
 
     beamformer = Beamformer(settings.beamformer, receiver.output_blob)
-    ppf = PFB(settings.channeliser, beamformer.output_blob)    
-    persister = Persister(settings.persister, ppf.output_blob)    
+    ppf = PFB(settings.channeliser, beamformer.output_blob)
+    persister = Persister(settings.persister, ppf.output_blob)
 
     correlator = Correlator(settings.correlator, receiver.output_blob)
     corr_persister = CorrMatrixPersister(settings.corrmatrixpersister, correlator.output_blob)

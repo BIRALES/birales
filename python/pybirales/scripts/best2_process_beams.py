@@ -16,7 +16,7 @@ def realtime(opts):
     """ Generating beam plot in real-time """
 
     print "Initialising real-time plotting"
-    
+
     nbeams = opts.nbeams
     nchans = opts.nchans
 
@@ -50,7 +50,7 @@ def realtime(opts):
         # File size has changed, open file and seek to previous load
         f = open(args[0], 'rb')
         f.seek(nsamp * nchans * nbeams * 4)
-            
+
         # Read rest of file and close
         # Sanity check... read only as large as buffer
         data = f.read(plotsamples * nbeams * nchans * 4)
@@ -62,17 +62,17 @@ def realtime(opts):
         currsamp = len(data) / (nbeams * nchans)
         data = np.reshape(data, (currsamp, nchans, nbeams))
         data = data[:,:,beam]
-            
+
         # Check where new data goes in plot buffer
         if nsamp + currsamp <= plotsamples:
             toplot[nsamp:nsamp+currsamp,:] = data
-        else: # We need to reshuffle data          
+        else: # We need to reshuffle data
             toplot[:plotsamples-currsamp,:] = toplot[currsamp:plotsamples,:]
             toplot[plotsamples-currsamp:,:] = data
 
         # Update plot
         fig.clear()
-        plt.imshow(toplot, aspect='auto', origin='lower')	
+        plt.imshow(toplot, aspect='auto', origin='lower')
         plt.xlabel('Frequency')
         plt.ylabel('Time')
         fig.canvas.draw()
@@ -101,7 +101,7 @@ def multipixel(opts):
         # Check current filesize
         while os.stat(args[0]).st_size / (nchans * nbeams * 4) == nsamp:
             sleep(0.1)
-        
+
         data = f.read(nchans * nbeams * 4)
 
         data = np.array(struct.unpack('f' * nchans * nbeams, data), dtype=float)
@@ -148,14 +148,14 @@ def plot(opts):
         fig = plt.figure(figsize=(11,8))
         ax = fig.add_subplot(1,1,1)
         data = 20*np.log10(data[:,:,opts.beam])
-       # data[np.where(data < (np.mean(data) + np.std(data)*1.5))] = 0        
+       # data[np.where(data < (np.mean(data) + np.std(data)*1.5))] = 0
         im = ax.imshow(data, aspect='auto', interpolation='none',
                   origin='lower')#, extent=[frequency[0], frequency[-1], 0, time[-1]])
         ax.xaxis.set_major_formatter(formatter)
         ax.set_xlabel("Channel (kHz)")
         ax.set_ylabel("Time (s)")
 
-      #  cax = fig.add_axes([0.9, 0.1, 0.01, 0.8]) 
+      #  cax = fig.add_axes([0.9, 0.1, 0.01, 0.8])
       #  fig.subplots_adjust(right=0.9)
       #  fig.colorbar(im, cax)
 
@@ -177,7 +177,7 @@ def plot(opts):
         ax.set_xlabel("Channel (MHz)")
         ax.set_ylabel("Log Power (Arbitrary)")
         ax.set_xlim((frequency[0], frequency[-1]))
-        
+
         ax = fig.add_subplot(2,2,4)
         toplot = np.sum(data / nchans, axis=1)
         ax.plot(time[:len(toplot)], toplot)
@@ -188,15 +188,15 @@ def plot(opts):
 
         ax = fig.add_subplot(1,2,1)
         ax.set_title("Beam %d" % opts.beam)
-    
-        data[np.where(data < (np.mean(data) + np.std(data)))] = 0        
+
+        data[np.where(data < (np.mean(data) + np.std(data)))] = 0
         im = ax.imshow(data, aspect='auto', interpolation='none',
                   origin='lower', extent=[frequency[0], frequency[-1], 0, time[-1]])
         ax.xaxis.set_major_formatter(formatter)
         ax.set_xlabel("Channel (kHz)")
         ax.set_ylabel("Time (s)")
 
-        cax = fig.add_axes([0.49, 0.1, 0.01, 0.8]) 
+        cax = fig.add_axes([0.49, 0.1, 0.01, 0.8])
         fig.subplots_adjust(right=0.9)
         fig.colorbar(im, cax)
 
@@ -214,7 +214,6 @@ def plot(opts):
         print data.shape
         data = np.sum(data, axis = 1)
         print data.shape
-#        data = data[: math.floor(data.shape[0] / opts.samples) * opts.samples, :]
         data = np.reshape(data, (len(data) / opts.samples, opts.samples, nbeams))
         data = 20*np.log10(np.sum(data, axis=1))
 
@@ -224,7 +223,6 @@ def plot(opts):
             ax.xaxis.set_major_formatter(pylab.FormatStrFormatter('%2.1f'))
             ax.set_xlabel("Time (s)")
             ax.set_ylabel("Log Power (Arbitrary)")
-#            ax.set_xlim((time[0], time[-1]))
 
         fig.tight_layout()
         plt.legend()
@@ -242,12 +240,12 @@ def plot(opts):
 
         # Show beam
         if opts.waterfall:
-            ax.imshow(np.log10(data[:,:,i]), aspect='auto', origin='lower', 
+            ax.imshow(np.log10(data[:,:,i]), aspect='auto', origin='lower',
                       extent=[frequency[0], frequency[-1], 0, time[-1]], interpolation='none')
             ax.xaxis.set_major_formatter( pylab.FormatStrFormatter('%2.2f'))
             ax.set_xlabel("Channel (kHz)")
             ax.set_ylabel("Time (s)")
-        
+
         # Plot bandpass
         if opts.bandpass:
             ax.plot(frequency, np.log10(np.sum(data[:,:,i], axis=0)))
@@ -261,7 +259,7 @@ def plot(opts):
     f.close()
 
 def transpose(opts):
-    """ Transpose data so it can be viewed with the Qt plotter 
+    """ Transpose data so it can be viewed with the Qt plotter
         Each beam is saved to a different file """
 
     print "Generating beam files"
@@ -274,11 +272,11 @@ def transpose(opts):
 
     # Create file per beam
     basename = os.path.basename(args[0]).split('.')[0]
-    files = [open(os.path.join(os.path.dirname(args[0]), 
+    files = [open(os.path.join(os.path.dirname(args[0]),
                   "%s_beam%d.dat" % (basename, i)), 'wb') for i in range(nbeams) ]
 
     # Get file size to calculate number of time spectra
-    filesize = os.path.getsize(args[0])    
+    filesize = os.path.getsize(args[0])
     nsamp = filesize / (4 * nchans * nbeams)
 
     # Read each time spectrum separately
@@ -300,7 +298,7 @@ def transpose(opts):
 
 def integrate(opts):
     """ Integrate samples """
-    
+
     print "Time samples:       %d" % opts.samples
     print args[0], glob.glob(args[0])
     print "===== Generating time series ====="
@@ -314,13 +312,13 @@ def integrate(opts):
 
         # Create output file
         basename = os.path.basename(filename).split('.')[0]
-        w = open(os.path.join(os.path.dirname(args[0]), 
+        w = open(os.path.join(os.path.dirname(args[0]),
                  "%s_timeseries_%d.dat" % (basename, opts.samples)), 'wb')
 
         # Get file size to calculate number of time spectra
-        filesize = os.path.getsize(filename)    
+        filesize = os.path.getsize(filename)
         iterations = filesize / (opts.nchans * opts.samples * 4)
- 
+
         # Process file
         for i in range(iterations):
             data = f.read(opts.nchans * opts.samples * 4)
@@ -329,8 +327,8 @@ def integrate(opts):
             data = np.reshape(data, (nsamp, opts.nchans))
 
             w.write(struct.pack('f', np.sum(np.sum(data, axis = 1) / opts.nchans) / nsamp))
-            
-            sys.stdout.write("===== Processing %d of %d [%.2f%%]   \r" % 
+
+            sys.stdout.write("===== Processing %d of %d [%.2f%%]   \r" %
                             (i, iterations, (i / float(iterations) * 100)))
             sys.stdout.flush()
 
@@ -404,5 +402,3 @@ if __name__ == "__main__":
         multipixel(opts)
     else:
         plot(opts)
-
-    
