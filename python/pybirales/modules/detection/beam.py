@@ -61,7 +61,7 @@ class Beam:
         """
 
         # return np.abs(data[0, self.id, int(self.n_channels / 2):, :]).T
-        data = np.abs(data[0, self.id, int(self.n_channels / 2):, :]).T
+        data = np.abs(data[0, self.id, :, :]).T
         #
         # # @todo - check if the mean can be used as an estimate for the noise
         mean_noise_per_channel = np.mean(data, axis=0)
