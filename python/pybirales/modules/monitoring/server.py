@@ -25,7 +25,17 @@ def index():
 
     :return:
     """
-    return render_template('index.html')
+    now = Time.now()
+
+    max_channel = request.args.get('max_channel', type=float) if request.args.get('max_channel') else None
+    min_channel = request.args.get('min_channel', type=float) if request.args.get('min_channel') else None
+
+    max_time = Time(request.args.get('max_time')).iso if request.args.get('max_time') else now.iso
+    min_time = Time(request.args.get('min_time')).iso if request.args.get('min_time') else (
+        now - TimeDelta(3600, format='sec')).datetime
+
+    return render_template('index.html', max_time=max_time,
+                           min_time=min_time, max_channel=max_channel, min_channel=min_channel)
 
 
 @app.route('/monitoring/beam_candidates', methods=['GET', 'POST'])

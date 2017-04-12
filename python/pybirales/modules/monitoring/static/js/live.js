@@ -5,13 +5,14 @@ var BeamCandidatesPlotter = function () {
     this._beam_candidates_url = this.host + '/monitoring/beam_candidates';
 
     this._beam_candidates_plot_selector = 'live-beam-candidates-plot';
+    this._beam_candidates_plot_selector_id = '#' + this._beam_candidates_plot_selector;
 
-    this._tx = 410.0703125;
-    this._max_channel = 410.0703125;
-    this._min_channel = 398.9921875;
+    this._tx = $(this._beam_candidates_plot_selector_id).data('chart-tx') || 410.0703125;
+    this._max_channel = $(this._beam_candidates_plot_selector_id).data('chart-max_channel') || 410.0703125;
+    this._min_channel = $(this._beam_candidates_plot_selector_id).data('chart-min_channel') || 398.9921875;
 
-    this._max_time = new Date();
-    this._min_time = new Date(new Date().setHours(this._max_time.getHours() - 0.2));
+    this._max_time = new Date($(this._beam_candidates_plot_selector_id).data('chart-max_time')) || new Date();
+    this._min_time = new Date($(this._beam_candidates_plot_selector_id).data('chart-min_time')) || new Date(new Date().setHours(this._max_time.getHours() - 0.2));
 
     this._title = '';
     this._x_label = 'Channel (MHz)';

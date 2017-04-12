@@ -10,8 +10,17 @@
                         <h4 class="title">Beam Candidates</h4>
                         <p class="category">Live</p>
                     </div>
+
                     <div class="content">
-                        <div class="chart plotly" id="live-beam-candidates-plot"></div>
+                        <div class="chart plotly" id="live-beam-candidates-plot"
+                             data-chart-tx="{{ tx }}"
+                             data-chart-min_channel="{{ min_channel }}"
+                             data-chart-max_channel="{{ max_channel }}"
+                             data-chart-min_time="{{ min_time }}"
+                             data-chart-max_time="{{ max_time }}"
+                        >
+
+                        </div>
                         <div class="footer">
                             <hr/>
                             <div class="stats">
@@ -50,7 +59,6 @@
     <script>
         $(document).ready(function () {
             var poll = false;
-            log.setLevel('debug');
             var interval = 2;
             var plotters = [
                 new BeamCandidatesPlotter()
