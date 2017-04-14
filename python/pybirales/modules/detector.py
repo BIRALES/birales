@@ -114,7 +114,7 @@ class Detector(ProcessingModule):
 
         # Create the beams
         beams = [Beam(beam_id=n_beam, obs_info=obs_info, beam_data=input_data)
-                 for n_beam in range(settings.detection.nbeams)]
+                 for n_beam in range(settings.detection.beam_range[0], settings.detection.beam_range[1])]
 
         # Process the beam data to detect the beam candidates
         t1 = time.time()
