@@ -25,7 +25,7 @@ var BeamCandidatesPlotter = function () {
             var beam_candidates_trace = {
                 x: beam_candidate['data']['channel'],
                 y: beam_candidate['data']['time'],
-                z: beam_candidate['data']['snr'],
+                text: beam_candidate['data']['snr'],
                 mode: 'markers',
                 name: 'beam ' + beam_candidate.beam_id + ' candidate'
             };
@@ -60,8 +60,8 @@ var BeamCandidatesPlotter = function () {
                 b: 50,
                 t: 20,
                 pad: 10
-            },
-            shapes: [
+            }
+            /*shapes: [
                 {
                     'type': 'line',
                     'x0': self._tx,
@@ -73,7 +73,7 @@ var BeamCandidatesPlotter = function () {
                         'width': 3
                     }
                 }
-            ]
+            ]*/
         };
 
     };
