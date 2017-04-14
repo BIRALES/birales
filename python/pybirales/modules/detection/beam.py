@@ -70,7 +70,7 @@ class Beam:
         normalised_data = np.where(data > 0., data, np.nan) / mean_noise_per_channel
         #
         # # Take the log value of the power
-        log_data = np.log10(normalised_data)
+        log_data = 10 * np.log10(normalised_data)
         #
         # # Replace nan values with 0.
         log_data[np.isnan(log_data)] = 0.
