@@ -1,8 +1,8 @@
 import logging as log
-import numpy as np
+import os
 
 from multiprocessing.dummy import Pool as ThreadPool
-from pybirales.modules.detection.detection_strategies import SpaceDebrisDetection
+from pybirales.modules.detection.detection_strategies import SpaceDebrisDetection, SpiritSpaceDebrisDetectionStrategy
 from pybirales.modules.detection.repository import BeamCandidateRepository
 from pybirales.modules.detection.repository import ConfigurationRepository
 from pybirales.base.definitions import PipelineError
@@ -16,6 +16,50 @@ from pybirales.blobs.receiver_data import ReceiverBlob
 from pybirales.modules.detection.beam import Beam
 from pybirales.plotters.spectrogram_plotter import plotter
 from pybirales.modules.detection.queue import BeamCandidatesQueue
+import time
+from multiprocessing import Pool
+
+
+def dd2(beam):
+    # Apply the pre-processing filters to the beam data
+    t1 = time.time()
+    candidates = []
+    try:
+        beam.apply_filters()
+
+        # Run detection algorithm on the beam data to extract possible candidates
+        candidates = SpiritSpaceDebrisDetectionStrategy().detect(beam)
+    except Exception:
+        log.exception('Something went wrong with process')
+    log.warning('Process %s finished beam %s in %1.4f s', os.getpid(), beam.id, time.time() - t1)
+    return candidates
+
+def dd3(q, beam):
+    # Apply the pre-processing filters to the beam data
+    t1 = time.time()
+    candidates = []
+    try:
+        beam.apply_filters()
+
+        # Run detection algorithm on the beam data to extract possible candidates
+        candidates = SpiritSpaceDebrisDetectionStrategy().detect(beam)
+    except Exception:
+        log.exception('Something went wrong with process')
+    log.warning('Process %s finished beam %s in %1.4f s', os.getpid(), beam.id, time.time() - t1)
+
+    new_beam_candidates = [candidate for sub_list in candidates for candidate in sub_list if candidate]
+
+    for new_beam_candidate in new_beam_candidates:
+        if new_beam_candidate:
+            q.enqueue(new_beam_candidate)
+
+    if settings.detection.save_candidates:
+        # Persist beam candidates
+        q.save()
+
+    log.info('%s beam candidates, were found', len(new_beam_candidates))
+
+    return candidates
 
 
 class Detector(ProcessingModule):
@@ -39,12 +83,16 @@ class Detector(ProcessingModule):
         # Initialise thread pool with N threads
         self._thread_pool = ThreadPool(settings.detection.nthreads)
 
+        self._m_pool = Pool()
+
         # Flag that indicates whether the configuration was persisted
         self._config_persisted = False
 
         super(Detector, self).__init__(config, input_blob)
 
         self.name = "Detector"
+
+        self.pool = Pool(processes=4)
 
     def generate_output_blob(self):
         pass
@@ -69,20 +117,29 @@ class Detector(ProcessingModule):
                  for n_beam in range(settings.detection.nbeams)]
 
         # Process the beam data to detect the beam candidates
-        if settings.detection.nthreads > 1:
+        t1 = time.time()
+        if settings.detection.multi_proc:
+            new_beam_candidates = self._get_beam_candidates_multi_process(beams)
+        elif settings.detection.nthreads > 1:
             new_beam_candidates = self._get_beam_candidates_parallel(beams)
         else:
             new_beam_candidates = self._get_beam_candidates_single(beams)
+        log.debug('new candidates detected in %0.1f s', time.time() - t1)
 
+        t6 = time.time()
         for new_beam_candidate in new_beam_candidates:
             if new_beam_candidate:
                 self._debris_queue.enqueue(new_beam_candidate)
+        log.debug("Total E took: %1.3f", time.time() - t6)
 
+        t7 = time.time()
         if settings.detection.save_candidates:
             # Persist beam candidates
             self._debris_queue.save()
+        log.debug("Total S took: %1.3f,", time.time() - t7)
 
         log.info('%s beam candidates, were found', len(new_beam_candidates))
+
 
     def _get_beam_candidates_single(self, beams):
         """
@@ -99,6 +156,28 @@ class Detector(ProcessingModule):
         # Do not add beam candidates that a
         return [candidate for sub_list in beam_candidates for candidate in sub_list if candidate]
 
+
+    def _get_beam_candidates_multi_process(self, beams):
+        t1 = time.time()
+
+        beam_candidates = []
+
+        # pool = self._m_pool
+        try:
+
+            beam_candidates = self.pool.map(dd2, beams)
+            # results = [pool.apply_async(dd2, args=(beam,)) for beam in beams]
+            # beam_candidates = [p.get() for p in results]
+        except Exception:
+            log.exception('An exception has occurred')
+
+        # self.pool.close()
+        # self.pool.join()
+
+        log.debug('t1 %0.3f', time.time() - t1)
+        # Flatten list of beam candidates returned by the N threads
+        return [candidate for sub_list in beam_candidates for candidate in sub_list if candidate]
+
     def _get_beam_candidates_parallel(self, beams):
         """
         Run the detection algorithm using N threads
@@ -109,8 +188,9 @@ class Detector(ProcessingModule):
         log.debug('Running space debris detection algorithm on %s beams in parallel', len(beams))
 
         # Run using N threads
+        t1 = time.time()
         beam_candidates = self._thread_pool.map(self._detect_space_debris_candidates, beams)
-
+        log.debug('t1 %0.1f', time.time() - t1)
         # Flatten list of beam candidates returned by the N threads
         return [candidate for sub_list in beam_candidates for candidate in sub_list if candidate]
 
@@ -123,3 +203,4 @@ class Detector(ProcessingModule):
         candidates = self.detection_strategy.detect(beam)
 
         return candidates
+

@@ -71,16 +71,16 @@ class DummyDataGenerator(ProcessingModule):
         start = n / frame_rate * self._counter
 
         ts = start + np.arange(n) / frame_rate
-        f1 = 446.02233885
-        f2 = 200.60375975
         noise_power = 0.1 * frame_rate / 2
 
-        # Doppler shifted signal (from f1 to f2)
-        freq = np.linspace(f1, f2, len(ts))
-        ys = 100 * np.sin(2 * np.pi * freq * ts)
-        ys += 10 * np.random.normal(scale=np.sqrt(noise_power), size=ts.shape)
-
         for i in range(self._nants):
+            f1 = np.random.uniform(445.02233885, 447.02233885)
+            f2 = np.random.uniform(200.60375975, 201.60375975)
+
+            # Doppler shifted signal (from f1 to f2)
+            freq = np.linspace(f1, f2, len(ts))
+            ys = 100 * np.sin(2 * np.pi * freq * ts)
+            ys += 10 * np.random.normal(scale=np.sqrt(noise_power), size=ts.shape)
             output_data[:, :, :, i] = ys
             # output_data[:, :, :, i] = 10*np.sin(np.arange(self._nsamp) * 0.5)
             # plotter.scatter(ys, ts, 'antenna_6_signal', i == 6)

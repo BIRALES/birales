@@ -27,6 +27,8 @@ def index():
     """
     now = Time.now()
 
+    poll = 1 if request.args.get('poll') else 0
+
     max_channel = request.args.get('max_channel', type=float) if request.args.get('max_channel') else None
     min_channel = request.args.get('min_channel', type=float) if request.args.get('min_channel') else None
 
@@ -35,7 +37,7 @@ def index():
         now - TimeDelta(3600, format='sec')).datetime
 
     return render_template('index.html', max_time=max_time,
-                           min_time=min_time, max_channel=max_channel, min_channel=min_channel)
+                           min_time=min_time, max_channel=max_channel, min_channel=min_channel, poll=poll)
 
 
 @app.route('/monitoring/beam_candidates', methods=['GET', 'POST'])

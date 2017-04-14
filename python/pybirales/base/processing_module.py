@@ -144,6 +144,7 @@ class ProcessingModule(Module):
         """ Thread body """
         self._is_stopped = False
         while not self._stop:
+
             # Get pointer to input data if required
             input_data, obs_info = None, None
             if self._input is not None:

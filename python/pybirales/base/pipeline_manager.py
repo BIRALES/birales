@@ -138,14 +138,18 @@ class PipelineManager(object):
             logging.info("PyBIRALES: Starting")
 
             # Start all modules
-            for module in self._modules:
-                module.start()
+            try:
+                for module in self._modules:
+                    module.start()
 
-            # If we have any plotter, go to plotter loop, otherwise wait
-            if len(self._plotters) > 0:
-                self.plotting_loop()
-            else:
-                self.wait_pipeline()
+                # If we have any plotter, go to plotter loop, otherwise wait
+                if len(self._plotters) > 0:
+                    self.plotting_loop()
+                else:
+                    self.wait_pipeline()
+            except Exception:
+                import logging as log
+                log.exception('xi haga gara')
 
         except Exception as exception:
             logging.exception('Pipeline error: %s', exception.__class__.__name__)
@@ -190,6 +194,6 @@ class PipelineManager(object):
         """ Wait for modules to finish processing """
         for module in self._modules:
             while module.isAlive() and module._stop is False:
-                module.join(5.0)
+                module.join(15.0)
             if module.isAlive():
                 logging.warning("PipelineManager: Killing thread %s abruptly", module.name)

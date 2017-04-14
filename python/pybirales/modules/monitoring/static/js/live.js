@@ -45,6 +45,7 @@ var BeamCandidatesPlotter = function () {
     };
 
     this._get_layout = function () {
+        log.debug('Time Range: ', self._min_time, self._max_time);
         return {
             title: self._title,
             xaxis: {
@@ -74,6 +75,7 @@ var BeamCandidatesPlotter = function () {
                 }
             ]
         };
+
     };
 
     this.publish = function () {

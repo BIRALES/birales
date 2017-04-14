@@ -39,7 +39,7 @@ def detection_pipeline(configuration, debug):
     manager = PipelineManager(configuration, debug)
 
     # Initialise the modules
-    receiver = Receiver(settings.receiver)
+    receiver = DummyDataGenerator(settings.generator)
     beamformer = Beamformer(settings.beamformer, receiver.output_blob)
     ppf = PFB(settings.channeliser, beamformer.output_blob)
     detector = Detector(settings.detection, ppf.output_blob)

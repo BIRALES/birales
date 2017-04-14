@@ -11,11 +11,12 @@ class BeamCandidatesQueue:
 
     def enqueue(self, new_cluster):
         # Check if beam candidate is similar to candidate that was already added to the queue
+        t1 = time.time()
         beam_queue = self.queue[new_cluster.beam_id]
 
         for old_cluster in beam_queue:
             if new_cluster.is_similar_to(old_cluster, threshold=0.1):
-                log.debug('Merging cluster with another cluster present in queue')
+                # log.debug('Merging cluster with another cluster present in queue')
                 # mark old cluster as 'to delete'
                 old_cluster.delete()
 
@@ -27,7 +28,7 @@ class BeamCandidatesQueue:
         else:
             # If we didn't merge, add the candidate to the queue
             beam_queue.insert(0, new_cluster)
-
+        # log.debug('Enqueuing took %1.3f s', time.time() - t1)
         # Pop the last element if queue is full
         self.dequeue(new_cluster.beam_id)
 
