@@ -11,8 +11,8 @@ phasefile = 'I_O/' + user_defined_name + '_phase.txt'
 RBname = 'I_O/redbas.txt'
 
 ## Initialize RBCal
-rbCal = RBCal2() ##For Debugging
-#rbCal = RBCal()
+#rbCal = RBCal2() ##For Debugging
+rbCal = RBCal()
 rbCal.load_RBs(RBname)
 
 ## Launch RBCal

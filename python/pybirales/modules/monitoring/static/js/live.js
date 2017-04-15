@@ -59,7 +59,8 @@ var BeamCandidatesPlotter = function () {
                 b: 50,
                 t: 20,
                 pad: 10
-            },
+            }
+/* ,
             shapes: [
                 {
                     'type': 'line',
@@ -72,7 +73,7 @@ var BeamCandidatesPlotter = function () {
                         'width': 3
                     }
                 }
-            ]
+            ] */
         };
     };
 

@@ -18,6 +18,10 @@ class RBCal:
         self.imag_data = []
         self.gain_coeff = None
         self.phase_coeff = None
+        self.gain_coeff_all = None
+        self.phase_coeff_all = None
+        self.gain_coeff_final = []
+        self.phase_coeff_final = []
 
     def load_RBs(self, filename):
 
@@ -31,128 +35,116 @@ class RBCal:
 
         np.set_printoptions(precision=5)
 
+        # Open Correlated Visibilities File
         f = h5py.File(filename, "r")
         data = f["Vis"]
+
+        # Define size of data matrix to hold visibilities for all baselines at a given time sample
         data_out = np.zeros((1, len(self.RB_index), 1), dtype=np.complex)
-                
-        # Per-Baseline Integration in Time
-        for i in range(len(self.RB_index)):
-            data_out[0, i, 0] = (np.sum(data[:, 0, i, 0]))#/(len(data[:,0,i,0]))
-        self.data = data_out
 
-        # Forming A Configuration Matrix
-        ant_no = max(self.RB_ants2) + 1
-        bas_no = max(self.RB_group) + 1
+        # Select number of time samples to carry calibration over (1 = approx 1.5s)
+        time = 200
 
-        A = np.zeros((len(self.RB_index), int(ant_no + bas_no)))
+        # Select start time sample for calibration, if required
+        time_peak = np.where(data[:,0,:,0].real == np.max(data[:,0,:,0].real))[0][0]
+        start = int(time_peak-(time))
+        if start < 0:
+            start = 0
+
+        start = 600
+
+        self.gain_coeff_all = np.zeros((time, np.max(self.RB_ants2)+1))
+        self.phase_coeff_all = np.zeros((time, np.max(self.RB_ants2)+1))  
+        
+        for t in range(0, time):
+            # Per-Baseline Integration in Time
+            for i in range(len(self.RB_index)):
+                data_out[0, i, 0] = ((data[t+start, 0, i, 0]))#/(len(data[:,0,i,0]))
+            self.data = data_out
+
+            # Forming A Configuration Matrix
+            ant_no = max(self.RB_ants2) + 1
+            bas_no = max(self.RB_group) + 1
+
+            A = np.zeros((len(self.RB_index), int(ant_no + bas_no)))
     
-        for i in range(len(self.RB_index)):
-            A[i, (self.RB_ants1[i])] = 1
-            A[i, (self.RB_ants2[i])] = 1
-            A[i, (ant_no + self.RB_group[i])] = 1
+            for i in range(len(self.RB_index)):
+                A[i, (self.RB_ants1[i])] = 1
+                A[i, (self.RB_ants2[i])] = 1
+                A[i, (ant_no + self.RB_group[i])] = 1
 
-        # Forming Real and Imag Data
+            # Forming Real and Imag Data
 
-        self.imags = []
-        self.real_data = []
-        self.imag_data = []
+            self.reals = []
+            self.imags = []
+            self.real_data = []
+            self.imag_data = []
 
-        for i in range(len(self.RB_index)):
-            reals = self.data[0, int(self.RB_index[i]), 0].real
-            imags = self.data[0, int(self.RB_index[i]), 0].imag
+            for i in range(len(self.RB_index)):
+                reals = self.data[0, int(self.RB_index[i]), 0].real
+                imags = self.data[0, int(self.RB_index[i]), 0].imag
 
-            self.reals.append(reals)
-            self.imags.append(imags)
-            self.real_data.append(np.log(np.sqrt((ma.pow((np.float(reals)), 2)) + (ma.pow((np.float(imags)), 2)))))
-            self.imag_data.append(np.degrees(np.arctan(np.float(imags) / np.float(reals))))
+                self.reals.append(reals)
+                self.imags.append(imags)
+                self.real_data.append(np.log(np.sqrt((ma.pow((np.float(reals)), 2)) + (ma.pow((np.float(imags)), 2)))))
+                self.imag_data.append((np.arctan(np.float(imags) / np.float(reals))))
 
-        self.real_data = np.array(self.real_data)
-        self.imag_data = np.array(self.imag_data)
+            self.real_data = np.array(self.real_data)
+            self.imag_data = np.array(self.imag_data)
 
-        self.reals = np.array(self.reals)
-        self.imags = np.array(self.imags)
+            self.reals = np.array(self.reals)
+            self.imags = np.array(self.imags)
 
-        # Forming N Cov Matrix
+            # Forming N Cov Matrix
 
-        N_R = np.zeros((len(self.RB_index), len(self.RB_index)))
-        N_I = np.zeros((len(self.RB_index), len(self.RB_index)))
-        #for i in range(len(self.RB_index)):
-        #    self.RB_group = np.array(self.RB_group)
-        #    indices = np.where(self.RB_group == self.RB_group[int(self.RB_index[i])])[0]
-        #    redbasl_data_r = []
-        #    redbasl_data_i = []
-        #    indices = np.array(indices)
-        #    for j in indices:
-        #        reald = self.real_data[int(self.RB_index[j])]
-        #        redbasl_data_r.append(reald)
-        #        imagd = self.imag_data[int(self.RB_index[j])]
-        #        redbasl_data_i.append(imagd)
-        #    redbasl_mean_r = np.float(np.mean(redbasl_data_r))
-        #    redbasl_mean_i = np.float(np.mean(redbasl_data_i))
-        #    redbasl_diff_r = []
-        #    redbasl_diff_i = []
-        #    for k in indices:
-        #        redbasl_diff_r.append((self.real_data[int(self.RB_index[k])] - redbasl_mean_r) ** 2)
-        #        redbasl_diff_i.append((self.imag_data[int(self.RB_index[k])] - redbasl_mean_i) ** 2)
-        #    redbasl_diff_total_r = np.sum(redbasl_diff_r)
-        #    redbasl_diff_total_i = np.sum(redbasl_diff_i)
-        #    spread_r = (1 / np.float(len(indices))) * redbasl_diff_total_r
-        #    spread_i = (1 / np.float(len(indices))) * redbasl_diff_total_i
-        #    N_R[i, i] = spread_r / (self.real_data[int(self.RB_index[i])] ** 2)
-        #    N_I[i, i] = spread_i / (self.imag_data[int(self.RB_index[i])] ** 2)
+            N_R = np.zeros((len(self.RB_index), len(self.RB_index)))
+            N_I = np.zeros((len(self.RB_index), len(self.RB_index)))
+            for i in range(len(self.RB_index)):
+                N_R[i,i] = 1/((np.sqrt((ma.pow((np.float(self.reals[i])), 2)) + (ma.pow((np.float(self.imags[i])), 2))))**2)
+                N_I[i,i] = -1/((np.sqrt((ma.pow((np.float(self.reals[i])), 2)) + (ma.pow((np.float(self.imags[i])), 2))))**2)
 
-        for i in range(len(self.RB_index)):
-             N_R[i,i] = 1/((np.sqrt((ma.pow((np.float(self.reals[i])), 2)) + (ma.pow((np.float(self.imags[i])), 2))))**2)
-             N_I[i,i] = -1/((np.sqrt((ma.pow((np.float(self.reals[i])), 2)) + (ma.pow((np.float(self.imags[i])), 2))))**2)
+            # Solving for x_coeff with Least Squares Estimation
+            A_trans = [list(i) for i in zip(*A)]
+            A_trans = np.array(A_trans)
+            N_inv_R = np.linalg.pinv(N_R)
+            N_inv_I = np.linalg.pinv(N_I)
 
-        #print(N_R)
-        #print(N_I)
+            gain_coeff = (np.dot((np.linalg.pinv(np.dot((np.dot(A_trans, N_inv_R)), A))),
+                             (np.dot((np.dot(A_trans, N_inv_R)), self.real_data))))
+            phase_coeff = np.degrees(np.dot((np.linalg.pinv(np.dot((np.dot(A_trans, N_inv_I)), A))),
+                               (np.dot((np.dot(A_trans, N_inv_I)), self.imag_data))))
 
-        # Solving for x_coeff with Least Squares Estimation
-        A_trans = [list(i) for i in zip(*A)]
-        A_trans = np.array(A_trans)
-        N_inv_R = np.linalg.pinv(N_R)
-        N_inv_I = np.linalg.pinv(N_I)
+            gains = gain_coeff[0:ant_no]
+            gains = gains / gains[4]
+            self.gain_coeff = gains
 
-        gain_coeff = (np.dot((np.linalg.pinv(np.dot((np.dot(A_trans, N_inv_R)), A))),
-                         (np.dot((np.dot(A_trans, N_inv_R)), self.real_data))))
-        phase_coeff = (np.dot((np.linalg.pinv(np.dot((np.dot(A_trans, N_inv_I)), A))),
-                           (np.dot((np.dot(A_trans, N_inv_I)), self.imag_data))))
+            phases = phase_coeff[0:ant_no]
+            phases = phases - phases[4]
+            self.phase_coeff = phases
+            
+            # Maintain all coefficients for averaging
+            for i in range(len(self.gain_coeff)):
+                self.gain_coeff_all[t,i] = self.gain_coeff[i]
+                self.phase_coeff_all[t,i] = self.phase_coeff[i]
 
-        #gain_coeff=(np.dot((np.dot((np.dot((np.linalg.pinv(np.dot((np.dot(A_trans,N_inv_R)),A))),A_trans)),N_inv_R)),self.real_data))
-        #phase_coeff=(np.dot((np.dot((np.dot((np.linalg.pinv(np.dot((np.dot(A_trans,N_inv_I)),A))),A_trans)),N_inv_I)),self.imag_data))
+            print(t)
 
-        gains = gain_coeff[0:ant_no]
-        gains = gains / gains[4]
-        #minimum_pv = np.round(np.min(gains), 4) 
-        #maximum_pv = np.round(np.max(gains), 4) 
-        #minimum_nv = np.round(np.min(gains), 4)
-        #maximum_nv = 0
-        #if minimum_pv == maximum_pv:
-        #    gains = gains/gains
-        #if minimum_pv != maximum_pv:
-        #    for i in range(len(gains)):
-        #        if gains[i] >= 0:
-        #            gains[i] = (np.float(gains[i] - minimum_pv) / np.float(maximum_pv - minimum_pv))
-        #        if gains[i] < 0:
-        #            gains[i] = (np.float(gains[i] - minimum_nv) / np.float(maximum_nv - minimum_nv))
-        self.gain_coeff = gains
+        # Obtain coeffs
+        for i in range(len(self.gain_coeff)):
+            self.gain_coeff_final.append(np.mean(self.gain_coeff_all[:,i]))
+            self.phase_coeff_final.append(np.mean(self.phase_coeff_all[:,i]))
 
-        phases = phase_coeff[0:ant_no]
-        phases = phases - phases[4]
-        self.phase_coeff = phases
-
-        print("Gain_coeff " + str(self.gain_coeff))
-        print("Phase_coeff " + str(self.phase_coeff))
+        print("Gain_coeff " + str(self.gain_coeff_final))
+        print("Phase_coeff " + str(self.phase_coeff_final))
 
     def parse_coeff(self, filename1, filename2):
 
         text_file = open(filename1, "w")
-        for i in range(len(self.gain_coeff)):
-            text_file.write('a' + str(i) + ' ' + str(self.gain_coeff[i]) + '\n')
+        for i in range(len(self.gain_coeff_final)):
+            text_file.write('a' + str(i) + ' ' + str(self.gain_coeff_final[i]) + '\n')
         text_file.close()
 
         text_file = open(filename2, "w")
-        for i in range(len(self.phase_coeff)):
-             text_file.write('a' + str(i) + ' ' + str(self.phase_coeff[i]) + '\n')
+        for i in range(len(self.phase_coeff_final)):
+             text_file.write('a' + str(i) + ' ' + str(self.phase_coeff_final[i]) + '\n')
         text_file.close()

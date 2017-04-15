@@ -1,5 +1,4 @@
 import time
-import uuid
 import logging
 from abc import abstractmethod
 from threading import Thread
@@ -18,9 +17,6 @@ class Module(Thread):
         # Call superclass
         super(Module, self).__init__()
 
-        # Generate ID
-        self._id = uuid.uuid4()
-
         # Set module configuration
         self._config = config
 
@@ -31,8 +27,6 @@ class Module(Thread):
 
         # Set module input and output blobs
         self._input = input_blob
-        if self._input is not None:
-            self._input.register_reader(self.id)
 
         if self._no_output:
             self._output = None
@@ -56,11 +50,6 @@ class Module(Thread):
         logging.info('Stopping %s module', self.name)
         self._stop = True
         logging.info('Stopping %s module', self.name)
-
-    @property
-    def id(self):
-        """ Unique object id """
-        return self._id
 
     @property
     def is_stopped(self):
@@ -148,7 +137,7 @@ class ProcessingModule(Module):
             input_data, obs_info = None, None
             if self._input is not None:
                 # This can be released immediately since, data has already been deep copied
-                input_data, obs_info = self._input.request_read(self._id)
+                input_data, obs_info = self._input.request_read()
 
             # Get pointer to output data if required
             output_data = None
@@ -168,7 +157,7 @@ class ProcessingModule(Module):
 
             # Release reader lock
             if self._input is not None:
-                self._input.release_read(self.id)
+                self._input.release_read()
 
             # A short sleep to force a context switch (since locks do not force one)
             time.sleep(0.001)

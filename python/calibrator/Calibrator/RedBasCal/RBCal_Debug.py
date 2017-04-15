@@ -44,18 +44,24 @@ class RBCal2:
         #plt.ion()
 
         # Select antenna for plotting of coefficients
-        plot_ant = 25
-        jack_phase = 
-        jack_gain = 
+        plot_ant = 8
+        # Load jack coeff for comparison
+        #jack_gp = np.loadtxt("I_O/casa_jack.txt")
+        #jack_phase = jack_gp[:, 1]
+        #jack_gain = jack_gp[:, 2]
 
         for ts in timesteps:
             basl0_g = []
             basl0_p = []
-            for t in range(ts+1, ts+200):
+            jack_p = []
+            jack_g = []
+            basl0_g_mean = []
+            basl0_p_mean = []
+            for t in range(ts, ts+200):
                 
                 # Per-Baseline Integration in Time
                 for i in range(len(self.RB_index)):
-                    data_out[0, i, 0] = (np.sum(data[ts:t, 0, i, 0]))#/(len(data[:,0,i,0]))
+                    data_out[0, i, 0] = (np.sum(data[t, 0, i, 0]))#/(len(data[:,0,i,0]))
                 self.data = data_out
 
                 # Forming A Configuration Matrix
@@ -142,7 +148,7 @@ class RBCal2:
                 #phase_coeff=(np.dot((np.dot((np.dot((np.linalg.pinv(np.dot((np.dot(A_trans,N_inv_I)),A))),A_trans)),N_inv_I)),self.imag_data))
 
                 gains = gain_coeff[0:ant_no]
-                gains = gains / gains[0]
+                gains = gains / gains[4]
                 #minimum_pv = np.round(np.min(gains), 4) 
                 #maximum_pv = np.round(np.max(gains), 4) 
                 #minimum_nv = np.round(np.min(gains), 4)
@@ -158,23 +164,31 @@ class RBCal2:
                 self.gain_coeff = gains
 
                 phases = phase_coeff[0:ant_no]
-                phases = phases - phases[0]
+                phases = phases - phases[4]
                 self.phase_coeff = phases
+                #print(self.phase_coeff[plot_ant])
 
                 #print("Gain_coeff " + str(self.gain_coeff))
                 #print("Phase_coeff " + str(self.phase_coeff))
 
                 basl0_g.append(self.gain_coeff[plot_ant])
                 basl0_p.append(self.phase_coeff[plot_ant])
-                print(t)
+                basl0_g_mean.append(np.mean(basl0_g))
+                basl0_p_mean.append(np.mean(basl0_p))
+                print(np.mean(basl0_g), np.mean(basl0_p))
+                #jack_g.append(jack_gain[plot_ant])
+                #jack_p.append(jack_phase[plot_ant])
+                #print(t)
 
                 if t % 10 == 0:
                     x = np.linspace(1, len(basl0_g), len(basl0_g))
-                    y = basl0_g
-                    z = basl0_p
+                    y = basl0_g_mean
+                    z = basl0_p_mean
                     plt.cla()
                     plt.plot(x, y, color = 'blue')
                     plt.plot(x, z, color = 'red')
+                    #plt.plot(x, jack_g, color = 'cyan')
+                    #plt.plot(x, jack_p, color = 'salmon')
                     plt.xlim(0, 200)
                     plt.ylim(-200, 200)
                     plt.show(block = False)

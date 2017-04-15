@@ -72,7 +72,7 @@ def realtime(opts):
 
         # Update plot
         fig.clear()
-        plt.imshow(toplot, aspect='auto', origin='lower')
+        plt.imshow(10*np.log10(toplot), aspect='auto', origin='lower')
         plt.xlabel('Frequency')
         plt.ylabel('Time')
         fig.canvas.draw()
@@ -145,9 +145,9 @@ def plot(opts):
 
     # Process only one beam
     if opts.beam != -1 and opts.waterfall:
-        fig = plt.figure(figsize=(11,8))
+        fig = plt.figure()#(figsize=(11,8))
         ax = fig.add_subplot(1,1,1)
-        data = 20*np.log10(data[:,:,opts.beam])
+        data = 10*np.log10(data[:,:,opts.beam])
        # data[np.where(data < (np.mean(data) + np.std(data)*1.5))] = 0
         im = ax.imshow(data, aspect='auto', interpolation='none',
                   origin='lower')#, extent=[frequency[0], frequency[-1], 0, time[-1]])
@@ -211,15 +211,14 @@ def plot(opts):
         fig = plt.figure(figsize=(8,8))
         ax = fig.add_subplot(1, 1, 1)
 
-        print data.shape
         data = np.sum(data, axis = 1)
-        print data.shape
         data = np.reshape(data, (len(data) / opts.samples, opts.samples, nbeams))
-        data = 20*np.log10(np.sum(data, axis=1))
+        data = 10 * np.log10(np.sum(data, axis=1))
 
         # Plot time series
+        markers = matplotlib.markers.MarkerStyle.markers.keys()
         for i in range(nbeams):
-            ax.plot(data[:,i], label="Beam %d" % i)
+            ax.plot(data[:,i], marker = markers[i], label="Beam %d" % i)
             ax.xaxis.set_major_formatter(pylab.FormatStrFormatter('%2.1f'))
             ax.set_xlabel("Time (s)")
             ax.set_ylabel("Log Power (Arbitrary)")
