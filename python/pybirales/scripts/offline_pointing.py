@@ -67,11 +67,11 @@ class Pointing(object):
 
         # Make sure that we have enough antenna locations
         if len(config['antenna_locations']) != nants:
-            raise PipelineError("Pointing: Mismatch between number of antennas and number of antenna locations")
+            print("Pointing: Mismatch between number of antennas and number of antenna locations")
 
         # Make sure that we have enough pointing
         if len(config['pointings']) != config['nbeams']:
-            raise PipelineError("Pointing: Mismatch between number of beams and number of beam pointings")
+           print("Pointing: Mismatch between number of beams and number of beam pointings")
 
         # Initialise Pointing
         array = config['antenna_locations']
@@ -88,7 +88,9 @@ class Pointing(object):
         self._array = AntennaArray(array, self._reference_location[0], self._reference_location[1])
 
         # Calculate displacement vectors to each antenna from reference antenna
-        self._reference_location = EarthLocation.from_geodetic(self._array.lon, self._array.lat,
+        # (longitude, latitude)
+        self._reference_location = EarthLocation.from_geodetic(self._reference_location[1],
+                                                               self._reference_location[0],
                                                                height=self._array.height)
 
         self._vectors_enu = np.full([self._nants, 3], np.nan)
@@ -101,11 +103,14 @@ class Pointing(object):
         # Ignore AstropyWarning
         warnings.simplefilter('ignore', category=AstropyWarning)
 
-    def run(self):
+    def run(self, pointing_time=None):
         """ Run pointing """
 
         # Get time once (so that all beams use the same time for pointing)
-        pointing_time = Time(datetime.datetime.utcnow(), scale='utc', location=self._reference_location)
+        if pointing_time is None:
+            pointing_time = Time(datetime.datetime.utcnow(), scale='utc', location=self._reference_location)
+        else:
+            pointing_time = Time(pointing_time, scale='utc', location=self._reference_location)
 
         for beam in range(self._nbeams):
             self.point_array(beam, self._reference_pointing[0], self._reference_pointing[1],
@@ -149,7 +154,7 @@ class Pointing(object):
         delta_dec = Angle(delta_dec, u.deg)
 
         # If we're using static beam, then we must adjust RA (by setting reference RA equal to LST)
-        ref_ra = Angle(pointing_time.sidereal_time('mean'))
+       # ref_ra = Angle(pointing_time.sidereal_time('apparent'))
 
         # Convert RA DEC to ALT AZ
         alt, az = self._ra_dec_to_alt_az(ref_ra + delta_ra,
@@ -158,6 +163,7 @@ class Pointing(object):
                                          self._reference_location)
 
         # Point beam to required ALT AZ
+       # print("RA: {}, DEC: {}, ALT: {}, AZ: {}".format(ref_ra + delta_ra, ref_dec + delta_dec, alt, az))
         self.point_array_static(beam, alt, az)
 
     @staticmethod
@@ -172,7 +178,7 @@ class Pointing(object):
 
         # Initialise SkyCoord object using the default frame (ICRS) and convert to horizontal
         # coordinates (altitude/azimuth) from the antenna's perspective.
-        sky_coordinates = SkyCoord(ra=right_ascension, dec=declination)
+        sky_coordinates = SkyCoord(ra=right_ascension, dec=declination, location=location)
         c_altaz = sky_coordinates.transform_to(AltAz(obstime=time, location=location))
 
         return c_altaz.alt, c_altaz.az
@@ -270,9 +276,12 @@ class AntennaArray(object):
 
 
 if __name__ == "__main__":
-    # Create config
 
-    pointing = Pointing(config, 1, 32)
-    pointing.run()
+    # Should be pointing to zenith (regardless of time)
+    for i in range(-90, 90, 2):
+        config['reference_antenna_location'] = [44.52357778, 11.6459889]
+        config['reference_pointing'] = [0,  i]
+        config['pointings'] = [[0, 0]]
 
-    print(pointing.weights)
+        pointing = Pointing(config, 1, 32)
+        pointing.run()
