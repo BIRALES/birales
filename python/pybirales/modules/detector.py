@@ -22,21 +22,18 @@ from multiprocessing import Pool
 
 def dd2(beam):
     # Apply the pre-processing filters to the beam data
-    t1 = time.time()
     candidates = []
     try:
         beam.apply_filters()
-
         # Run detection algorithm on the beam data to extract possible candidates
         candidates = SpiritSpaceDebrisDetectionStrategy().detect(beam)
     except Exception:
         log.exception('Something went wrong with process')
-    log.warning('Process %s finished beam %s in %1.4f s', os.getpid(), beam.id, time.time() - t1)
     return candidates
+
 
 def dd3(q, beam):
     # Apply the pre-processing filters to the beam data
-    t1 = time.time()
     candidates = []
     try:
         beam.apply_filters()
@@ -45,7 +42,6 @@ def dd3(q, beam):
         candidates = SpiritSpaceDebrisDetectionStrategy().detect(beam)
     except Exception:
         log.exception('Something went wrong with process')
-    log.warning('Process %s finished beam %s in %1.4f s', os.getpid(), beam.id, time.time() - t1)
 
     new_beam_candidates = [candidate for sub_list in candidates for candidate in sub_list if candidate]
 
@@ -117,29 +113,22 @@ class Detector(ProcessingModule):
                  for n_beam in range(settings.detection.beam_range[0], settings.detection.beam_range[1])]
 
         # Process the beam data to detect the beam candidates
-        t1 = time.time()
         if settings.detection.multi_proc:
             new_beam_candidates = self._get_beam_candidates_multi_process(beams)
         elif settings.detection.nthreads > 1:
             new_beam_candidates = self._get_beam_candidates_parallel(beams)
         else:
             new_beam_candidates = self._get_beam_candidates_single(beams)
-        log.debug('new candidates detected in %0.1f s', time.time() - t1)
 
-        t6 = time.time()
         for new_beam_candidate in new_beam_candidates:
             if new_beam_candidate:
                 self._debris_queue.enqueue(new_beam_candidate)
-        log.debug("Total E took: %1.3f", time.time() - t6)
 
-        t7 = time.time()
         if settings.detection.save_candidates:
             # Persist beam candidates
             self._debris_queue.save()
-        log.debug("Total S took: %1.3f,", time.time() - t7)
 
         log.info('%s beam candidates, were found', len(new_beam_candidates))
-
 
     def _get_beam_candidates_single(self, beams):
         """
@@ -156,10 +145,7 @@ class Detector(ProcessingModule):
         # Do not add beam candidates that a
         return [candidate for sub_list in beam_candidates for candidate in sub_list if candidate]
 
-
     def _get_beam_candidates_multi_process(self, beams):
-        t1 = time.time()
-
         beam_candidates = []
 
         # pool = self._m_pool
@@ -174,7 +160,6 @@ class Detector(ProcessingModule):
         # self.pool.close()
         # self.pool.join()
 
-        log.debug('t1 %0.3f', time.time() - t1)
         # Flatten list of beam candidates returned by the N threads
         return [candidate for sub_list in beam_candidates for candidate in sub_list if candidate]
 
@@ -188,14 +173,12 @@ class Detector(ProcessingModule):
         log.debug('Running space debris detection algorithm on %s beams in parallel', len(beams))
 
         # Run using N threads
-        t1 = time.time()
         beam_candidates = self._thread_pool.map(self._detect_space_debris_candidates, beams)
-        log.debug('t1 %0.1f', time.time() - t1)
         # Flatten list of beam candidates returned by the N threads
         return [candidate for sub_list in beam_candidates for candidate in sub_list if candidate]
 
     def _detect_space_debris_candidates(self, beam):
-        # plotter.plot(beam.snr, 'detection/input_beam_6_' + str(time.time()), beam.id == 0)
+        plotter.plot(beam.snr, 'detection/input_beam_0', beam.id == 0)
 
         # Apply the pre-processing filters to the beam data
         beam.apply_filters()

@@ -52,6 +52,12 @@ class Beam:
         self.channels = np.arange(self.f_ch1, self.f_ch1 + self.f_off * self.n_channels, self.f_off)
         self.snr = self._set_snr(beam_data)
 
+    def _rms(self, data):
+        return np.sqrt(np.mean(data**2.0))
+
+    def _power(self, data):
+        return np.abs(data) ** 2
+
     def _set_snr(self, data):
         """
         Calculate the Signal to Noise Ratio from the power data
@@ -61,20 +67,44 @@ class Beam:
         """
 
         # return np.abs(data[0, self.id, int(self.n_channels / 2):, :]).T
-        data = np.abs(data[0, self.id, :, :]).T
+        # data = np.abs(data[0, self.id, :, :]).T
         #
-        # # @todo - check if the mean can be used as an estimate for the noise
-        mean_noise_per_channel = np.mean(data, axis=0)
+        # @todo - check if the mean can be used as an estimate for the noise
+        # mean_noise_per_channel = np.mean(data, axis=0)
         #
         # # Normalised the data by the mean noise at each channel
-        normalised_data = np.where(data > 0., data, np.nan) / mean_noise_per_channel
+        # normalised_data = np.where(data > 0., data, np.nan) / mean_noise_per_channel
+
+        data = data[0, self.id, :, :].T
+
+        # data = np.abs(data)
+        # mean_noise_per_channel = np.mean(data, axis=0)
+        # normalised_data = np.where(data > 0., data, np.nan) / mean_noise_per_channel
         #
-        # # Take the log value of the power
-        log_data = 10 * np.log10(normalised_data)
-        #
-        # # Replace nan values with 0.
+        # log_data = 10 * np.log10(normalised_data)
+        # log_data[np.isnan(log_data)] = 0.
+
+        p_v = self._power(data)
+        # p_n = self._power(np.mean(data, axis=0))
+        p_n = self._power(self._rms(data))
+        snr = (p_v - p_n) / p_n
+        snr[snr < 0] = np.nan
+        log_data = 10 * np.log10(snr)
         log_data[np.isnan(log_data)] = 0.
-        #
+
+        return log_data
+
+        # power_antenna = self._power(data)
+        # power_noise = self._power(self._rms(data))
+        # normalised_data = np.where(power_antenna > 0., power_antenna, np.nan) / np.abs(np.sqrt(np.mean(data**2.0, axis=0)))**2
+
+        # p_n = self._power(np.mean(data, axis=0))
+        # p_v = self._power(data)
+        # snr = (p_v - p_n) / p_n
+        # snr[snr < 0] = np.nan
+        # log_data = 10 * np.log10(snr)
+        # log_data[np.isnan(log_data)] = 0.
+
         return log_data
 
     def _apply_filter(self, beam_filter):

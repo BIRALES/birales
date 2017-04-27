@@ -57,35 +57,26 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         # Initialise the clustering algorithm
         self.db_scan = DBSCAN(eps=self._eps,
                               min_samples=self._min_samples,
-                              # algorithm=self._algorithm,
-                              metric="precomputed",
+                              algorithm=self._algorithm,
+                              # metric="precomputed",
                               n_jobs=-1)
-        self.db_scan = hdbscan.HDBSCAN(min_cluster_size=self._min_samples)
+        # self.db_scan = hdbscan.HDBSCAN(min_cluster_size=self._min_samples)
 
         self._linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
 
     def detect(self, beam):
-        t2 = time.time()
         clusters = self._create_clusters(beam)
-        log.debug("%s detection clusters detected in beam %s in %0.2f", len(clusters), beam.id, time.time() - t2)
 
-        t3 = time.time()
         merged_clusters = self._merge_clusters(clusters)
-        log.debug("%s detection clusters remain after merging in beam %s in %0.2f", len(merged_clusters), beam.id,
-                  time.time() - t3)
 
         return merged_clusters
 
     def c(self, data):
-        t1 = time.time()
         cluster_labels = self.db_scan.fit_predict(data)
-        # log.warning('DBSCAN finished in %1.2f s', time.time() - t1)
         return cluster_labels
 
     def c2(self, data):
-        t1 = time.time()
         e, l = DB2.DBSCAN(data, minPts=5, eps=3.0, verbose=True)
-        # log.warning('DBSCAN2 finished in %1.2f s', time.time() - t1)
         return l
 
     def _create_clusters(self, beam):
@@ -94,7 +85,6 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         :param beam: The beam object from which the clusters will be generated
         :return:
         """
-        t4 = time.time()
         # Select the data points that are non-zero and transform them in a time (x), channel (y) nd-array
         data = np.column_stack(np.where(beam.snr > 0))
 
@@ -104,7 +94,6 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         # X = euclidean_distances(data, data)
         X = data
         # Perform clustering on the data and returns cluster labels the points are associated with
-        t5 = time.time()
         try:
 
             cluster_labels = self.c(X)
@@ -113,7 +102,6 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
         except ValueError:
             log.exception('DBSCAN failed in beam %s', beam.id)
             return []
-        log.debug('DBSCAN finished in %1.3f s in beam %s', time.time() - t5, beam.id)
         plotter.plot(beam.snr, 'detection/detection_db_scan_' + str(time.time()), beam.id == 0,
                      cluster_labels=cluster_labels)
 
@@ -159,10 +147,9 @@ class SpiritSpaceDebrisDetectionStrategy(SpaceDebrisDetectionStrategy):
                           cluster.c, len(channel_indices), cluster._score)
                 clusters.append(cluster)
 
-        log.debug('DBSCAN detected %s clusters in beam %s, of which %s are linear in %0.3f',
+        log.debug('DBSCAN detected %s clusters in beam %s, of which %s are linear',
                   len(np.unique(filtered_cluster_labels)),
-                  beam.id, len(clusters),
-                  time.time() - t4)
+                  beam.id, len(clusters))
 
         return clusters
 

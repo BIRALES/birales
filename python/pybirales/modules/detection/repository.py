@@ -190,9 +190,7 @@ class BeamCandidateRepository(Repository):
 
         try:
             # Get JSON representation of candidates
-            t1 = time.time()
             to_save = [candidate.to_json() for candidate in beam_candidates]
-            log.debug('d1 %1.3f', time.time() - t1)
             # Save candidates to the database
             if len(beam_candidates) is 1:
                 self.database.beam_candidates.insert_one(to_save[0])

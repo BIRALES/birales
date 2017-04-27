@@ -64,7 +64,7 @@
                 new BeamCandidatesPlotter()
             ];
 
-            log.info('Initialise the plotters');
+            log.info('Initialise the plotters', poll);
             $.each(plotters, function (i, plotter) {
                 plotter.publish();
 

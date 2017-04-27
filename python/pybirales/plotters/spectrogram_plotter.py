@@ -22,6 +22,7 @@ class SpectrogramPlotter:
             try:
                 self.fig.clf()
                 plt.imshow(data, aspect='auto', interpolation='none', origin='lower')
+                plt.colorbar()
                 if cluster_labels is not None:
                     categories = [self.colors[c] for c in cluster_labels if c in self.colors]
                     d = np.column_stack(np.where(data > 0))

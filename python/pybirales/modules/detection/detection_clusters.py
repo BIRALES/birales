@@ -194,6 +194,11 @@ class DetectionCluster:
                 'ra': self.beam.ra,
                 'dec': self.beam.dec,
             },
+            'model': {
+                'm': self.m,
+                'c': self.c,
+                'score': self._score,
+            },
             'beam_id': self.beam_id,
             'tx': settings.observation.transmitter_frequency,
             'min_time': self.min_time.datetime,
