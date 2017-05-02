@@ -5,6 +5,7 @@ import time
 import struct
 from pybirales.base import settings
 from pybirales.base.definitions import PipelineError
+from pybirales.blobs.channelised_data import ChannelisedBlob
 from pybirales.base.processing_module import ProcessingModule
 import numpy as np
 
@@ -66,8 +67,12 @@ class Persister(ProcessingModule):
         self.name = "Persister"
 
     def generate_output_blob(self):
-        """ Generate output data blob """
-        return None
+        """
+        Generate the output blob
+        :return:
+        """
+        return ChannelisedBlob(self._config, self._input.shape,
+                         datatype=np.complex64)
 
     def process(self, obs_info, input_data, output_data):
 
@@ -95,8 +100,11 @@ class Persister(ProcessingModule):
         if self._counter <= 2:
             return
 
+        # Save data to output
+        output_data[:] = input_data[:]
+
         # Transpose data and write to file
         # np.save(self._file, np.abs(input_data[self._beam_range, self._channel_range, :].T))
-        temp_array = np.abs(input_data[self._beam_range, self._channel_range, :].T).ravel()
+        temp_array = np.power(np.abs(input_data[self._beam_range, self._channel_range, :].T), 2).ravel()
         self._file.write(struct.pack('f' * len(temp_array), *temp_array))
         self._file.flush()

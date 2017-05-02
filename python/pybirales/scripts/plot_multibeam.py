@@ -70,7 +70,7 @@ if __name__ == "__main__":
     for i, beam in enumerate(opts.to_plot):
         data = open(files[beam], 'rb').read()
         data = np.array(struct.unpack("f" * (len(data) / 4), data))
-        plt.plot(10 * np.log10(data), label="Beam %d" % beam, marker=markers[i])
+        plt.plot(np.arange(0, len(data)) * opts.tsamp / 60, 10 * np.log10(data), label="Beam %d" % beam)#, marker=markers[i])
 
     plt.legend()
     plt.title("%s transit (Beam %d on source)" % (opts.name, opts.center))

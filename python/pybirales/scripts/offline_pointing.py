@@ -1,216 +1,123 @@
-import numpy as np
-import ctypes
 import datetime
 import logging
-import time
 import warnings
 
-from threading import Thread, Lock
-from numpy import ctypeslib
-
-from astropy.coordinates import Angle, EarthLocation, SkyCoord, AltAz
-from astropy.units import Quantity
+import numpy as np
 from astropy import constants
 from astropy import units as u
+from astropy.coordinates import Angle, EarthLocation, SkyCoord, AltAz
 from astropy.time import Time
+from astropy.units import Quantity
 from astropy.utils.exceptions import AstropyWarning
-
-from pybirales.base import settings
-from pybirales.base.definitions import PipelineError
-from pybirales.base.processing_module import ProcessingModule
-from pybirales.blobs.beamformed_data import BeamformedBlob
-from pybirales.blobs.dummy_data import DummyBlob
-from pybirales.blobs.receiver_data import ReceiverBlob
 
 # Mute Astropy Warnings
 warnings.simplefilter('ignore', category=AstropyWarning)
 
 
-class Beamformer(ProcessingModule):
-    """ Beamformer processing module """
+config = {}
 
-    def __init__(self, config, input_blob=None):
-        # This module needs an input blob of type channelised
-        if type(input_blob) not in [DummyBlob, ReceiverBlob]:
-            raise PipelineError("Beamformer: Invalid input data type, should be DummyBlob or ReceiverBlob")
+config['reference_antenna_location'] = [44.52357778, 11.6459889]
+config['antenna_locations'] = [[-8.499750, -35.000000, 0.000000],
+                               [-2.833250, -35.000000, 0.000000],
+                               [2.833250, -35.000000, 0.000000],
+                               [8.499750, -35.000000, 0.000000],
+                               [-8.499750, -25.000000, 0.000000],
+                               [-2.833250, -25.000000, 0.000000],
+                               [2.833250, -25.000000, 0.000000],
+                               [8.499750, -25.000000, 0.000000],
+                               [-8.499750, -15.000000, 0.000000],
+                               [-2.833250, -15.000000, 0.000000],
+                               [2.833250, -15.000000, 0.000000],
+                               [8.499750, -15.000000, 0.000000],
+                               [-8.499750, -5.000000, 0.000000],
+                               [-2.833250, -5.000000, 0.000000],
+                               [2.833250, -5.000000, 0.000000],
+                               [8.499750, -5.000000, 0.000000],
+                               [-8.499750, 5.000000, 0.000000],
+                               [-2.833250, 5.000000, 0.000000],
+                               [2.833250, 5.000000, 0.000000],
+                               [8.499750, 5.000000, 0.000000],
+                               [-8.499750, 15.000000, 0.000000],
+                               [-2.833250, 15.000000, 0.000000],
+                               [2.833250, 15.000000, 0.000000],
+                               [8.499750, 15.000000, 0.000000],
+                               [-8.499750, 25.000000, 0.000000],
+                               [-2.833250, 25.000000, 0.000000],
+                               [2.833250, 25.000000, 0.000000],
+                               [8.499750, 25.000000, 0.000000],
+                               [-8.499750, 35.000000, 0.000000],
+                               [-2.833250, 35.000000, 0.000000],
+                               [2.833250, 35.000000, 0.000000],
+                               [8.499750, 35.000000, 0.000000]]
 
-        # Sanity checks on configuration
-        if {'nbeams', 'antenna_locations', 'pointings', 'reference_pointing', 'reference_antenna_location'} \
-                - set(config.settings()) != set():
-            raise PipelineError("Beamformer: Missing keys on configuration "
-                                "(nbeams, nants, antenna_locations, pointings)")
-        self._nbeams = config.nbeams
-
-        # Make sure that antenna locations is a list
-        if type(config.antenna_locations) is not list:
-            raise PipelineError("Beamformer: Expected list of antennas with long/lat/height as antenna locations")
-
-        # Number of threads to use
-        self._nthreads = 2
-        if 'nthreads' in config.settings():
-            self._nthreads = config.nthreads
-
-        # Check if we have to move the telescope
-        self._move_to_dec = False
-        if 'move_to_dec' in config.settings():
-            self._move_to_dec = config.move_to_dec
-
-        # Create placeholder for pointing class instance
-        self._pointing = None
-
-        # Wrap library containing C-implementation of beamformer
-        self._beamformer = ctypes.CDLL("libbeamformer.so")
-        complex_p = ctypeslib.ndpointer(np.complex64, ndim=1, flags='C')
-        self._beamformer.beamform.argtypes = [complex_p, complex_p, complex_p, ctypes.c_uint32, ctypes.c_uint32,
-                                              ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32]
-        self._beamformer.beamform.restype = None
-
-        # Call superclass initializer
-        super(Beamformer, self).__init__(config, input_blob)
-
-        # Processing module name
-        self.name = "Beamformer"
-
-    def generate_output_blob(self):
-        """ Generate output data blob """
-        input_shape = dict(self._input.shape)
-        datatype = self._input.datatype
-
-        # Initialise pointing
-        self._initialise(input_shape['nsubs'], input_shape['nants'])
-
-        # Create output blob
-        return BeamformedBlob(self._config, [('npols', input_shape['npols']),
-                                             ('nbeams', self._nbeams),
-                                             ('nsubs', input_shape['nsubs']),
-                                             ('nsamp', input_shape['nsamp'])],
-                              datatype=datatype)
-
-    def _initialise(self, nsubs, nants):
-        """ Initialise pointing """
-
-        # Create pointing instance
-        if self._pointing is None:
-            self._pointing = Pointing(self._config, nsubs, nants)
-            self._pointing.start()
-
-    def process(self, obs_info, input_data, output_data):
-
-        # Get data information
-        nsamp = obs_info['nsamp']
-        nsubs = obs_info['nsubs']
-        nants = obs_info['nants']
-        npols = obs_info['npols']
-
-        # If pointing is not initialise, initialise
-        if self._pointing is None:
-            self._initialise(nsubs, nants)
-
-        # Get weights
-        self._pointing.start_reading_weighs()
-
-        # Apply pointing coefficients
-        self._beamformer.beamform(input_data.ravel(), self._pointing.weights.ravel(), output_data.ravel(),
-                                  nsamp, nsubs, self._nbeams, nants, npols, self._nthreads)
-
-        # Done using weights
-        self._pointing.stop_reading_weights()
-
-        # Update observation information
-        obs_info['nbeams'] = self._nbeams
-        obs_info['reference_pointing'] = self._config.reference_pointing
-        obs_info['pointings'] = self._config.pointings
-
-        logging.debug("Input data: %s shape: %s", np.sum(input_data), input_data.shape)
-        logging.debug("Output data: %s shape: %s", np.sum(output_data), output_data.shape)
-
-        return obs_info
+config['pointings'] = [[0, 0]]
+config['reference_pointing'] = [0, 64.515]
+config['nbeams'] = len(config['pointings'])
+config['start_center_frequency'] = 410.03125
+config['channel_bandwidth'] = 0.078125
 
 
-class Pointing(Thread):
+class Pointing(object):
     """ Pointing class which periodically updates pointing weights """
 
     def __init__(self, config, nsubs, nants):
 
         # Call superclass initialiser
         super(Pointing, self).__init__()
-        self.daemon = True
 
         # Make sure that we have enough antenna locations
-        if len(config.antenna_locations) != nants:
-            raise PipelineError("Pointing: Mismatch between number of antennas and number of antenna locations")
+        if len(config['antenna_locations']) != nants:
+            print("Pointing: Mismatch between number of antennas and number of antenna locations")
 
         # Make sure that we have enough pointing
-        if len(config.pointings) != config.nbeams:
-            raise PipelineError("Pointing: Mismatch between number of beams and number of beam pointings")
-
-        # Check if we're using static beams
-        self._static_beams = False
-        if "static_beams" in config.settings():
-            self._static_beams = config.static_beams
+        if len(config['pointings']) != config['nbeams']:
+           print("Pointing: Mismatch between number of beams and number of beam pointings")
 
         # Initialise Pointing
-        array = config.antenna_locations
-        self._start_center_frequency = settings.observation.start_center_frequency
-        self._reference_location = config.reference_antenna_location
-        self._reference_pointing = config.reference_pointing
-        self._pointings = config.pointings
-        self._bandwidth = settings.observation.channel_bandwidth
-        self._nbeams = config.nbeams
+        array = config['antenna_locations']
+        self._start_center_frequency = config['start_center_frequency']
+        self._reference_location = config['reference_antenna_location']
+        self._reference_pointing = config['reference_pointing']
+        self._pointings = config['pointings']
+        self._bandwidth = config['channel_bandwidth']
+        self._nbeams = config['nbeams']
         self._nants = nants
         self._nsubs = nsubs
-
-        self._pointing_period = 5
-        if 'pointing_period' in config.settings():
-            self._pointing_period = config.pointing_period
 
         # Create AntennaArray object
         self._array = AntennaArray(array, self._reference_location[0], self._reference_location[1])
 
         # Calculate displacement vectors to each antenna from reference antenna
-        self._reference_location = EarthLocation.from_geodetic(self._array.lon, self._array.lat,
+        # (longitude, latitude)
+        self._reference_location = EarthLocation.from_geodetic(self._reference_location[1],
+                                                               self._reference_location[0],
                                                                height=self._array.height)
 
         self._vectors_enu = np.full([self._nants, 3], np.nan)
         for i in range(self._nants):
             self._vectors_enu[i, :] = self._array.antenna_position(i)
 
-        # Lock to be used for synchronised access
-        self._lock = Lock()
-
         # Create initial weights
-        self.weights = np.zeros((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
-        self.weights = np.ones((self._nsubs, self._nbeams, 4), dtype=np.complex64)
-        self._temp_weights = np.ones((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
+        self.weights = np.ones((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
 
         # Ignore AstropyWarning
         warnings.simplefilter('ignore', category=AstropyWarning)
 
-    def run(self):
-        """ Run thread """
-        while True:
+    def run(self, pointing_time=None):
+        """ Run pointing """
 
-            # Get time once (so that all beams use the same time for pointing)
+        # Get time once (so that all beams use the same time for pointing)
+        if pointing_time is None:
             pointing_time = Time(datetime.datetime.utcnow(), scale='utc', location=self._reference_location)
+        else:
+            pointing_time = Time(pointing_time, scale='utc', location=self._reference_location)
 
-            for beam in range(self._nbeams):
-                self.point_array(beam, self._reference_pointing[0], self._reference_pointing[1],
-                                 self._pointings[beam][0], self._pointings[beam][1],
-                                 pointing_time)
+        for beam in range(self._nbeams):
+            self.point_array(beam, self._reference_pointing[0], self._reference_pointing[1],
+                             self._pointings[beam][0], self._pointings[beam][1],
+                             pointing_time)
 
-            self._lock.acquire()
-            self.weights = self._temp_weights.copy()
-            self._lock.release()
-            logging.info("Updated beamforming coefficients")
-            time.sleep(self._pointing_period)
-
-    def start_reading_weighs(self):
-        """ Lock weights for access to beamformer """
-        self._lock.acquire()
-
-    def stop_reading_weights(self):
-        """ Beamformer finished, unlock weights """
-        self._lock.release()
+        logging.info("Updated beamforming coefficients")
 
     def point_array_static(self, beam, altitude, azimuth):
         """ Calculate the phase shift given the altitude and azimuth coordinates of a sky object as astropy angles
@@ -227,8 +134,8 @@ class Pointing(Thread):
                                                                  self._vectors_enu)
 
             # Apply to weights file
-            self._temp_weights[i, beam, :].real = real
-            self._temp_weights[i, beam, :].imag = imag
+            self.weights[i, beam, :].real = real
+            self.weights[i, beam, :].imag = imag
 
     def point_array(self, beam, ref_ra, ref_dec, delta_ra, delta_dec, pointing_time=None):
         """ Calculate the phase shift between two antennas which is given by the phase constant (2 * pi / wavelength)
@@ -247,8 +154,7 @@ class Pointing(Thread):
         delta_dec = Angle(delta_dec, u.deg)
 
         # If we're using static beam, then we must adjust RA (by setting reference RA equal to LST)
-        if self._static_beams:
-            ref_ra = Angle(pointing_time.sidereal_time('mean'))
+       # ref_ra = Angle(pointing_time.sidereal_time('apparent'))
 
         # Convert RA DEC to ALT AZ
         alt, az = self._ra_dec_to_alt_az(ref_ra + delta_ra,
@@ -257,6 +163,7 @@ class Pointing(Thread):
                                          self._reference_location)
 
         # Point beam to required ALT AZ
+       # print("RA: {}, DEC: {}, ALT: {}, AZ: {}".format(ref_ra + delta_ra, ref_dec + delta_dec, alt, az))
         self.point_array_static(beam, alt, az)
 
     @staticmethod
@@ -271,7 +178,7 @@ class Pointing(Thread):
 
         # Initialise SkyCoord object using the default frame (ICRS) and convert to horizontal
         # coordinates (altitude/azimuth) from the antenna's perspective.
-        sky_coordinates = SkyCoord(ra=right_ascension, dec=declination)
+        sky_coordinates = SkyCoord(ra=right_ascension, dec=declination, location=location)
         c_altaz = sky_coordinates.transform_to(AltAz(obstime=time, location=location))
 
         return c_altaz.alt, c_altaz.az
@@ -366,3 +273,15 @@ class AntennaArray(object):
         self._y = [positions[i][1] for i in range(len(positions))]
         self._z = [positions[i][2] for i in range(len(positions))]
         self._height = [0 for i in range(len(positions))]
+
+
+if __name__ == "__main__":
+
+    # Should be pointing to zenith (regardless of time)
+    for i in range(-90, 90, 2):
+        config['reference_antenna_location'] = [44.52357778, 11.6459889]
+        config['reference_pointing'] = [0,  i]
+        config['pointings'] = [[0, 0]]
+
+        pointing = Pointing(config, 1, 32)
+        pointing.run()

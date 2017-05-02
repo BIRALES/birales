@@ -1,6 +1,7 @@
 import time
 import ctypes
 import logging
+import datetime
 import numpy as np
 from enum import Enum
 from pybirales.base import settings
@@ -96,7 +97,7 @@ class Receiver(Generator):
             obs_info['sampling_time'] = 1.0 / settings.observation.samples_per_second
             obs_info['start_center_frequency'] = settings.observation.start_center_frequency
             obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
-            obs_info['timestamp'] = timestamp
+            obs_info['timestamp'] = datetime.datetime.utcnow() - datetime.timedelta(seconds=self._nsamp * obs_info['sampling_time'])
             obs_info['nsubs'] = self._nsubs
             obs_info['nsamp'] = self._nsamp
             obs_info['nants'] = self._nants
@@ -134,7 +135,7 @@ class Receiver(Generator):
 
         # Start data consumer
         if self._daq.startBiralesConsumer(self._nsamp, self._start_time,
-                                          self._samples_per_second) != Result.Success.value:
+                                          min(self._nsamp, self._samples_per_second)) != Result.Success.value:
             raise PipelineError("Receiver: Failed to start data consumer")
 
         # Set channel data consumer callback
