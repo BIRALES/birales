@@ -2,6 +2,7 @@ import time
 import logging
 from abc import abstractmethod
 from threading import Thread
+from pybirales.base.definitions import NoDataReaderException
 import time
 import logging as log
 
@@ -38,7 +39,6 @@ class Module(Thread):
         self._stop = False
         self._is_stopped = True
 
-
     @abstractmethod
     def generate_output_blob(self):
         """ Create the output blob to be used by the next module in the pipeline
@@ -49,7 +49,6 @@ class Module(Thread):
         """ Stops the current thread """
         logging.info('Stopping %s module', self.name)
         self._stop = True
-        logging.info('Stopping %s module', self.name)
 
     @property
     def is_stopped(self):
@@ -146,9 +145,13 @@ class ProcessingModule(Module):
                 output_data = self._output.request_write()
 
             # Perform required processing
-            s = time.time()
-            res = self.process(obs_info, input_data, output_data)
-            log.info('%s finished in %0.3f seconds', self.name, time.time() - s)
+            try:
+                s = time.time()
+                res = self.process(obs_info, input_data, output_data)
+                log.info('%s finished in %0.3f s', self.name, time.time() - s)
+            except NoDataReaderException:
+                logging.info("Data finished")
+
             if res is not None:
                 obs_info = res
 
@@ -163,4 +166,5 @@ class ProcessingModule(Module):
             # A short sleep to force a context switch (since locks do not force one)
             time.sleep(0.001)
 
+        log.info('%s killed', self.name)
         self._is_stopped = True

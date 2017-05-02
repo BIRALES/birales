@@ -126,6 +126,12 @@ class Beamformer(ProcessingModule):
 
         return obs_info
 
+    def stop(self):
+        logging.info('Stopping %s module', self.name)
+        self._stop = True
+        if isinstance(self._pointing, Pointing):
+            self._pointing.stop()
+
 
 class Pointing(Thread):
     """ Pointing class which periodically updates pointing weights """
@@ -135,6 +141,9 @@ class Pointing(Thread):
         # Call superclass initialiser
         super(Pointing, self).__init__()
         self.daemon = True
+
+        # Thread name
+        self.name = "Pointing Thread"
 
         # Make sure that we have enough antenna locations
         if len(config.antenna_locations) != nants:
@@ -183,12 +192,16 @@ class Pointing(Thread):
         self.weights = np.ones((self._nsubs, self._nbeams, 4), dtype=np.complex64)
         self._temp_weights = np.ones((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
 
+        self._stop = False
+        self._is_stopped = True
+
         # Ignore AstropyWarning
         warnings.simplefilter('ignore', category=AstropyWarning)
 
     def run(self):
         """ Run thread """
-        while True:
+        self._is_stopped = False
+        while not self._stop:
 
             # Get time once (so that all beams use the same time for pointing)
             pointing_time = Time(datetime.datetime.utcnow(), scale='utc', location=self._reference_location)
@@ -203,6 +216,7 @@ class Pointing(Thread):
             self._lock.release()
             logging.info("Updated beamforming coefficients")
             time.sleep(self._pointing_period)
+        self._is_stopped = True
 
     def start_reading_weighs(self):
         """ Lock weights for access to beamformer """
@@ -294,8 +308,11 @@ class Pointing(Thread):
         k = (2.0 * np.pi * frequency.to(u.Hz).value) / constants.c.value
         return np.cos(np.multiply(k, path_length)), np.sin(np.multiply(k, path_length))
 
+    def stop(self):
+        """ Stops the current thread """
+        logging.info('Stopping %s thread', self.name)
+        self._stop = True
 
-# --------------------------------------------------------------------------------------------------
 
 class AntennaArray(object):
     """ Class representing antenna array """

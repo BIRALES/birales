@@ -264,18 +264,20 @@ def offline_birales_pipeline(configuration, debug):
     reader = RawDataReader(settings.rawdatareader)
     beamformer = Beamformer(settings.beamformer, reader.output_blob)
     ppf = PFB(settings.channeliser, beamformer.output_blob)
+    detector = Detector(settings.detection, ppf.output_blob)
     terminator = Terminator(settings.terminator, ppf.output_blob)
 
     # Add modules to pipeline manager
     manager.add_module("reader", reader)
     manager.add_module("ppf", ppf)
     manager.add_module("beamformer", beamformer)
-    manager.add_module("terminator", terminator)
+    manager.add_module("detector", detector)
 
-    manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, reader.output_blob)
+    # manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, reader.output_blob)
     # manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
 
     manager.start_pipeline()
+
 
 @cli.command()
 @click.argument('configuration', default='config/birales.ini')

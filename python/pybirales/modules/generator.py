@@ -82,13 +82,12 @@ class DummyDataGenerator(ProcessingModule):
             # Doppler shifted signal (from f1 to f2)
             freq = np.linspace(f1, f2, len(ts))
             ys = np.sin(2 * np.pi * freq * ts)
-            print('signal', np.sum(ys))
+
             ys += 0.01 * np.random.normal(scale=np.sqrt(noise_power), size=ts.shape)
 
-            print('noise', np.sum(ys))
             output_data[:, :, :, i] = ys
             # output_data[:, :, :, i] = 10*np.sin(np.arange(self._nsamp) * 0.5)
-            plotter.scatter(ys, ts, 'antenna_0_signal', True)
+            # plotter.scatter(ys, ts, 'antenna_0_signal', True)
 
         self._counter += 1
 

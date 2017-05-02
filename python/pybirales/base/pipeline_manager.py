@@ -9,7 +9,10 @@ import configparser
 from matplotlib import pyplot as plt
 
 from pybirales.base import settings
-from pybirales.base.definitions import PipelineError
+from pybirales.base.definitions import PipelineError, NoDataReaderException
+import yappi as profiler
+from datetime import datetime
+import logging as log
 
 
 class PipelineManager(object):
@@ -137,20 +140,20 @@ class PipelineManager(object):
         try:
             logging.info("PyBIRALES: Starting")
 
+            profiler.start()
             # Start all modules
-            try:
-                for module in self._modules:
-                    module.start()
+            for module in self._modules:
+                module.start()
 
-                # If we have any plotter, go to plotter loop, otherwise wait
-                if len(self._plotters) > 0:
-                    self.plotting_loop()
-                else:
-                    self.wait_pipeline()
-            except Exception:
-                import logging as log
-                log.exception('xi haga gara')
+            # If we have any plotter, go to plotter loop, otherwise wait
+            if len(self._plotters) > 0:
+                self.plotting_loop()
+            else:
+                self.wait_pipeline()
 
+        except NoDataReaderException as exception:
+            logging.info("Data finished")
+            self.stop_pipeline()
         except Exception as exception:
             logging.exception('Pipeline error: %s', exception.__class__.__name__)
             # An error occurred, force stop all modules
@@ -159,6 +162,7 @@ class PipelineManager(object):
     def plotting_loop(self):
         """ Plotting loop """
         while True:
+            profiler.clear_stats()
             for plotter in self._plotters:
                 plotter.update_plot()
                 logging.info("{} updated".format(plotter.__class__.__name__))
@@ -177,23 +181,31 @@ class PipelineManager(object):
             while not module.is_stopped and tries < 5:
                 time.sleep(0.5)
                 tries += 1
+                log.warning('%s could not be stopped. Re-trying.', module.name)
                 # All done
+
+        log.info('Stopping profiling')
+        profiler.stop()
+
+        profiler.get_func_stats().print_all()
 
     @staticmethod
     def _initialise_logging(debug):
         """ Initialise logging functionality """
         set_log_config(settings.manager.loggging_config_file_path)
-        log = logging.getLogger()
+        logger = logging.getLogger()
         # Logging level should be INFO by default
-        log.setLevel(logging.INFO)
+        logger.setLevel(logging.INFO)
         if debug:
             # Change Logging level to DEBUG
-            log.setLevel(logging.DEBUG)
+            logger.setLevel(logging.DEBUG)
 
     def wait_pipeline(self):
         """ Wait for modules to finish processing """
         for module in self._modules:
             while module.isAlive() and module._stop is False:
-                module.join(15.0)
+                module.join(5.0)
             if module.isAlive():
                 logging.warning("PipelineManager: Killing thread %s abruptly", module.name)
+
+

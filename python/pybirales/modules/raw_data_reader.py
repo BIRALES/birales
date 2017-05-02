@@ -1,14 +1,13 @@
-import logging
+import sys
 import numpy as np
-import time
 from time import sleep
 import datetime
 
-from pybirales.base.definitions import PipelineError, ObservationInfo
+from pybirales.base.definitions import PipelineError, ObservationInfo, NoDataReaderException
 from pybirales.base.processing_module import ProcessingModule
 from pybirales.blobs.dummy_data import DummyBlob
-from scipy.signal import chirp
 from pybirales.base import settings
+
 
 class RawDataReader(ProcessingModule):
     """ Raw data reader """
@@ -50,11 +49,15 @@ class RawDataReader(ProcessingModule):
                          datatype=np.complex64)
 
     def process(self, obs_info, input_data, output_data):
-
         # Read next data set
         data = self._f.read(self._nsamp * self._nants * 8)
         data = np.frombuffer(data, np.complex64)
-        data = data.reshape((1, 1, self._nsamp, self._nants))
+
+        try:
+            data = data.reshape((1, 1, self._nsamp, self._nants))
+        except ValueError:
+            sys.exit()
+
         output_data[:] = data
         sleep(1)
 

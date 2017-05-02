@@ -56,3 +56,7 @@ class NotConfiguredError(Exception):
 class PipelineError(Exception):
     """ Define an exception which occurs when a pipeline error occurs """
     pass
+
+
+class NoDataReaderException(Exception):
+    pass

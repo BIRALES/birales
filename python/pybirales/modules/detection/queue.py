@@ -56,6 +56,6 @@ class BeamCandidatesQueue:
         if candidates_to_save:
             self.repository.persist(candidates_to_save)
 
-        log.info('Added %s candidates, Deleted %s candidates in %0.4f s',
+        log.info('Added %s candidates, Deleted %s candidates',
                  len(candidates_to_save),
                  len(candidates_to_delete))
