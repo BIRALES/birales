@@ -77,9 +77,9 @@ class Detector(ProcessingModule):
         self._debris_queue = BeamCandidatesQueue(settings.beamformer.nbeams)
 
         # Initialise thread pool with N threads
-        self._thread_pool = ThreadPool(settings.detection.nthreads)
+        # self._thread_pool = ThreadPool(settings.detection.nthreads)
 
-        self._m_pool = Pool()
+        # self._m_pool = Pool()
 
         # Flag that indicates whether the configuration was persisted
         self._config_persisted = False
@@ -88,7 +88,7 @@ class Detector(ProcessingModule):
 
         self.name = "Detector"
 
-        self.pool = Pool(processes=4)
+        self.pool = Pool(processes=1)
 
     def generate_output_blob(self):
         pass

@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 from pybirales.base import settings
 from pybirales.base.definitions import PipelineError, NoDataReaderException
 import yappi as profiler
-from datetime import datetime
+from threading import Event
 import logging as log
 
 
@@ -49,13 +49,19 @@ class PipelineManager(object):
             if "plot_update_rate" in self._config.settings():
                 self._plot_update_rate = self._config.plot_update_rate
 
+        self._stop = Event()
+
         # Set interrupt signal handler
         signal.signal(signal.SIGINT, self._signal_handler)
 
+        self.count = 0
+
     # Capturing interrupt signal
     def _signal_handler(self, signum, frame):
-        logging.info("Ctrl-C detected, stopping pipeline")
-        self.stop_pipeline()
+
+        if not self._stop.is_set():
+            logging.info("Ctrl-C detected, stopping pipeline")
+            self.stop_pipeline()
 
     def _configure_pipeline(self, config_file):
         """ Parse configuration file and set pipeline
@@ -170,6 +176,7 @@ class PipelineManager(object):
 
     def stop_pipeline(self):
         """ Stop pipeline (one at a time) """
+        self._stop.set()
         # Loop over all modules
         for module in self._modules:
             # Stop module
