@@ -5,7 +5,7 @@ import logging
 import time
 import warnings
 
-from threading import Thread, Lock
+from threading import Thread, Lock, Event
 from numpy import ctypeslib
 
 from astropy.coordinates import Angle, EarthLocation, SkyCoord, AltAz
@@ -121,14 +121,11 @@ class Beamformer(ProcessingModule):
         obs_info['reference_pointing'] = self._config.reference_pointing
         obs_info['pointings'] = self._config.pointings
 
-        logging.debug("Input data: %s shape: %s", np.sum(input_data), input_data.shape)
-        logging.debug("Output data: %s shape: %s", np.sum(output_data), output_data.shape)
-
         return obs_info
 
     def stop(self):
         logging.info('Stopping %s module', self.name)
-        self._stop = True
+        self._stop.set()
         if isinstance(self._pointing, Pointing):
             self._pointing.stop()
 
@@ -188,35 +185,32 @@ class Pointing(Thread):
         self._lock = Lock()
 
         # Create initial weights
-        self.weights = np.zeros((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
-        self.weights = np.ones((self._nsubs, self._nbeams, 4), dtype=np.complex64)
+        # self.weights = np.zeros((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
+        self.weights = np.ones((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
         self._temp_weights = np.ones((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
 
-        self._stop = False
-        self._is_stopped = True
+        self._stop = Event()
 
         # Ignore AstropyWarning
         warnings.simplefilter('ignore', category=AstropyWarning)
 
     def run(self):
         """ Run thread """
-        self._is_stopped = False
-        while not self._stop:
+        while not self._stop.is_set():
 
             # Get time once (so that all beams use the same time for pointing)
             pointing_time = Time(datetime.datetime.utcnow(), scale='utc', location=self._reference_location)
 
-            for beam in range(self._nbeams):
-                self.point_array(beam, self._reference_pointing[0], self._reference_pointing[1],
-                                 self._pointings[beam][0], self._pointings[beam][1],
-                                 pointing_time)
+           # for beam in range(self._nbeams):
+           #     self.point_array(beam, self._reference_pointing[0], self._reference_pointing[1],
+           #                      self._pointings[beam][0], self._pointings[beam][1],
+           #                      pointing_time)
 
             self._lock.acquire()
             self.weights = self._temp_weights.copy()
             self._lock.release()
             logging.info("Updated beamforming coefficients")
             time.sleep(self._pointing_period)
-        self._is_stopped = True
 
     def start_reading_weighs(self):
         """ Lock weights for access to beamformer """
@@ -311,7 +305,7 @@ class Pointing(Thread):
     def stop(self):
         """ Stops the current thread """
         logging.info('Stopping %s thread', self.name)
-        self._stop = True
+        self._stop.set()
 
 
 class AntennaArray(object):

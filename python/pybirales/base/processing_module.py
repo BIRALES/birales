@@ -1,7 +1,8 @@
 import time
 import logging
 from abc import abstractmethod
-from threading import Thread
+import thread
+from threading import Thread, Event
 from pybirales.base.definitions import NoDataReaderException
 import time
 import logging as log
@@ -36,8 +37,8 @@ class Module(Thread):
 
         # Stopping clause
         self.daemon = True
-        self._stop = False
-        self._is_stopped = True
+        self._stop = Event()
+        # self._is_stopped = True
 
     @abstractmethod
     def generate_output_blob(self):
@@ -48,12 +49,12 @@ class Module(Thread):
     def stop(self):
         """ Stops the current thread """
         logging.info('Stopping %s module', self.name)
-        self._stop = True
+        self._stop.set()
 
     @property
     def is_stopped(self):
         """ Specified whether the thread body is running or not """
-        return self._is_stopped
+        return self._stop.is_set()
 
     @property
     def output_blob(self):
@@ -77,11 +78,12 @@ class Generator(Module):
         Thread body
         :return:
         """
-        self._is_stopped = False
-        while not self._stop:
+
+        self._stop.clear()
+        while not self._stop.is_set():
             time.sleep(1)
 
-        self._is_stopped = True
+        self._stop.set()
 
     def request_output_blob(self):
         """
@@ -130,8 +132,7 @@ class ProcessingModule(Module):
 
     def run(self):
         """ Thread body """
-        self._is_stopped = False
-        while not self._stop:
+        while not self._stop.is_set():
 
             # Get pointer to input data if required
             input_data, obs_info = None, None
@@ -147,10 +148,13 @@ class ProcessingModule(Module):
             # Perform required processing
             try:
                 s = time.time()
+
                 res = self.process(obs_info, input_data, output_data)
                 log.info('%s finished in %0.3f s', self.name, time.time() - s)
             except NoDataReaderException:
                 logging.info("Data finished")
+            except KeyboardInterrupt:
+                logging.info("Ctrl-C signal arrived in thread")
 
             if res is not None:
                 obs_info = res
@@ -167,4 +171,3 @@ class ProcessingModule(Module):
             time.sleep(0.001)
 
         log.info('%s killed', self.name)
-        self._is_stopped = True

@@ -140,7 +140,7 @@ class PipelineManager(object):
         try:
             logging.info("PyBIRALES: Starting")
 
-            profiler.start()
+            # profiler.start()
             # Start all modules
             for module in self._modules:
                 module.start()
@@ -162,7 +162,7 @@ class PipelineManager(object):
     def plotting_loop(self):
         """ Plotting loop """
         while True:
-            profiler.clear_stats()
+            # profiler.clear_stats()
             for plotter in self._plotters:
                 plotter.update_plot()
                 logging.info("{} updated".format(plotter.__class__.__name__))
@@ -170,7 +170,6 @@ class PipelineManager(object):
 
     def stop_pipeline(self):
         """ Stop pipeline (one at a time) """
-
         # Loop over all modules
         for module in self._modules:
             # Stop module
@@ -181,13 +180,9 @@ class PipelineManager(object):
             while not module.is_stopped and tries < 5:
                 time.sleep(0.5)
                 tries += 1
-                log.warning('%s could not be stopped. Re-trying.', module.name)
                 # All done
 
         log.info('Stopping profiling')
-        profiler.stop()
-
-        profiler.get_func_stats().print_all()
 
     @staticmethod
     def _initialise_logging(debug):
@@ -202,10 +197,9 @@ class PipelineManager(object):
 
     def wait_pipeline(self):
         """ Wait for modules to finish processing """
+
         for module in self._modules:
-            while module.isAlive() and module._stop is False:
-                module.join(5.0)
+            while module.isAlive() and module.is_stopped is False:
+                module.join(5)
             if module.isAlive():
                 logging.warning("PipelineManager: Killing thread %s abruptly", module.name)
-
-
