@@ -3,16 +3,15 @@ import logging
 import re
 import signal
 import time
-from logging.config import fileConfig as set_log_config
-
+import yappi as profiler
 import configparser
+import logging as log
+from logging.config import fileConfig as set_log_config
 from matplotlib import pyplot as plt
-
+from datetime import datetime
 from pybirales.base import settings
 from pybirales.base.definitions import PipelineError, NoDataReaderException
-import yappi as profiler
 from threading import Event
-import logging as log
 
 
 class PipelineManager(object):
@@ -146,7 +145,9 @@ class PipelineManager(object):
         try:
             logging.info("PyBIRALES: Starting")
 
-            # profiler.start()
+            if settings.manager.profile:
+                profiler.start()
+
             # Start all modules
             for module in self._modules:
                 module.start()
@@ -158,7 +159,7 @@ class PipelineManager(object):
                 self.wait_pipeline()
 
         except NoDataReaderException as exception:
-            logging.info("Data finished")
+            logging.info('Data finished %s', exception.__class__.__name__)
             self.stop_pipeline()
         except Exception as exception:
             logging.exception('Pipeline error: %s', exception.__class__.__name__)
@@ -168,7 +169,6 @@ class PipelineManager(object):
     def plotting_loop(self):
         """ Plotting loop """
         while True:
-            # profiler.clear_stats()
             for plotter in self._plotters:
                 plotter.update_plot()
                 logging.info("{} updated".format(plotter.__class__.__name__))
@@ -189,7 +189,12 @@ class PipelineManager(object):
                 tries += 1
                 # All done
 
-        log.info('Stopping profiling')
+        if settings.manager.profile:
+            profiler.stop()
+            stats = profiler.get_func_stats()
+            profiling_file_path = settings.manager.profiler_file_path+'_{:%Y%m%d_%H:%M}.stats'.format(datetime.utcnow())
+            log.info('Profiling stopped. Dumping profiling statistics to %s', profiling_file_path)
+            stats.save(profiling_file_path, type='callgrind')
 
     @staticmethod
     def _initialise_logging(debug):
@@ -210,3 +215,4 @@ class PipelineManager(object):
                 module.join(5)
             if module.isAlive():
                 logging.warning("PipelineManager: Killing thread %s abruptly", module.name)
+
