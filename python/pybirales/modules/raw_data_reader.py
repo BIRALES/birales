@@ -7,7 +7,7 @@ from pybirales.base.definitions import PipelineError, ObservationInfo, NoDataRea
 from pybirales.base.processing_module import ProcessingModule
 from pybirales.blobs.dummy_data import DummyBlob
 from pybirales.base import settings
-
+import logging as log
 
 class RawDataReader(ProcessingModule):
     """ Raw data reader """
@@ -32,7 +32,11 @@ class RawDataReader(ProcessingModule):
         super(RawDataReader, self).__init__(config, input_blob)
 
         # Open file
-        self._f = open(self._filepath, 'rb')
+        try:
+            self._f = open(self._filepath, 'rb')
+        except IOError:
+            log.error('Data not found in %s. Exiting.', self._filepath)
+            sys.exit()
 
         # Processing module name
         self.name = "RawDataReader"

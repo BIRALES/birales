@@ -1,6 +1,6 @@
 from pybirales.modules.detection.repository import BeamCandidateRepository
+from pybirales.base import settings
 import logging as log
-import time
 
 
 class BeamCandidatesQueue:
@@ -30,6 +30,10 @@ class BeamCandidatesQueue:
         # log.debug('Enqueuing took %1.3f s', time.time() - t1)
         # Pop the last element if queue is full
         self.dequeue(new_cluster.beam_id)
+
+        if settings.detection.save_candidates:
+            # Persist beam candidates
+            self.save()
 
     def dequeue(self, beam_id):
         """
