@@ -53,7 +53,6 @@ def get_beam_candidates():
 
     detected_beam_candidates = beam_candidates_repo.get(beam_id, max_channel, min_channel, max_time, min_time)
 
-    # return jsonify(data[:10])
     return Response(json.dumps(detected_beam_candidates[:100], default=json_util.default),
                     mimetype='application/json; charset=utf-8')
 

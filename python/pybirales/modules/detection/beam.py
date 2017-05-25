@@ -77,13 +77,15 @@ class Beam:
 
         data = data[0, self.id, :, :].T
 
+        # version 1 - start
         # data = np.abs(data)
         # mean_noise_per_channel = np.mean(data, axis=0)
         # normalised_data = np.where(data > 0., data, np.nan) / mean_noise_per_channel
-        #
-        # log_data = 10 * np.log10(normalised_data)
+        # log_data = 10*np.log10(normalised_data)
         # log_data[np.isnan(log_data)] = 0.
+        # version 1 - end
 
+        # version 2 - start
         p_v = self._power(data)
         # p_n = self._power(np.mean(data, axis=0))
         p_n = self._power(self._rms(data))
@@ -91,6 +93,7 @@ class Beam:
         snr[snr < 0] = np.nan
         log_data = 10 * np.log10(snr)
         log_data[np.isnan(log_data)] = 0.
+        # version 2 - end
 
         return log_data
 

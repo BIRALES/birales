@@ -43,9 +43,9 @@ class Detector(ProcessingModule):
         """
 
         # Checks if input data is empty
-        if not input_data.any():
-            log.warning('Input data is empty')
-            return
+        # if not input_data.any():
+        #     log.warning('Input data is empty')
+        #     return
 
         if not self._config_persisted:
             self._configurations_repository.persist(obs_info)

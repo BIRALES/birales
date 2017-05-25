@@ -125,8 +125,8 @@ class DetectionStrategy(SpaceDebrisDetectionStrategy):
         except ValueError:
             log.exception('DBSCAN failed in beam %s', beam.id)
             return []
-        plotter.plot(beam.snr, 'detection/detection_db_scan_' + str(time.time()), beam.id == 0,
-                     cluster_labels=cluster_labels)
+        # plotter.plot(beam.snr, 'detection/db_scan/' + str(time.time()), beam.id == 0,
+        #              cluster_labels=cluster_labels)
 
         # Select only those labels which were not classified as noise (-1)
         filtered_cluster_labels = cluster_labels[cluster_labels > -1]
@@ -259,7 +259,7 @@ class DetectionStrategy(SpaceDebrisDetectionStrategy):
         return [candidate for sub_list in beam_candidates for candidate in sub_list if candidate]
 
     def detect_space_debris_candidates(self, beam):
-        plotter.plot(beam.snr, 'detection/input_beam_0', beam.id == 0)
+        plotter.plot(beam.snr, 'detection/input_beam/' + str(beam.t_0), beam.id == 0)
 
         # Apply the pre-processing filters to the beam data
         beam.apply_filters()

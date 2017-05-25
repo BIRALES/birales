@@ -201,10 +201,10 @@ class Pointing(Thread):
             # Get time once (so that all beams use the same time for pointing)
             pointing_time = Time(datetime.datetime.utcnow(), scale='utc', location=self._reference_location)
 
-            # for beam in range(self._nbeams):
-            #     self.point_array(beam, self._reference_pointing[0], self._reference_pointing[1],
-            #                      self._pointings[beam][0], self._pointings[beam][1],
-            #                      pointing_time)
+            for beam in range(self._nbeams):
+                self.point_array(beam, self._reference_pointing[0], self._reference_pointing[1],
+                                 self._pointings[beam][0], self._pointings[beam][1],
+                                 pointing_time)
 
             self._lock.acquire()
             self.weights = self._temp_weights.copy()

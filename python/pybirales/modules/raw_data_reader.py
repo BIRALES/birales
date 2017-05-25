@@ -8,6 +8,8 @@ from pybirales.base.processing_module import ProcessingModule
 from pybirales.blobs.dummy_data import DummyBlob
 from pybirales.base import settings
 import logging as log
+import pickle
+
 
 class RawDataReader(ProcessingModule):
     """ Raw data reader """
@@ -36,6 +38,12 @@ class RawDataReader(ProcessingModule):
             self._f = open(self._filepath, 'rb')
         except IOError:
             log.error('Data not found in %s. Exiting.', self._filepath)
+            sys.exit()
+
+        try:
+            self._config = pickle.load(open(config.config_filepath, 'rb'))
+        except IOError:
+            log.error('Config PKL file was not found in %s. Exiting.', config.config_filepath)
             sys.exit()
 
         # Processing module name
@@ -73,8 +81,8 @@ class RawDataReader(ProcessingModule):
         obs_info['nsamp'] = self._nsamp
         obs_info['nants'] = self._nants
         obs_info['npols'] = self._npols
-        obs_info['start_center_frequency'] = settings.observation.start_center_frequency
+        obs_info['start_center_frequency'] = self._config['start_center_frequency']
         obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
-        obs_info['timestamp'] = datetime.datetime.utcnow()
+        obs_info['timestamp'] = self._config['timestamp']
 
         return obs_info

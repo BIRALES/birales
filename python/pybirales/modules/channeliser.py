@@ -146,7 +146,7 @@ class PFB(ProcessingModule):
             self._temp_input[:, :, :, self._nchans * self._ntaps:] = np.transpose(input_data, (0, 3, 1, 2))
 
         # Channelise
-        self.channelise_serial()
+        self.channelise_parallel()
 
         # Update observation information
         obs_info['nchans'] = self._nchans * obs_info['nsubs']
