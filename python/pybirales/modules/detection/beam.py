@@ -77,14 +77,6 @@ class Beam:
 
         data = data[0, self.id, :, :].T
 
-        # version 1 - start
-        # data = np.abs(data)
-        # mean_noise_per_channel = np.mean(data, axis=0)
-        # normalised_data = np.where(data > 0., data, np.nan) / mean_noise_per_channel
-        # log_data = 10*np.log10(normalised_data)
-        # log_data[np.isnan(log_data)] = 0.
-        # version 1 - end
-
         # version 2 - start
         p_v = self._power(data)
         # p_n = self._power(np.mean(data, axis=0))
@@ -94,19 +86,6 @@ class Beam:
         log_data = 10 * np.log10(snr)
         log_data[np.isnan(log_data)] = 0.
         # version 2 - end
-
-        return log_data
-
-        # power_antenna = self._power(data)
-        # power_noise = self._power(self._rms(data))
-        # normalised_data = np.where(power_antenna > 0., power_antenna, np.nan) / np.abs(np.sqrt(np.mean(data**2.0, axis=0)))**2
-
-        # p_n = self._power(np.mean(data, axis=0))
-        # p_v = self._power(data)
-        # snr = (p_v - p_n) / p_n
-        # snr[snr < 0] = np.nan
-        # log_data = 10 * np.log10(snr)
-        # log_data[np.isnan(log_data)] = 0.
 
         return log_data
 
@@ -121,17 +100,3 @@ class Beam:
         self._apply_filter(RemoveTransmitterChannelFilter())
 
         return self
-
-    def save_detections(self):
-        # Select points with an SNR > 0
-        indices = np.where(self.snr > 0.)
-        snr = self.snr[indices]
-        time = self.time[indices[0]]
-        channel = self.channels[indices[1]]
-
-        detections = np.column_stack([time, channel, snr])
-
-        repository = BeamDataRepository(self.id, self.data_set)
-        repository.persist(detections)
-
-        return indices

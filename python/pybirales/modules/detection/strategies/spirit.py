@@ -259,7 +259,7 @@ class DetectionStrategy(SpaceDebrisDetectionStrategy):
         return [candidate for sub_list in beam_candidates for candidate in sub_list if candidate]
 
     def detect_space_debris_candidates(self, beam):
-        plotter.plot(beam.snr, 'detection/input_beam/' + str(beam.t_0), beam.id == 0)
+        plotter.plot(beam, 'detection/input_beam/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 0)
 
         # Apply the pre-processing filters to the beam data
         beam.apply_filters()
@@ -271,4 +271,3 @@ class DetectionStrategy(SpaceDebrisDetectionStrategy):
         merged_clusters = self._merge_clusters(clusters)
 
         return merged_clusters
-

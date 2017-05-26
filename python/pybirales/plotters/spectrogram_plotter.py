@@ -20,34 +20,27 @@ class SpectrogramPlotter:
         self._count = 0
         self._freq = 10
 
-    def plot(self, data, filename, condition=True, cluster_labels=None):
+    def _file_path(self, filename):
+        min_count = self._count - self._freq
+        return self._plot_dir + filename + '_' + str(min_count) + '-' + str(self._count) + '.png'
+
+    def plot(self, beam, filename, condition=True):
         if not settings.detection.debug_candidates:
             return
 
         if condition:
-            try:
-                if self._count % self._freq == 0:
-                    if self._count != 0:
-                        plt.title(filename)
-                        plt.imshow(self._data, aspect='auto', interpolation='none', origin='lower',  vmin=0)
-                        plt.colorbar()
-                        if cluster_labels is not None:
-                            categories = [self.colors[c] for c in cluster_labels if c in self.colors]
-                            d = np.column_stack(np.where(data > 0))
-                            # plt.scatter(d[:, 1], d[:, 0], c=categories)
+            if self._count % self._freq == 0:
+                if self._count != 0:
+                    plt.title(filename)
+                    plt.imshow(self._data, aspect='auto', interpolation='none', origin='lower',  vmin=0)
+                    plt.colorbar()
 
-                        self.fig.savefig(self._plot_dir + filename + '_' + str(self._count) + '.png', bbox_inches='tight')
-                        self.fig.clf()
-                    self._data = copy.deepcopy(data)
-                else:
-                    self._data = np.vstack((self._data, copy.deepcopy(data)))
-
-                self._count += 1
-
-
-            except Exception as e:
-                log.exception('An error has occurred. Quiting')
-                exit()
+                    self.fig.savefig(self._file_path(filename), bbox_inches='tight')
+                    self.fig.clf()
+                self._data = copy.deepcopy(beam.snr)
+            else:
+                self._data = np.vstack((self._data, copy.deepcopy(beam.snr)))
+            self._count += 1
 
     def scatter(self, x, y, filename, condition=True):
         if not settings.detection.debug_candidates:
