@@ -1,7 +1,6 @@
 import itertools
 import logging as log
 import os
-import time
 from multiprocessing import Pool
 from multiprocessing.dummy import Pool as ThreadPool
 
@@ -14,7 +13,7 @@ from sklearn.cluster import DBSCAN
 from pybirales.base import settings
 from pybirales.modules.detection.beam import Beam
 from pybirales.modules.detection.detection_clusters import DetectionCluster
-from pybirales.modules.detection.strategies.detection_strategies import SpaceDebrisDetectionStrategy
+from pybirales.modules.detection.detection_strategies import SpaceDebrisDetectionStrategy
 from pybirales.plotters.spectrogram_plotter import plotter
 
 

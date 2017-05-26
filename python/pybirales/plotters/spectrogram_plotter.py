@@ -1,7 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import logging as log
-from matplotlib import colors
 from pybirales.base import settings
 import copy
 
@@ -41,18 +39,5 @@ class SpectrogramPlotter:
             else:
                 self._data = np.vstack((self._data, copy.deepcopy(beam.snr)))
             self._count += 1
-
-    def scatter(self, x, y, filename, condition=True):
-        if not settings.detection.debug_candidates:
-            return
-
-        if condition:
-            try:
-                self.fig.clf()
-                plt.plot(x[:100], "-")
-                self.fig.savefig(self._plot_dir + filename + '.png')
-            except Exception:
-                exit()
-
 
 plotter = SpectrogramPlotter()

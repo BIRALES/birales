@@ -26,3 +26,21 @@ class SpaceDebrisDetectionStrategy(object):
     @abstractmethod
     def detect(self, obs_info, input_data):
         pass
+    #
+    # def pre_process(self):
+    #     pass
+    #
+    # def post_process(self):
+    #     pass
+    #
+    # def process(self):
+    #     pass
+    #
+    # def multi_threaded(self):
+    #     pass
+    #
+    # def multi_processing(self):
+    #     pass
+    #
+    # def single_threaded(self):
+    #     pass

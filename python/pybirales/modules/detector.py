@@ -4,11 +4,11 @@ from pybirales.base import settings
 from pybirales.base.definitions import PipelineError
 from pybirales.base.processing_module import ProcessingModule
 from pybirales.blobs.channelised_data import ChannelisedBlob
+from pybirales.modules.detection.detection_strategies import SpaceDebrisDetection
 from pybirales.modules.detection.queue import BeamCandidatesQueue
 from pybirales.modules.detection.repository import BeamCandidateRepository
 from pybirales.modules.detection.repository import ConfigurationRepository
-from pybirales.modules.detection.strategies.detection_strategies import SpaceDebrisDetection
-from pybirales.modules.detection.strategies.spirit import DetectionStrategy
+from pybirales.modules.detection.detection_strategy import DetectionStrategy
 
 
 class Detector(ProcessingModule):
