@@ -29,6 +29,7 @@ class RawDataReader(ProcessingModule):
         self._nsubs = config.nsubs
         self._npols = config.npols
         self._filepath = config.filepath
+        self._read_count = 0
 
         # Call superclass initialiser
         super(RawDataReader, self).__init__(config, input_blob)
@@ -36,6 +37,7 @@ class RawDataReader(ProcessingModule):
         # Open file
         try:
             self._f = open(self._filepath, 'rb')
+            self._f.seek(self._nsamp * self._nants * 8 * 39)
         except IOError:
             log.error('Data not found in %s. Exiting.', self._filepath)
             sys.exit()
@@ -83,6 +85,8 @@ class RawDataReader(ProcessingModule):
         obs_info['npols'] = self._npols
         obs_info['start_center_frequency'] = self._config['start_center_frequency']
         obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
-        obs_info['timestamp'] = self._config['timestamp']
+        obs_info['timestamp'] = self._config['timestamp'] + datetime.timedelta(seconds=self._nsamp * obs_info['sampling_time']) * self._read_count
+
+        self._read_count += 1
 
         return obs_info

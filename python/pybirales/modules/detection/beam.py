@@ -1,6 +1,6 @@
 import numpy as np
 import datetime
-from pybirales.modules.detection.filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter
+from pybirales.modules.detection.filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter, MedianFilter
 from pybirales.modules.detection.repository import BeamDataRepository
 from pybirales.base import settings
 import warnings
@@ -82,7 +82,7 @@ class Beam:
         # p_n = self._power(np.mean(data, axis=0))
         p_n = self._power(self._rms(data))
         snr = (p_v - p_n) / p_n
-        snr[snr < 0] = np.nan
+        snr[snr <= 0] = np.nan
         log_data = 10 * np.log10(snr)
         log_data[np.isnan(log_data)] = 0.
         # version 2 - end
@@ -98,5 +98,8 @@ class Beam:
 
         # Remove transmitter frequency
         self._apply_filter(RemoveTransmitterChannelFilter())
+
+        # Remove transmitter frequency
+        self._apply_filter(MedianFilter())
 
         return self

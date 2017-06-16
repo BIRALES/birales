@@ -1,6 +1,7 @@
 import logging as log
 import numpy as np
 import scipy.ndimage as ndimage
+import scipy.signal as signal
 
 from abc import abstractmethod
 
@@ -33,14 +34,29 @@ class RemoveTransmitterChannelFilter(BeamDataFilter):
         :return: void
         """
 
-        sum_across_time = beam.snr.sum(axis=1)
-        peaks = np.where(sum_across_time > self.threshold)[0]
+        # sum_across_time = beam.snr.sum(axis=1)
+        # peaks = np.where(sum_across_time > self.threshold)[0]
+        #
+        # for i, peak in enumerate(peaks):
+        #     peak_snr = beam.snr[peak]
+        #     mean = np.mean(peak_snr[peak_snr > 0.0])
+        #     beam.snr[peak][peak_snr > 0.0] -= mean
+        #     beam.snr[peak][peak_snr < 0.0] = 0.0
 
-        for i, peak in enumerate(peaks):
-            peak_snr = beam.snr[peak]
-            mean = np.mean(peak_snr[peak_snr > 0.0])
-            beam.snr[peak][peak_snr > 0.0] -= mean
-            beam.snr[peak][peak_snr < 0.0] = 0.0
+        sum_across_time = beam.snr.sum(axis=0)
+        # peaks = np.where(sum_across_time > self.threshold)[0]
+
+        peaks_snr_i = np.where(sum_across_time > self.threshold)
+        beam.snr[:, peaks_snr_i] = beam.snr[:, peaks_snr_i] - np.mean(beam.snr[:, peaks_snr_i], axis=0)
+        beam.snr[beam.snr < 0.0] = 0.
+
+
+
+        # for i, peak in enumerate(peaks):
+        #     peak_snr = beam.snr[peak]
+        #     mean = np.mean(peak_snr[peak_snr > 0.0])
+        #     beam.snr[peak][peak_snr > 0.0] -= mean
+        #     beam.snr[peak][peak_snr < 0.0] = 0.0
 
         log.debug('Filter: Transmitter frequency removed from filtered beam %s', beam.id)
 
@@ -79,9 +95,15 @@ class MedianFilter(BeamDataFilter):
         :param beam:
         :return: void
         """
+        struct2 = np.zeros((5, 5))
+        struct2[2, 2] = 1
 
-        beam.snr = ndimage.median_filter(beam.snr, 1)
+        hot_pixels_mask = ndimage.binary_hit_or_miss(beam.snr, structure1=struct2)
+        beam.snr[hot_pixels_mask] = 0.
+        # beam.snr = signal.medfilt(beam.snr, 3)
 
+        # from scipy.ndimage import median_filter
+        # beam.snr = median_filter(beam.snr, size=2) - beam.snr
         log.debug('Filter: Median filter applied on beam %s', beam.id)
 
 
@@ -123,26 +145,3 @@ class TransmitterInputDataFilter(InputDataFilter):
             beam.snr[peak][peak_snr < 0.0] = 0.0
 
         log.debug('Filter: Transmitter frequency removed from filtered beam %s', beam.id)
-
-
-class RemoveBackgroundNoiseFilter(BeamDataFilter):
-    def __init__(self, std_threshold):
-        BeamDataFilter.__init__(self)
-        self.std_threshold = std_threshold
-
-    def apply(self, beam):
-        """
-        Remove instances that are n std away from the mean
-        :param beam:
-        :return: void
-        """
-
-        mean = np.mean(beam.snr)
-        std = np.std(beam.snr)
-        threshold = self.std_threshold * std + mean
-
-        try:
-            beam.snr[beam.snr < threshold] = 0.
-        except Exception:
-            print(beam.snr)
-        log.debug('Filter: Background noise removed from input beam %s', beam.id)

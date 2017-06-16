@@ -148,9 +148,12 @@ class ProcessingModule(Module):
             # Perform required processing
             try:
                 s = time.time()
-
                 res = self.process(obs_info, input_data, output_data)
-                log.info('%s finished in %0.3f s', self.name, time.time() - s)
+                tt = time.time() - s
+                if tt < 3.556:
+                    log.info('%s finished in %0.3f s', self.name, tt)
+                else:
+                    log.warning('%s finished in %0.3f s', self.name, tt)
             except NoDataReaderException:
                 logging.info("Data finished")
             except KeyboardInterrupt:

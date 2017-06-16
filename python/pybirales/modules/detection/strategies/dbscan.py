@@ -13,7 +13,7 @@ from sklearn.cluster import DBSCAN
 from pybirales.base import settings
 from pybirales.modules.detection.beam import Beam
 from pybirales.modules.detection.detection_clusters import DetectionCluster
-from pybirales.modules.detection.detection_strategies import SpaceDebrisDetectionStrategy
+from pybirales.modules.detection.strategies.strategies import SpaceDebrisDetectionStrategy
 from pybirales.plotters.spectrogram_plotter import plotter
 
 
@@ -21,41 +21,15 @@ def dd2(beam):
     # Apply the pre-processing filters to the beam data
     candidates = []
     try:
-        beam.apply_filters()
+        # beam.apply_filters()
         # Run detection algorithm on the beam data to extract possible candidates
-        candidates = DetectionStrategy().detect_space_debris_candidates(beam)
+        candidates = DBScanDetectionStrategy().detect_space_debris_candidates(beam)
     except Exception:
         log.exception('Something went wrong with process')
     return candidates
 
 
-def dd3(q, beam):
-    # Apply the pre-processing filters to the beam data
-    candidates = []
-    try:
-        beam.apply_filters()
-
-        # Run detection algorithm on the beam data to extract possible candidates
-        candidates = DetectionStrategy().detect_space_debris_candidates(beam)
-    except Exception:
-        log.exception('Something went wrong with process')
-
-    new_beam_candidates = [candidate for sub_list in candidates for candidate in sub_list if candidate]
-
-    for new_beam_candidate in new_beam_candidates:
-        if new_beam_candidate:
-            q.enqueue(new_beam_candidate)
-
-    if settings.detection.save_candidates:
-        # Persist beam candidates
-        q.save()
-
-    log.info('%s beam candidates, were found', len(new_beam_candidates))
-
-    return candidates
-
-
-class DetectionStrategy(SpaceDebrisDetectionStrategy):
+class DBScanDetectionStrategy(SpaceDebrisDetectionStrategy):
     name = 'Spirit'
     _eps = 5
     _min_samples = 10
@@ -75,7 +49,7 @@ class DetectionStrategy(SpaceDebrisDetectionStrategy):
 
         self._thread_pool = ThreadPool(settings.detection.nthreads)
 
-        self._m_pool = Pool()
+        # self._m_pool = Pool()
 
         self._linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
 
@@ -229,9 +203,10 @@ class DetectionStrategy(SpaceDebrisDetectionStrategy):
         beam_candidates = []
 
         # pool = self._m_pool
+        _m_pool = Pool()
         try:
 
-            beam_candidates = self.pool.map(dd2, beams)
+            beam_candidates = _m_pool.map(dd2, beams)
             # results = [pool.apply_async(dd2, args=(beam,)) for beam in beams]
             # beam_candidates = [p.get() for p in results]
         except Exception:
@@ -258,10 +233,12 @@ class DetectionStrategy(SpaceDebrisDetectionStrategy):
         return [candidate for sub_list in beam_candidates for candidate in sub_list if candidate]
 
     def detect_space_debris_candidates(self, beam):
-        plotter.plot(beam, 'detection/input_beam/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 0)
+        # plotter.plot(beam, 'detection/input_beam/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 0)
 
         # Apply the pre-processing filters to the beam data
         beam.apply_filters()
+
+        plotter.plot(beam, 'detection/filtered_beam/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 0)
 
         # Run detection algorithm on the beam data to extract possible candidates
         clusters = self._create_clusters(beam)

@@ -5,7 +5,7 @@ from pybirales.base import settings
 
 
 class DetectionCluster:
-    def __init__(self, model, beam, time_data, channels, snr):
+    def __init__(self, model, beam, indices, time_data, channels, snr):
         """
         Initialisation of the Detection cluster Object
 
@@ -29,6 +29,7 @@ class DetectionCluster:
         self.to_delete = False
         self.to_save = True
 
+        self.indices = indices
         self.time_data = time_data
         self.channel_data = channels
         self.snr_data = snr
@@ -40,7 +41,7 @@ class DetectionCluster:
 
         self.m = None
         self.c = None
-        self._score = None
+        self.score = None
 
         # Compare the detection cluster's data against a (linear) model
         self.fit_model(model=self._model, channel_data=self.channel_data, time_data=self.time_data)
@@ -69,7 +70,7 @@ class DetectionCluster:
             channels = channels[inlier_mask]
             time = time[inlier_mask]
 
-            self._score = model.estimator_.score(channels, time)
+            self.score = model.estimator_.score(channels, time)
             self.m = model.estimator_.coef_[0]
             self.c = model.estimator_.intercept_
 
@@ -83,7 +84,7 @@ class DetectionCluster:
         :return:
         """
 
-        return self._score > threshold
+        return self.score > threshold
 
     def is_similar_to(self, cluster, threshold):
         """
@@ -127,6 +128,8 @@ class DetectionCluster:
 
         return DetectionCluster(model=self._model,
                                 beam=cluster.beam,
+                                indices=[np.concatenate([self.indices[0], cluster.indices[0]]),
+                                         np.concatenate([self.indices[1], cluster.indices[1]])],
                                 time_data=np.concatenate([self.time_data, cluster.time_data]),
                                 channels=np.concatenate([self.channel_data, cluster.channel_data]),
                                 snr=np.concatenate([self.snr_data, cluster.snr_data]))
@@ -197,7 +200,7 @@ class DetectionCluster:
             'model': {
                 'm': self.m,
                 'c': self.c,
-                'score': self._score,
+                'score': self.score,
             },
             'beam_id': self.beam_id,
             'tx': settings.observation.transmitter_frequency,

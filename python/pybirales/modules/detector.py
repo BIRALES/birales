@@ -4,11 +4,11 @@ from pybirales.base import settings
 from pybirales.base.definitions import PipelineError
 from pybirales.base.processing_module import ProcessingModule
 from pybirales.blobs.channelised_data import ChannelisedBlob
-from pybirales.modules.detection.detection_strategies import SpaceDebrisDetection
 from pybirales.modules.detection.queue import BeamCandidatesQueue
 from pybirales.modules.detection.repository import BeamCandidateRepository
 from pybirales.modules.detection.repository import ConfigurationRepository
-from pybirales.modules.detection.detection_strategy import DetectionStrategy
+from pybirales.modules.detection.strategies.m_dbscan import MultiProcessingDBScanDetectionStrategy
+from pybirales.modules.detection.strategies.strategies import SpaceDebrisDetection
 
 
 class Detector(ProcessingModule):
@@ -18,7 +18,7 @@ class Detector(ProcessingModule):
                 "Detector: Invalid input data type, should be BeamformedBlob, DummyBlob or ReceiverBlob")
 
         # Load detection algorithm dynamically (specified in config file)
-        self.detection_strategy = SpaceDebrisDetection(DetectionStrategy())
+        self.detection_strategy = SpaceDebrisDetection(MultiProcessingDBScanDetectionStrategy())
 
         # Repository Layer for saving the beam candidates to the Data store
         self._candidates_repository = BeamCandidateRepository()
