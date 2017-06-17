@@ -1,4 +1,5 @@
 import logging as log
+import time
 
 from pybirales.base import settings
 from pybirales.base.definitions import PipelineError
@@ -52,10 +53,14 @@ class Detector(ProcessingModule):
             self._config_persisted = True
 
         # Process the beam data to detect the beam candidates
+        tt = time.time()
         new_beam_candidates = self.detection_strategy.detect(obs_info, input_data)
+        log.debug('Candidates detected in %0.3f s', time.time() - tt)
 
-        for new_beam_candidate in new_beam_candidates:
-            self._debris_queue.enqueue(new_beam_candidate)
+        # tt = time.time()
+        # for new_beam_candidate in new_beam_candidates:
+        #     self._debris_queue.enqueue(new_beam_candidate)
+        # log.debug('Enqueuing took %0.3f s', time.time() - tt)
 
         log.info('%s beam candidates, were found', len(new_beam_candidates))
 

@@ -12,7 +12,7 @@ class Repository:
     def __init__(self):
         self.host = 'localhost'
         self.port = 27017
-        self.client = mongo.MongoClient(self.host, self.port)
+        self.client = mongo.MongoClient(self.host, self.port, connect=False)
         self.database = self.client['birales']
 
     @abstractmethod

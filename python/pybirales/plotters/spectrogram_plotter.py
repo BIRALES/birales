@@ -52,7 +52,7 @@ class SpectrogramPlotter:
         if condition:
             if np.any(clusters):
                 for cluster in clusters:
-                    beam.snr[cluster.indices[0], cluster.indices[1]] = np.random.uniform(20, 50)
+                    beam.snr[cluster.indices[0], cluster.indices[1]] = 50
             if self._count % self._freq == 0:
                 if self._count != 0:
                     plt.title(filename + '_' + str(self._count - self._freq) + '-' + str(self._count))

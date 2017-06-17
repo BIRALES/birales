@@ -84,6 +84,18 @@ class RemoveBackgroundNoiseFilter(BeamDataFilter):
         log.debug('Filter: Background noise removed from input beam %s', beam.id)
 
 
+class PepperNoiseFilter(BeamDataFilter):
+    def __init__(self):
+        BeamDataFilter.__init__(self)
+
+    def apply(self, beam):
+        structure = np.zeros((5, 5))
+        structure[2, 2] = 1
+
+        hot_pixels_mask = ndimage.binary_hit_or_miss(beam.snr, structure1=structure)
+        beam.snr[hot_pixels_mask] = 0.
+
+
 class MedianFilter(BeamDataFilter):
     def __init__(self):
         BeamDataFilter.__init__(self)
@@ -95,11 +107,7 @@ class MedianFilter(BeamDataFilter):
         :param beam:
         :return: void
         """
-        struct2 = np.zeros((5, 5))
-        struct2[2, 2] = 1
 
-        hot_pixels_mask = ndimage.binary_hit_or_miss(beam.snr, structure1=struct2)
-        beam.snr[hot_pixels_mask] = 0.
         # beam.snr = signal.medfilt(beam.snr, 3)
 
         # from scipy.ndimage import median_filter

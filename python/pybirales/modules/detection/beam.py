@@ -1,6 +1,6 @@
 import numpy as np
 import datetime
-from pybirales.modules.detection.filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter, MedianFilter
+from pybirales.modules.detection.filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter, PepperNoiseFilter
 from pybirales.modules.detection.repository import BeamDataRepository
 from pybirales.base import settings
 import warnings
@@ -99,7 +99,7 @@ class Beam:
         # Remove transmitter frequency
         self._apply_filter(RemoveTransmitterChannelFilter())
 
-        # Remove transmitter frequency
-        self._apply_filter(MedianFilter())
+        # Remove pepper noise from the data
+        self._apply_filter(PepperNoiseFilter())
 
         return self

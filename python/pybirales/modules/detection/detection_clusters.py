@@ -1,7 +1,11 @@
 import numpy as np
 import datetime
 import logging as log
+import time as time2
+
 from pybirales.base import settings
+np.set_printoptions(precision=20)
+from astropy.time import Time
 
 
 class DetectionCluster:
@@ -44,7 +48,9 @@ class DetectionCluster:
         self.score = None
 
         # Compare the detection cluster's data against a (linear) model
+        t = time2.time()
         self.fit_model(model=self._model, channel_data=self.channel_data, time_data=self.time_data)
+        log.debug('Fitting on %s data points took %0.3f s', len(self.channel_data), time2.time() - t)
 
     def fit_model(self, model, channel_data, time_data):
         """
@@ -52,13 +58,38 @@ class DetectionCluster:
 
         :return:
         """
+        c = np.array(channel_data)
+        ts = np.array(time_data)
+        if np.all(c == c[0]) or np.all(ts == ts[0]):
+            self.score = np.nan
+            self.m = np.nan
+            self.c = np.nan
+            return
+
+        s = np.array(self.snr_data)
+
+        ndx = np.lexsort(keys=(s, ts))
+        index = np.empty(len(ts), 'bool')
+        index[-1] = True
+        index[:-1] = ts[1:] != ts[:-1]
+        i = ndx[index]
 
         # todo - apply filter to only compare 1 channel (highest snr) per time sample
-        channels = np.array([[channel] for channel in channel_data])
-        time = np.array([t.unix for t in time_data])
+        channels = np.array([[channel] for channel in c[i]])
+        time = np.array([t.unix for t in ts[i]])
+
+        # print('from %s to %s' % (len(channel_data), len(c[i])))
 
         try:
+            t = time2.time()
             model.fit(channels, time)
+            t2 = time2.time() - t
+            log.debug('Fitting 2 took %0.3f s', t2)
+
+            # if t2 > 0.2:
+            #     print('from', channel_data.shape, 'to', channels.shape)
+            #     print(channels)
+            #     print(time)
         except ValueError:
             log.debug('Linear interpolation failed. No inliers found.')
         else:
@@ -69,10 +100,15 @@ class DetectionCluster:
             # Remove outliers - select data points that are inliers
             channels = channels[inlier_mask]
             time = time[inlier_mask]
+            snr = self.snr_data[i][inlier_mask]
 
             self.score = model.estimator_.score(channels, time)
             self.m = model.estimator_.coef_[0]
             self.c = model.estimator_.intercept_
+
+            self.channel_data = np.array([channel[0] for channel in channels])
+            self.time_data = [Time(t, format='unix') for t in time]
+            self.snr_data = np.array(snr)
 
     def is_linear(self, threshold):
         """

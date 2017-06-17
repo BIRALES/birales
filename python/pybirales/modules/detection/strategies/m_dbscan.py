@@ -13,16 +13,21 @@ from pybirales.modules.detection.beam import Beam
 from pybirales.modules.detection.detection_clusters import DetectionCluster
 from pybirales.modules.detection.strategies.strategies import SpaceDebrisDetectionStrategy
 from pybirales.plotters.spectrogram_plotter import plotter
+from functools import partial
+from pybirales.modules.detection.queue import BeamCandidatesQueue
+
 
 _eps = 5
 _min_samples = 5
 _algorithm = 'kd_tree'
 _r2_threshold = 0.90
 _merge_threshold = 0.10
+_n_proc = 32
 _linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
 db_scan = DBSCAN(eps=_eps, min_samples=_min_samples, algorithm=_algorithm, n_jobs=-1)
 _ref_time = None
 _time_delta = None
+_debris_queue = BeamCandidatesQueue(_n_proc)
 
 
 class MultiProcessingDBScanDetectionStrategy(SpaceDebrisDetectionStrategy):
@@ -30,15 +35,12 @@ class MultiProcessingDBScanDetectionStrategy(SpaceDebrisDetectionStrategy):
 
     def __init__(self):
         SpaceDebrisDetectionStrategy.__init__(self)
-        # Initialise the clustering algorithm
-        # self.db_scan = hdbscan.HDBSCAN(min_cluster_size=self._min_samples)
-
         self.pool = Pool()
 
     def detect(self, obs_info, input_data):
         global _time_delta, _ref_time
-        _ref_time = Time(obs_info['timestamp'])
-        _time_delta = TimeDelta(obs_info['sampling_time'], format='sec')
+        ref_time = Time(obs_info['timestamp'])
+        time_delta = TimeDelta(obs_info['sampling_time'], format='sec')
 
         beams = [Beam(beam_id=n_beam, obs_info=obs_info, beam_data=input_data)
                  for n_beam in range(settings.detection.beam_range[0], settings.detection.beam_range[1])]
@@ -47,7 +49,9 @@ class MultiProcessingDBScanDetectionStrategy(SpaceDebrisDetectionStrategy):
         beam_candidates = []
         try:
             if settings.detection.multi_proc:
-                beam_candidates = self.pool.map(m_detect, beams)
+                func = partial(m_detect, ref_time, time_delta)
+                beam_candidates = self.pool.map(func, beams)
+
             else:
                 for beam in beams:
                     beam_candidates.append(m_detect(beam))
@@ -96,6 +100,7 @@ def _create_clusters(beam):
 
     # Group the data points in clusters
     clusters = []
+    tt = time.time()
     for label in np.unique(filtered_cluster_labels):
         data_indices = data[np.where(cluster_labels == label)]
 
@@ -110,22 +115,32 @@ def _create_clusters(beam):
             continue
 
         # Create a Detection Cluster from the cluster data
-
+        x = time.time()
         cluster = DetectionCluster(model=_linear_model,
                                    beam=beam,
                                    indices=[time_indices, channel_indices],
                                    time_data=[_ref_time + t * _time_delta for t in beam.time[time_indices]],
                                    channels=beam.channels[channel_indices],
                                    snr=beam.snr[(time_indices, channel_indices)])
+        tt = time.time() - x
+        log.debug('P took %0.3f s', tt)
+
+        if tt > 2:
+            print(beam.channels[channel_indices])
+            print(beam.time[time_indices])
 
         # Add only those clusters that are linear
         if cluster.is_linear(threshold=0.9):
             log.debug('Cluster with m:%3.2f, c:%3.2f, n:%s and r:%0.2f is considered to be linear.', cluster.m,
                       cluster.c, len(channel_indices), cluster.score)
             clusters.append(cluster)
+    log.debug('%s candidates (%s valid) created in %0.3f s',
+              len(np.unique(filtered_cluster_labels)),
+              len(clusters),
+              time.time() - tt)
 
-    plotter.plot_detections(beam, 'detection/db_scan/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 3,
-                            clusters=clusters)
+    # plotter.plot_detections(beam, 'detection/db_scan/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 3,
+    #                         clusters=clusters)
 
     log.debug('DBSCAN detected %s clusters in beam %s, of which %s are linear',
               len(np.unique(filtered_cluster_labels)),
@@ -170,7 +185,7 @@ def _merge_clusters(clusters):
     return clusters
 
 
-def m_detect(beam):
+def m_detect(ref_time, time_delta, beam):
     """
     The core detection algorithm to be applied to the incoming data
 
@@ -180,17 +195,37 @@ def m_detect(beam):
     :return:
     """
 
+    global _time_delta, _ref_time
+    _ref_time = ref_time
+    _time_delta = time_delta
+
     # Apply the pre-processing filters to the beam data
+    candidates = []
 
-    # plotter = SpectrogramPlotter()
-    beam.apply_filters()
-    # plotter.plot(beam, 'detection/filtered_beam/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 3)
+    try:
+        # plotter = SpectrogramPlotter()
+        t = time.time()
+        beam.apply_filters()
+        log.debug('Filters took %0.3f s', time.time() - t)
+        # plotter.plot(beam, 'detection/filtered_beam/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 3)
 
-    # Run detection algorithm on the beam data to extract possible candidates
-    clusters = _create_clusters(beam)
+        # Run detection algorithm on the beam data to extract possible candidates
+        t = time.time()
+        clusters = _create_clusters(beam)
+        log.debug('Candidates created in %0.3f s', time.time() - t)
 
-    # Merge clusters which are identified as being similar
-    candidates = _merge_clusters(clusters)
+        # Merge clusters which are identified as being similar
+        t2 = time.time()
+        candidates = _merge_clusters(clusters)
+        log.debug('Merging of clusters took %0.3f s', time.time() - t2)
+
+        t3 = time.time()
+        for candidate in candidates:
+            _debris_queue.enqueue(candidate)
+        log.debug('Merging of clusters took %0.3f s', time.time() - t3)
+
+    except Exception:
+        log.exception('Something went wrong with process')
 
     return candidates
 
