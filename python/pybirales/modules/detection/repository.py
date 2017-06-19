@@ -1,11 +1,8 @@
 import logging as log
-import sys
-import numpy as np
 import pymongo as mongo
 
 from abc import abstractmethod
-import time
-from astropy.time import Time
+from pybirales.base import settings
 
 
 class Repository:
@@ -14,6 +11,7 @@ class Repository:
         self.port = 27017
         self.client = mongo.MongoClient(self.host, self.port, connect=False)
         self.database = self.client['birales']
+        self.client.birales.authenticate('birales_rw', 'arcadia10')
 
     @abstractmethod
     def persist(self, entity):
