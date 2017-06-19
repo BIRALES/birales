@@ -37,7 +37,7 @@ class RawDataReader(ProcessingModule):
         # Open file
         try:
             self._f = open(self._filepath, 'rb')
-            self._f.seek(self._nsamp * self._nants * 8 * 39)
+            self._f.seek(self._nsamp * self._nants * 8 * 1)
         except IOError:
             log.error('Data not found in %s. Exiting.', self._filepath)
             sys.exit()

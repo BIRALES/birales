@@ -27,7 +27,7 @@ _linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
 db_scan = DBSCAN(eps=_eps, min_samples=_min_samples, algorithm=_algorithm, n_jobs=-1)
 _ref_time = None
 _time_delta = None
-_debris_queue = BeamCandidatesQueue(_n_proc)
+
 
 
 class MultiProcessingDBScanDetectionStrategy(SpaceDebrisDetectionStrategy):
@@ -220,6 +220,7 @@ def m_detect(ref_time, time_delta, beam):
         log.debug('Merging of clusters took %0.3f s', time.time() - t2)
 
         t3 = time.time()
+        _debris_queue = BeamCandidatesQueue(_n_proc)
         for candidate in candidates:
             _debris_queue.enqueue(candidate)
         log.debug('Merging of clusters took %0.3f s', time.time() - t3)
