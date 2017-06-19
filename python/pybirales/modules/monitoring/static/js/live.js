@@ -30,6 +30,17 @@ var BeamCandidatesPlotter = function () {
                 name: 'beam ' + beam_candidate.beam_id + ' candidate'
             };
 
+            var beam_candidates_snr_trace = {
+                x: beam_candidate['data']['channel'],
+                y: beam_candidate['data']['snr'],
+                xaxis: 'x2',
+                yaxis: 'y2',
+                text: beam_candidate['data']['snr'],
+                mode: 'scatter',
+                showlegend: false
+                // name: 'beam ' + beam_candidate.beam_id + ' candidate'
+            };
+
             if (beam_candidate['min_time'] < self._min_time) {
                 self._min_time = beam_candidate['min_time'];
             }
@@ -39,6 +50,7 @@ var BeamCandidatesPlotter = function () {
             }
 
             traces.push(beam_candidates_trace);
+            traces.push(beam_candidates_snr_trace);
         });
 
         return traces;
@@ -52,7 +64,15 @@ var BeamCandidatesPlotter = function () {
                 title: self._x_label
             },
             yaxis: {
-                title: self._y_label
+                title: self._y_label,
+                domain: [0.0, 0.6]
+            },
+            yaxis2: {
+                title: 'SNR',
+                domain: [0.7, 1]
+            },
+            xaxis2: {
+                anchor: 'y2'
             },
             margin: {
                 l: 120,
@@ -62,18 +82,18 @@ var BeamCandidatesPlotter = function () {
                 pad: 10
             }
             /*shapes: [
-                {
-                    'type': 'line',
-                    'x0': self._tx,
-                    'y0': self._min_time,
-                    'x1': self._tx,
-                    'y1': self._max_time,
-                    'line': {
-                        'color': 'rgb(55, 128, 191)',
-                        'width': 3
-                    }
-                }
-            ]*/
+             {
+             'type': 'line',
+             'x0': self._tx,
+             'y0': self._min_time,
+             'x1': self._tx,
+             'y1': self._max_time,
+             'line': {
+             'color': 'rgb(55, 128, 191)',
+             'width': 3
+             }
+             }
+             ]*/
         };
 
     };
@@ -82,8 +102,8 @@ var BeamCandidatesPlotter = function () {
         var beam_candidates = self._get_beam_candidates_data(self._max_channel, self._min_channel, self._max_time, self._min_time);
 
         $.when(beam_candidates).done(function (beam_candidates) {
-            if(beam_candidates){
-                log.debug('Publishing the', self.name, 'plotter with', beam_candidates.length,'candidates');
+            if (beam_candidates) {
+                log.debug('Publishing the', self.name, 'plotter with', beam_candidates.length, 'candidates');
                 var traces = self._get_trace(beam_candidates);
 
                 var layout = self._get_layout();
@@ -92,7 +112,7 @@ var BeamCandidatesPlotter = function () {
 
                 self._update_html();
             }
-            else{
+            else {
                 log.debug('No candidates were detected');
             }
         });
@@ -103,7 +123,7 @@ var BeamCandidatesPlotter = function () {
         var beam_candidates = self._get_beam_candidates_data(self._max_channel, self._min_channel, undefined, from);
 
         $.when(beam_candidates).done(function (beam_candidates) {
-            if(beam_candidates){
+            if (beam_candidates) {
                 var traces = self._get_trace(beam_candidates);
 
                 var layout = self._get_layout();
