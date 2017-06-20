@@ -13,6 +13,7 @@ from pybirales.modules.detection.beam import Beam
 from pybirales.modules.detection.detection_clusters import DetectionCluster
 from pybirales.modules.detection.strategies.strategies import SpaceDebrisDetectionStrategy
 from pybirales.plotters.spectrogram_plotter import plotter
+from pybirales.modules.detection.repository import BeamCandidateRepository
 from functools import partial
 from pybirales.modules.detection.queue import BeamCandidatesQueue
 
@@ -21,13 +22,13 @@ _eps = 5
 _min_samples = 5
 _algorithm = 'kd_tree'
 _r2_threshold = 0.90
-_merge_threshold = 0.10
+_merge_threshold = 0.20
 _n_proc = 32
 _linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
 db_scan = DBSCAN(eps=_eps, min_samples=_min_samples, algorithm=_algorithm, n_jobs=-1)
 _ref_time = None
 _time_delta = None
-
+_debris_queue = BeamCandidatesQueue(_n_proc)
 
 
 class MultiProcessingDBScanDetectionStrategy(SpaceDebrisDetectionStrategy):
@@ -51,10 +52,10 @@ class MultiProcessingDBScanDetectionStrategy(SpaceDebrisDetectionStrategy):
             if settings.detection.multi_proc:
                 func = partial(m_detect, ref_time, time_delta)
                 beam_candidates = self.pool.map(func, beams)
-
             else:
+                _debris_queue.set_repository(BeamCandidateRepository())
                 for beam in beams:
-                    beam_candidates.append(m_detect(beam))
+                    beam_candidates.append(m_detect(ref_time, time_delta, beam))
         except Exception:
             log.exception('An exception has occurred')
 
@@ -125,10 +126,6 @@ def _create_clusters(beam):
         tt = time.time() - x
         log.debug('P took %0.3f s', tt)
 
-        if tt > 2:
-            print(beam.channels[channel_indices])
-            print(beam.time[time_indices])
-
         # Add only those clusters that are linear
         if cluster.is_linear(threshold=0.9):
             log.debug('Cluster with m:%3.2f, c:%3.2f, n:%s and r:%0.2f is considered to be linear.', cluster.m,
@@ -195,7 +192,7 @@ def m_detect(ref_time, time_delta, beam):
     :return:
     """
 
-    global _time_delta, _ref_time
+    global _time_delta, _ref_time, _debris_queue
     _ref_time = ref_time
     _time_delta = time_delta
 
@@ -212,18 +209,18 @@ def m_detect(ref_time, time_delta, beam):
         # Run detection algorithm on the beam data to extract possible candidates
         t = time.time()
         clusters = _create_clusters(beam)
-        log.debug('Candidates created in %0.3f s', time.time() - t)
+        log.debug('%s candidates created in %0.3f s', len(clusters), time.time() - t)
 
         # Merge clusters which are identified as being similar
         t2 = time.time()
         candidates = _merge_clusters(clusters)
-        log.debug('Merging of clusters took %0.3f s', time.time() - t2)
+        log.debug('The merging of %s clusters took %0.3f s', len(clusters) - len(candidates), time.time() - t2)
 
         t3 = time.time()
-        _debris_queue = BeamCandidatesQueue(_n_proc)
+        _debris_queue.set_repository(BeamCandidateRepository())
         for candidate in candidates:
             _debris_queue.enqueue(candidate)
-        log.debug('Merging of clusters took %0.3f s', time.time() - t3)
+        log.debug('Enqueuing of clusters took %0.3f s', time.time() - t3)
 
     except Exception:
         log.exception('Something went wrong with process')

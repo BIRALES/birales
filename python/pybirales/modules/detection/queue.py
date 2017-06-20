@@ -7,14 +7,18 @@ class BeamCandidatesQueue:
     def __init__(self, n_beams):
         self.queue = [[] for _ in range(n_beams)]
         self._max_size = 20
-        self.repository = BeamCandidateRepository()
+        self.repository = None
+        # self.repository = BeamCandidateRepository()
+
+    def set_repository(self, repository):
+        self.repository = repository
 
     def enqueue(self, new_cluster):
         # Check if beam candidate is similar to candidate that was already added to the queue
         beam_queue = self.queue[new_cluster.beam_id]
-
         for old_cluster in beam_queue:
-            if new_cluster.is_similar_to(old_cluster, threshold=0.1):
+
+            if new_cluster.is_similar_to(old_cluster, threshold=0.2):
                 log.debug('Merging clusters in beam_queue %s (length: %s)', new_cluster.beam_id, len(beam_queue))
                 # mark old cluster as 'to delete'
                 old_cluster.delete()

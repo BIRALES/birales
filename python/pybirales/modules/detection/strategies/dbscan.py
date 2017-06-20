@@ -35,7 +35,7 @@ class DBScanDetectionStrategy(SpaceDebrisDetectionStrategy):
     _min_samples = 10
     _algorithm = 'kd_tree'
     _r2_threshold = 0.90
-    _merge_threshold = 0.10
+    _merge_threshold = 0.30
 
     def __init__(self):
         SpaceDebrisDetectionStrategy.__init__(self)

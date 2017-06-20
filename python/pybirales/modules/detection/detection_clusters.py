@@ -58,27 +58,29 @@ class DetectionCluster:
 
         :return:
         """
-        c = np.array(channel_data)
-        ts = np.array(time_data)
-        if np.all(c == c[0]) or np.all(ts == ts[0]):
-            self.score = np.nan
-            self.m = np.nan
-            self.c = np.nan
-            return
 
-        s = np.array(self.snr_data)
+        if settings.detection.select_highest_snr:
+            c = np.array(channel_data)
+            ts = np.array(time_data)
+            if np.all(c == c[0]) or np.all(ts == ts[0]):
+                self.score = np.nan
+                self.m = np.nan
+                self.c = np.nan
+                return
 
-        ndx = np.lexsort(keys=(s, ts))
-        index = np.empty(len(ts), 'bool')
-        index[-1] = True
-        index[:-1] = ts[1:] != ts[:-1]
-        i = ndx[index]
+            s = np.array(self.snr_data)
 
-        # todo - apply filter to only compare 1 channel (highest snr) per time sample
-        channels = np.array([[channel] for channel in c[i]])
-        time = np.array([t.unix for t in ts[i]])
+            ndx = np.lexsort(keys=(s, ts))
+            index = np.empty(len(ts), 'bool')
+            index[-1] = True
+            index[:-1] = ts[1:] != ts[:-1]
+            i = ndx[index]
 
-        # print('from %s to %s' % (len(channel_data), len(c[i])))
+            channels = np.array([[channel] for channel in c[i]])
+            time = np.array([t.unix for t in ts[i]])
+        else:
+            channels = np.array([[channel] for channel in channel_data])
+            time = np.array([t.unix for t in time_data])
 
         try:
             t = time2.time()
@@ -100,7 +102,10 @@ class DetectionCluster:
             # Remove outliers - select data points that are inliers
             channels = channels[inlier_mask]
             time = time[inlier_mask]
-            snr = self.snr_data[i][inlier_mask]
+            if settings.detection.select_highest_snr:
+                snr = self.snr_data[i][inlier_mask]
+            else:
+                snr = self.snr_data[inlier_mask]
 
             self.score = model.estimator_.score(channels, time)
             self.m = model.estimator_.coef_[0]

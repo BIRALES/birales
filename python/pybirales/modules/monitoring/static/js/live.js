@@ -30,16 +30,16 @@ var BeamCandidatesPlotter = function () {
                 name: 'beam ' + beam_candidate.beam_id + ' candidate'
             };
 
-            var beam_candidates_snr_trace = {
-                x: beam_candidate['data']['channel'],
-                y: beam_candidate['data']['snr'],
-                xaxis: 'x2',
-                yaxis: 'y2',
-                text: beam_candidate['data']['snr'],
-                mode: 'scatter',
-                showlegend: false
-                // name: 'beam ' + beam_candidate.beam_id + ' candidate'
-            };
+            // var beam_candidates_snr_trace = {
+            //     x: beam_candidate['data']['channel'],
+            //     y: beam_candidate['data']['snr'],
+            //     xaxis: 'x2',
+            //     yaxis: 'y2',
+            //     text: beam_candidate['data']['snr'],
+            //     mode: 'scatter',
+            //     showlegend: false
+            //     // name: 'beam ' + beam_candidate.beam_id + ' candidate'
+            // };
 
             if (beam_candidate['min_time'] < self._min_time) {
                 self._min_time = beam_candidate['min_time'];
@@ -50,7 +50,7 @@ var BeamCandidatesPlotter = function () {
             }
 
             traces.push(beam_candidates_trace);
-            traces.push(beam_candidates_snr_trace);
+            // traces.push(beam_candidates_snr_trace);
         });
 
         return traces;
@@ -67,13 +67,13 @@ var BeamCandidatesPlotter = function () {
                 title: self._y_label,
                 domain: [0.0, 0.6]
             },
-            yaxis2: {
-                title: 'SNR',
-                domain: [0.7, 1]
-            },
-            xaxis2: {
-                anchor: 'y2'
-            },
+            // yaxis2: {
+            //     title: 'SNR',
+            //     domain: [0.7, 1]
+            // },
+            // xaxis2: {
+            //     anchor: 'y2'
+            // },
             margin: {
                 l: 120,
                 r: 50,
