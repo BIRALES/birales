@@ -13,5 +13,8 @@ python/calibrator/*.log
 
 *.log
 *.swp
+*.h5
+*.pkl
 python/pybirales/plots/*
 python/pybirales/pybirales.egg-info
+python/calibrator
