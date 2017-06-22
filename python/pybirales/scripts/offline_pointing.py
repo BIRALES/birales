@@ -51,7 +51,7 @@ config['antenna_locations'] = [[-8.499750, -35.000000, 0.000000],
                                [8.499750, 35.000000, 0.000000]]
 
 config['pointings'] = [[0, 0]]
-config['reference_pointing'] = [0, 64.515]
+config['reference_declination'] = 64.515
 config['nbeams'] = len(config['pointings'])
 config['start_center_frequency'] = 410.03125
 config['channel_bandwidth'] = 0.078125
@@ -77,21 +77,22 @@ class Pointing(object):
         array = config['antenna_locations']
         self._start_center_frequency = config['start_center_frequency']
         self._reference_location = config['reference_antenna_location']
-        self._reference_pointing = config['reference_pointing']
+        self._reference_declination = config['reference_declination']
         self._pointings = config['pointings']
         self._bandwidth = config['channel_bandwidth']
         self._nbeams = config['nbeams']
         self._nants = nants
         self._nsubs = nsubs
 
+        # Ignore AstropyWarning
+        warnings.simplefilter('ignore', category=AstropyWarning)
+
         # Create AntennaArray object
         self._array = AntennaArray(array, self._reference_location[0], self._reference_location[1])
 
         # Calculate displacement vectors to each antenna from reference antenna
         # (longitude, latitude)
-        self._reference_location = EarthLocation.from_geodetic(self._reference_location[1],
-                                                               self._reference_location[0],
-                                                               height=self._array.height)
+        self._reference_location = self._reference_location[0], self._reference_location[1]
 
         self._vectors_enu = np.full([self._nants, 3], np.nan)
         for i in range(self._nants):
@@ -100,24 +101,9 @@ class Pointing(object):
         # Create initial weights
         self.weights = np.ones((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
 
-        # Ignore AstropyWarning
-        warnings.simplefilter('ignore', category=AstropyWarning)
-
-    def run(self, pointing_time=None):
-        """ Run pointing """
-
-        # Get time once (so that all beams use the same time for pointing)
-        if pointing_time is None:
-            pointing_time = Time(datetime.datetime.utcnow(), scale='utc', location=self._reference_location)
-        else:
-            pointing_time = Time(pointing_time, scale='utc', location=self._reference_location)
-
+        # Generate weights
         for beam in range(self._nbeams):
-            self.point_array(beam, self._reference_pointing[0], self._reference_pointing[1],
-                             self._pointings[beam][0], self._pointings[beam][1],
-                             pointing_time)
-
-        logging.info("Updated beamforming coefficients")
+            self.point_array(beam, self._reference_declination, self._pointings[beam][0], self._pointings[beam][1])
 
     def point_array_static(self, beam, altitude, azimuth):
         """ Calculate the phase shift given the altitude and azimuth coordinates of a sky object as astropy angles
@@ -133,11 +119,11 @@ class Pointing(object):
             real, imag = self._phaseshifts_from_altitude_azimuth(altitude.rad, azimuth.rad, frequency,
                                                                  self._vectors_enu)
 
-            # Apply to weights file
+            # Apply to weights
             self.weights[i, beam, :].real = real
             self.weights[i, beam, :].imag = imag
 
-    def point_array(self, beam, ref_ra, ref_dec, delta_ra, delta_dec, pointing_time=None):
+    def point_array(self, beam, ref_dec, ha, delta_dec):
         """ Calculate the phase shift between two antennas which is given by the phase constant (2 * pi / wavelength)
         multiplied by the projection of the baseline vector onto the plane wave arrival vector
         :param beam: Beam to which this applies
@@ -147,27 +133,27 @@ class Pointing(object):
         :return: The phaseshift in radians for each antenna
         """
 
+        # We must have a positive hour angle and non-zero
+        if ha < 0:
+            ha = Angle(ha + 360, u.deg)
+        elif ha < 0.0001:
+            ha = Angle(0.0001, u.deg)
+        else:
+            ha = Angle(ha, u.deg)
+
         # Type conversions if required
-        ref_ra = Angle(ref_ra, u.deg)
         ref_dec = Angle(ref_dec, u.deg)
-        delta_ra = Angle(delta_ra, u.deg)
         delta_dec = Angle(delta_dec, u.deg)
 
-        # If we're using static beam, then we must adjust RA (by setting reference RA equal to LST)
-       # ref_ra = Angle(pointing_time.sidereal_time('apparent'))
-
         # Convert RA DEC to ALT AZ
-        alt, az = self._ra_dec_to_alt_az(ref_ra + delta_ra,
-                                         ref_dec + delta_dec,
-                                         Time(pointing_time),
-                                         self._reference_location)
+        alt, az = self._ha_dec_to_alt_az(ha, ref_dec + delta_dec, self._reference_location)
 
         # Point beam to required ALT AZ
-       # print("RA: {}, DEC: {}, ALT: {}, AZ: {}".format(ref_ra + delta_ra, ref_dec + delta_dec, alt, az))
+        #  print("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, ref_dec + delta_dec, alt.deg, az.deg))
         self.point_array_static(beam, alt, az)
 
     @staticmethod
-    def _ra_dec_to_alt_az(right_ascension, declination, time, location):
+    def _ha_dec_to_alt_az(hour_angle, declination, location):
         """ Calculate the altitude and azimuth coordinates of a sky object from right ascension and declination and time
         :param right_ascension: Right ascension of source (in astropy Angle on string which can be converted to Angle)
         :param declination: Declination of source (in astropy Angle on string which can be converted to Angle)
@@ -175,13 +161,22 @@ class Pointing(object):
         :param location: astropy EarthLocation
         :return: Array containing altitude and azimuth of source as astropy angle
         """
+        lat = Angle(location[1], u.deg)
 
-        # Initialise SkyCoord object using the default frame (ICRS) and convert to horizontal
-        # coordinates (altitude/azimuth) from the antenna's perspective.
-        sky_coordinates = SkyCoord(ra=right_ascension, dec=declination, location=location)
-        c_altaz = sky_coordinates.transform_to(AltAz(obstime=time, location=location))
+        alt = Angle(np.arcsin(np.sin(declination.rad) * np.sin(lat.rad) +
+                              np.cos(declination.rad) * np.cos(lat.rad) * np.cos(hour_angle.rad)),
+                    u.rad)
 
-        return c_altaz.alt, c_altaz.az
+        # Condition where array is at zenith
+        if abs(lat.deg - declination.deg) < 0.01:
+            az = Angle(0, u.deg)
+        else:
+            az = Angle(np.arccos((np.sin(declination.rad) - np.sin(alt.rad) * np.sin(lat.rad)) /
+                                 (np.cos(alt.rad) * np.cos(lat.rad))), u.rad)
+            if np.sin(hour_angle.rad) >= 0:
+                az = Angle(360 - az.deg, u.deg)
+
+        return alt, az
 
     @staticmethod
     def _phaseshifts_from_altitude_azimuth(altitude, azimuth, frequency, displacements):
@@ -278,10 +273,10 @@ class AntennaArray(object):
 if __name__ == "__main__":
 
     # Should be pointing to zenith (regardless of time)
-    for i in range(-90, 90, 2):
-        config['reference_antenna_location'] = [44.52357778, 11.6459889]
-        config['reference_pointing'] = [0,  i]
-        config['pointings'] = [[0, 0]]
+    config['reference_antenna_location'] = [11.6459889, 44.52357778]
+    config['reference_declination'] = 40.52
+    config['pointings'] = [[25.0, 0]]
 
+    for i in range(90):
+        config['reference_declination'] = i+0.52357778
         pointing = Pointing(config, 1, 32)
-        pointing.run()
