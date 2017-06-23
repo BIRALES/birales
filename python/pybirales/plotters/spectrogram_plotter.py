@@ -41,7 +41,8 @@ class SpectrogramPlotter:
                     log.info('Saved %s', self._file_path(filename))
                 self._data = copy.deepcopy(beam.snr[:, self._min_channel:self._max_channel])
             else:
-                self._data = np.vstack((self._data, np.ones((1, self._max_channel - self._min_channel))))
+                # self._data = np.vstack((self._data, np.ones((1, self._max_channel - self._min_channel))))
+                beam.snr[0, self._min_channel:self._max_channel] = 1  # divider
                 self._data = np.vstack((self._data, copy.deepcopy(beam.snr[:, self._min_channel:self._max_channel])))
             self._count += 1
 

@@ -17,7 +17,6 @@ from pybirales.modules.detection.repository import BeamCandidateRepository
 from functools import partial
 from pybirales.modules.detection.queue import BeamCandidatesQueue
 
-
 _eps = 5
 _min_samples = 5
 _algorithm = 'kd_tree'
@@ -28,7 +27,14 @@ _linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
 db_scan = DBSCAN(eps=_eps, min_samples=_min_samples, algorithm=_algorithm, n_jobs=-1)
 _ref_time = None
 _time_delta = None
-_debris_queue = BeamCandidatesQueue(_n_proc)
+
+_debris_queue = BeamCandidatesQueue(32)
+
+def init():
+    global _debris_queue
+    _debris_queue = BeamCandidatesQueue(settings.beamformer.nbeams)
+
+# _debris_queue = BeamCandidatesQueue(_n_proc)
 
 
 class MultiProcessingDBScanDetectionStrategy(SpaceDebrisDetectionStrategy):
@@ -36,9 +42,9 @@ class MultiProcessingDBScanDetectionStrategy(SpaceDebrisDetectionStrategy):
 
     def __init__(self):
         SpaceDebrisDetectionStrategy.__init__(self)
-        self.pool = Pool()
+        # self.pool = Pool()
 
-    def detect(self, obs_info, input_data):
+    def detect(self, obs_info, input_data, pool, queue):
         global _time_delta, _ref_time
         ref_time = Time(obs_info['timestamp'])
         time_delta = TimeDelta(obs_info['sampling_time'], format='sec')
@@ -50,12 +56,13 @@ class MultiProcessingDBScanDetectionStrategy(SpaceDebrisDetectionStrategy):
         beam_candidates = []
         try:
             if settings.detection.multi_proc:
-                func = partial(m_detect, ref_time, time_delta)
-                beam_candidates = self.pool.map(func, beams)
+                func = partial(m_detect, ref_time, time_delta, queue)
+                beam_candidates = pool.map(func, beams)
             else:
-                _debris_queue.set_repository(BeamCandidateRepository())
+                # queue = BeamCandidatesQueue(settings.beamformer.nbeams)
+                # queue.set_repository(BeamCandidateRepository())
                 for beam in beams:
-                    beam_candidates.append(m_detect(ref_time, time_delta, beam))
+                    beam_candidates.append(m_detect(ref_time, time_delta, None, beam))
         except Exception:
             log.exception('An exception has occurred')
 
@@ -182,12 +189,15 @@ def _merge_clusters(clusters):
     return clusters
 
 
-def m_detect(ref_time, time_delta, beam):
+def m_detect(ref_time, time_delta, queue, beam):
     """
     The core detection algorithm to be applied to the incoming data
 
     To be run in parallel using the multi-processing queue
 
+    :param ref_time:
+    :param time_delta:
+    :param queue:
     :param beam:
     :return:
     """
@@ -198,13 +208,14 @@ def m_detect(ref_time, time_delta, beam):
 
     # Apply the pre-processing filters to the beam data
     candidates = []
-
+    # print('Beam Queue ', 0, 'has', len(queue.queue[0]), 'candidates')
+    plotter.plot(beam, 'detection/input_beam/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 0)
     try:
         # plotter = SpectrogramPlotter()
         t = time.time()
         beam.apply_filters()
         log.debug('Filters took %0.3f s', time.time() - t)
-        # plotter.plot(beam, 'detection/filtered_beam/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 3)
+        # plotter.plot(beam, 'detection/filtered_beam/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 0)
 
         # Run detection algorithm on the beam data to extract possible candidates
         t = time.time()
@@ -221,6 +232,8 @@ def m_detect(ref_time, time_delta, beam):
         for candidate in candidates:
             _debris_queue.enqueue(candidate)
         log.debug('Enqueuing of clusters took %0.3f s', time.time() - t3)
+
+
 
     except Exception:
         log.exception('Something went wrong with process')

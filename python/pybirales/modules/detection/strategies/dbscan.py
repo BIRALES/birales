@@ -233,12 +233,13 @@ class DBScanDetectionStrategy(SpaceDebrisDetectionStrategy):
         return [candidate for sub_list in beam_candidates for candidate in sub_list if candidate]
 
     def detect_space_debris_candidates(self, beam):
+
         # plotter.plot(beam, 'detection/input_beam/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 0)
 
         # Apply the pre-processing filters to the beam data
         beam.apply_filters()
 
-        plotter.plot(beam, 'detection/filtered_beam/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 0)
+        # plotter.plot(beam, 'detection/filtered_beam/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 0)
 
         # Run detection algorithm on the beam data to extract possible candidates
         clusters = self._create_clusters(beam)

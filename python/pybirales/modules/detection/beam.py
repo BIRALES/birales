@@ -48,6 +48,7 @@ class Beam:
         self.t_0 = obs_info['timestamp']
         self.dt = obs_info['sampling_time']
         self.time = np.arange(0, beam_data.shape[3])
+        self.noise = obs_info['noise']
 
         self.channels = np.arange(self.f_ch1, self.f_ch1 + self.f_off * self.n_channels, self.f_off)
         self.snr = self._set_snr(beam_data)
@@ -66,26 +67,16 @@ class Beam:
         :return:
         """
 
-        # return np.abs(data[0, self.id, int(self.n_channels / 2):, :]).T
-        # data = np.abs(data[0, self.id, :, :]).T
-        #
-        # @todo - check if the mean can be used as an estimate for the noise
-        # mean_noise_per_channel = np.mean(data, axis=0)
-        #
-        # # Normalised the data by the mean noise at each channel
-        # normalised_data = np.where(data > 0., data, np.nan) / mean_noise_per_channel
-
         data = data[0, self.id, :, :].T
 
-        # version 2 - start
+        # version 3 - start
         p_v = self._power(data)
-        # p_n = self._power(np.mean(data, axis=0))
-        p_n = self._power(self._rms(data))
-        snr = (p_v - p_n) / p_n
+        p_n = self.noise
+        snr = p_v / p_n
         snr[snr <= 0] = np.nan
         log_data = 10 * np.log10(snr)
         log_data[np.isnan(log_data)] = 0.
-        # version 2 - end
+        # version 3 - end
 
         return log_data
 

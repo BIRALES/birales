@@ -15,8 +15,8 @@ class SpaceDebrisDetection(object):
             log.error('%s is not a valid detection strategy. Exiting.', self.detection_strategy)
             sys.exit()
 
-    def detect(self, obs_info, input_data):
-        return self.detection_strategy.detect(obs_info, input_data)
+    def detect(self, obs_info, input_data, pool, queue):
+        return self.detection_strategy.detect(obs_info, input_data, pool, queue)
 
 
 class SpaceDebrisDetectionStrategy(object):
@@ -24,7 +24,7 @@ class SpaceDebrisDetectionStrategy(object):
         self.max_detections = settings.detection.max_detections
 
     @abstractmethod
-    def detect(self, obs_info, input_data):
+    def detect(self, obs_info, input_data, pool, queue):
         pass
 
     # def pre_process(self):

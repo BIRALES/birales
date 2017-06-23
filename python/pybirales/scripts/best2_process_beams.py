@@ -147,7 +147,7 @@ def plot(opts):
     if opts.beam != -1 and opts.waterfall:
         fig = plt.figure()#(figsize=(11,8))
         ax = fig.add_subplot(1,1,1)
-        data = 10*np.log10(data[:,:,opts.beam])
+        data = 10*np.log10(data[:,:,opts.beam]**2)
        # data[np.where(data < (np.mean(data) + np.std(data)*1.5))] = 0
         im = ax.imshow(data, aspect='auto', interpolation='none',
                   origin='lower')#, extent=[frequency[0], frequency[-1], 0, time[-1]])

@@ -187,7 +187,9 @@ class Pointing(Thread):
         # Create initial weights
         # self.weights = np.zeros((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
         self.weights = np.ones((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
+        # self.weights[:,:,4:] = 0+0j
         self._temp_weights = np.ones((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
+        # self._temp_weights[:, :, 4:] = 0 + 0j
 
         self._stop = Event()
 

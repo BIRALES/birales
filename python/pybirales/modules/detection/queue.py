@@ -1,6 +1,7 @@
 from pybirales.modules.detection.repository import BeamCandidateRepository
 from pybirales.base import settings
 import logging as log
+from multiprocessing.queues import Queue
 
 
 class BeamCandidatesQueue:
@@ -8,6 +9,8 @@ class BeamCandidatesQueue:
         self.queue = [[] for _ in range(n_beams)]
         self._max_size = 20
         self.repository = None
+
+        # super(BeamCandidatesQueue, self).__init__(maxsize=self._max_size)
         # self.repository = BeamCandidateRepository()
 
     def set_repository(self, repository):
