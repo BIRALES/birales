@@ -36,6 +36,35 @@
             <div class="col-md-12">
                 <div class="card">
                     <div class="header">
+                        <h4 class="title">SNR Profile</h4>
+                        <p class="category">Live</p>
+                    </div>
+
+                    <div class="content">
+                        <div class="plotly" id="live-beam-candidates-snr-profile-plot"
+                             data-chart-tx="{{ tx }}"
+                             data-chart-min_channel="{{ min_channel }}"
+                             data-chart-max_channel="{{ max_channel }}"
+                             data-chart-min_time="{{ min_time }}"
+                             data-chart-max_time="{{ max_time }}"
+                        >
+
+                        </div>
+                        <div class="footer">
+                            <hr/>
+                            <div class="stats">
+                                <i class="fa fa-history"></i> <span id="beam-candidates-last-updated"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="header">
                         <h4 class="title">Orbit Determination Data</h4>
                         <p class="category">Live</p>
                     </div>
@@ -55,13 +84,15 @@
 {% block scripts %}
     {{ super() }}
     <script src="{{ url_for('static', filename='js/live.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/snr_profile.js') }}"></script>
 
     <script>
         $(document).ready(function () {
             var poll = {{ poll }};
             var interval = 5;
             var plotters = [
-                new BeamCandidatesPlotter()
+                new BeamCandidatesPlotter(),
+                    new BeamCandidatesSNRProfilePlotter()
             ];
 
             log.info('Initialise the plotters', poll);
