@@ -7,8 +7,10 @@ from multiprocessing.dummy import Pool as ThreadPool
 import DBSCAN_multiplex as DB2
 import numpy as np
 from astropy.time import Time, TimeDelta
+
 from sklearn import linear_model
 from sklearn.cluster import DBSCAN
+from skimage.measure import LineModelND, ransac
 
 from pybirales.base import settings
 from pybirales.modules.detection.beam import Beam

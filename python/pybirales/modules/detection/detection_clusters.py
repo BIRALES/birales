@@ -6,6 +6,7 @@ import time as time2
 from pybirales.base import settings
 np.set_printoptions(precision=20)
 from astropy.time import Time
+from skimage.measure import LineModelND, ransac
 
 
 class DetectionCluster:
@@ -84,7 +85,11 @@ class DetectionCluster:
 
         try:
             t = time2.time()
-            model.fit(channels, time)
+            # model.fit(channels, time)
+
+
+
+
             t2 = time2.time() - t
             log.debug('Fitting 2 took %0.3f s', t2)
 
@@ -137,6 +142,25 @@ class DetectionCluster:
         :type threshold: float
         :return:
         """
+
+        temp = DetectionCluster(model=self._model,
+                                beam=cluster.beam,
+                                indices=[np.concatenate([self.indices[0], cluster.indices[0]]),
+                                         np.concatenate([self.indices[1], cluster.indices[1]])],
+                                time_data=np.concatenate([self.time_data, cluster.time_data]),
+                                channels=np.concatenate([self.channel_data, cluster.channel_data]),
+                                snr=np.concatenate([self.snr_data, cluster.snr_data]))
+
+        merge = self._pd(cluster.m, self.m) <= threshold and self._pd(cluster.c, self.c) <= threshold
+        if temp.score >= self.score or merge:
+            log.warning('Cluster will improve on merging. Old merge result is %s', merge)
+            return True
+        else:
+            log.warning('Won\'t merge clusters %s and %s. Old merge result is %s', len(cluster.time_data), len(self.time_data), merge)
+            log.warning('Gradient PD :%s ', self._pd(cluster.m, self.m))
+            log.warning('Coeff PD: %s',  self._pd(cluster.c, self.c))
+            log.warning('Score: %s %s', temp.score, self.score)
+            return False
 
         # Check if the gradients and the intercepts of the two clusters are similar
         return self._pd(cluster.m, self.m) <= threshold and self._pd(cluster.c, self.c) <= threshold
