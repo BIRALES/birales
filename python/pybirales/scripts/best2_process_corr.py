@@ -42,7 +42,14 @@ if __name__ == "__main__":
         pass
 
     # Plot
-    for to_plot in opts.baseline.split(','):
-        plt.plot(data[:nsamp, 0, baselines[to_plot], 0], label=to_plot)
+#    for to_plot in opts.baseline.split(','):
+#        plt.plot(data[:nsamp, 0, baselines[to_plot], 0], label=to_plot)
+    counter = 0
+    for i in range(opts.nants):
+        for j in range(i + i, opts.nants):
+            plt.plot(data[:nsamp, 0, counter, 0], label="{}-{}".format(i, j))
+            counter += 1
+
+    #plt.axvline(x=2220)
     plt.legend()
     plt.show()

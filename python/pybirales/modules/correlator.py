@@ -21,11 +21,10 @@ def correlate(input_data, output_data, nchans, nants, integrations, nsamp):
 #                    output_data[i, c, baseline, 0] = \
 #                        np.dot(input_data[0, c, antenna1,
 #                               i * integrations:(i + 1) * integrations],
-#                               np.conj(input_data[0, c, antenna2,
+#                              np.conj(input_data[0, c, antenna2,
 #                                       i * integrations:(i + 1) * integrations]))
                      output_data[i, c, baseline, 0] = np.correlate(input_data[0, c, antenna1, i * integrations:(i + 1) * integrations], 
                                                                    input_data[0, c, antenna2, i * integrations:(i + 1) * integrations])
-                     print i*integrations, i * integrations, (i + 1) * integrations, input_data[0, c, antenna1, i * integrations], input_data[0, c, antenna2, i * integrations]
                 baseline += 1
 
 
@@ -102,6 +101,42 @@ class Correlator(ProcessingModule):
         if self._nsamp % self._integrations != 0:
             logging.warning("Number of integration not factor of number of samples, skipping buffer")
             return
+
+	calib_coeffs = np.array([1+0j,	
+    	0.37921-1.0166j,
+	1.0541+0.011449j,
+	1.1097-0.21978j,
+	-0.53587-0.61423j,
+	-0.68138-0.97568j,
+	-1.0463+0.24731j,
+	-1.4677+0.24342j,
+	0.28354+1.0108j,
+	0.62238+0.71357j,
+	0.44854+1.2109j,
+	1.0746+0.22425j,
+	-0.75818-1.548j,
+	0.61083+0.94167j,
+	-0.42345-1.4099j,
+	-0.83914-0.5053j,
+	0.16475-1.3879j,
+	-1.3017-0.28034j,
+	-0.74333-0.46589j,
+	-0.83767-1.1915j,
+	0.83129+0.65413j,
+	0.23431+0.85324j,
+	-0.0012562+1.120j,
+	-0.070134+1.3493j,
+	0.47897-0.75327j,
+	-0.16405-1.1344j,
+	-0.88662-0.69923j,
+	-0.24001-1.0737j,
+	-0.041437+1.3206j,
+	-1.005-0.90608j,
+	0.19415+0.99563j,
+	0.23096+1.1082j], dtype=np.complex64)
+	
+	# Apply coeffs
+	input_data *= calib_coeffs
 
         # Transpose the data so the we can parallelise over frequency
         self._current_input = np.transpose(input_data, (0, 1, 3, 2)).copy()

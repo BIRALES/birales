@@ -35,7 +35,7 @@ class Beamformer(ProcessingModule):
             raise PipelineError("Beamformer: Invalid input data type, should be DummyBlob or ReceiverBlob")
 
         # Sanity checks on configuration
-        if {'nbeams', 'antenna_locations', 'pointings', 'reference_pointing', 'reference_antenna_location'} \
+        if {'nbeams', 'antenna_locations', 'pointings', 'reference_antenna_location', 'reference_declination'} \
                 - set(config.settings()) != set():
             raise PipelineError("Beamformer: Missing keys on configuration "
                                 "(nbeams, nants, antenna_locations, pointings)")
@@ -92,7 +92,6 @@ class Beamformer(ProcessingModule):
         # Create pointing instance
         if self._pointing is None:
             self._pointing = Pointing(self._config, nsubs, nants)
-            self._pointing.start()
 
     def process(self, obs_info, input_data, output_data):
 
@@ -106,19 +105,12 @@ class Beamformer(ProcessingModule):
         if self._pointing is None:
             self._initialise(nsubs, nants)
 
-        # Get weights
-        self._pointing.start_reading_weighs()
-
         # Apply pointing coefficients
         self._beamformer.beamform(input_data.ravel(), self._pointing.weights.ravel(), output_data.ravel(),
                                   nsamp, nsubs, self._nbeams, nants, npols, self._nthreads)
 
-        # Done using weights
-        self._pointing.stop_reading_weights()
-
         # Update observation information
         obs_info['nbeams'] = self._nbeams
-        obs_info['reference_pointing'] = self._config.reference_pointing
         obs_info['pointings'] = self._config.pointings
 
         return obs_info
@@ -126,66 +118,46 @@ class Beamformer(ProcessingModule):
     def stop(self):
         logging.info('Stopping %s module', self.name)
         self._stop.set()
-        if isinstance(self._pointing, Pointing):
-            self._pointing.stop()
 
-
-class Pointing(Thread):
+class Pointing(object):
     """ Pointing class which periodically updates pointing weights """
 
     def __init__(self, config, nsubs, nants):
 
-        # Call superclass initialiser
-        super(Pointing, self).__init__()
-        self.daemon = True
-
-        # Thread name
-        self.name = "Pointing Thread"
-
         # Make sure that we have enough antenna locations
         if len(config.antenna_locations) != nants:
-            raise PipelineError("Pointing: Mismatch between number of antennas and number of antenna locations")
+            logging.error("Pointing: Mismatch between number of antennas and number of antenna locations")
 
         # Make sure that we have enough pointing
         if len(config.pointings) != config.nbeams:
-            raise PipelineError("Pointing: Mismatch between number of beams and number of beam pointings")
-
-        # Check if we're using static beams
-        self._static_beams = False
-        if "static_beams" in config.settings():
-            self._static_beams = config.static_beams
+           logging.error("Pointing: Mismatch between number of beams and number of beam pointings")
 
         # Initialise Pointing
         array = config.antenna_locations
         self._start_center_frequency = settings.observation.start_center_frequency
         self._reference_location = config.reference_antenna_location
-        self._reference_pointing = config.reference_pointing
+        self._reference_declination = config.reference_declination
         self._pointings = config.pointings
         self._bandwidth = settings.observation.channel_bandwidth
         self._nbeams = config.nbeams
         self._nants = nants
         self._nsubs = nsubs
 
-        self._pointing_period = 5
-        if 'pointing_period' in config.settings():
-            self._pointing_period = config.pointing_period
+        # Ignore AstropyWarning
+        warnings.simplefilter('ignore', category=AstropyWarning)
 
         # Create AntennaArray object
         self._array = AntennaArray(array, self._reference_location[0], self._reference_location[1])
 
         # Calculate displacement vectors to each antenna from reference antenna
-        self._reference_location = EarthLocation.from_geodetic(self._array.lon, self._array.lat,
-                                                               height=self._array.height)
+        # (longitude, latitude)
+        self._reference_location = self._reference_location[0], self._reference_location[1]
 
         self._vectors_enu = np.full([self._nants, 3], np.nan)
         for i in range(self._nants):
             self._vectors_enu[i, :] = self._array.antenna_position(i)
 
-        # Lock to be used for synchronised access
-        self._lock = Lock()
-
         # Create initial weights
-        # self.weights = np.zeros((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
         self.weights = np.ones((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
         # self.weights[:,:,4:] = 0+0j
         self._temp_weights = np.ones((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
@@ -218,9 +190,9 @@ class Pointing(Thread):
         """ Lock weights for access to beamformer """
         self._lock.acquire()
 
-    def stop_reading_weights(self):
-        """ Beamformer finished, unlock weights """
-        self._lock.release()
+        # Generate weights
+        for beam in range(self._nbeams):
+            self.point_array(beam, self._reference_declination, self._pointings[beam][0], self._pointings[beam][1])
 
     def point_array_static(self, beam, altitude, azimuth):
         """ Calculate the phase shift given the altitude and azimuth coordinates of a sky object as astropy angles
@@ -236,11 +208,11 @@ class Pointing(Thread):
             real, imag = self._phaseshifts_from_altitude_azimuth(altitude.rad, azimuth.rad, frequency,
                                                                  self._vectors_enu)
 
-            # Apply to weights file
-            self._temp_weights[i, beam, :].real = real
-            self._temp_weights[i, beam, :].imag = imag
+            # Apply to weights
+            self.weights[i, beam, :].real = real
+            self.weights[i, beam, :].imag = imag
 
-    def point_array(self, beam, ref_ra, ref_dec, delta_ra, delta_dec, pointing_time=None):
+    def point_array(self, beam, ref_dec, ha, delta_dec):
         """ Calculate the phase shift between two antennas which is given by the phase constant (2 * pi / wavelength)
         multiplied by the projection of the baseline vector onto the plane wave arrival vector
         :param beam: Beam to which this applies
@@ -250,27 +222,27 @@ class Pointing(Thread):
         :return: The phaseshift in radians for each antenna
         """
 
+        # We must have a positive hour angle and non-zero
+        if ha < 0:
+            ha = Angle(ha + 360, u.deg)
+        elif ha < 0.0001:
+            ha = Angle(0.0001, u.deg)
+        else:
+            ha = Angle(ha, u.deg)
+
         # Type conversions if required
-        ref_ra = Angle(ref_ra, u.deg)
         ref_dec = Angle(ref_dec, u.deg)
-        delta_ra = Angle(delta_ra, u.deg)
         delta_dec = Angle(delta_dec, u.deg)
 
-        # If we're using static beam, then we must adjust RA (by setting reference RA equal to LST)
-        if self._static_beams:
-            ref_ra = Angle(pointing_time.sidereal_time('mean'))
-
         # Convert RA DEC to ALT AZ
-        alt, az = self._ra_dec_to_alt_az(ref_ra + delta_ra,
-                                         ref_dec + delta_dec,
-                                         Time(pointing_time),
-                                         self._reference_location)
+        alt, az = self._ha_dec_to_alt_az(ha, ref_dec + delta_dec, self._reference_location)
 
         # Point beam to required ALT AZ
+        print("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, ref_dec + delta_dec, alt.deg, az.deg))
         self.point_array_static(beam, alt, az)
 
     @staticmethod
-    def _ra_dec_to_alt_az(right_ascension, declination, time, location):
+    def _ha_dec_to_alt_az(hour_angle, declination, location):
         """ Calculate the altitude and azimuth coordinates of a sky object from right ascension and declination and time
         :param right_ascension: Right ascension of source (in astropy Angle on string which can be converted to Angle)
         :param declination: Declination of source (in astropy Angle on string which can be converted to Angle)
@@ -278,13 +250,22 @@ class Pointing(Thread):
         :param location: astropy EarthLocation
         :return: Array containing altitude and azimuth of source as astropy angle
         """
+        lat = Angle(location[1], u.deg)
 
-        # Initialise SkyCoord object using the default frame (ICRS) and convert to horizontal
-        # coordinates (altitude/azimuth) from the antenna's perspective.
-        sky_coordinates = SkyCoord(ra=right_ascension, dec=declination)
-        c_altaz = sky_coordinates.transform_to(AltAz(obstime=time, location=location))
+        alt = Angle(np.arcsin(np.sin(declination.rad) * np.sin(lat.rad) +
+                              np.cos(declination.rad) * np.cos(lat.rad) * np.cos(hour_angle.rad)),
+                    u.rad)
 
-        return c_altaz.alt, c_altaz.az
+        # Condition where array is at zenith
+        if abs(lat.deg - declination.deg) < 0.01:
+            az = Angle(0, u.deg)
+        else:
+            az = Angle(np.arccos((np.sin(declination.rad) - np.sin(alt.rad) * np.sin(lat.rad)) /
+                                 (np.cos(alt.rad) * np.cos(lat.rad))), u.rad)
+            if np.sin(hour_angle.rad) >= 0:
+                az = Angle(360 - az.deg, u.deg)
+
+        return alt, az
 
     @staticmethod
     def _phaseshifts_from_altitude_azimuth(altitude, azimuth, frequency, displacements):
@@ -304,11 +285,8 @@ class Pointing(Thread):
         k = (2.0 * np.pi * frequency.to(u.Hz).value) / constants.c.value
         return np.cos(np.multiply(k, path_length)), np.sin(np.multiply(k, path_length))
 
-    def stop(self):
-        """ Stops the current thread """
-        logging.info('Stopping %s thread', self.name)
-        self._stop.set()
 
+# --------------------------------------------------------------------------------------------------
 
 class AntennaArray(object):
     """ Class representing antenna array """
@@ -379,3 +357,4 @@ class AntennaArray(object):
         self._y = [positions[i][1] for i in range(len(positions))]
         self._z = [positions[i][2] for i in range(len(positions))]
         self._height = [0 for i in range(len(positions))]
+

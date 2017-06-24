@@ -73,7 +73,7 @@ class RawDataReader(ProcessingModule):
             sys.exit()
 
         output_data[:] = data
-        sleep(1)
+        sleep(0.5)
 
         # output_data = self.generate_corrdata()
         # Create observation information

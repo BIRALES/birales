@@ -2,33 +2,30 @@ from matplotlib.widgets import Slider
 from matplotlib import pyplot as plt
 import numpy as np
 
-data = np.load("casa_raw_processed_test.npy")
+data = np.load("virgo_raw_processed.npy")
 
-start_ra = -0
-stop_ra = 0
-delta_ra = 1
+start_ra = -5
+stop_ra = 5
+delta_ra = 0.5
 start_dec = -5
 stop_dec = 5
-delta_dec = 1
+delta_dec = 0.5
 
-pointings_ra = np.arange(start_ra, stop_ra, delta_ra)
-pointings_dec = np.arange(start_dec, stop_dec, delta_dec)
-
-pointing_index = []
-for i in pointings_ra:
-    for j in pointings_dec:
-        pointing_index.append((i, j))
-
+#pointings_ra = np.arange(start_ra, stop_ra, delta_ra)
+#pointings_dec = np.arange(start_dec, stop_dec, delta_dec)
+#
+#pointing_index = []
+#for i in pointings_ra:
+#    for j in pointings_dec:
+#        pointing_index.append((i, j))
+#
 #print(np.where(data == np.max(data)))
-#print(pointing_index[218])
-
-#plt.plot(data[5, :].T)
-#for i in range(4):
-#    plt.plot(data[5-1*i, :].T)
-#    plt.plot(data[5+1*i, :].T)
-for i in range(10):
-    plt.plot(data[i,:].T, label=i)
-plt.legend()
+#
+#for i in range(10):
+#    plt.plot(data[163-1*i, :].T)
+#    plt.plot(data[163+1*i, :].T)
+plt.plot(data.T)
+#plt.axvline(x=8883)
 plt.show()
 exit()
 
