@@ -107,3 +107,5 @@ class CorrMatrixPersister(ProcessingModule):
         f.close()
 
         self._counter += 1
+
+        return obs_info

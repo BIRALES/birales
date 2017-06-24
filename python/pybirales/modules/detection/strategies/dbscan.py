@@ -4,7 +4,7 @@ import os
 from multiprocessing import Pool
 from multiprocessing.dummy import Pool as ThreadPool
 
-import DBSCAN_multiplex as DB2
+#import DBSCAN_multiplex as DB2
 import numpy as np
 from astropy.time import Time, TimeDelta
 

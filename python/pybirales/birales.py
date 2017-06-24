@@ -26,13 +26,13 @@ def cli():
 
 
 @cli.command()
-@click.argument('configuration')
+@click.argument('configuration', type=click.Path(exists=True))
 @click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
 @click.option('--save-raw/--no-save-raw', default=False, help='Save raw data')
 @click.option('--save-beam/--no-save-beam', default=False, help='Save beam data')
 def detection_pipeline(configuration, debug, save_raw, save_beam):
     """
-    This script runs the BIRALES pipeline with post processing enabled,
+    This script runs the multipixel pipeline with debris detection enabled,
     using the specified CONFIGURATION.
 
     """
@@ -72,7 +72,7 @@ def detection_pipeline(configuration, debug, save_raw, save_beam):
 
 
 @cli.command()
-@click.argument('configuration', default='config/birales.ini')
+@click.argument('configuration', type=click.Path(exists=True))
 @click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
 def standalone_test(configuration, debug):
     """
@@ -96,13 +96,13 @@ def standalone_test(configuration, debug):
     manager.add_module("terminator", terminator)
 
 #    manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, pfb.output_blob)
-    manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
+#    manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
 
     manager.start_pipeline()
 
 
 @cli.command()
-@click.argument('configuration', default='config/birales.ini')
+@click.argument('configuration', type=click.Path(exists=True))
 @click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
 def test_receiver(configuration, debug):
     """
@@ -121,7 +121,7 @@ def test_receiver(configuration, debug):
     manager.add_module("receiver", receiver)
     manager.add_module("terminator", terminator)
 
-    manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
+  #  manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
   #  manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
   #  manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
 
@@ -129,12 +129,12 @@ def test_receiver(configuration, debug):
 
 
 @cli.command()
-@click.argument('configuration', default='config/birales.ini')
+@click.argument('configuration', type=click.Path(exists=True))
 @click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
 @click.option('--save-raw/--no-save-raw', default=False, help='Save raw data?')
 def birales_pipeline(configuration, debug, save_raw):
     """
-    This script runs the default BIRALES pipeline,
+    This script runs the multipixel pipeline without detection,
     using the specified CONFIGURATION.
     """
 
@@ -163,18 +163,19 @@ def birales_pipeline(configuration, debug, save_raw):
     manager.add_module("terminator", terminator)
 
     # Add plotters
-    manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
+    # manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
     # manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, receiver.output_blob)
     # manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
 
     manager.start_pipeline()
 
 @cli.command()
-@click.argument('configuration', default='config/birales.ini')
+@click.argument('configuration', type=click.Path(exists=True))
 @click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
-def correlator_pipeline(configuration, debug):
+@click.option('--save-raw/--no-save-raw', default=False, help='Save raw data?')
+def correlator_pipeline(configuration, debug, save_raw):
     """
-    This script runs the correlator test pipeline,
+    This script runs the correlator pipeline,
     using the specified CONFIGURATION.
     """
 
@@ -183,7 +184,14 @@ def correlator_pipeline(configuration, debug):
 
     # Generate processing modules and data blobs
     receiver = Receiver(settings.receiver)
-    correlator = Correlator(settings.correlator, receiver.output_blob)
+
+    if save_raw:
+        persister_raw = RawPersister(settings.rawpersister, receiver.output_blob)
+        correlator = Correlator(settings.correlator, persister_raw.output_blob)
+        manager.add_module("persister_raw", persister_raw)
+    else:
+        correlator = Correlator(settings.correlator, receiver.output_blob)
+   
     persister = CorrMatrixPersister(settings.corrmatrixpersister, correlator.output_blob)
 
     # Add modules to pipeline manager
@@ -195,11 +203,11 @@ def correlator_pipeline(configuration, debug):
 
 
 @cli.command()
-@click.argument('configuration', default='config/birales.ini')
+@click.argument('configuration', type=click.Path(exists=True))
 @click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
 def multipipeline(configuration, debug):
     """
-    This script runs the test receiver pipeline,
+    This script runs the multipixel pipeline together with the correlator pipeline,
     using the specified CONFIGURATION.
     """
 
@@ -227,11 +235,11 @@ def multipipeline(configuration, debug):
     manager.start_pipeline()
 
 @cli.command()
-@click.argument('configuration', default='config/birales.ini')
+@click.argument('configuration', type=click.Path(exists=True))
 @click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
 def save_raw_data(configuration, debug):
     """
-     This script runs the standalone test pipeline,
+     This script runs save the incoming raw data to file,
      using the specified CONFIGURATION.
     """
 
@@ -249,11 +257,11 @@ def save_raw_data(configuration, debug):
     manager.start_pipeline()
 
 @cli.command()
-@click.argument('configuration', default='config/birales.ini')
+@click.argument('configuration', type=click.Path(exists=True))
 @click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
 def offline_birales_pipeline(configuration, debug):
     """
-     This script runs the standalone test pipeline,
+     This script runs the offline (read from file) multipixel pipeline with detection,
      using the specified CONFIGURATION.
     """
 
@@ -282,11 +290,11 @@ def offline_birales_pipeline(configuration, debug):
 
 
 @cli.command()
-@click.argument('configuration', default='config/birales.ini')
+@click.argument('configuration', type=click.Path(exists=True))
 @click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
 def offline_correlator(configuration, debug):
     """
-     This script runs the standalone test pipeline,
+     This script runs the offline (read from file) correlator pipeline,
      using the specified CONFIGURATION.
     """
 

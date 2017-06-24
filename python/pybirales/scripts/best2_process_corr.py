@@ -35,7 +35,11 @@ if __name__ == "__main__":
         data = data[:]
 
     # Calculate number of samples in file
-    nsamp = np.where(data[:, 0, 0, 0] == 0)[0][0]
+    nsamp = len(data)
+    try:
+        nsamp = np.where(data[:, 0, 0, 0] == 0)[0][0]
+    except:
+        pass
 
     # Plot
     for to_plot in opts.baseline.split(','):
