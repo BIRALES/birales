@@ -4,9 +4,9 @@ import logging as log
 import time as time2
 
 from pybirales.base import settings
+
 np.set_printoptions(precision=20)
 from astropy.time import Time
-from skimage.measure import LineModelND, ransac
 
 
 class DetectionCluster:
@@ -77,7 +77,7 @@ class DetectionCluster:
             index[:-1] = ts[1:] != ts[:-1]
             i = ndx[index]
 
-            channels = np.array([[channel] for channel in c[i]])
+            channels = np.array([[channel, ss] for channel, ss in zip(c[i], s[i])])
             time = np.array([t.unix for t in ts[i]])
         else:
             channels = np.array([[channel] for channel in channel_data])
@@ -85,10 +85,7 @@ class DetectionCluster:
 
         try:
             t = time2.time()
-            # model.fit(channels, time)
-
-
-
+            model.fit(channels, time)
 
             t2 = time2.time() - t
             log.debug('Fitting 2 took %0.3f s', t2)
@@ -156,14 +153,12 @@ class DetectionCluster:
             log.warning('Cluster will improve on merging. Old merge result is %s', merge)
             return True
         else:
-            log.warning('Won\'t merge clusters %s and %s. Old merge result is %s', len(cluster.time_data), len(self.time_data), merge)
+            log.warning('Won\'t merge clusters %s and %s. Old merge result is %s', len(cluster.time_data),
+                        len(self.time_data), merge)
             log.warning('Gradient PD :%s ', self._pd(cluster.m, self.m))
-            log.warning('Coeff PD: %s',  self._pd(cluster.c, self.c))
+            log.warning('Coeff PD: %s', self._pd(cluster.c, self.c))
             log.warning('Score: %s %s', temp.score, self.score)
             return False
-
-        # Check if the gradients and the intercepts of the two clusters are similar
-        return self._pd(cluster.m, self.m) <= threshold and self._pd(cluster.c, self.c) <= threshold
 
     @staticmethod
     def _pd(a, b):
@@ -275,6 +270,7 @@ class DetectionCluster:
             'max_channel': self.max_channel,
             'created_at': datetime.datetime.utcnow(),
             'configuration_id': self.beam.configuration_id,
+            'noise': self.beam.noise,
             'data': {
                 'time': [b.iso for b in self.time_data],
                 'channel': self.channel_data.tolist(),

@@ -7,7 +7,7 @@ var BeamCandidatesPlotter = function () {
     this._beam_candidates_plot_selector = 'live-beam-candidates-plot';
     this._beam_candidates_plot_selector_id = '#' + this._beam_candidates_plot_selector;
 
-    this._tx = $(this._beam_candidates_plot_selector_id).data('chart-tx') || 410.0703125;
+    this._tx = $(this._beam_candidates_plot_selector_id).data('chart-tx') || 410.02;
     this._max_channel = $(this._beam_candidates_plot_selector_id).data('chart-max_channel') || 410.0703125;
     this._min_channel = $(this._beam_candidates_plot_selector_id).data('chart-min_channel') || 398.9921875;
 
@@ -42,11 +42,11 @@ var BeamCandidatesPlotter = function () {
             };
 
             if (beam_candidate['min_time'] < self._min_time) {
-                self._min_time = beam_candidate['min_time'];
+                self._min_time = (new Date(beam_candidate['min_time'].$date)).toISOString();;
             }
 
             if (beam_candidate['max_time'] > self._max_time) {
-                self._max_time = beam_candidate['max_time'];
+                self._max_time = (new Date(beam_candidate['max_time'].$date)).toISOString();;
             }
 
             traces.push(beam_candidates_trace);
@@ -77,7 +77,20 @@ var BeamCandidatesPlotter = function () {
                 b: 50,
                 t: 20,
                 pad: 10
-            }
+            },
+            shapes: [
+                {
+                    'type': 'line',
+                    'x0': self._tx,
+                    'y0': self._min_time,
+                    'x1': self._tx,
+                    'y1': self._max_time,
+                    'line': {
+                        'color': 'rgb(255, 0, 0)',
+                        'width': 3
+                    }
+                }
+            ]
         };
 
     };
