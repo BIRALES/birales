@@ -30,15 +30,15 @@ class BeamCandidatesQueue:
         #         break
 
         beam_queue = self.queue[new_cluster.beam_id]
-        log.warning('Queue %s length is %s (before merging)', new_cluster.beam_id, len(beam_queue))
+        # log.warning('Queue %s length is %s (before merging)', new_cluster.beam_id, len(beam_queue))
         for i, old_cluster in enumerate(beam_queue):
             if old_cluster.to_delete:
                 continue
 
             if new_cluster.is_similar_to(old_cluster, threshold=0.2):
-                log.debug('Merging clusters [%s -> %s] in beam_queue %s (length: %s)',
-                          len(old_cluster.merge(new_cluster).time_data), len(old_cluster.time_data),
-                          new_cluster.beam_id, len(beam_queue))
+                # log.debug('Merging clusters [%s -> %s] in beam_queue %s (length: %s)',
+                #           len(old_cluster.merge(new_cluster).time_data), len(old_cluster.time_data),
+                          # new_cluster.beam_id, len(beam_queue))
                 # mark old cluster as 'to delete'
                 old_cluster.delete()
                 # beam_queue.remove(old_cluster)
@@ -52,9 +52,9 @@ class BeamCandidatesQueue:
         else:
             # If we didn't merge, add the candidate to the queue
             beam_queue.insert(0, new_cluster)
-            log.warning('Inserted a cluster of size %s', len(new_cluster.time_data))
+            # log.warning('Inserted a cluster of size %s', len(new_cluster.time_data))
 
-        log.warning('Queue %s length is %s (after merging)', new_cluster.beam_id, len(beam_queue))
+        # log.warning('Queue %s length is %s (after merging)', new_cluster.beam_id, len(beam_queue))
         # log.debug('Enqueuing took %1.3f s', time.time() - t1)
         # Pop the last element if queue is full
         self.dequeue(new_cluster.beam_id)
@@ -63,8 +63,8 @@ class BeamCandidatesQueue:
             # Persist beam candidates
             self.save()
 
-        log.warning('Queue %s length is %s (after merging + deletion)', new_cluster.beam_id,
-                    len(self.queue[new_cluster.beam_id]))
+        # log.warning('Queue %s length is %s (after merging + deletion)', new_cluster.beam_id,
+        #             len(self.queue[new_cluster.beam_id]))
 
     def dequeue(self, beam_id):
         """

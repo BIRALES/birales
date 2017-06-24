@@ -78,19 +78,19 @@ var BeamCandidatesPlotter = function () {
                 t: 20,
                 pad: 10
             },
-            shapes: [
-                {
-                    'type': 'line',
-                    'x0': self._tx,
-                    'y0': self._min_time,
-                    'x1': self._tx,
-                    'y1': self._max_time,
-                    'line': {
-                        'color': 'rgb(255, 0, 0)',
-                        'width': 3
-                    }
-                }
-            ]
+            // shapes: [
+            //     {
+            //         'type': 'line',
+            //         'x0': self._tx,
+            //         'y0': self._min_time,
+            //         'x1': self._tx,
+            //         'y1': self._max_time,
+            //         'line': {
+            //             'color': 'rgb(255, 0, 0)',
+            //             'width': 3
+            //         }
+            //     }
+            // ]
         };
 
     };

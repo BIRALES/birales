@@ -77,7 +77,8 @@ class DetectionCluster:
             index[:-1] = ts[1:] != ts[:-1]
             i = ndx[index]
 
-            channels = np.array([[channel, ss] for channel, ss in zip(c[i], s[i])])
+            # channels = np.array([[channel, ss] for channel, ss in zip(c[i], s[i])])
+            channels = np.array([[channel] for channel in c[i]])
             time = np.array([t.unix for t in ts[i]])
         else:
             channels = np.array([[channel] for channel in channel_data])
@@ -150,14 +151,14 @@ class DetectionCluster:
 
         merge = self._pd(cluster.m, self.m) <= threshold and self._pd(cluster.c, self.c) <= threshold
         if temp.score >= self.score or merge:
-            log.warning('Cluster will improve on merging. Old merge result is %s', merge)
+            # log.warning('Cluster will improve on merging. Old merge result is %s', merge)
             return True
         else:
-            log.warning('Won\'t merge clusters %s and %s. Old merge result is %s', len(cluster.time_data),
-                        len(self.time_data), merge)
-            log.warning('Gradient PD :%s ', self._pd(cluster.m, self.m))
-            log.warning('Coeff PD: %s', self._pd(cluster.c, self.c))
-            log.warning('Score: %s %s', temp.score, self.score)
+            # log.warning('Won\'t merge clusters %s and %s. Old merge result is %s', len(cluster.time_data),
+            #             len(self.time_data), merge)
+            # log.warning('Gradient PD :%s ', self._pd(cluster.m, self.m))
+            # log.warning('Coeff PD: %s', self._pd(cluster.c, self.c))
+            # log.warning('Score: %s %s', temp.score, self.score)
             return False
 
     @staticmethod

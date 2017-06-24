@@ -143,8 +143,8 @@ def _create_clusters(beam):
               len(clusters),
               time.time() - tt)
 
-    # plotter.plot_detections(beam, 'detection/db_scan/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 3,
-    #                         clusters=clusters)
+    plotter.plot_detections(beam, 'detection/db_scan/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 0,
+                            clusters=clusters)
 
     log.debug('DBSCAN detected %s clusters in beam %s, of which %s are linear',
               len(np.unique(filtered_cluster_labels)),
@@ -209,7 +209,7 @@ def m_detect(ref_time, time_delta, queue, beam):
     # Apply the pre-processing filters to the beam data
     candidates = []
     # print('Beam Queue ', 0, 'has', len(queue.queue[0]), 'candidates')
-    plotter.plot(beam, 'detection/input_beam/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 0)
+    # plotter.plot(beam, 'detection/input_beam/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 0)
     try:
         # plotter = SpectrogramPlotter()
         t = time.time()
