@@ -96,7 +96,6 @@ class Beamformer(ProcessingModule):
         # Create pointing instance
         if self._pointing is None:
             self._pointing = Pointing(self._config, nsubs, nants)
-            logging.info(self._disable_antennas)
             if self._disable_antennas is not None:
                 self._pointing.disable_antennas(self._disable_antennas)
             
@@ -226,7 +225,8 @@ class Pointing(object):
         alt, az = self._ha_dec_to_alt_az(ha, ref_dec + delta_dec, self._reference_location)
 
         # Point beam to required ALT AZ
-        logging.info("Beam {}. LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(beam, self._reference_location[1], ha.deg, ref_dec + delta_dec, alt.deg, az.deg))
+        logging.info("Beam {0}. LAT: {1:0.2f}, HA: {2:0.2f}, DEC: {3:0.2f}, ALT: {4:0.2f}, AZ: {5:0.2f}".format(
+                      beam, self._reference_location[1], ha.deg, ref_dec + delta_dec, alt.deg, az.deg))
         self.point_array_static(beam, alt, az)
 
     @staticmethod
