@@ -112,7 +112,7 @@ class Receiver(Generator):
             # Release output blob
             self.release_output_blob(obs_info)
 
-            logging.info("Receiver: Received buffer")
+            logging.info("Receiver: Received buffer ({})".format(obs_info['timestamp'].time()))
 
         return self._callback_type(data_callback)
 
