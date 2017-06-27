@@ -44,9 +44,9 @@ class DetectionCluster:
         self.min_channel = np.min(self.channel_data)
         self.max_channel = np.max(self.channel_data)
 
-        self.m = None
-        self.c = None
-        self.score = None
+        self.m = np.nan
+        self.c = np.nan
+        self.score = np.nan
 
         # Compare the detection cluster's data against a (linear) model
         t = time2.time()
@@ -91,10 +91,6 @@ class DetectionCluster:
             t2 = time2.time() - t
             log.debug('Fitting 2 took %0.3f s', t2)
 
-            # if t2 > 0.2:
-            #     print('from', channel_data.shape, 'to', channels.shape)
-            #     print(channels)
-            #     print(time)
         except ValueError:
             log.debug('Linear interpolation failed. No inliers found.')
         else:
@@ -173,6 +169,9 @@ class DetectionCluster:
         mean = np.mean([a, b])
         try:
             percentage_difference = abs(diff / mean)
+
+            if np.isnan(percentage_difference):
+                percentage_difference = 1.0
         except RuntimeWarning:
             percentage_difference = 1.0
 
