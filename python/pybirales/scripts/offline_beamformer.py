@@ -11,7 +11,7 @@ def beamformer(i, nbeams, data, weights, coeffs, output):
         output[b, i] = 10 * np.log10(np.sum(np.power(np.abs(np.dot(data * coeffs, weights[0, b, :])), 2)))
 
 
-filepath = "/mnt/2017/06_06_2017/cygnus/cygnus_raw.dat"
+filepath = "/mnt/2017/27_06_2017/casa/casa_raw.dat"
 
 nsamp = 32768
 nants = 32
@@ -24,7 +24,7 @@ delta_dec = 1
 
 # Update pointing config
 config['reference_antenna_location'] = [11.6459889, 44.52357778]
-config['reference_declination'] = 40.781765
+config['reference_declination'] = 58.92
 
 # Generate pointings
 config['pointings'] = []
@@ -48,37 +48,37 @@ totalsamp = filesize / (8 * nants)
 output = np.zeros((config['nbeams'], int(totalsamp / nsamp)), dtype=np.float)
 
 calib_coeffs = np.array([1+0j,
-0.74462-0.73813j,
-0.96279-0.16081j,
-1.219-0.134j,
-0.93059-0.59947j,
-1.2159-0.50152j,
--0.019579-1.1272j,
-0.015478-1.1649j,
-0.095198-1.0152j,
--0.37284-0.92108j,
-0.0094763-1.03j,
--0.88349-0.44626j,
--0.85426-0.36294j,
-0.99494-0.085607j,
--0.93417-0.45786j,
--1.1268+0.19645j,
-0.98924-0.24188j,
--0.084482-1.0418j,
-0.12612-0.96274j,
-0.43426-0.94296j,
--0.3467-0.98741j,
--0.29758-0.9503j,
--0.22098-1.0108j,
--0.49866-1.0313j,
--0.5508-1.0289j,
--0.98711+0.34351j,
--0.5513+0.95981j,
--0.92713+0.58359j,
--0.64829+0.67835j,
--0.79674+0.67704j,
-0.04517-0.9787j,
-0.16587-1.0433j], dtype=np.complex64)
+1.1181-0.66994j,
+0.91954-0.13299j,
+0.94726-0.18677j,
+0.70255-0.62481j,
+1.1135-0.44208j,
+0.042972-1.0638j,
+0.19723-1.0855j,
+0.25116-0.95616j,
+-0.17402-0.91246j,
+0.14082-0.89012j,
+-0.84676-0.59564j,
+-0.96256-0.32477j,
+0.96903-0.16857j,
+-1.0874-0.56989j,
+0+0j,
+0.99513-0.24908j,
+-0.051223-0.93473j,
+0.096611-0.96612j,
+0.4442-0.89073j,
+-0.51102-0.85209j,
+-0.27417-0.96805j,
+-0.10254-1.0064j,
+-0.21471-0.90289j,
+-0.6638-0.86633j,
+-0.88048+0.19947j,
+-0.70341+0.71836j,
+-1.0133+0.23887j,
+-0.69349+0.66405j,
+-0.61236-0.69497j,
+-0.15895+0.96957j,
+-0.039497+1.0068j], dtype=np.complex64)
 
 # Open file
 with open(filepath, 'rb') as f:
@@ -99,4 +99,4 @@ with open(filepath, 'rb') as f:
         sys.stdout.flush()
 
 # Save file
-np.save("cygnus_raw_processed", output)
+np.save("casa_raw_processed", output)

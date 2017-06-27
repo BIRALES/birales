@@ -40,7 +40,11 @@ class Beamformer(ProcessingModule):
             raise PipelineError("Beamformer: Missing keys on configuration "
                                 "(nbeams, nants, antenna_locations, pointings)")
         self._nbeams = config.nbeams
-
+        
+        self._disable_antennas = None
+        if 'disable_antennas' in config.settings():
+            self._disable_antennas = config.disable_antennas
+        
         # Make sure that antenna locations is a list
         if type(config.antenna_locations) is not list:
             raise PipelineError("Beamformer: Expected list of antennas with long/lat/height as antenna locations")
@@ -92,6 +96,10 @@ class Beamformer(ProcessingModule):
         # Create pointing instance
         if self._pointing is None:
             self._pointing = Pointing(self._config, nsubs, nants)
+            logging.info(self._disable_antennas)
+            if self._disable_antennas is not None:
+                self._pointing.disable_antennas(self._disable_antennas)
+            
 
     def process(self, obs_info, input_data, output_data):
 
@@ -159,40 +167,20 @@ class Pointing(object):
 
         # Create initial weights
         self.weights = np.ones((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
-        # self.weights[:,:,4:] = 0+0j
-        self._temp_weights = np.ones((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
-        # self._temp_weights[:, :, 4:] = 0 + 0j
-
-        self._stop = Event()
-
-        # Ignore AstropyWarning
-        warnings.simplefilter('ignore', category=AstropyWarning)
-
-    def run(self):
-        """ Run thread """
-        while not self._stop.is_set():
-
-            # Get time once (so that all beams use the same time for pointing)
-            pointing_time = Time(datetime.datetime.utcnow(), scale='utc', location=self._reference_location)
-
-            for beam in range(self._nbeams):
-                self.point_array(beam, self._reference_pointing[0], self._reference_pointing[1],
-                                 self._pointings[beam][0], self._pointings[beam][1],
-                                 pointing_time)
-
-            self._lock.acquire()
-            self.weights = self._temp_weights.copy()
-            self._lock.release()
-            logging.info("Updated beamforming coefficients")
-            time.sleep(self._pointing_period)
-
-    def start_reading_weighs(self):
-        """ Lock weights for access to beamformer """
-        self._lock.acquire()
 
         # Generate weights
         for beam in range(self._nbeams):
             self.point_array(beam, self._reference_declination, self._pointings[beam][0], self._pointings[beam][1])
+
+
+        # Ignore AstropyWarning
+        warnings.simplefilter('ignore', category=AstropyWarning)
+
+    def disable_antennas(self, antennas):
+	""" Disable any antennas """
+        for antenna in antennas:
+            logging.info("Disabling antenna {}".format(antenna))
+            self.weights[:, :, antenna] = np.zeros((self._nsubs, self._nbeams))
 
     def point_array_static(self, beam, altitude, azimuth):
         """ Calculate the phase shift given the altitude and azimuth coordinates of a sky object as astropy angles
