@@ -53,8 +53,8 @@ config['antenna_locations'] = [[0,      0,  0],
 config['pointings'] = [[0, 0]]
 config['reference_declination'] = 64.515
 config['nbeams'] = len(config['pointings'])
-config['start_center_frequency'] = 410
-config['channel_bandwidth'] = 0.0001 # 0.078125
+config['start_center_frequency'] = 410.078125
+config['channel_bandwidth'] = 0.078125
 
 
 class Pointing(object):
@@ -189,7 +189,7 @@ class Pointing(object):
         :return: The phaseshift angles in radians
         """
         scale = np.array(
-            [-np.sin(azimuth) * np.cos(altitude), -np.cos(azimuth) * np.cos(altitude), -np.sin(altitude)])
+            [np.sin(azimuth) * np.cos(altitude), np.cos(azimuth) * np.cos(altitude), np.sin(altitude)])
 
         path_length = np.dot(scale, displacements.transpose())
 
@@ -274,41 +274,8 @@ if __name__ == "__main__":
 
     # Should be pointing to zenith (regardless of time)
     config['reference_antenna_location'] = [11.6459889, 44.52357778]
-    config['reference_declination'] = 58.905452
+    config['reference_declination'] = 40.781765
     config['pointings'] = [[0, 0]]
-
-    calib_coeffs = np.array([1+0j,
-    0.74462+0.73813j,
-    0.96279+0.16081j,
-    1.219+0.134j,
-    -0.32421+1.0584j,
-    -0.15246+1.3064j,
-    -1.0901+0.28728j,
-    -1.1169+0.33127j,
-    -0.61186-0.81568j,
-    -0.16366-0.98011j,
-    -0.54654-0.87314j,
-    0.51988-0.84227j,
-    0.87381+0.31297j,
-    -0.67283-0.73793j,
-    0.99691+0.29745j,
-    0.69452+0.90883j,
-    0.66416-0.77201j,
-    0.89022+0.5477j,
-    0.91526+0.32415j,
-    1.0374+0.040547j,
-    -0.532+0.9012j,
-    -0.4766+0.87434j,
-    -0.41321+0.94853j,
-    -0.68958+0.9147j,
-    -1.0694-0.46741j,
-    0.26409-1.0113j,
-    0.91304-0.62572j,
-    0.50817-0.97052j,
-    0.84344+0.41115j,
-    0.51221-0.91149j,
-    0.29735+0.93353j,
-    0.20658+1.036j], dtype=np.complex64)
 
     pointing = Pointing(config, 1, 32)
     print pointing.weights

@@ -238,7 +238,7 @@ class Pointing(object):
         alt, az = self._ha_dec_to_alt_az(ha, ref_dec + delta_dec, self._reference_location)
 
         # Point beam to required ALT AZ
-        print("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, ref_dec + delta_dec, alt.deg, az.deg))
+        logging.info("Beam {}. LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(beam, self._reference_location[1], ha.deg, ref_dec + delta_dec, alt.deg, az.deg))
         self.point_array_static(beam, alt, az)
 
     @staticmethod
@@ -278,7 +278,7 @@ class Pointing(object):
         :return: The phaseshift angles in radians
         """
         scale = np.array(
-            [-np.sin(azimuth) * np.cos(altitude), -np.cos(azimuth) * np.cos(altitude), -np.sin(altitude)])
+            [np.sin(azimuth) * np.cos(altitude), np.cos(azimuth) * np.cos(altitude), np.sin(altitude)])
 
         path_length = np.dot(scale, displacements.transpose())
 
