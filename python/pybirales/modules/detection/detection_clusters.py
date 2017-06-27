@@ -126,6 +126,13 @@ class DetectionCluster:
 
         return self.score > threshold
 
+    def is_valid(self):
+        if settings.detection.m_limit[0] <= self.m <= settings.detection.m_limit[1]:
+            if len(self.time_data) > 2:
+                return True
+
+        return False
+
     def is_similar_to(self, cluster, threshold):
         """
         Determine if two clusters are similar

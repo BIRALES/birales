@@ -78,7 +78,10 @@ def _create_clusters(beam):
     """
 
     # Select the data points that are non-zero and transform them in a time (x), channel (y) nd-array
-    data = np.column_stack(np.where(beam.snr > 0))
+    ndx = np.where(beam.snr > 0)
+
+    data = np.column_stack(ndx)
+    # c_data = np.hstack((data, beam.snr[ndx].reshape(ndx[0].shape[0], 1)))
 
     if not np.any(data):
         return []
@@ -134,7 +137,7 @@ def _create_clusters(beam):
         log.debug('P took %0.3f s', tt)
 
         # Add only those clusters that are linear
-        if cluster.is_linear(threshold=0.9):
+        if cluster.is_linear(threshold=0.9) and cluster.is_valid():
             log.debug('Cluster with m:%3.2f, c:%3.2f, n:%s and r:%0.2f is considered to be linear.', cluster.m,
                       cluster.c, len(channel_indices), cluster.score)
             clusters.append(cluster)
