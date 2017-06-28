@@ -273,6 +273,7 @@ def offline_birales_pipeline(configuration, debug):
     # generator = DummyDataGenerator(settings.generator)
     beamformer = Beamformer(settings.beamformer, reader.output_blob)
     ppf = PFB(settings.channeliser, beamformer.output_blob)
+    # persister = Persister(settings.persister, ppf.output_blob)
     detector = Detector(settings.detection, ppf.output_blob)
     terminator = Terminator(settings.terminator, ppf.output_blob)
 

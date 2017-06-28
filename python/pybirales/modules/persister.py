@@ -95,16 +95,18 @@ class Persister(ProcessingModule):
                 pickle.dump(obs_info.get_dict(), f)
             self._head_written = True
 
+        # Save data to output
+        output_data[:] = input_data[:].copy()
+
         # Ignore first 2 buffers (because of channeliser)
         self._counter += 1
         if self._counter <= 2:
-            return
-
-        # Save data to output
-        output_data[:] = input_data[:]
+            return obs_info
 
         # Transpose data and write to file
         # np.save(self._file, np.abs(input_data[self._beam_range, self._channel_range, :].T))
         temp_array = np.power(np.abs(input_data[self._beam_range, self._channel_range, :].T), 2).ravel()
         self._file.write(struct.pack('f' * len(temp_array), *temp_array))
         self._file.flush()
+
+        return obs_info
