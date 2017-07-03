@@ -8,3 +8,11 @@
     padding: 0 5px;
     margin: 10px 0;
 }
+
+.chart.plotly{
+    height: 450px
+}
+
+caption {
+    padding-left: 15px;
+}

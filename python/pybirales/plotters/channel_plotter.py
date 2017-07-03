@@ -103,15 +103,17 @@ class ChannelisedDataPlotter(Plotter):
 
             # input_data[index, 255, :] = input_data[index, 255, :]
 
+            #im = self._axes[index].imshow(10*np.log10(np.abs(input_data[index, :, :])),
+        #                                  aspect='auto', interpolation='none')
             im = self._axes[index].imshow(np.abs(input_data[index, :, :]),
-                                          aspect='auto', interpolation='none')
+                                      aspect='auto', interpolation='none')
             self._axes[index].set_xlabel("Time")
             self._axes[index].set_ylabel("Channel")
             self._axes[index].set_title("Beam %d" % beam)
 
         cax = self._figure.add_axes([0.95, 0.1, 0.01, 0.8])
         self._figure.subplots_adjust(right=0.9)
-        self._figure.colorbar(im, cax)
+    #    self._figure.colorbar(im, cax)
         self._figure.canvas.draw()
         self._figure.canvas.flush_events()
         plt.show(block=False)

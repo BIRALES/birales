@@ -25,23 +25,23 @@ build.sky.Dir = 'I_O/SkyModel/SkyModel.osm'
 
 ## Observation Settings
 # Phase Centre (Pointing) RA, Dec
-build.observation.PCRA = 30
-build.observation.PCDec = 90
+build.observation.PCRA = 336.0458 #Transit in 60mins from start, CasA RA 23:24:11
+build.observation.PCDec = 58.8
 # Observation Starts at "TStart" for an Observation of time "Length" divided into "TSteps"
 build.observation.TSteps = 1
-build.observation.TStart = str(date_save.day) + '-' + str(date_save.month) + '-' + str(date_save.year) + ' ' + str(date_save.hour) + ':' + str(date_save.minute) + ':' + str(date_save.second) + '.000'
-build.observation.Length = '00:01:00.000'
+build.observation.TStart = '13-04-2017 08:11:32.000'
+build.observation.Length = '00:00:01.000'
 # No of channels, starting from "StartFreq" (in mHz) with increments "IncreFreq" (in mHz) per channel
 build.observation.Chan = 1
-build.observation.StartFreq = 400
+build.observation.StartFreq = 410.0135
 build.observation.IncreFreq = 1
 
 ## Telescope Settings
 # TM Directory
 build.telescope.Dir = TM_name
 # Telescope Longitude, Latitude
-build.telescope.Long = 0
-build.telescope.Lati = 90
+build.telescope.Long = 11.6459889
+build.telescope.Lati = 44.52357778
 # Telescope Polarization Mode
 build.telescope.PolM = 'Scalar'
 
@@ -49,7 +49,7 @@ build.telescope.PolM = 'Scalar'
 # Visibility File Path
 build.interferometer.VisF_Dir = 'I_O/' + user_defined_name + '.vis'
 # Bandwith (in mHz) and Time Averaging (in sec)
-build.interferometer.Bandwith = 1
+build.interferometer.Bandwith = 20e6/256
 build.interferometer.TAverage = 1
 build.interferometer.MS_Dir= 'I_O/' + user_defined_name + '.ms'
 

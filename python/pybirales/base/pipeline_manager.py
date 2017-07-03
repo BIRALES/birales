@@ -3,13 +3,15 @@ import logging
 import re
 import signal
 import time
-from logging.config import fileConfig as set_log_config
-
+import yappi as profiler
 import configparser
+import logging as log
+from logging.config import fileConfig as set_log_config
 from matplotlib import pyplot as plt
-
+from datetime import datetime
 from pybirales.base import settings
-from pybirales.base.definitions import PipelineError
+from pybirales.base.definitions import PipelineError, NoDataReaderException
+from threading import Event
 
 
 class PipelineManager(object):
@@ -46,13 +48,19 @@ class PipelineManager(object):
             if "plot_update_rate" in self._config.settings():
                 self._plot_update_rate = self._config.plot_update_rate
 
+        self._stop = Event()
+
         # Set interrupt signal handler
         signal.signal(signal.SIGINT, self._signal_handler)
 
+        self.count = 0
+
     # Capturing interrupt signal
     def _signal_handler(self, signum, frame):
-        logging.info("Ctrl-C detected, stopping pipeline")
-        self.stop_pipeline()
+
+        if not self._stop.is_set():
+            logging.info("Ctrl-C detected, stopping pipeline")
+            self.stop_pipeline()
 
     def _configure_pipeline(self, config_file):
         """ Parse configuration file and set pipeline
@@ -137,6 +145,9 @@ class PipelineManager(object):
         try:
             logging.info("PyBIRALES: Starting")
 
+            if settings.manager.profile:
+                profiler.start()
+
             # Start all modules
             for module in self._modules:
                 module.start()
@@ -147,6 +158,9 @@ class PipelineManager(object):
             else:
                 self.wait_pipeline()
 
+        except NoDataReaderException as exception:
+            logging.info('Data finished %s', exception.__class__.__name__)
+            self.stop_pipeline()
         except Exception as exception:
             logging.exception('Pipeline error: %s', exception.__class__.__name__)
             # An error occurred, force stop all modules
@@ -162,7 +176,7 @@ class PipelineManager(object):
 
     def stop_pipeline(self):
         """ Stop pipeline (one at a time) """
-
+        self._stop.set()
         # Loop over all modules
         for module in self._modules:
             # Stop module
@@ -175,21 +189,30 @@ class PipelineManager(object):
                 tries += 1
                 # All done
 
+        if settings.manager.profile:
+            profiler.stop()
+            stats = profiler.get_func_stats()
+            profiling_file_path = settings.manager.profiler_file_path+'_{:%Y%m%d_%H:%M}.stats'.format(datetime.utcnow())
+            log.info('Profiling stopped. Dumping profiling statistics to %s', profiling_file_path)
+            stats.save(profiling_file_path, type='callgrind')
+
     @staticmethod
     def _initialise_logging(debug):
         """ Initialise logging functionality """
         set_log_config(settings.manager.loggging_config_file_path)
-        log = logging.getLogger()
+        logger = logging.getLogger()
         # Logging level should be INFO by default
-        log.setLevel(logging.INFO)
+        logger.setLevel(logging.INFO)
         if debug:
             # Change Logging level to DEBUG
-            log.setLevel(logging.DEBUG)
+            logger.setLevel(logging.DEBUG)
 
     def wait_pipeline(self):
         """ Wait for modules to finish processing """
+
         for module in self._modules:
-            while module.isAlive() and module._stop is False:
-                module.join(5.0)
+            while module.isAlive() and module.is_stopped is False:
+                module.join(5)
             if module.isAlive():
                 logging.warning("PipelineManager: Killing thread %s abruptly", module.name)
+

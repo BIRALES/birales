@@ -1,14 +1,13 @@
-var BeamCandidatesPlotter = function () {
+var BeamCandidatesSNRProfilePlotter = function () {
     var self = this;
-    this.name = "Beam Candidates";
+    this.name = "SNR profile";
     this.host = "";
     this._beam_candidates_url = this.host + '/monitoring/beam_candidates';
 
-    this._beam_candidates_plot_selector = 'live-beam-candidates-plot';
+    this._beam_candidates_plot_selector = 'live-beam-candidates-snr-profile-plot';
     this._beam_candidates_plot_selector_id = '#' + this._beam_candidates_plot_selector;
 
-    this._tx = $(this._beam_candidates_plot_selector_id).data('chart-tx') || 410.02;
-    this._beam_id = $(this._beam_candidates_plot_selector_id).data('chart-beam_id') || undefined;
+    this._tx = $(this._beam_candidates_plot_selector_id).data('chart-tx') || 410.0703125;
     this._max_channel = $(this._beam_candidates_plot_selector_id).data('chart-max_channel') || 410.0703125;
     this._min_channel = $(this._beam_candidates_plot_selector_id).data('chart-min_channel') || 398.9921875;
 
@@ -16,41 +15,29 @@ var BeamCandidatesPlotter = function () {
     this._min_time = $(this._beam_candidates_plot_selector_id).data('chart-min_time');
 
     this._title = '';
-    this._x_label = 'Channel (MHz)';
-    this._y_label = 'Date';
+    this._x_label = 'Date';
+    this._y_label = 'SNR';
 
     this._get_trace = function (beam_candidates) {
         var traces = [];
 
         $.each(beam_candidates, function (j, beam_candidate) {
-            var beam_candidates_trace = {
-                x: beam_candidate['data']['channel'],
-                y: beam_candidate['data']['time'],
-                text: beam_candidate['data']['snr'],
-                mode: 'markers',
-                name: 'beam ' + beam_candidate.beam_id + ' candidate'
-            };
-
             var beam_candidates_snr_trace = {
-                x: beam_candidate['data']['channel'],
+                x: beam_candidate['data']['time'],
                 y: beam_candidate['data']['snr'],
-                // xaxis: 'x2',
-                yaxis: 'y2',
-                text: beam_candidate['data']['time'],
-                mode: 'scatter',
+                text: beam_candidate['data']['channel'],
+                type: 'scatter',
                 showlegend: false,
                 name: 'beam ' + beam_candidate.beam_id + ' candidate'
             };
 
             if (beam_candidate['min_time'] < self._min_time) {
-                self._min_time = (new Date(beam_candidate['min_time'].$date)).toISOString();
+                self._min_time = beam_candidate['min_time'];
             }
 
             if (beam_candidate['max_time'] > self._max_time) {
-                self._max_time = (new Date(beam_candidate['max_time'].$date)).toISOString();
+                self._max_time = beam_candidate['max_time'];
             }
-
-            traces.push(beam_candidates_trace);
             traces.push(beam_candidates_snr_trace);
         });
 
@@ -58,19 +45,13 @@ var BeamCandidatesPlotter = function () {
     };
 
     this._get_layout = function () {
-        log.debug('Time Range: ', self._min_time, self._max_time);
         return {
             title: self._title,
             xaxis: {
                 title: self._x_label
             },
             yaxis: {
-                title: self._y_label,
-                domain: [0.0, 0.6]
-            },
-            yaxis2: {
-                title: 'SNR',
-                domain: [0.7, 1]
+                title: self._y_label
             },
             margin: {
                 l: 120,
@@ -78,26 +59,13 @@ var BeamCandidatesPlotter = function () {
                 b: 50,
                 t: 20,
                 pad: 10
-            },
-            // shapes: [
-            //     {
-            //         'type': 'line',
-            //         'x0': self._tx,
-            //         'y0': self._min_time,
-            //         'x1': self._tx,
-            //         'y1': self._max_time,
-            //         'line': {
-            //             'color': 'rgb(255, 0, 0)',
-            //             'width': 3
-            //         }
-            //     }
-            // ]
+            }
         };
 
     };
 
     this.publish = function () {
-        var beam_candidates = self._get_beam_candidates_data(self._beam_id, self._max_channel, self._min_channel, self._max_time, self._min_time);
+        var beam_candidates = self._get_beam_candidates_data(self._max_channel, self._min_channel, self._max_time, self._min_time);
 
         $.when(beam_candidates).done(function (beam_candidates) {
             if (beam_candidates) {
@@ -118,7 +86,7 @@ var BeamCandidatesPlotter = function () {
 
     this.update = function () {
         var from = self._max_time;
-        var beam_candidates = self._get_beam_candidates_data(self._beam_id, self._max_channel, self._min_channel, undefined, from);
+        var beam_candidates = self._get_beam_candidates_data(self._max_channel, self._min_channel, undefined, from);
 
         $.when(beam_candidates).done(function (beam_candidates) {
             if (beam_candidates) {
@@ -142,12 +110,11 @@ var BeamCandidatesPlotter = function () {
         $('#beam-candidates-last-updated').html('Detections since ' + self._min_time)
     };
 
-    this._get_beam_candidates_data = function (beam_id, max_channel, min_channel, max_time, min_time) {
+    this._get_beam_candidates_data = function (max_channel, min_channel, max_time, min_time) {
         return $.ajax({
             url: self._beam_candidates_url,
             method: 'get',
             data: {
-                beam_id: beam_id,
                 max_channel: max_channel,
                 min_channel: min_channel,
                 max_time: max_time,

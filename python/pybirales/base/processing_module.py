@@ -1,8 +1,9 @@
 import time
-import uuid
 import logging
 from abc import abstractmethod
-from threading import Thread
+import thread
+from threading import Thread, Event
+from pybirales.base.definitions import NoDataReaderException
 import time
 import logging as log
 
@@ -18,9 +19,6 @@ class Module(Thread):
         # Call superclass
         super(Module, self).__init__()
 
-        # Generate ID
-        self._id = uuid.uuid4()
-
         # Set module configuration
         self._config = config
 
@@ -31,8 +29,6 @@ class Module(Thread):
 
         # Set module input and output blobs
         self._input = input_blob
-        if self._input is not None:
-            self._input.register_reader(self.id)
 
         if self._no_output:
             self._output = None
@@ -41,9 +37,8 @@ class Module(Thread):
 
         # Stopping clause
         self.daemon = True
-        self._stop = False
-        self._is_stopped = True
-
+        self._stop = Event()
+        # self._is_stopped = True
 
     @abstractmethod
     def generate_output_blob(self):
@@ -54,18 +49,12 @@ class Module(Thread):
     def stop(self):
         """ Stops the current thread """
         logging.info('Stopping %s module', self.name)
-        self._stop = True
-        logging.info('Stopping %s module', self.name)
-
-    @property
-    def id(self):
-        """ Unique object id """
-        return self._id
+        self._stop.set()
 
     @property
     def is_stopped(self):
         """ Specified whether the thread body is running or not """
-        return self._is_stopped
+        return self._stop.is_set()
 
     @property
     def output_blob(self):
@@ -89,11 +78,12 @@ class Generator(Module):
         Thread body
         :return:
         """
-        self._is_stopped = False
-        while not self._stop:
+
+        self._stop.clear()
+        while not self._stop.is_set():
             time.sleep(1)
 
-        self._is_stopped = True
+        self._stop.set()
 
     def request_output_blob(self):
         """
@@ -142,13 +132,13 @@ class ProcessingModule(Module):
 
     def run(self):
         """ Thread body """
-        self._is_stopped = False
-        while not self._stop:
+        while not self._stop.is_set():
+
             # Get pointer to input data if required
             input_data, obs_info = None, None
             if self._input is not None:
                 # This can be released immediately since, data has already been deep copied
-                input_data, obs_info = self._input.request_read(self._id)
+                input_data, obs_info = self._input.request_read()
 
             # Get pointer to output data if required
             output_data = None
@@ -156,9 +146,19 @@ class ProcessingModule(Module):
                 output_data = self._output.request_write()
 
             # Perform required processing
-            s = time.time()
-            res = self.process(obs_info, input_data, output_data)
-            log.info('%s finished in %0.3f seconds', self.name, time.time() - s)
+            try:
+                s = time.time()
+                res = self.process(obs_info, input_data, output_data)
+                tt = time.time() - s
+                if tt < 3.556:
+                    log.info('%s finished in %0.3f s', self.name, tt)
+                else:
+                    log.warning('%s finished in %0.3f s', self.name, tt)
+            except NoDataReaderException:
+                logging.info("Data finished")
+            except KeyboardInterrupt:
+                logging.info("Ctrl-C signal arrived in thread")
+
             if res is not None:
                 obs_info = res
 
@@ -168,10 +168,9 @@ class ProcessingModule(Module):
 
             # Release reader lock
             if self._input is not None:
-                self._input.release_read(self.id)
+                self._input.release_read()
 
             # A short sleep to force a context switch (since locks do not force one)
             time.sleep(0.001)
 
-        self._is_stopped = True
-
+        log.info('%s killed', self.name)

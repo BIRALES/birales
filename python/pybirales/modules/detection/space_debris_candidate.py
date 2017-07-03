@@ -1,16 +1,11 @@
 import numpy as np
 import datetime
 import logging as log
-import time as time2
-
 from pybirales.base import settings
-
-np.set_printoptions(precision=20)
-from astropy.time import Time
 
 
 class DetectionCluster:
-    def __init__(self, model, beam, indices, time_data, channels, snr):
+    def __init__(self, model, beam, time_data, channels, snr):
         """
         Initialisation of the Detection cluster Object
 
@@ -34,7 +29,6 @@ class DetectionCluster:
         self.to_delete = False
         self.to_save = True
 
-        self.indices = indices
         self.time_data = time_data
         self.channel_data = channels
         self.snr_data = snr
@@ -44,14 +38,12 @@ class DetectionCluster:
         self.min_channel = np.min(self.channel_data)
         self.max_channel = np.max(self.channel_data)
 
-        self.m = np.nan
-        self.c = np.nan
-        self.score = np.nan
+        self.m = None
+        self.c = None
+        self._score = None
 
         # Compare the detection cluster's data against a (linear) model
-        t = time2.time()
         self.fit_model(model=self._model, channel_data=self.channel_data, time_data=self.time_data)
-        log.debug('Fitting on %s data points took %0.3f s', len(self.channel_data), time2.time() - t)
 
     def fit_model(self, model, channel_data, time_data):
         """
@@ -60,37 +52,12 @@ class DetectionCluster:
         :return:
         """
 
-        if settings.detection.select_highest_snr:
-            c = np.array(channel_data)
-            ts = np.array(time_data)
-            if np.all(c == c[0]) or np.all(ts == ts[0]):
-                self.score = np.nan
-                self.m = np.nan
-                self.c = np.nan
-                return
-
-            s = np.array(self.snr_data)
-
-            ndx = np.lexsort(keys=(s, ts))
-            index = np.empty(len(ts), 'bool')
-            index[-1] = True
-            index[:-1] = ts[1:] != ts[:-1]
-            i = ndx[index]
-
-            # channels = np.array([[channel, ss] for channel, ss in zip(c[i], s[i])])
-            channels = np.array([[channel] for channel in c[i]])
-            time = np.array([t.unix for t in ts[i]])
-        else:
-            channels = np.array([[channel] for channel in channel_data])
-            time = np.array([t.unix for t in time_data])
+        # todo - apply filter to only compare 1 channel (highest snr) per time sample
+        channels = np.array([[channel] for channel in channel_data])
+        time = np.array([t.unix for t in time_data])
 
         try:
-            t = time2.time()
             model.fit(channels, time)
-
-            t2 = time2.time() - t
-            log.debug('Fitting 2 took %0.3f s', t2)
-
         except ValueError:
             log.debug('Linear interpolation failed. No inliers found.')
         else:
@@ -101,18 +68,10 @@ class DetectionCluster:
             # Remove outliers - select data points that are inliers
             channels = channels[inlier_mask]
             time = time[inlier_mask]
-            if settings.detection.select_highest_snr:
-                snr = self.snr_data[i][inlier_mask]
-            else:
-                snr = self.snr_data[inlier_mask]
 
-            self.score = model.estimator_.score(channels, time)
+            self._score = model.estimator_.score(channels, time)
             self.m = model.estimator_.coef_[0]
             self.c = model.estimator_.intercept_
-
-            self.channel_data = np.array([channel[0] for channel in channels])
-            self.time_data = [Time(t, format='unix') for t in time]
-            self.snr_data = np.array(snr)
 
     def is_linear(self, threshold):
         """
@@ -124,14 +83,7 @@ class DetectionCluster:
         :return:
         """
 
-        return self.score > threshold
-
-    def is_valid(self):
-        if settings.detection.m_limit[0] <= self.m <= settings.detection.m_limit[1]:
-            if len(self.time_data) > 2:
-                return True
-
-        return False
+        return self._score > threshold
 
     def is_similar_to(self, cluster, threshold):
         """
@@ -144,25 +96,8 @@ class DetectionCluster:
         :return:
         """
 
-        temp = DetectionCluster(model=self._model,
-                                beam=cluster.beam,
-                                indices=[np.concatenate([self.indices[0], cluster.indices[0]]),
-                                         np.concatenate([self.indices[1], cluster.indices[1]])],
-                                time_data=np.concatenate([self.time_data, cluster.time_data]),
-                                channels=np.concatenate([self.channel_data, cluster.channel_data]),
-                                snr=np.concatenate([self.snr_data, cluster.snr_data]))
-
-        merge = self._pd(cluster.m, self.m) <= threshold and self._pd(cluster.c, self.c) <= threshold
-        if temp.score >= self.score or merge:
-            # log.warning('Cluster will improve on merging. Old merge result is %s', merge)
-            return True
-        else:
-            # log.warning('Won\'t merge clusters %s and %s. Old merge result is %s', len(cluster.time_data),
-            #             len(self.time_data), merge)
-            # log.warning('Gradient PD :%s ', self._pd(cluster.m, self.m))
-            # log.warning('Coeff PD: %s', self._pd(cluster.c, self.c))
-            # log.warning('Score: %s %s', temp.score, self.score)
-            return False
+        # Check if the gradients and the intercepts of the two clusters are similar
+        return self._pd(cluster.m, self.m) <= threshold and self._pd(cluster.c, self.c) <= threshold
 
     @staticmethod
     def _pd(a, b):
@@ -176,9 +111,6 @@ class DetectionCluster:
         mean = np.mean([a, b])
         try:
             percentage_difference = abs(diff / mean)
-
-            if np.isnan(percentage_difference):
-                percentage_difference = 1.0
         except RuntimeWarning:
             percentage_difference = 1.0
 
@@ -195,8 +127,6 @@ class DetectionCluster:
 
         return DetectionCluster(model=self._model,
                                 beam=cluster.beam,
-                                indices=[np.concatenate([self.indices[0], cluster.indices[0]]),
-                                         np.concatenate([self.indices[1], cluster.indices[1]])],
                                 time_data=np.concatenate([self.time_data, cluster.time_data]),
                                 channels=np.concatenate([self.channel_data, cluster.channel_data]),
                                 snr=np.concatenate([self.snr_data, cluster.snr_data]))
@@ -267,7 +197,7 @@ class DetectionCluster:
             'model': {
                 'm': self.m,
                 'c': self.c,
-                'score': self.score,
+                'score': self._score,
             },
             'beam_id': self.beam_id,
             'tx': settings.observation.transmitter_frequency,
@@ -277,7 +207,6 @@ class DetectionCluster:
             'max_channel': self.max_channel,
             'created_at': datetime.datetime.utcnow(),
             'configuration_id': self.beam.configuration_id,
-            'noise': self.beam.noise,
             'data': {
                 'time': [b.iso for b in self.time_data],
                 'channel': self.channel_data.tolist(),

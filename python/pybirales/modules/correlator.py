@@ -11,18 +11,20 @@ from pybirales.blobs.receiver_data import ReceiverBlob
 from pybirales.blobs.dummy_data import DummyBlob
 
 
-@numba.jit(nopython=True, nogil=True)
+#@numba.jit(nopython=True, nogil=True)
 def correlate(input_data, output_data, nchans, nants, integrations, nsamp):
     for c in xrange(nchans):
         baseline = 0
         for antenna1 in xrange(nants):
             for antenna2 in xrange(antenna1 + 1, nants):
                 for i in xrange(nsamp / integrations):
-                    output_data[i, c, baseline, 0] = \
-                        np.dot(input_data[0, c, antenna1,
-                               i * integrations:(i + 1) * integrations],
-                               np.conj(input_data[0, c, antenna2,
-                                       i * integrations:(i + 1) * integrations]))
+#                    output_data[i, c, baseline, 0] = \
+#                        np.dot(input_data[0, c, antenna1,
+#                               i * integrations:(i + 1) * integrations],
+#                              np.conj(input_data[0, c, antenna2,
+#                                       i * integrations:(i + 1) * integrations]))
+                     output_data[i, c, baseline, 0] = np.correlate(input_data[0, c, antenna1, i * integrations:(i + 1) * integrations], 
+                                                                   input_data[0, c, antenna2, i * integrations:(i + 1) * integrations])
                 baseline += 1
 
 
@@ -99,6 +101,42 @@ class Correlator(ProcessingModule):
         if self._nsamp % self._integrations != 0:
             logging.warning("Number of integration not factor of number of samples, skipping buffer")
             return
+
+	calib_coeffs = np.array([1+0j,
+	0.74462-0.73813j,
+	0.96279-0.16081j,
+	1.219-0.134j,
+	1.1013+0.11142j,
+	1.2633+0.36585j,
+	0.68739-0.89354j,
+	0.73833-0.9012j,
+	1.0109-0.1333j,
+	0.81491-0.56862j,
+	1.0063-0.22017j,
+	0.23828-0.96069j,
+	0.69746-0.61241j,
+	-0.35428+0.93366j,
+	0.81765-0.64325j,
+	0.31159-1.1006j,
+	-0.78607+0.64746j,
+	0.5285+0.90175j,
+	0.30446+0.922j,
+	0.018304+1.038j,
+	0.11882+1.0397j,
+	0.079158+0.99265j,
+	-0.0089506+1.0346j,
+	0.25724+1.1163j,
+	-0.46037+1.0724j,
+	0.88436+0.55704j,
+	1.094-0.16808j,
+	1.0345+0.36037j,
+	0.67881+0.64781j,
+	-0.67647+0.79722j,
+	0.97867-0.045864j,
+	1.0432-0.16661j], dtype=np.complex64)
+	
+	# Apply coeffs
+#	input_data *= calib_coeffs
 
         # Transpose the data so the we can parallelise over frequency
         self._current_input = np.transpose(input_data, (0, 1, 3, 2)).copy()

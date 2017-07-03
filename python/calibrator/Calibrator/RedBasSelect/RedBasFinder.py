@@ -27,6 +27,11 @@ class RedBasFinder:
         self.Bas_1 = indices_out[:,0]
         self.Bas_2 = indices_out[:,1]
 
+        text_file = open("I_O/Test.txt", "w")
+        for i in range(len(self.Bas_1)):   
+            text_file.write(str(self.Bas_1[i]) + ', ' + str(self.Bas_2[i]) + '\n')
+        text_file.close() 
+
         # Group all inter-redundant baselines by same group number
         grp_num = -1
         for i in range(0, len(self.Bas_1)):
@@ -43,6 +48,8 @@ class RedBasFinder:
                 grp_num += 1
 		self.basl_ind.append(self.Bas_1[i])
 		self.basl_grp.append(grp_num)
+            if ((self.Bas_1[i] in self.basl_ind) and (self.Bas_2[i] in self.basl_ind)):
+                basl_already_selected = 1
 
         #Add_other_non_redundant_unique_baselines_and_their_indices
         for i in range(0, len(self.basl_ind)):
@@ -51,11 +58,11 @@ class RedBasFinder:
 		self.basl_ind.append(i)
 		self.basl_grp.append(grp_num)
 
-        #Sort_baselines_by_baseline_number_for_A_matrix
-        basl_sort = sorted(zip(self.basl_ind, self.basl_grp), key=lambda x: x[0])
+        #Sort_baselines_by_baseline_group_number_for_A_matrix
+        basl_sort = sorted(zip(self.basl_grp, self.basl_ind), key=lambda x: x[0])
         basl_sort = np.array(basl_sort)
-        self.basl_ind = basl_sort[:,0]
-        self.basl_grp = basl_sort[:,1] 
+        self.basl_grp = basl_sort[:,0]
+        self.basl_ind = basl_sort[:,1] 
 
     def parse(self, name):
 

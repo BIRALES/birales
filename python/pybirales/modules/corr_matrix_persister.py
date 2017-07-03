@@ -51,12 +51,12 @@ class CorrMatrixPersister(ProcessingModule):
         """ Create HDF5 file for storing correlation matrix"""
         f = h5py.File(self._filepath, "w")
 
-        dset = f.create_dataset("Vis", (64, obs_info['nsubs'], obs_info['nbaselines'],
+        dset = f.create_dataset("Vis", (obs_info['nsamp'], obs_info['nsubs'], obs_info['nbaselines'],
                                         obs_info['nstokes']),
                                 maxshape=(None, obs_info['nsubs'], obs_info['nbaselines'], obs_info['nstokes']),
                                 dtype='c16')
 
-        dset[:] = np.zeros(((64, obs_info['nsubs'], obs_info['nbaselines'],
+        dset[:] = np.zeros(((obs_info['nsamp'], obs_info['nsubs'], obs_info['nbaselines'],
                              obs_info['nstokes'])), dtype=np.complex64)
 
         # Create baselines data set
@@ -107,3 +107,5 @@ class CorrMatrixPersister(ProcessingModule):
         f.close()
 
         self._counter += 1
+
+        return obs_info

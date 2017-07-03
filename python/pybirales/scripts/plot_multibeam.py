@@ -3,6 +3,29 @@ from optparse import OptionParser
 import numpy as np, struct
 import sys, math, os, sys
 import glob, re, operator
+import matplotlib
+
+def extract_values(values):
+    """ Extract values from string representation of list
+    :param values: String representation of values
+    :return: List of values
+    """
+
+    # Return list
+    converted = []
+
+    # Loop over all comma separated values
+    for item in values.split(","):
+        # Check if item contains a semi-colon
+        if item.find(":") > 0:
+            index = item.find(":")
+            lower = item[:index]
+            upper = item[index+1:]
+            converted.extend(range(int(lower), int(upper) + 1))
+        else:
+            converted.append(int(item))
+
+    return converted
 
 if __name__ == "__main__":
 
@@ -16,51 +39,38 @@ if __name__ == "__main__":
         help='Declination difference between beams. Default value 1')
     p.add_option('-n', '--name', dest='name', type='string', default="Cygnus",
         help='Source name. Default Cygnus')
-    p.add_option('-c', '--center', dest='center', type='int', default=0,
+    p.add_option('-c', '--center', dest='center', type='int', default=15,
         help='Central beam (or beam on source). Default value 0')
-    p.add_option('-t', '--tsamp', dest='tsamp', type='float', default=51.2e-6,
-        help='Sampling Time. Default value 51.2e-6')
+    p.add_option('-t', '--tsamp', dest='tsamp', type='float', default=0.0131072,
+        help='Sampling Time. Default value 0.0131072')
+    p.add_option('-b', '--nbeams', dest='nbeams', type='int', default=32,
+        help='Number of beams. Default 32')
+    p.add_option('-i', '--integrations', dest='integrations', type='int', default=64,
+        help='Number of integrations. Default 64')
+    p.add_option('-p', '--to-plot', dest='to_plot', default='15',
+        help='Beams to plot. Default 15')
 
     opts, args = p.parse_args(sys.argv[1:])
 
-    # Get filenames
-#    files = {}
-#    for f in glob.glob(sys.argv[1]):
-#        number = int(re.match(".*beam(?P<number>\d+).*", f).groupdict()['number'])
-#        files[number] = f
+    if len(sys.argv) < 2:
+        print("File pattern required")
+        exit(0)
 
-    files  = {
-    11: "/data/10_04_2017/beam_test_1491843414_beam11_timeseries_64.dat",
-    12: "/data/10_04_2017/beam_test_1491843414_beam12_timeseries_64.dat",
-    13: "/data/10_04_2017/beam_test_1491843414_beam13_timeseries_64.dat",
-    14: "/data/10_04_2017/beam_test_1491843414_beam14_timeseries_64.dat",
-    15: "/data/10_04_2017/beam_test_1491843414_beam15_timeseries_64.dat",
-    16: "/data/10_04_2017/beam_test_1491843414_beam16_timeseries_64.dat",
-    17: "/data/10_04_2017/beam_test_1491843414_beam17_timeseries_64.dat",
-    18: "/data/10_04_2017/beam_test_1491843414_beam18_timeseries_64.dat",
-    19: "/data/10_04_2017/beam_test_1491843414_beam19_timeseries_64.dat",
-#    0 : "/data/27_05_2016/casa/CasA_beam0_timeseries_64.dat",
-#    1 : "/data/27_05_2016/casa/CasA_beam1_timeseries_64.dat",
-#    2 : "/data/27_05_2016/casa/CasA_beam2_timeseries_64.dat",
-#    3 : "/data/27_05_2016/casa/CasA_beam3_timeseries_64.dat",
-#    4 : "/data/27_05_2016/casa/CasA_beam4_timeseries_64.dat",
-#    5 : "/data/27_05_2016/casa/CasA_beam5_timeseries_64.dat",
-#    6 : "/data/27_05_2016/casa/CasA_beam6_timeseries_64.dat",
-#    7 : "/data/27_05_2016/casa/CasA_beam7_timeseries_64.dat",
-#    8 : "/data/27_05_2016/casa/CasA_beam8_timeseries_64.dat",
-#    9 : "/data/27_05_2016/casa/CasA_beam9_timeseries_64.dat",
-#    10 : "/data/27_05_2016/casa/CasA_beam10_timeseries_64.dat",
-#    11 : "/data/27_05_2016/casa/CasA_beam11_timeseries_64.dat",
-#    12 : "/data/27_05_2016/casa/CasA_beam12_timeseries_64.dat",
-    }
+    # Extract beams to plot
+    opts.to_plot = extract_values(opts.to_plot)
 
+    # Generate filenames
+    files = {}
+    for i in range(opts.nbeams):
+        files[i] = "{}_beam{}_timeseries_{}.dat".format(args[0], i, opts.integrations)
 
-    # Plot all the files
-    for k, v in files.iteritems():
-        data = open(v, 'rb').read()
+    markers = matplotlib.markers.MarkerStyle.markers.keys()
+
+    # Plot required beams
+    for i, beam in enumerate(opts.to_plot):
+        data = open(files[beam], 'rb').read()
         data = np.array(struct.unpack("f" * (len(data) / 4), data))
-        #x = [ (0 + i * opts.tsamp) / 60.0 for i in range(len(data))]
-        plt.plot(20*np.log10(data), label="Beam %d" % k)
+        plt.plot(np.arange(0, len(data)) * opts.tsamp / 60, 10 * np.log10(data), label="Beam %d" % beam)#, marker=markers[i])
 
     plt.legend()
     plt.title("%s transit (Beam %d on source)" % (opts.name, opts.center))

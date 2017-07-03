@@ -4,8 +4,8 @@ import ephem
 import math
 
 day = str(datetime.now()) # day = '1998/8/10 23:10:00'
-longitude = ephem.degrees('11.64595')
-latitude = ephem.degrees('44.524')
+longitude = ephem.degrees('11.6459889')
+latitude = ephem.degrees('44.52357778')
 
 
 def juldate2ephem(num):
@@ -60,5 +60,8 @@ if __name__ == "__main__":
     # B0329
     eqToTopo('03:32:59.368', '+54:34:43.57')
 
+    # Lat
+    eqToTopo('03:32:59.368', '+44:31:45.0')
+
     # Example (az and el in radians)
-    topoToEq(degrees(180), degrees(46.1837))
+    # topoToEq(degrees(180), degrees(46.1837))

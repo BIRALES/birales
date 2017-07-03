@@ -1,5 +1,7 @@
+import time
 import ctypes
 import logging
+import datetime
 import numpy as np
 from enum import Enum
 from pybirales.base import settings
@@ -33,7 +35,7 @@ class Receiver(Generator):
             raise PipelineError("Receiver: Receiver does not need an input block")
 
         # Sanity checks on configuration
-        if {'nsamp', 'nants', 'nsubs', 'port', 'interface', 'frame_size',
+        if {'nsamp', 'nants', 'nsubs', 'port', 'interface', 'frame_size', 'start_time',
             'frames_per_block', 'nblocks', 'nbits', 'complex', 'npols'} - set(config.settings()) != set():
             raise PipelineError("Receiver: Missing keys on configuration "
                                 "(nsamp, nants, nsubs, npols, ports, interface, frame_size, frames_per_block, nblocks)")
@@ -44,7 +46,7 @@ class Receiver(Generator):
         self._npols = config.npols
         self._complex = config.complex
         self._samples_per_second = settings.observation.samples_per_second
-        self._start_time = 0
+        self._start_time = config.start_time
 
         # Define data type
         if self._nbits == 64 and self._complex:
@@ -60,7 +62,7 @@ class Receiver(Generator):
         receiver_instance = self
 
         # Initialise DAQ
-        self._callback_type = ctypes.CFUNCTYPE(None, ctypes.POINTER(ctypes.c_int8), ctypes.c_double)
+        self._callback_type = ctypes.CFUNCTYPE(None, ctypes.POINTER(ctypes.c_int8), ctypes.c_double, ctypes.c_uint, ctypes.c_uint)
         self._daq = None
         self._initialise_library()
         self._initialise_receiver()
@@ -78,7 +80,7 @@ class Receiver(Generator):
                             datatype=self._datatype)
 
     def _get_callback_function(self):
-        def data_callback(data, timestamp):
+        def data_callback(data, timestamp, arg1, arg2):
             """ Data callback
             :param data: Data pointer
             :param timestamp: timestamp of first sample in the data """
@@ -95,7 +97,7 @@ class Receiver(Generator):
             obs_info['sampling_time'] = 1.0 / settings.observation.samples_per_second
             obs_info['start_center_frequency'] = settings.observation.start_center_frequency
             obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
-            obs_info['timestamp'] = timestamp
+            obs_info['timestamp'] = datetime.datetime.utcfromtimestamp(timestamp)
             obs_info['nsubs'] = self._nsubs
             obs_info['nsamp'] = self._nsamp
             obs_info['nants'] = self._nants
@@ -110,7 +112,7 @@ class Receiver(Generator):
             # Release output blob
             self.release_output_blob(obs_info)
 
-            logging.info("Receiver: Received buffer")
+            logging.info("Receiver: Received buffer ({})".format(obs_info['timestamp'].time()))
 
         return self._callback_type(data_callback)
 
@@ -122,6 +124,7 @@ class Receiver(Generator):
 
         # Start receiver
         if self._daq.startReceiver(self._config.interface,
+                                   self._config.ip,
                                    self._config.frame_size,
                                    self._config.frames_per_block,
                                    self._config.nblocks) != Result.Success.value:
@@ -153,7 +156,7 @@ class Receiver(Generator):
         self._daq.setReceiverConfiguration.restype = None
 
         # Define startReceiver function
-        self._daq.startReceiver.argtypes = [ctypes.c_char_p, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32]
+        self._daq.startReceiver.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32]
         self._daq.startReceiver.restype = ctypes.c_int
 
         # Define addReceiverPort function
@@ -161,7 +164,7 @@ class Receiver(Generator):
         self._daq.addReceiverPort.restype = ctypes.c_int
 
         # Define startBeamConsumer function
-        self._daq.startBiralesConsumer.argtypes = [ctypes.c_uint32]
+        self._daq.startBiralesConsumer.argtypes = [ctypes.c_uint32, ctypes.c_uint32, ctypes.c_float]
         self._daq.startBiralesConsumer.restype = ctypes.c_int
 
         # Define setBeamConsumerCallback function

@@ -6,3 +6,4 @@ from RedBasSelect import MSReader
 from RedBasSelect import RedBasFinder
 from Correlator import Correlator
 from RedBasCal import RBCal
+from RedBasCal import RBCal2

@@ -10,6 +10,7 @@ setup(
               'pybirales.instrument',
               'pybirales.modules',
               'pybirales.modules.detection',
+              'pybirales.modules.detection.strategies',
               'pybirales.modules.monitoring',
               'pybirales.plotters'],
     url='https://bitbucket.org/lessju/birales',
@@ -34,7 +35,8 @@ setup(
                       "scikit-learn",
                       "h5py",
                       "click",
-                      "flask"],
+                      "flask",
+                      "flask-compress"],
 )
 
 # TODO: Create /var/log/birales logging directory

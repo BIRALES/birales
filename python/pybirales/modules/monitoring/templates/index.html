@@ -1,99 +1,31 @@
-<!doctype html>
-<html>
-<head>
-    <title>BIRALES | Monitoring</title>
+{% extends "includes/layout.html" %}
+{% block title %}Monitoring{% endblock %}
 
-    <!-- Bootstrap core CSS -->
-    <link rel="stylesheet" href="/static/node_modules/bootstrap/dist/css/bootstrap.min.css">
-    <!--  Light Bootstrap Table core CSS -->
-    <link href="/static/themes/lbd/assets/css/light-bootstrap-dashboard.css" rel="stylesheet"/>
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="/static/node_modules/font-awesome/css/font-awesome.min.css">
-    <link href='http://fonts.googleapis.com/css?family=Roboto:400,700,300' rel='stylesheet' type='text/css'>
-    <link href="/static/themes/lbd/assets/css/pe-icon-7-stroke.css" rel="stylesheet"/>
-
-    <link rel="stylesheet" href="/static/css/app.css">
-</head>
-
-<body>
-
-<div class="wrapper">
-    <div class="sidebar" data-color="blue" data-image="static/img/nord_cross.png">
-        <div class="sidebar-wrapper">
-            <div class="logo">
-                <a href="/" class="simple-text">
-                    BIRALES 1.1
-                </a>
-            </div>
-
-            <ul class="nav">
-                <li class="active">
-                    <a href="index.html">
-                        <i class="pe-7s-graph"></i>
-                        <p>Dashboard</p>
-                    </a>
-                </li>
-                <li>
-                    <a href="archive.html">
-                        <i class="pe-7s-note2"></i>
-                        <p>Archive</p>
-                    </a>
-                </li>
-
-            </ul>
-        </div>
-    </div>
-
-    <div class="main-panel">
-        <nav class="navbar navbar-default navbar-fixed">
-            <div class="container-fluid">
-                <div class="navbar-header">
-                    <button type="button" class="navbar-toggle" data-toggle="collapse"
-                            data-target="#navigation-example-2">
-                        <span class="sr-only">Toggle navigation</span>
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                    </button>
-                    <a class="navbar-brand" href="#">Monitoring</a>
-                </div>
-            </div>
-        </nav>
-
-        <div class="content">
-            <div class="container-fluid">
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="header">
-                                <h4 class="title">Beam Candidates</h4>
-                                <p class="category">Live</p>
-                            </div>
-                            <div class="content">
-                                <div id="live-beam-candidates-plot"></div>
-                                <div class="footer">
-                                    <hr/>
-                                    <div class="stats">
-                                        <i class="fa fa-history"></i> <span id="beam-candidates-last-updated"></span>
-                                    </div>
-                                </div>
-
-
-                            </div>
-                        </div>
+{% block content %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="header">
+                        <h4 class="title">Beam Candidates</h4>
+                        <p class="category">Live</p>
                     </div>
-                </div>
 
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="header">
-                                <h4 class="title">Orbit Determination Data</h4>
-                                <p class="category">Live</p>
-                            </div>
-                            <div class="content">
-                                <div id="live-beam-candidates-od-table"></div>
-                                <div class="footer"></div>
+                    <div class="content">
+                        <div class="chart plotly" id="live-beam-candidates-plot"
+                             data-chart-tx="{{ tx }}"
+                             data-chart-beam_id="{{ beam_id }}"
+                             data-chart-min_channel="{{ min_channel }}"
+                             data-chart-max_channel="{{ max_channel }}"
+                             data-chart-min_time="{{ min_time }}"
+                             data-chart-max_time="{{ max_time }}"
+                        >
+
+                        </div>
+                        <div class="footer">
+                            <hr/>
+                            <div class="stats">
+                                <i class="fa fa-history"></i> <span id="beam-candidates-last-updated"></span>
                             </div>
                         </div>
                     </div>
@@ -101,66 +33,81 @@
             </div>
         </div>
 
-        <footer class="footer">
-            <div class="container-fluid">
-                <nav class="pull-left">
-                    <ul class="nav-footer-logos">
-                        <li>
-                            <a class="nav-footer-logo" href="#">
-                                <img src="static/img/inaf_logo.svg"/>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="nav-footer-logo" href="#">
-                                <img src="static/img/uom_logo.svg"/>
-                            </a>
-                        </li>
-                    </ul>
-                </nav>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="header">
+                        <h4 class="title">SNR Profile</h4>
+                        <p class="category">Live</p>
+                    </div>
 
-                <p class="copyright pull-right">
-                    &copy;
-                    <script>document.write(new Date().getFullYear())</script>
-                    <a href="">BIRALES</a>
-                </p>
+                    <div class="content">
+                        <div class="plotly" id="live-beam-candidates-snr-profile-plot"
+                             data-chart-tx="{{ tx }}"
+                             data-chart-beam_id="{{ beam_id }}"
+                             data-chart-min_channel="{{ min_channel }}"
+                             data-chart-max_channel="{{ max_channel }}"
+                             data-chart-min_time="{{ min_time }}"
+                             data-chart-max_time="{{ max_time }}"
+                        >
+
+                        </div>
+                        <div class="footer">
+                            <hr/>
+                            <div class="stats">
+                                <i class="fa fa-history"></i> <span id="beam-candidates-last-updated"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </footer>
+        </div>
 
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="header">
+                        <h4 class="title">Orbit Determination Data</h4>
+                        <p class="category">Live</p>
+                    </div>
+                    <div class="content">
+                        <div id="live-beam-candidates-od-table">
+                            <p>Click <a href="od_input.html">here</a> for the orbit determination table</p>
+                        </div>
+
+                        <div class="footer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
+{% endblock %}
 
-</body>
+{% block scripts %}
+    {{ super() }}
+    <script src="{{ url_for('static', filename='js/live.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/snr_profile.js') }}"></script>
 
+    <script>
+        $(document).ready(function () {
+            var poll = {{ poll }};
+            var interval = 5;
+            var plotters = [
+                new BeamCandidatesPlotter(),
+                new BeamCandidatesSNRProfilePlotter()
+            ];
 
-<!-- Bootstrap -->
-<script src="/static/node_modules/loglevel/dist/loglevel.min.js"></script>
-<script src="/static/node_modules/jquery/dist/jquery.min.js"></script>
-<script src="/static/node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
-<script src="/static/themes/lbd/assets/js/light-bootstrap-dashboard.js"></script>
-<script src="/static/node_modules/plotly.js/dist/plotly.min.js"></script>
-<script src="/static/js/live.js"></script>
+            log.info('Initialise the plotters', poll);
+            $.each(plotters, function (i, plotter) {
+                plotter.publish();
 
-<script>
-    $(document).ready(function () {
-        var poll = false;
-        log.setLevel('debug');
-        var interval = 2;
-        var plotters = [
-            new BeamCandidatesPlotter()
-        ];
-
-        log.info('Initialise the plotters');
-        $.each(plotters, function (i, plotter) {
-            plotter.publish();
-
-            if (poll) {
-                // Poll for updates
-                setInterval(function () {
-                    plotter.update()
-                }, interval * 1000);
-            }
+                if (poll) {
+                    // Poll for updates
+                    setInterval(function () {
+                        plotter.update()
+                    }, interval * 1000);
+                }
+            });
         });
-    });
-</script>
-
-</html>
+    </script>
+{% endblock %}

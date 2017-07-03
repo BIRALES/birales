@@ -22,3 +22,5 @@ singledispatch==3.4.0.3
 six==1.10.0
 tornado==4.4.2
 Werkzeug==0.11.11
+yappi
+sklearn

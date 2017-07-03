@@ -155,9 +155,6 @@ class PFB(ProcessingModule):
         obs_info['channel_bandwidth'] /= self._nchans
         obs_info['start_center_frequency'] -= obs_info['channel_bandwidth'] * self._nchans / 2.0
 
-        logging.debug("Input data: %s shape: %s", np.sum(input_data), input_data.shape)
-        logging.debug("Output data: %s shape: %s", np.sum(output_data), output_data.shape)#
-
         return obs_info
 
     # ------------------------------------------- HELPER FUNCTIONS ---------------------------------------
@@ -212,5 +209,5 @@ class PFB(ProcessingModule):
                                      self._filtered[p, b, c, :], self._ntaps, self._nchans)
 
                     # Fourier transform and save output
-                    self._current_output[b, c * self._nchans: (c + 1) * self._nchans] = \
+                    self._current_output[p, b, c * self._nchans: (c + 1) * self._nchans] = \
                         np.abs(np.fft.fft(self._filtered[p, b, c, :], axis=0))

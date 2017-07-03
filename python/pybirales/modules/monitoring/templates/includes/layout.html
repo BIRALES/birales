@@ -1,0 +1,108 @@
+<html>
+<head>
+    {% block head %}
+        <title>BIRALES | {% block title %}{% endblock %}</title>
+
+        <link rel="shortcut icon" href="{{ url_for('static', filename='img/birales_logo.png') }}">
+
+        <!-- Bootstrap core CSS -->
+        <link rel="stylesheet" href="{{ url_for('static', filename='node_modules/bootstrap/dist/css/bootstrap.min.css') }}">
+        <!--  Light Bootstrap Table core CSS -->
+        <link rel="stylesheet" href="{{ url_for('static', filename='themes/lbd/assets/css/light-bootstrap-dashboard.css') }}">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="{{ url_for('static', filename='node_modules/font-awesome/css/font-awesome.min.css') }}">
+        <link href='http://fonts.googleapis.com/css?family=Roboto:400,700,300' rel='stylesheet' type='text/css'>
+        <link rel="stylesheet" href="{{ url_for('static', filename='themes/lbd/assets/css/pe-icon-7-stroke.css') }}"/>
+
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}"/>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}"/>
+    {% endblock %}
+</head>
+<body>
+<div class="wrapper">
+    <div class="sidebar" data-color="blue" data-image="{{ url_for('static', filename='img/nord_cross.png') }}">
+        <div class="sidebar-wrapper">
+            <div class="logo">
+                <a href="/" class="simple-text">
+                    BIRALES 1.1
+                </a>
+            </div>
+
+            <ul class="nav">
+                <li class="active">
+                    <a href="">
+                        <i class="pe-7s-graph"></i>
+                        <p>Dashboard</p>
+                    </a>
+                </li>
+                <li>
+                    <a href="">
+                        <i class="pe-7s-note2"></i>
+                        <p>Archive</p>
+                    </a>
+                </li>
+
+            </ul>
+        </div>
+    </div>
+
+    <div class="main-panel">
+        <nav class="navbar navbar-default navbar-fixed">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse"
+                            data-target="#navigation-example-2">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="#">Monitoring</a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+
+        <footer class="footer">
+            <div class="container-fluid">
+                <nav class="pull-left">
+                    <ul class="nav-footer-logos">
+                        <li>
+                            <a class="nav-footer-logo" href="#">
+                                <img src="{{ url_for('static', filename='img/inaf_logo.svg') }}"/>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-footer-logo" href="#">
+                                <img src="{{ url_for('static', filename='img/uom_logo.svg') }}"/>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+
+                <p class="copyright pull-right">                &copy;
+                    <script>document.write(new Date().getFullYear())</script>
+                    <a href="">BIRALES</a>
+                </p>
+            </div>
+        </footer>
+    </div>
+</div>
+
+{% block scripts %}
+    <!-- Bootstrap -->
+    <script src="{{ url_for('static', filename='node_modules/loglevel/dist/loglevel.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='node_modules/bootstrap/dist/js/bootstrap.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='themes/lbd/assets/js/light-bootstrap-dashboard.js') }}"></script>
+    <script src="{{ url_for('static', filename='node_modules/plotly.js/dist/plotly.min.js') }}"></script>
+
+    <script>
+        log.setLevel('debug');
+    </script>
+{% endblock %}
+</body>
+</html>
