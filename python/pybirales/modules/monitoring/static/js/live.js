@@ -28,7 +28,7 @@ var BeamCandidatesPlotter = function () {
                 y: beam_candidate['data']['time'],
                 text: beam_candidate['data']['snr'],
                 mode: 'markers',
-                name: 'beam ' + beam_candidate.beam_id + ' candidate'
+                name: 'beam ' + beam_candidate.beam_id
             };
 
             var beam_candidates_snr_trace = {
@@ -69,7 +69,7 @@ var BeamCandidatesPlotter = function () {
                 domain: [0.0, 0.6]
             },
             yaxis2: {
-                title: 'SNR',
+                title: 'SNR (dB)',
                 domain: [0.7, 1]
             },
             margin: {

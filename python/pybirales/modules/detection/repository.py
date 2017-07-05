@@ -191,10 +191,12 @@ class BeamCandidateRepository(Repository):
             # Get JSON representation of candidates
             to_save = [candidate.to_json() for candidate in beam_candidates]
             # Save candidates to the database
-            if len(beam_candidates) is 1:
-                self.database.beam_candidates.insert_one(to_save[0])
-            else:
-                self.database.beam_candidates.insert_many(to_save)
+            # if len(beam_candidates) is 1:
+            #     self.database.beam_candidates.insert_one(to_save[0])
+            # else:
+            #     self.database.beam_candidates.insert_many(to_save)
+            for candidate in to_save:
+                self.database.beam_candidates.insert_one(candidate)
 
         except mongo.errors.ServerSelectionTimeoutError:
             log.error('MongoDB is not running. Detected beam candidates could not be saved.')

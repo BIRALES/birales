@@ -2,6 +2,7 @@ from pybirales.modules.detection.repository import BeamCandidateRepository
 from pybirales.base import settings
 import logging as log
 from multiprocessing.queues import Queue
+import time
 
 
 class BeamCandidatesQueue:
@@ -9,36 +10,34 @@ class BeamCandidatesQueue:
         self.queue = [[] for _ in range(n_beams)]
         self._max_size = 20
         self.repository = None
+        self.beam_id = None
 
         self.candidates_to_delete = []
-
-        # super(BeamCandidatesQueue, self).__init__(maxsize=self._max_size)
-        # self.repository = BeamCandidateRepository()
 
     def set_repository(self, repository):
         self.repository = repository
 
-    def enqueue(self, new_cluster):
-        # Check if beam candidate is similar to candidate that was already added to the queue
-        # all_clusters_compared = False
-        # beam_queue = self.queue[new_cluster.beam_id]
-        # n = 0
-        # while True:
-        #     queue_length = len(self.queue[new_cluster.beam_id])
-        #
-        #     if n == queue_length:
-        #         break
+    def set_candidates(self, candidates):
+        self.queue = candidates
 
-        beam_queue = self.queue[new_cluster.beam_id]
+    def get_candidates(self, beam_id):
+        return self.queue[beam_id]
+
+    def enqueue(self, new_cluster):
+        t1 = time.time()
+        self.beam_id = new_cluster.beam_config['beam_id']
+        beam_queue = self.queue[self.beam_id]
         # log.warning('Queue %s length is %s (before merging)', new_cluster.beam_id, len(beam_queue))
         for i, old_cluster in enumerate(beam_queue):
             if old_cluster.to_delete:
                 continue
 
+            t1 = time.time()
             if new_cluster.is_similar_to(old_cluster, threshold=0.2):
+                # log.warning('Is similar took %1.3f s', time.time() - t1)
                 # log.debug('Merging clusters [%s -> %s] in beam_queue %s (length: %s)',
                 #           len(old_cluster.merge(new_cluster).time_data), len(old_cluster.time_data),
-                          # new_cluster.beam_id, len(beam_queue))
+                #           new_cluster.beam_id, len(beam_queue))
                 # mark old cluster as 'to delete'
                 old_cluster.delete()
                 # beam_queue.remove(old_cluster)
@@ -55,16 +54,16 @@ class BeamCandidatesQueue:
             # log.warning('Inserted a cluster of size %s', len(new_cluster.time_data))
 
         # log.warning('Queue %s length is %s (after merging)', new_cluster.beam_id, len(beam_queue))
-        # log.debug('Enqueuing took %1.3f s', time.time() - t1)
+        # log.warning('Enqueuing took %1.3f s', time.time() - t1)
         # Pop the last element if queue is full
-        self.dequeue(new_cluster.beam_id)
+        self.dequeue(self.beam_id)
 
         if settings.detection.save_candidates:
             # Persist beam candidates
             self.save()
 
-        # log.warning('Queue %s length is %s (after merging + deletion)', new_cluster.beam_id,
-        #             len(self.queue[new_cluster.beam_id]))
+            # log.warning('Queue %s length is %s (after merging + deletion)', new_cluster.beam_id,
+            #             len(self.queue[new_cluster.beam_id]))
 
     def dequeue(self, beam_id):
         """
@@ -88,6 +87,7 @@ class BeamCandidatesQueue:
             self.repository.delete(candidates_to_delete)
 
         # add new clusters
+        # print(candidates_to_save)
         if candidates_to_save:
             self.repository.persist(candidates_to_save)
 
@@ -98,3 +98,8 @@ class BeamCandidatesQueue:
         # Garbage collect - remove candidates marked for deletion from queue
         for q, queue in enumerate(self.queue):
             self.queue[q] = [candidate for candidate in queue if not candidate.to_delete]
+
+    def summary(self, msg):
+        print('Queue', id(self), ' Summary', msg)
+        for q, queue in enumerate(self.queue[:5]):
+            print('Q' + str(q) + ' size:', len(queue))

@@ -72,7 +72,12 @@
                     </div>
                     <div class="content">
                         <div id="live-beam-candidates-od-table">
-                            <p>Click <a href="od_input.html">here</a> for the orbit determination table</p>
+                            <p>Click <a href="{{ url_for('get_orbit_determination_table',
+                                    beam_id=beam_id,
+                                    min_channel=min_channel,
+                                    max_channel=max_channel,
+                                    min_time=min_time,
+                                    max_time=max_time) }}">here</a> for the orbit determination table</p>
                         </div>
 
                         <div class="footer"></div>

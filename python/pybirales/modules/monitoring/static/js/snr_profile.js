@@ -8,6 +8,7 @@ var BeamCandidatesSNRProfilePlotter = function () {
     this._beam_candidates_plot_selector_id = '#' + this._beam_candidates_plot_selector;
 
     this._tx = $(this._beam_candidates_plot_selector_id).data('chart-tx') || 410.0703125;
+    this._beam_id = $(this._beam_candidates_plot_selector_id).data('chart-beam_id') || undefined;
     this._max_channel = $(this._beam_candidates_plot_selector_id).data('chart-max_channel') || 410.0703125;
     this._min_channel = $(this._beam_candidates_plot_selector_id).data('chart-min_channel') || 398.9921875;
 
@@ -26,7 +27,7 @@ var BeamCandidatesSNRProfilePlotter = function () {
                 x: beam_candidate['data']['time'],
                 y: beam_candidate['data']['snr'],
                 text: beam_candidate['data']['channel'],
-                type: 'scatter',
+                type: 'markers',
                 showlegend: false,
                 name: 'beam ' + beam_candidate.beam_id + ' candidate'
             };
@@ -65,7 +66,7 @@ var BeamCandidatesSNRProfilePlotter = function () {
     };
 
     this.publish = function () {
-        var beam_candidates = self._get_beam_candidates_data(self._max_channel, self._min_channel, self._max_time, self._min_time);
+        var beam_candidates = self._get_beam_candidates_data(self._beam_id, self._max_channel, self._min_channel, self._max_time, self._min_time);
 
         $.when(beam_candidates).done(function (beam_candidates) {
             if (beam_candidates) {
@@ -86,7 +87,7 @@ var BeamCandidatesSNRProfilePlotter = function () {
 
     this.update = function () {
         var from = self._max_time;
-        var beam_candidates = self._get_beam_candidates_data(self._max_channel, self._min_channel, undefined, from);
+        var beam_candidates = self._get_beam_candidates_data(self._beam_id, self._max_channel, self._min_channel, undefined, from);
 
         $.when(beam_candidates).done(function (beam_candidates) {
             if (beam_candidates) {
@@ -110,11 +111,12 @@ var BeamCandidatesSNRProfilePlotter = function () {
         $('#beam-candidates-last-updated').html('Detections since ' + self._min_time)
     };
 
-    this._get_beam_candidates_data = function (max_channel, min_channel, max_time, min_time) {
+    this._get_beam_candidates_data = function (beam_id, max_channel, min_channel, max_time, min_time) {
         return $.ajax({
             url: self._beam_candidates_url,
             method: 'get',
             data: {
+                beam_id: beam_id,
                 max_channel: max_channel,
                 min_channel: min_channel,
                 max_time: max_time,

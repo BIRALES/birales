@@ -1,6 +1,7 @@
 import numpy as np
 import datetime
-from pybirales.modules.detection.filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter, PepperNoiseFilter
+from pybirales.modules.detection.filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter, \
+    PepperNoiseFilter
 from pybirales.modules.detection.repository import BeamDataRepository
 from pybirales.base import settings
 import warnings
@@ -13,7 +14,7 @@ class Beam:
     The Beam class from which beam object can be created.
     """
 
-    def __init__(self, beam_id, obs_info, beam_data):
+    def __init__(self, beam_id, obs_info, channels, time, beam_data):
         """
         Initialise the Beam class object
 
@@ -25,39 +26,26 @@ class Beam:
         self.id = beam_id
         self.name = 'Beam ' + str(beam_id)
 
-        self.ra = settings.beamformer.pointings[self.id][0] if settings.beamformer.pointings[self.id] else 0.0
-        self.dec = settings.beamformer.pointings[self.id][1] if settings.beamformer.pointings[self.id] else 0.0
+        self.ra = obs_info['pointings'][self.id][0] if obs_info['pointings'][self.id] else 0.0
+        self.dec = obs_info['pointings'][self.id][1] if obs_info['pointings'][self.id] else 0.0
 
-        self.ha = 0.0
-        self.top_frequency = 0.0
-        self.frequency_offset = 0.0
-
-        self.observation_name = settings.observation.name
-        self.tx = settings.observation.transmitter_frequency
+        self.observation_name = obs_info['settings']['observation']['name']
+        self.tx = obs_info['transmitter_frequency']
         self.configuration_id = obs_info['configuration_id']
-        self.n_beams = obs_info['nbeams']
-        self.n_channels = obs_info['nchans']
-        self.n_sub_channels = obs_info['nchans'] / 2
-        self.f_ch1 = obs_info['start_center_frequency']
-        self.f_off = obs_info['channel_bandwidth']
-        self.sampling_rate = settings.observation.samples_per_second
-        self.n_samples = obs_info['nsamp']
-
         self.name = 'Observation ' + self.observation_name
 
-        self.t_0 = obs_info['timestamp']
-        self.dt = obs_info['sampling_time']
-        self.time = np.arange(0, beam_data.shape[3])
         self.noise = obs_info['noise']
-
-        self.channels = np.arange(self.f_ch1, self.f_ch1 + self.f_off * self.n_channels, self.f_off)
+        self.channels = channels
+        self.time = time
         self.snr = self._set_snr(beam_data)
 
-    def _rms(self, data):
-        return np.sqrt(np.mean(data**2.0))
+    @staticmethod
+    def _rms(data):
+        return np.sqrt(np.mean(np.power(data, 2.0)))
 
-    def _power(self, data):
-        return np.abs(data) ** 2
+    @staticmethod
+    def _power(data):
+        return np.power(np.abs(data), 2.0)
 
     def _set_snr(self, data):
         """
@@ -68,7 +56,6 @@ class Beam:
         """
 
         data = data[0, self.id, :, :].T
-
         # version 3 - start
         p_v = self._power(data)
         p_n = self.noise
@@ -94,3 +81,12 @@ class Beam:
         self._apply_filter(PepperNoiseFilter())
 
         return self
+
+    def get_config(self):
+        return {
+            'beam_id': self.id,
+            'beam_ra': self.ra,
+            'beam_dec': self.dec,
+            'configuration_id': self.configuration_id,
+            'beam_noise': self.noise,
+        }

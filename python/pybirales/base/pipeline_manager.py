@@ -12,6 +12,7 @@ from datetime import datetime
 from pybirales.base import settings
 from pybirales.base.definitions import PipelineError, NoDataReaderException
 from threading import Event
+import os
 
 
 class PipelineManager(object):
@@ -59,8 +60,14 @@ class PipelineManager(object):
     def _signal_handler(self, signum, frame):
 
         if not self._stop.is_set():
-            logging.info("Ctrl-C detected, stopping pipeline")
-            self.stop_pipeline()
+            if os.getppid() != os.getpid():
+                logging.info("Ctrl-C detected by process %s, stopping pipeline", os.getpid())
+
+                self.stop_pipeline()
+
+                # if os.getppid() != os.getpid():
+                #     # (hack) Send a kill signal to the parent process
+                #     os.kill(os.getppid(), signal.SIGTERM)
 
     def _configure_pipeline(self, config_file):
         """ Parse configuration file and set pipeline
@@ -196,6 +203,8 @@ class PipelineManager(object):
             log.info('Profiling stopped. Dumping profiling statistics to %s', profiling_file_path)
             stats.save(profiling_file_path, type='callgrind')
 
+
+
     @staticmethod
     def _initialise_logging(debug):
         """ Initialise logging functionality """
@@ -209,10 +218,13 @@ class PipelineManager(object):
 
     def wait_pipeline(self):
         """ Wait for modules to finish processing """
-
         for module in self._modules:
             while module.isAlive() and module.is_stopped is False:
                 module.join(5)
+
             if module.isAlive():
                 logging.warning("PipelineManager: Killing thread %s abruptly", module.name)
 
+            if module.is_stopped:
+                logging.info("Thread %s was stopped. Stopping pipeline.", module.name)
+                self.stop_pipeline()
