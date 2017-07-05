@@ -29,7 +29,7 @@ class RawDataReader(ProcessingModule):
         self._nsubs = config.nsubs
         self._npols = config.npols
         self._filepath = config.filepath
-        self._read_count = -2
+        self._read_count = 0
 
         # Call superclass initialiser
         super(RawDataReader, self).__init__(config, input_blob)
@@ -37,7 +37,7 @@ class RawDataReader(ProcessingModule):
         # Open file
         try:
             self._f = open(self._filepath, 'rb')
-            self._f.seek(self._nsamp * self._nants * 8 * 35)
+            # self._f.seek(self._nsamp * self._nants * 8 * 35)
         except IOError:
             log.error('Data not found in %s. Exiting.', self._filepath)
             sys.exit()

@@ -29,7 +29,7 @@ class Detector(ProcessingModule):
         # Flag that indicates whether the configuration was persisted
         self._config_persisted = False
 
-        self.pool = Pool(12)
+        self.pool = Pool(settings.detection.n_procs)
 
         self.counter = 0
 

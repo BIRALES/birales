@@ -89,4 +89,5 @@ class Beam:
             'beam_dec': self.dec,
             'configuration_id': self.configuration_id,
             'beam_noise': self.noise,
+            'tx': self.tx,
         }

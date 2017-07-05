@@ -243,7 +243,7 @@ class DetectionCluster:
                 'score': self.score,
             },
             'beam_id': self.beam_config['beam_id'],
-            'tx': settings.observation.transmitter_frequency,
+            'tx': self.beam_config['tx'],
             'min_time': self.min_time,
             'max_time': self.max_time,
             'min_channel': self.min_channel,
