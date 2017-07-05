@@ -29,7 +29,7 @@ class RawDataReader(ProcessingModule):
         self._nsubs = config.nsubs
         self._npols = config.npols
         self._filepath = config.filepath
-        self._read_count = -2
+        self._read_count = 0
 
         # Call superclass initialiser
         super(RawDataReader, self).__init__(config, input_blob)
@@ -70,6 +70,7 @@ class RawDataReader(ProcessingModule):
         try:
             data = data.reshape((1, 1, self._nsamp, self._nants))
         except ValueError:
+            raise NoDataReaderException
             sys.exit()
 
         output_data[:] = data
@@ -83,6 +84,8 @@ class RawDataReader(ProcessingModule):
         obs_info['nsamp'] = self._nsamp
         obs_info['nants'] = self._nants
         obs_info['npols'] = self._npols
+
+        obs_info['transmitter_frequency'] = self._config['settings']['observation']['transmitter_frequency']
         obs_info['start_center_frequency'] = self._config['start_center_frequency']
         obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
         obs_info['timestamp'] = self._config['timestamp'] + datetime.timedelta(seconds=self._nsamp * obs_info['sampling_time']) * self._read_count

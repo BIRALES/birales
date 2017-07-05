@@ -1,17 +1,17 @@
-import logging as log
-import time
 import numpy as np
+from functools import partial
 
-from pybirales.base import settings
 from pybirales.base.definitions import PipelineError
 from pybirales.base.processing_module import ProcessingModule
 from pybirales.blobs.channelised_data import ChannelisedBlob
 from pybirales.modules.detection.queue import BeamCandidatesQueue
 from pybirales.modules.detection.repository import BeamCandidateRepository
 from pybirales.modules.detection.repository import ConfigurationRepository
-from pybirales.modules.detection.strategies.m_dbscan import MultiProcessingDBScanDetectionStrategy, init
-from pybirales.modules.detection.strategies.strategies import SpaceDebrisDetection
+from pybirales.modules.detection.strategies.m_dbscan import m_detect
 from multiprocessing import Pool
+
+from pybirales.base import settings
+from pybirales.modules.detection.beam import Beam
 
 
 class Detector(ProcessingModule):
@@ -19,12 +19,6 @@ class Detector(ProcessingModule):
         if type(input_blob) is not ChannelisedBlob:
             raise PipelineError(
                 "Detector: Invalid input data type, should be BeamformedBlob, DummyBlob or ReceiverBlob")
-
-        # Load detection algorithm dynamically (specified in config file)
-        self.detection_strategy = SpaceDebrisDetection(MultiProcessingDBScanDetectionStrategy())
-
-        # Repository Layer for saving the beam candidates to the Data store
-        self._candidates_repository = BeamCandidateRepository()
 
         # Repository Layer for saving the configuration to the Data store
         self._configurations_repository = ConfigurationRepository()
@@ -35,13 +29,19 @@ class Detector(ProcessingModule):
         # Flag that indicates whether the configuration was persisted
         self._config_persisted = False
 
-        self.pool = Pool(8, init, ())
+        self.pool = Pool(settings.detection.n_procs)
 
         self.counter = 0
 
         self.noise = []
 
         self.mean_noise = 0
+
+        self.channels = None
+
+        self.time = None
+
+        self._doppler_mask = None
 
         super(Detector, self).__init__(config, input_blob)
 
@@ -62,25 +62,62 @@ class Detector(ProcessingModule):
             self.mean_noise = np.mean(self.noise)
         return float(self.mean_noise)
 
+    def _get_doppler_mask(self, channels, obs_info):
+        if self._doppler_mask is None:
+            a = obs_info['transmitter_frequency'] + settings.detection.doppler_range[0] * 1e-6
+            b = obs_info['transmitter_frequency'] + settings.detection.doppler_range[1] * 1e-6
+
+            self._doppler_mask = np.bitwise_and(channels < b, channels > a)
+
+        return self._doppler_mask
+
+    def _get_channels(self, obs_info):
+        if self.channels is None:
+            self.channels = np.arange(obs_info['start_center_frequency'],
+                                      obs_info['start_center_frequency'] + obs_info['channel_bandwidth'] * obs_info[
+                                          'nchans'],
+                                      obs_info['channel_bandwidth'])
+            self.channels = self.channels[self._get_doppler_mask(self.channels, obs_info)]
+
+        return self.channels
+
+    def _get_time(self, obs_info):
+        if self.time is None:
+            self.time = np.arange(0, obs_info['nsamp'])
+        return self.time
+
     def process(self, obs_info, input_data, output_data):
         """
         Run the Space Debris Detector pipeline
         :return void
         """
+        channels = self._get_channels(obs_info)
+        time = self._get_time(obs_info)
+        doppler_mask = self._get_doppler_mask(channels, obs_info)
 
         # estimate the noise from the data
         obs_info['noise'] = self._get_noise_estimation(input_data)
+
+        if settings.detection.doppler_subset:
+            input_data = input_data[:, :, doppler_mask, :]
 
         if not self._config_persisted:
             self._configurations_repository.persist(obs_info)
             self._config_persisted = True
 
-        # Process the beam data to detect the beam candidates
-        tt = time.time()
-        new_beam_candidates = self.detection_strategy.detect(obs_info, input_data, self.pool, self._debris_queue)
-        log.debug('Candidates detected in %0.3f s', time.time() - tt)
+        beam_candidates = []
+        beams = [Beam(beam_id=n_beam,
+                      obs_info=obs_info,
+                      channels=channels,
+                      time=time,
+                      beam_data=input_data)
+                 for n_beam in range(settings.detection.beam_range[0], settings.detection.beam_range[1])]
 
-        log.info('%s beam candidates, were found', len(new_beam_candidates))
+        if settings.detection.multi_proc:
+            func = partial(m_detect, obs_info, self._debris_queue)
+            beam_candidates = self.pool.map(func, beams)
+
+        self._debris_queue.set_candidates(beam_candidates)
 
         self.counter += 1
 

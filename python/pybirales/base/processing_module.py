@@ -6,6 +6,7 @@ from threading import Thread, Event
 from pybirales.base.definitions import NoDataReaderException
 import time
 import logging as log
+import settings
 
 
 class Module(Thread):
@@ -150,12 +151,13 @@ class ProcessingModule(Module):
                 s = time.time()
                 res = self.process(obs_info, input_data, output_data)
                 tt = time.time() - s
-                if tt < 3.556:
+                if tt < settings.receiver.nsamp / settings.observation.samples_per_second:
                     log.info('%s finished in %0.3f s', self.name, tt)
                 else:
                     log.warning('%s finished in %0.3f s', self.name, tt)
             except NoDataReaderException:
                 logging.info("Data finished")
+                self.stop()
             except KeyboardInterrupt:
                 logging.info("Ctrl-C signal arrived in thread")
 
