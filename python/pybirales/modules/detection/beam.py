@@ -2,8 +2,6 @@ import numpy as np
 import datetime
 from pybirales.modules.detection.filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter, \
     PepperNoiseFilter
-from pybirales.modules.detection.repository import BeamDataRepository
-from pybirales.base import settings
 import warnings
 
 warnings.filterwarnings('error')
