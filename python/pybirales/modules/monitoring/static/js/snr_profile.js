@@ -28,7 +28,7 @@ var BeamCandidatesSNRProfilePlotter = function () {
                 y: beam_candidate['data']['snr'],
                 text: beam_candidate['data']['channel'],
                 type: 'markers',
-                showlegend: false,
+                // showlegend: false,
                 name: 'beam ' + beam_candidate.beam_id + ' candidate'
             };
 

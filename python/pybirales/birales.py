@@ -17,7 +17,7 @@ from pybirales.modules.detector import Detector
 from pybirales.plotters.channel_plotter import ChannelisedDataPlotter
 from pybirales.plotters.antenna_plotter import AntennaPlotter
 from pybirales.plotters.bandpass_plotter import BandpassPlotter
-from pybirales.modules.monitoring.server import app
+# from pybirales.modules.monitoring.server import app
 
 
 @click.group()

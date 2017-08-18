@@ -36,7 +36,8 @@ setup(
                       "h5py",
                       "click",
                       "flask",
-                      "flask-compress", 'sklearn'],
+                      "flask-compress",
+                      'sklearn'],
 )
 
 # TODO: Create /var/log/birales logging directory
