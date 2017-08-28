@@ -60,11 +60,13 @@ class PipelineManager(object):
     def _signal_handler(self, signum, frame):
 
         if not self._stop.is_set():
-            if os.getppid() != os.getpid():
-                logging.info("Ctrl-C detected by process %s, stopping pipeline", os.getpid())
+            # if os.getppid() != os.getpid():
+            #     logging.info("Ctrl-C detected by process %s, stopping pipeline", os.getpid())
+            #
+            #     self.stop_pipeline()
+            logging.info("Ctrl-C detected by process %s, stopping pipeline", os.getpid())
 
-                self.stop_pipeline()
-
+            self.stop_pipeline()
                 # if os.getppid() != os.getpid():
                 #     # (hack) Send a kill signal to the parent process
                 #     os.kill(os.getppid(), signal.SIGTERM)
@@ -168,10 +170,14 @@ class PipelineManager(object):
         except NoDataReaderException as exception:
             logging.info('Data finished %s', exception.__class__.__name__)
             self.stop_pipeline()
+        except KeyboardInterrupt:
+            logging.info('Keyboard interrupt')
         except Exception as exception:
             logging.exception('Pipeline error: %s', exception.__class__.__name__)
             # An error occurred, force stop all modules
             self.stop_pipeline()
+        else:
+            logging.info('Pipeline stopped')
 
     def plotting_loop(self):
         """ Plotting loop """
@@ -203,11 +209,15 @@ class PipelineManager(object):
             log.info('Profiling stopped. Dumping profiling statistics to %s', profiling_file_path)
             stats.save(profiling_file_path, type='callgrind')
 
-
-
     @staticmethod
     def _initialise_logging(debug):
-        """ Initialise logging functionality """
+        """
+        Initialise logging functionality
+
+        :param debug:
+        :return:
+        """
+
         set_log_config(settings.manager.loggging_config_file_path)
         logger = logging.getLogger()
         # Logging level should be INFO by default
@@ -216,15 +226,24 @@ class PipelineManager(object):
             # Change Logging level to DEBUG
             logger.setLevel(logging.DEBUG)
 
-    def wait_pipeline(self):
-        """ Wait for modules to finish processing """
+    def is_module_stopped(self):
         for module in self._modules:
-            while module.isAlive() and module.is_stopped is False:
-                module.join(5)
-
-            if module.isAlive():
-                logging.warning("PipelineManager: Killing thread %s abruptly", module.name)
-
             if module.is_stopped:
-                logging.info("Thread %s was stopped. Stopping pipeline.", module.name)
+                return True
+        return False
+
+    def wait_pipeline(self):
+        """
+        Wait for modules to finish processing. If a module is stopped, the pipeline is
+        stopped
+
+        :return:
+        """
+
+        while True:
+            if self.is_module_stopped():
                 self.stop_pipeline()
+                break
+            else:
+                # Suspend the loop for a short time
+                time.sleep(1)

@@ -48,6 +48,7 @@ class PFB(ProcessingModule):
         self._bin_width_scale = 1.0
         self._nchans = config.nchans
         self._ntaps = config.ntaps
+        self._use_numba = config.use_numba
 
         self._nthreads = 2
         if 'nthreads' in config.settings():
@@ -61,6 +62,7 @@ class PFB(ProcessingModule):
 
         # Create thread pool for parallel PFB
         self._thread_pool = ThreadPool(self._nthreads)
+        # self._thread_pool = Pool(settings.detection.n_procs)
 
         # Variable below will be populated in generate_output_blob
         self._filter = None
@@ -104,8 +106,9 @@ class PFB(ProcessingModule):
         self._generate_filter()
 
         # Create temporary array for filtered data
-        self._filtered = np.zeros((self._npols, self._nbeams, self._nsubs, self._nchans, int(self._nsamp / self._nchans)),
-                                  dtype=np.complex64)
+        self._filtered = np.zeros(
+            (self._npols, self._nbeams, self._nsubs, self._nchans, int(self._nsamp / self._nchans)),
+            dtype=np.complex64)
 
         # Create temporary input array
         self._temp_input = np.zeros((self._npols, self._nbeams, self._nsubs, self._nsamp + self._nchans * self._ntaps),
@@ -146,7 +149,10 @@ class PFB(ProcessingModule):
             self._temp_input[:, :, :, self._nchans * self._ntaps:] = np.transpose(input_data, (0, 3, 1, 2))
 
         # Channelise
-        self.channelise_parallel()
+        if self._use_numba:
+            self.channelise_parallel()
+        else:
+            self.channelise_serial()
 
         # Update observation information
         obs_info['nchans'] = self._nchans * obs_info['nsubs']
@@ -195,6 +201,7 @@ class PFB(ProcessingModule):
        :return:
        """
         self._thread_pool.map(self.channelise_thread, range(self._nbeams))
+
 
     def channelise_serial(self):
         """
