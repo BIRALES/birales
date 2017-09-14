@@ -31,8 +31,7 @@ class Beamformer(ProcessingModule):
 
     def __init__(self, config, input_blob=None):
         # This module needs an input blob of type channelised
-        if type(input_blob) not in [DummyBlob, ReceiverBlob]:
-            raise PipelineError("Beamformer: Invalid input data type, should be DummyBlob or ReceiverBlob")
+        self._validate_data_blob(input_blob, valid_blobs=[DummyBlob, ReceiverBlob])
 
         # Sanity checks on configuration
         if {'nbeams', 'antenna_locations', 'pointings', 'reference_antenna_location', 'reference_declination'} \

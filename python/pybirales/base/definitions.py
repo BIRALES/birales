@@ -59,4 +59,14 @@ class PipelineError(Exception):
 
 
 class NoDataReaderException(Exception):
+    """
+    Pipeline has reached the end of the data file
+    """
+    pass
+
+
+class InputDataNotValidException(PipelineError):
+    """
+    Input data passed to a module is not the type that the module is expecting
+    """
     pass

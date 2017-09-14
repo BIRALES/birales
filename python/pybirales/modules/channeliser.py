@@ -17,7 +17,7 @@ def apply_fir_filter(data, fir_filter, output, ntaps, nchans):
     """
     Optimised filter function using numpy and numba
     :param data: Input data pointer
-    :param fir_filter: Filter coefficients pointer
+    :param fir_filter: Filter coefficients pointerself
     :param output: Output data pointer
     :param ntaps: Number of taps
     :param nchans: Number of channels

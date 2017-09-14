@@ -1,17 +1,11 @@
 import logging
 import numpy as np
-import time
-from time import sleep
 import datetime
 
 from pybirales.base.definitions import PipelineError, ObservationInfo
 from pybirales.base.processing_module import ProcessingModule
 from pybirales.blobs.dummy_data import DummyBlob
-from scipy.signal import chirp
 from pybirales.base import settings
-
-
-from pybirales.plotters.spectrogram_plotter import plotter
 
 
 class DummyDataGenerator(ProcessingModule):
@@ -20,8 +14,7 @@ class DummyDataGenerator(ProcessingModule):
     def __init__(self, config, input_blob=None):
 
         # This module does not need an input_blob
-        if input_blob is not None:
-            raise PipelineError("DummyDataGenerator: Invalid input data type, should be None")
+        self._validate_data_blob(input_blob, valid_blobs=[type(None)])
 
         # Sanity checks on configuration
         if {'nants', 'nsamp', 'nsubs', 'npols', 'nbits', 'complex'} - set(config.settings()) != set():

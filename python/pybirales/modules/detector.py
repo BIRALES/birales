@@ -1,11 +1,9 @@
 import numpy as np
 from functools import partial
 
-from pybirales.base.definitions import PipelineError
 from pybirales.base.processing_module import ProcessingModule
 from pybirales.blobs.channelised_data import ChannelisedBlob
 from pybirales.modules.detection.queue import BeamCandidatesQueue
-from pybirales.modules.detection.repository import BeamCandidateRepository
 from pybirales.modules.detection.repository import ConfigurationRepository
 from pybirales.modules.detection.strategies.m_dbscan import m_detect
 from multiprocessing import Pool
@@ -15,10 +13,11 @@ from pybirales.modules.detection.beam import Beam
 
 
 class Detector(ProcessingModule):
+    _valid_input_blobs = [ChannelisedBlob]
+
     def __init__(self, config, input_blob=None):
-        if type(input_blob) is not ChannelisedBlob:
-            raise PipelineError(
-                "Detector: Invalid input data type, should be BeamformedBlob, DummyBlob or ReceiverBlob")
+        # Ensure that the input blob is of the expected format
+        self._validate_data_blob(input_blob, valid_blobs=[ChannelisedBlob])
 
         # Repository Layer for saving the configuration to the Data store
         self._configurations_repository = ConfigurationRepository()

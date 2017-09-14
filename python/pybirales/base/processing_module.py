@@ -1,15 +1,16 @@
-import time
 import logging
+import threading
 from abc import abstractmethod
-import thread
 from threading import Thread, Event
-from pybirales.base.definitions import NoDataReaderException
+from pybirales.base.definitions import NoDataReaderException, InputDataNotValidException, PipelineError
 import time
 import logging as log
 import settings
 
 
 class Module(Thread):
+    _valid_input_blobs = []
+
     def __init__(self, config=None, input_blob=None):
         """
 
@@ -57,7 +58,13 @@ class Module(Thread):
             logging.info('Stopping %s module', self.name)
             self._stop.set()
 
-    @abstractmethod
+    def _validate_data_blob(self, input_blob, valid_blobs):
+        if type(input_blob) not in valid_blobs:
+            raise InputDataNotValidException("Input blob for {} should be ({}). Got a {} instead.".format(
+                self.__class__.__name__,
+                ', '.join([bt.__name__ for bt in valid_blobs]),
+                input_blob.__class__.__name__))
+
     def _tear_down(self):
         """
         Gracefully terminate this module (to be overridden)

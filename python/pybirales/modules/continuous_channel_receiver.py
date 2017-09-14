@@ -32,8 +32,7 @@ class ContinuousChannelReceiver(Generator):
 
     def __init__(self, config, input_blob=None):
         # This module does not need an input block
-        if input_blob is not None:
-            raise PipelineError("Receiver: Receiver does not need an input block")
+        self._validate_data_blob(input_blob, valid_blobs=[type(None)])
 
         # Sanity checks on configuration
         if {'nsamp', 'nants', 'nsubs', 'port', 'npols', 'interface', 'frame_size',
