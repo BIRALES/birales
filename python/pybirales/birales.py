@@ -256,6 +256,7 @@ def save_raw_data(configuration, debug):
 
     manager.start_pipeline()
 
+
 @cli.command()
 @click.argument('configuration', type=click.Path(exists=True))
 @click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
