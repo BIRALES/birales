@@ -47,6 +47,9 @@ class Detector(ProcessingModule):
 
         self.name = "Detector"
 
+    def _tear_down(self):
+        self.pool.close()
+
     def _get_noise_estimation(self, input_data):
         if self.counter < settings.detection.n_noise_samples:
             power = np.power(np.abs(input_data[0, :, settings.detection.noise_channels, :]), 2)

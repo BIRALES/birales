@@ -39,18 +39,31 @@ class Module(Thread):
         # Stopping clause
         self.daemon = True
         self._stop = Event()
-        # self._is_stopped = True
 
     @abstractmethod
     def generate_output_blob(self):
         """ Create the output blob to be used by the next module in the pipeline
-        :return: Create data blob """
+        :return: Create data blob
+        """
         pass
 
     def stop(self):
-        """ Stops the current thread """
-        logging.info('Stopping %s module', self.name)
-        self._stop.set()
+        """
+        Stops the current thread if it is not stopped already
+        :return:
+        """
+
+        if not self.is_stopped:
+            logging.info('Stopping %s module', self.name)
+            self._stop.set()
+
+    @abstractmethod
+    def _tear_down(self):
+        """
+        Gracefully terminate this module (to be overridden)
+        :return:
+        """
+        pass
 
     @property
     def is_stopped(self):
@@ -131,6 +144,9 @@ class ProcessingModule(Module):
         """
         pass
 
+    def clean(self):
+        pass
+
     def run(self):
         """ Thread body """
         while not self._stop.is_set():
@@ -175,4 +191,6 @@ class ProcessingModule(Module):
             # A short sleep to force a context switch (since locks do not force one)
             time.sleep(0.001)
 
+        # Clean
+        self._tear_down()
         log.info('%s killed', self.name)

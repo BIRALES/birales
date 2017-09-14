@@ -56,20 +56,18 @@ class PipelineManager(object):
 
         self.count = 0
 
-    # Capturing interrupt signal
     def _signal_handler(self, signum, frame):
+        """
+        Capturing interrupt signal
 
+        :param signum:
+        :param frame:
+        :return:
+        """
         if not self._stop.is_set():
-            # if os.getppid() != os.getpid():
-            #     logging.info("Ctrl-C detected by process %s, stopping pipeline", os.getpid())
-            #
-            #     self.stop_pipeline()
             logging.info("Ctrl-C detected by process %s, stopping pipeline", os.getpid())
 
             self.stop_pipeline()
-                # if os.getppid() != os.getpid():
-                #     # (hack) Send a kill signal to the parent process
-                #     os.kill(os.getppid(), signal.SIGTERM)
 
     def _configure_pipeline(self, config_file):
         """ Parse configuration file and set pipeline
