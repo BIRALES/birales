@@ -123,5 +123,7 @@ class Detector(ProcessingModule):
 
         self.counter += 1
 
+        return obs_info
+
     def generate_output_blob(self):
         pass

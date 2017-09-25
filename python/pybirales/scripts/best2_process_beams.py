@@ -8,9 +8,11 @@ from time import sleep
 import matplotlib
 import signal
 
+
 def signal_handler(signal, frame):
     print('Ctrl-C detected. Exiting')
     exit(0)
+
 
 def realtime(opts):
     """ Generating beam plot in real-time """
@@ -35,10 +37,10 @@ def realtime(opts):
 
     # Create figure
     plt.ion()
-    fig = plt.figure(figsize=(12,10))
+    fig = plt.figure(figsize=(12, 10))
 
     # Loop forever (until kill signal)
-    nsamp    = 0  # Current nsamp
+    nsamp = 0  # Current nsamp
     filesize = 0
 
     while True:
@@ -61,24 +63,25 @@ def realtime(opts):
         data = np.array(struct.unpack('f' * (len(data) / 4), data), dtype=float)
         currsamp = len(data) / (nbeams * nchans)
         data = np.reshape(data, (currsamp, nchans, nbeams))
-        data = data[:,:,beam]
+        data = data[:, :, beam]
 
         # Check where new data goes in plot buffer
         if nsamp + currsamp <= plotsamples:
-            toplot[nsamp:nsamp+currsamp,:] = data
-        else: # We need to reshuffle data
-            toplot[:plotsamples-currsamp,:] = toplot[currsamp:plotsamples,:]
-            toplot[plotsamples-currsamp:,:] = data
+            toplot[nsamp:nsamp + currsamp, :] = data
+        else:  # We need to reshuffle data
+            toplot[:plotsamples - currsamp, :] = toplot[currsamp:plotsamples, :]
+            toplot[plotsamples - currsamp:, :] = data
 
         # Update plot
         fig.clear()
-        plt.imshow(10*np.log10(toplot), aspect='auto', origin='lower')
+        plt.imshow(10 * np.log10(toplot), aspect='auto', origin='lower')
         plt.xlabel('Frequency')
         plt.ylabel('Time')
         fig.canvas.draw()
 
         # Update number of samples read
         nsamp += currsamp
+
 
 def multipixel(opts):
     """ Generate multi-pixel view for specified sample """
@@ -91,7 +94,7 @@ def multipixel(opts):
     # Open file and seek position
     f = open(args[0], 'rb')
 
-    nsamp    = 0  # Current nsamp
+    nsamp = 0  # Current nsamp
     filesize = 0
 
     fig = plt.figure()
@@ -136,41 +139,42 @@ def plot(opts):
     nsamp = len(data) / (nbeams * nchans)
     data = np.reshape(data, (nsamp, nchans, nbeams))
 
-    time      = np.arange(0, opts.tsamp * data.shape[0], opts.tsamp)
+    time = np.arange(0, opts.tsamp * data.shape[0], opts.tsamp)
     frequency = (np.arange(opts.fch1 * 1e6, opts.fch1 * 1e6 + opts.foff * (data.shape[1]), opts.foff)) * 1e-6
     formatter = pylab.FormatStrFormatter('%2.3f')
 
     # Mask central channel (DC in complex)
-    #data[:,nchans/2-1,:] = data[:,nchans/2,:]
+    # data[:,nchans/2-1,:] = data[:,nchans/2,:]
 
     # Process only one beam
     if opts.beam != -1 and opts.waterfall:
-        fig = plt.figure()#(figsize=(11,8))
-        ax = fig.add_subplot(1,1,1)
-        data = 10*np.log10(data[:,:,opts.beam]**2)
-       # data[np.where(data < (np.mean(data) + np.std(data)*1.5))] = 0
+        fig = plt.figure()  # (figsize=(11,8))
+        ax = fig.add_subplot(1, 1, 1)
+        data = 10 * np.log10(data[:, :, opts.beam] ** 2)
+        # data[np.where(data < (np.mean(data) + np.std(data)*1.5))] = 0
         im = ax.imshow(data, aspect='auto', interpolation='none',
-                  origin='lower')#, extent=[frequency[0], frequency[-1], 0, time[-1]])
+                       origin='lower')  # , extent=[frequency[0], frequency[-1], 0, time[-1]])
         ax.xaxis.set_major_formatter(formatter)
         ax.set_xlabel("Channel (kHz)")
         ax.set_ylabel("Time (s)")
 
-      #  cax = fig.add_axes([0.9, 0.1, 0.01, 0.8])
-      #  fig.subplots_adjust(right=0.9)
-      #  fig.colorbar(im, cax)
+        #  cax = fig.add_axes([0.9, 0.1, 0.01, 0.8])
+        #  fig.subplots_adjust(right=0.9)
+        #  fig.colorbar(im, cax)
 
-    #    fig.tight_layout()
+        #    fig.tight_layout()
         plt.show()
         f.close()
 
-
     if opts.beam != -1:
+        data = data[:,:,opts.beam]
+        rms = np.sqrt(np.mean(data.ravel()**2))
+        maximum = np.max(data.ravel())
+        data = 10*np.log10(data / rms)
+        print "RMS: {}, max: {}\n".format(rms, maximum)
 
-        fig = plt.figure(figsize=(11,8))
-
-        data = np.log10(data[:,:,opts.beam])
-
-        ax = fig.add_subplot(2,2,2)
+        fig = plt.figure(figsize=(11, 8))
+        ax = fig.add_subplot(2, 2, 2)
         toplot = np.sum(data, axis=0)
         ax.plot(frequency[:len(toplot)], toplot)
         ax.xaxis.set_major_formatter(formatter)
@@ -178,7 +182,7 @@ def plot(opts):
         ax.set_ylabel("Log Power (Arbitrary)")
         ax.set_xlim((frequency[0], frequency[-1]))
 
-        ax = fig.add_subplot(2,2,4)
+        ax = fig.add_subplot(2, 2, 4)
         toplot = np.sum(data / nchans, axis=1)
         ax.plot(time[:len(toplot)], toplot)
         ax.xaxis.set_major_formatter(pylab.FormatStrFormatter('%2.1f'))
@@ -186,12 +190,12 @@ def plot(opts):
         ax.set_ylabel("Log Power (Arbitrary)")
         ax.set_xlim((time[0], time[-1]))
 
-        ax = fig.add_subplot(1,2,1)
+        ax = fig.add_subplot(1, 2, 1)
         ax.set_title("Beam %d" % opts.beam)
 
         data[np.where(data < (np.mean(data) + np.std(data)))] = 0
         im = ax.imshow(data, aspect='auto', interpolation='none',
-                  origin='lower', extent=[frequency[0], frequency[-1], 0, time[-1]])
+                       origin='lower', extent=[frequency[0], frequency[-1], 0, time[-1]])
         ax.xaxis.set_major_formatter(formatter)
         ax.set_xlabel("Channel (kHz)")
         ax.set_ylabel("Time (s)")
@@ -208,17 +212,17 @@ def plot(opts):
 
     # Plot time series
     if opts.time:
-        fig = plt.figure(figsize=(8,8))
+        fig = plt.figure(figsize=(8, 8))
         ax = fig.add_subplot(1, 1, 1)
 
-        data = np.sum(data, axis = 1)
+        data = np.sum(data, axis=1)
         data = np.reshape(data, (len(data) / opts.samples, opts.samples, nbeams))
         data = 10 * np.log10(np.sum(data, axis=1))
 
         # Plot time series
         markers = matplotlib.markers.MarkerStyle.markers.keys()
         for i in range(nbeams):
-            ax.plot(data[:,i], marker = markers[i], label="Beam %d" % i)
+            ax.plot(data[:, i], marker=markers[i], label="Beam %d" % i)
             ax.xaxis.set_major_formatter(pylab.FormatStrFormatter('%2.1f'))
             ax.set_xlabel("Time (s)")
             ax.set_ylabel("Log Power (Arbitrary)")
@@ -230,7 +234,7 @@ def plot(opts):
         return
 
     # Plot each beam separately
-    fig = plt.figure(figsize=(18,12))
+    fig = plt.figure(figsize=(18, 12))
     num_rows = math.ceil(math.sqrt(nbeams))
     for i in range(nbeams):
 
@@ -239,16 +243,16 @@ def plot(opts):
 
         # Show beam
         if opts.waterfall:
-            ax.imshow(np.log10(data[:,:,i]), aspect='auto', origin='lower',
+            ax.imshow(np.log10(data[:, :, i]), aspect='auto', origin='lower',
                       extent=[frequency[0], frequency[-1], 0, time[-1]], interpolation='none')
-            ax.xaxis.set_major_formatter( pylab.FormatStrFormatter('%2.2f'))
+            ax.xaxis.set_major_formatter(pylab.FormatStrFormatter('%2.2f'))
             ax.set_xlabel("Channel (kHz)")
             ax.set_ylabel("Time (s)")
 
         # Plot bandpass
         if opts.bandpass:
-            ax.plot(frequency, np.log10(np.sum(data[:,:,i], axis=0)))
-            ax.xaxis.set_major_formatter( pylab.FormatStrFormatter('%2.2f'))
+            ax.plot(frequency, np.log10(np.sum(data[:, :, i], axis=0)))
+            ax.xaxis.set_major_formatter(pylab.FormatStrFormatter('%2.2f'))
             ax.set_xlabel("Channel (MHz)")
             ax.set_ylabel("Log Power (Arbitrary)")
             ax.set_xlim((frequency[0], frequency[-1]))
@@ -256,6 +260,7 @@ def plot(opts):
     fig.tight_layout()
     plt.show()
     f.close()
+
 
 def transpose(opts):
     """ Transpose data so it can be viewed with the Qt plotter
@@ -272,7 +277,7 @@ def transpose(opts):
     # Create file per beam
     basename = os.path.basename(args[0]).split('.')[0]
     files = [open(os.path.join(os.path.dirname(args[0]),
-                  "%s_beam%d.dat" % (basename, i)), 'wb') for i in range(nbeams) ]
+                               "%s_beam%d.dat" % (basename, i)), 'wb') for i in range(nbeams)]
 
     # Get file size to calculate number of time spectra
     filesize = os.path.getsize(args[0])
@@ -286,7 +291,7 @@ def transpose(opts):
 
         # Write to respective file
         for j in range(nbeams):
-            files[j].write(struct.pack('f'*nchans, *data[j,:]))
+            files[j].write(struct.pack('f' * nchans, *data[j, :]))
 
         sys.stdout.write("Processing %d of %d [%.2f%%]   \r" % (i, nsamp, (i / float(nsamp) * 100)))
         sys.stdout.flush()
@@ -294,6 +299,7 @@ def transpose(opts):
     # Close files
     f.close()
     [f.close for f in files]
+
 
 def integrate(opts):
     """ Integrate samples """
@@ -312,7 +318,7 @@ def integrate(opts):
         # Create output file
         basename = os.path.basename(filename).split('.')[0]
         w = open(os.path.join(os.path.dirname(args[0]),
-                 "%s_timeseries_%d.dat" % (basename, opts.samples)), 'wb')
+                              "%s_timeseries_%d.dat" % (basename, opts.samples)), 'wb')
 
         # Get file size to calculate number of time spectra
         filesize = os.path.getsize(filename)
@@ -325,16 +331,17 @@ def integrate(opts):
             data = np.array(struct.unpack('f' * opts.nchans * nsamp, data), dtype=float)
             data = np.reshape(data, (nsamp, opts.nchans))
 
-            w.write(struct.pack('f', np.sum(np.sum(data, axis = 1) / opts.nchans) / nsamp))
+            w.write(struct.pack('f', np.sum(np.sum(data, axis=1) / opts.nchans) / nsamp))
 
             sys.stdout.write("===== Processing %d of %d [%.2f%%]   \r" %
-                            (i, iterations, (i / float(iterations) * 100)))
+                             (i, iterations, (i / float(iterations) * 100)))
             sys.stdout.flush()
 
         # Close files
         f.close()
         w.flush()
         w.close()
+
 
 if __name__ == "__main__":
 
@@ -343,51 +350,51 @@ if __name__ == "__main__":
     p.set_description(__doc__)
 
     p.add_option('-f', '--bandpass', dest='bandpass', action='store_true', default=False,
-        help='Show bandpass plots')
+                 help='Show bandpass plots')
     p.add_option('-w', '--waterfall', dest='waterfall', action='store_true', default=False,
-        help='Show beam waterfall plots')
+                 help='Show beam waterfall plots')
     p.add_option('-t', '--time', dest='time', action='store_true', default=False,
-        help='Show power time series')
+                 help='Show power time series')
     p.add_option('-r', '--realtime', dest='realtime', action='store_true', default=False,
-        help='Realtime plotting mode')
+                 help='Realtime plotting mode')
     p.add_option('-m', '--multipixel', dest='multipixel', action='store_true', default=False,
-        help='Multi-pixel view')
+                 help='Multi-pixel view')
     p.add_option('-p', '--process', dest='process', action='store_true', default=False,
-        help='Generate beam file for future processing. Default option')
+                 help='Generate beam file for future processing. Default option')
     p.add_option('-i', '--integrate', dest='integrate', action='store_true', default=False,
-        help='Generate integrated time series. File must already have been processed. Default integration length 128')
+                 help='Generate integrated time series. File must already have been processed. Default integration length 128')
     p.add_option('-o', '--obstime', dest='obstime', type='float', default=0,
-        help='For multi-pixel mode only. Time since start of observation to plot')
+                 help='For multi-pixel mode only. Time since start of observation to plot')
     p.add_option('-x', '--gridx', dest='gridx', type='int', default=4,
-        help='For multi-pixel mode only. X-dimension of grid. Default 4')
+                 help='For multi-pixel mode only. X-dimension of grid. Default 4')
     p.add_option('-y', '--gridy', dest='gridy', type='int', default=4,
-        help='For multi-pixel mode only. Y dimension of grid. Default 4')
+                 help='For multi-pixel mode only. Y dimension of grid. Default 4')
     p.add_option('-s', '--samples', dest='samples', type='int', default=128,
-        help='For integration mode only. Number of samples to integrate. Default value 128')
+                 help='For integration mode only. Number of samples to integrate. Default value 128')
     p.add_option('-c', '--nchans', dest='nchans', type='int', default=8192,
-        help='Number of frequency channels. Default 8192')
+                 help='Number of frequency channels. Default 8192')
     p.add_option('-b', '--nbeams', dest='nbeams', type='int', default=32,
-        help='Number of beams. Default 32')
+                 help='Number of beams. Default 32')
     p.add_option('', '--beam', dest='beam', type='int', default=-1,
-        help='Select beam to be processed. Default -1 (process all beams)')
-    p.add_option('', '--fch1', dest='fch1', type='float', default=418,
-        help='Channel 0 frequency in MHz. Default 418')
+                 help='Select beam to be processed. Default -1 (process all beams)')
+    p.add_option('', '--fch1', dest='fch1', type='float', default=409.9992187,
+                 help='Channel 0 frequency in MHz. Default 409.9992187')
     p.add_option('', '--foff', dest='foff', type='float', default=9.53674,
-        help='Channel bandwidth in Hz. Default 9.53674')
+                 help='Channel bandwidth in Hz. Default 9.53674')
     p.add_option('', '--tsamp', dest='tsamp', type='float', default=0.1048576,
-        help='Sampling time in seconds. Default 0.1048576')
+                 help='Sampling time in seconds. Default 0.1048576')
 
     opts, args = p.parse_args(sys.argv[1:])
 
     print
-    print "Number of channels:    %d"       % opts.nchans
-    print "Number of beams:       %d"       % opts.nbeams
-    print "Frequency Resolution:  %.2f Hz"  % abs(opts.foff)
-    print "Temporal Resolution:   %.2f s"   % opts.tsamp
+    print "Number of channels:    %d" % opts.nchans
+    print "Number of beams:       %d" % opts.nbeams
+    print "Frequency Resolution:  %.2f Hz" % abs(opts.foff)
+    print "Temporal Resolution:   %.2f s" % opts.tsamp
     print "Top Frequency:         %.2f MHz" % opts.fch1
     print
 
-    if args==[]:
+    if args == []:
         print 'Please specify an input file! \nExiting.'
         exit()
 
