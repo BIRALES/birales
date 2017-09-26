@@ -2,6 +2,7 @@ import numpy as np
 import datetime
 from pybirales.modules.detection.filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter, \
     PepperNoiseFilter
+from pybirales.base import settings
 import warnings
 
 warnings.filterwarnings('error')
@@ -28,7 +29,7 @@ class Beam:
         self.dec = obs_info['pointings'][self.id][1] if obs_info['pointings'][self.id] else 0.0
 
         self.observation_name = obs_info['settings']['observation']['name']
-        self.tx = obs_info['transmitter_frequency']
+        self.tx = settings.observation.transmitter_frequency
         self.configuration_id = obs_info['configuration_id']
         self.name = 'Observation ' + self.observation_name
 
