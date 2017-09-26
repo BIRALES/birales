@@ -64,10 +64,10 @@ class Detector(ProcessingModule):
             self.mean_noise = np.mean(self.noise)
         return float(self.mean_noise)
 
-    def _get_doppler_mask(self, channels, obs_info):
+    def _get_doppler_mask(self, channels):
         if self._doppler_mask is None:
-            a = obs_info['transmitter_frequency'] + settings.detection.doppler_range[0] * 1e-6
-            b = obs_info['transmitter_frequency'] + settings.detection.doppler_range[1] * 1e-6
+            a = settings.observation.transmitter_frequency + settings.detection.doppler_range[0] * 1e-6
+            b = settings.observation.transmitter_frequency + settings.detection.doppler_range[1] * 1e-6
 
             self._doppler_mask = np.bitwise_and(channels < b, channels > a)
 
@@ -79,7 +79,7 @@ class Detector(ProcessingModule):
                                       obs_info['start_center_frequency'] + obs_info['channel_bandwidth'] * obs_info[
                                           'nchans'],
                                       obs_info['channel_bandwidth'])
-            self.channels = self.channels[self._get_doppler_mask(self.channels, obs_info)]
+            self.channels = self.channels[self._get_doppler_mask(self.channels)]
 
         return self.channels
 
@@ -95,7 +95,7 @@ class Detector(ProcessingModule):
         """
         channels = self._get_channels(obs_info)
         time = self._get_time(obs_info)
-        doppler_mask = self._get_doppler_mask(channels, obs_info)
+        doppler_mask = self._get_doppler_mask(channels)
 
         # estimate the noise from the data
         obs_info['noise'] = self._get_noise_estimation(input_data)
