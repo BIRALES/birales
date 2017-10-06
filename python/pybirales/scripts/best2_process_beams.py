@@ -143,34 +143,38 @@ def plot(opts):
     frequency = (np.arange(opts.fch1 * 1e6, opts.fch1 * 1e6 + opts.foff * (data.shape[1]), opts.foff)) * 1e-6
     formatter = pylab.FormatStrFormatter('%2.3f')
 
-    # Mask central channel (DC in complex)
-    # data[:,nchans/2-1,:] = data[:,nchans/2,:]
-
     # Process only one beam
     if opts.beam != -1 and opts.waterfall:
+
+        data = data[:,:,opts.beam]
+        rms = np.sqrt(np.mean(data.ravel()**2))
+        maximum = np.max(data.ravel())
+        data = 10*np.log10(data / rms)
+        print "RMS: {}, max: {}\n".format(rms, maximum)
+
+
         fig = plt.figure()  # (figsize=(11,8))
         ax = fig.add_subplot(1, 1, 1)
-        data = 10 * np.log10(data[:, :, opts.beam] ** 2)
-        # data[np.where(data < (np.mean(data) + np.std(data)*1.5))] = 0
         im = ax.imshow(data, aspect='auto', interpolation='none',
-                       origin='lower')  # , extent=[frequency[0], frequency[-1], 0, time[-1]])
+                       origin='lower', extent=[frequency[0], frequency[-1], 0, time[-1]])
         ax.xaxis.set_major_formatter(formatter)
         ax.set_xlabel("Channel (kHz)")
         ax.set_ylabel("Time (s)")
 
         #  cax = fig.add_axes([0.9, 0.1, 0.01, 0.8])
         #  fig.subplots_adjust(right=0.9)
-        #  fig.colorbar(im, cax)
+        fig.colorbar(im)
 
-        #    fig.tight_layout()
+        fig.tight_layout()
         plt.show()
         f.close()
 
     if opts.beam != -1:
         data = data[:,:,opts.beam]
-        rms = np.sqrt(np.mean(data.ravel()**2))
-        maximum = np.max(data.ravel())
-        data = 10*np.log10(data / rms)
+        #rms = np.sqrt(np.mean(data.ravel()**2))
+        #maximum = np.max(data.ravel())
+        #data = 10*np.log10(data / rms)
+        data = 10 * np.log10(data**2)
         print "RMS: {}, max: {}\n".format(rms, maximum)
 
         fig = plt.figure(figsize=(11, 8))

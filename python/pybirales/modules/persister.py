@@ -8,6 +8,7 @@ from pybirales.base.definitions import PipelineError
 from pybirales.blobs.channelised_data import ChannelisedBlob
 from pybirales.base.processing_module import ProcessingModule
 import numpy as np
+import fadvise
 
 
 class Persister(ProcessingModule):
@@ -39,6 +40,9 @@ class Persister(ProcessingModule):
             os.remove(filepath)
 
         self._file = open(filepath, "wb+")
+
+        # Use fadvise to optimise 
+        fadvise.set_advice(self._file, fadvise.POSIX_FADV_SEQUENTIAL)
 
         # Initialise ranges to persist for file
         self._beam_range = slice(None)

@@ -8,6 +8,7 @@ from pybirales.blobs.receiver_data import ReceiverBlob
 from pybirales.base.definitions import PipelineError
 from pybirales.base.processing_module import ProcessingModule
 import numpy as np
+import fadvise
 
 
 class RawPersister(ProcessingModule):
@@ -39,6 +40,7 @@ class RawPersister(ProcessingModule):
             os.remove(filepath)
 
         self._file = open(filepath, "wb+")
+        fadvise.set_advice(self._file, fadvise.POSIX_FADV_SEQUENTIAL)
 
         # Variable to check whether meta file has been written
         self._head_filepath = filepath + '.pkl'
