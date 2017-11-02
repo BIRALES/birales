@@ -30,9 +30,11 @@ class SpectrogramPlotter:
             return
 
         if condition:
+            print(self._count)
             if self._count % self._freq == 0:
                 if self._count != 0:
                     plt.title(filename + '_' + str(self._count - self._freq) + '-' + str(self._count))
+                    print(filename)
                     plt.imshow(self._data, aspect='auto', interpolation='none', origin='lower', vmin=0)
                     plt.colorbar()
 
@@ -46,14 +48,14 @@ class SpectrogramPlotter:
                 self._data = np.vstack((self._data, copy.deepcopy(beam.snr[:, self._min_channel:self._max_channel])))
             self._count += 1
 
-    def plot_detections(self, beam, filename, condition, clusters):
+    def plot_detections(self, beam, filename, condition, cluster_labels, cluster_data):
         if not settings.detection.debug_candidates:
             return
 
         if condition:
-            if np.any(clusters):
-                for cluster in clusters:
-                    beam.snr[cluster.indices[0], cluster.indices[1]] = 50
+            if np.any(cluster_labels):
+                for i, cluster in enumerate(cluster_data):
+                    beam.snr[cluster[0], cluster[1]] = 50 * (cluster_labels[i] + 1)
             if self._count % self._freq == 0:
                 if self._count != 0:
                     plt.title(filename + '_' + str(self._count - self._freq) + '-' + str(self._count))
@@ -71,3 +73,5 @@ class SpectrogramPlotter:
 
 
 plotter = SpectrogramPlotter()
+plotter1 = SpectrogramPlotter()
+plotter2 = SpectrogramPlotter()

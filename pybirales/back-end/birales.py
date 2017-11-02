@@ -1,22 +1,20 @@
 #!/usr/bin/python
 import click
-
-from pybirales.modules.corr_matrix_persister import CorrMatrixPersister
-from pybirales.modules.correlator import Correlator
-from pybirales.modules.terminator import Terminator
-from pybirales.base.pipeline_manager import PipelineManager
 from pybirales.base import settings
-from pybirales.modules.raw_data_reader import RawDataReader
+from pybirales.base.pipeline_manager import PipelineManager
 from pybirales.modules.beamformer import Beamformer
 from pybirales.modules.channeliser import PFB
-from pybirales.modules.generator import DummyDataGenerator
+from pybirales.modules.corr_matrix_persister import CorrMatrixPersister
+from pybirales.modules.correlator import Correlator
+from pybirales.modules.detector import Detector
 from pybirales.modules.persister import Persister
+from pybirales.modules.raw_data_reader import RawDataReader
 from pybirales.modules.raw_persister import RawPersister
 from pybirales.modules.receiver import Receiver
-from pybirales.modules.detector import Detector
+from pybirales.modules.terminator import Terminator
 from pybirales.plotters.channel_plotter import ChannelisedDataPlotter
-from pybirales.plotters.antenna_plotter import AntennaPlotter
-from pybirales.plotters.bandpass_plotter import BandpassPlotter
+
+
 # from pybirales.modules.monitoring.server import app
 
 
@@ -76,27 +74,29 @@ def detection_pipeline(configuration, debug, save_raw, save_beam):
 @click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
 def standalone_test(configuration, debug):
     """
-     This script runs the standalone test pipeline,
-     using the specified CONFIGURATION.
+    This script runs the standalone test pipeline,
+    using the specified CONFIGURATION.
+
     """
 
     # Initialise the Pipeline Manager
     manager = PipelineManager(configuration, debug)
 
-    # Initialise the modules
-    generator = DummyDataGenerator(settings.generator)
-    beamformer = Beamformer(settings.beamformer, generator.output_blob)
+    reader = RawDataReader(settings.rawdatareader)
+    beamformer = Beamformer(settings.beamformer, reader.output_blob)
     pfb = PFB(settings.channeliser, beamformer.output_blob)
-    terminator = Terminator(settings.terminator, pfb.output_blob)
+    persister = Persister(settings.persister, pfb.output_blob)
+    terminator = Terminator(None, persister.output_blob)
 
     # Add modules to pipeline manager
-    manager.add_module("generator", generator)
+    manager.add_module("reader", reader)
     manager.add_module("beamformer", beamformer)
     manager.add_module("pfb", pfb)
+    manager.add_module("persister", persister)
     manager.add_module("terminator", terminator)
 
-#    manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, pfb.output_blob)
-#    manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
+    # manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, pfb.output_blob)
+    # manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
 
     manager.start_pipeline()
 
@@ -275,18 +275,18 @@ def offline_birales_pipeline(configuration, debug):
     beamformer = Beamformer(settings.beamformer, reader.output_blob)
     ppf = PFB(settings.channeliser, beamformer.output_blob)
     # persister = Persister(settings.persister, ppf.output_blob)
-    detector = Detector(settings.detection, ppf.output_blob)
+    # detector = Detector(settings.detection, ppf.output_blob)
     terminator = Terminator(settings.terminator, ppf.output_blob)
 
     # Add modules to pipeline manager
     manager.add_module("reader", reader)
     manager.add_module("beamformer", beamformer)
     manager.add_module("ppf", ppf)
-    manager.add_module("detector", detector)
+    # manager.add_module("detector", detector)
 
     # manager.add_plotter("antenna_plotter", AntennaPlotter, settings.antennaplotter, reader.output_blob)
     # manager.add_plotter("bandpass_plotter", BandpassPlotter, settings.bandpassplotter, ppf.output_blob)
-    # manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
+    manager.add_plotter("channel_plotter", ChannelisedDataPlotter, settings.channelplotter, ppf.output_blob)
 
     manager.start_pipeline()
 
@@ -314,15 +314,15 @@ def offline_correlator(configuration, debug):
     manager.add_module("persister", persister)
 
     manager.start_pipeline()
-
-@cli.command()
-@click.option('--port', default=5000)
-@click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
-def start_server(port, debug):
-    app.config['SECRET_KEY'] = 'secret!'
-    app.config['DEBUG'] = debug
-    app.run(host='0.0.0.0', debug=debug, port=port)
-
+#
+# @cli.command()
+# @click.option('--port', default=5000)
+# @click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
+# def start_server(port, debug):
+#     app.config['SECRET_KEY'] = 'secret!'
+#     app.config['DEBUG'] = debug
+#     app.run(host='0.0.0.0', debug=debug, port=port)
+#
 
 if __name__ == "__main__":
     cli()

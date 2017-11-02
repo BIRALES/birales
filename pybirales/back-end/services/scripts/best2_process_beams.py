@@ -145,7 +145,7 @@ def plot(opts):
 
     # Process only one beam
     if opts.beam != -1 and opts.waterfall:
-
+        print(frequency[0])
         data = data[:,:,opts.beam]
         rms = np.sqrt(np.mean(data.ravel()**2))
         maximum = np.max(data.ravel())
@@ -171,8 +171,8 @@ def plot(opts):
 
     if opts.beam != -1:
         data = data[:,:,opts.beam]
-        #rms = np.sqrt(np.mean(data.ravel()**2))
-        #maximum = np.max(data.ravel())
+        rms = np.sqrt(np.mean(data.ravel()**2))
+        maximum = np.max(data.ravel())
         #data = 10*np.log10(data / rms)
         data = 10 * np.log10(data**2)
         print "RMS: {}, max: {}\n".format(rms, maximum)

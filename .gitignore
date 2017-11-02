@@ -1,20 +1,18 @@
 *.pyc
 .idea/
 data/
-python/pybirales/modules/monitoring/static/node_modules
 src/build
 *.dat
 *.dat.pkl
-python/build
-python/dist
-python/pybirales.egg-info
-python/calibrator/I_O
-python/calibrator/*.log
+pybirales/back-end/build
+pybirales/back-end/dist
+pybirales/back-end/pybirales.egg-info
+
 
 *.log
 *.swp
 *.h5
 *.pkl
-python/pybirales/plots/*
-python/pybirales/pybirales.egg-info
-python/calibrator
+pybirales/back-end/plots/*
+pybirales/back-end/services/calibrator
+pybirales/front-end/static/node_modules

@@ -1,9 +1,8 @@
-import logging
-import math
-import numpy as np
 import logging as log
-from matplotlib import pyplot as plt
+import math
 
+import numpy as np
+from matplotlib import pyplot as plt
 from pybirales.base.definitions import PipelineError
 from pybirales.base.plotter import Plotter
 from pybirales.blobs.channelised_data import ChannelisedBlob

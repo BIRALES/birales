@@ -17,8 +17,8 @@ pd.set_option('display.width', 1200)
 pd.set_option('display.max_rows', 500)
 
 BEAM_ID = None
-MAX_TIME = '2017-06-30 15:40:00'
-MIN_TIME = '2017-06-30 13:34:00'
+MAX_TIME = '2017-06-30 12:14:28'
+MIN_TIME = '2017-06-30 12:12:50'
 
 
 def get_data(beam_id, min_time, max_time):

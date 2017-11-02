@@ -4,19 +4,15 @@ import os
 from multiprocessing import Pool
 from multiprocessing.dummy import Pool as ThreadPool
 
-#import DBSCAN_multiplex as DB2
 import numpy as np
 from astropy.time import Time, TimeDelta
-
-from sklearn import linear_model
-from sklearn.cluster import DBSCAN
-from skimage.measure import LineModelND, ransac
-
 from pybirales.base import settings
 from pybirales.modules.detection.beam import Beam
 from pybirales.modules.detection.detection_clusters import DetectionCluster
 from pybirales.modules.detection.strategies.strategies import SpaceDebrisDetectionStrategy
 from pybirales.plotters.spectrogram_plotter import plotter
+from sklearn import linear_model
+from sklearn.cluster import DBSCAN
 
 
 def dd2(beam):
@@ -236,12 +232,12 @@ class DBScanDetectionStrategy(SpaceDebrisDetectionStrategy):
 
     def detect_space_debris_candidates(self, beam):
 
-        # plotter.plot(beam, 'detection/input_beam/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 0)
+        plotter.plot(beam, 'detection/input_beam/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 0)
 
         # Apply the pre-processing filters to the beam data
         beam.apply_filters()
 
-        # plotter.plot(beam, 'detection/filtered_beam/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 0)
+        plotter.plot(beam, 'detection/filtered_beam/' + str(beam.id) + '_' + str(beam.t_0), beam.id == 0)
 
         # Run detection algorithm on the beam data to extract possible candidates
         clusters = self._create_clusters(beam)
