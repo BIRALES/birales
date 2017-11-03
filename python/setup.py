@@ -37,7 +37,9 @@ setup(
                       "click",
                       "flask",
                       "flask-compress",
-                      'sklearn'],
+                      'sklearn',
+                      "yappi",
+                      "fadvise"],
 )
 
 # TODO: Create /var/log/birales logging directory

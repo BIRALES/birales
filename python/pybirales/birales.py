@@ -1,5 +1,9 @@
 #!/usr/bin/python
+from datetime import datetime
+import logging
+import sched
 import click
+import time
 
 from pybirales.modules.corr_matrix_persister import CorrMatrixPersister
 from pybirales.modules.correlator import Correlator
@@ -204,6 +208,48 @@ def correlator_pipeline(configuration, debug, save_raw):
 
 @cli.command()
 @click.argument('configuration', type=click.Path(exists=True))
+@click.option('--starttime', default="01/01/1970 00:00", help="Time at which to start observation. Format: dd/mm/yyyy_hh:mm")
+@click.option('--duration', default=0, help='Duration of observation in seconds?')
+def scheduled_correlator_pipeline(configuration, starttime, duration):
+    """
+    This script runs the correlator pipeline,
+    using the specified CONFIGURATION.
+    """
+
+    # Initialise the Pipeline Manager
+    manager = PipelineManager(configuration, False)
+
+    # Generate processing modules and data blobs
+    receiver = Receiver(settings.receiver)
+    persister_raw = RawPersister(settings.rawpersister, receiver.output_blob)
+    correlator = Correlator(settings.correlator, persister_raw.output_blob)
+    persister = CorrMatrixPersister(settings.corrmatrixpersister, correlator.output_blob)
+
+    # Add modules to pipeline manager
+    manager.add_module("receiver", receiver)
+    manager.add_module("correlator", correlator)
+    manager.add_module("persister_raw", persister_raw)
+    manager.add_module("persister", persister)
+
+    # Check that start time is valid
+    starttime = datetime.strptime(starttime, "%d/%m/%Y_%H:%M")
+    curr_time = datetime.fromtimestamp(int(time.time()))
+    wait_seconds = (starttime - curr_time).total_seconds()
+    if wait_seconds < 1:
+        logging.error("Scheduled start time must be in the future")
+        exit()
+
+    def run_pipeline():
+        manager.start_pipeline(duration)
+
+    logging.info("Setting scheduler to run at {}".format(starttime))
+    s = sched.scheduler(time.time, time.sleep)
+    s.enter((starttime - curr_time).total_seconds(), 0, run_pipeline, [])
+    s.run()
+
+
+@cli.command()
+@click.argument('configuration', type=click.Path(exists=True))
 @click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
 def multipipeline(configuration, debug):
     """
@@ -314,6 +360,7 @@ def offline_correlator(configuration, debug):
     manager.add_module("persister", persister)
 
     manager.start_pipeline()
+
 
 @cli.command()
 @click.option('--port', default=5000)
