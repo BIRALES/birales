@@ -4,15 +4,16 @@ data/
 src/build
 *.dat
 *.dat.pkl
-pybirales/back-end/build
-pybirales/back-end/dist
-pybirales/back-end/pybirales.egg-info
+build
+dist
+pybirales.egg-info
 
 
 *.log
 *.swp
 *.h5
 *.pkl
-pybirales/back-end/plots/*
-pybirales/back-end/services/calibrator
-pybirales/front-end/static/node_modules
+pybirales/backend/plots/*
+pybirales/backend/services/calibrator
+pybirales/frontend/app/static/node_modules
+

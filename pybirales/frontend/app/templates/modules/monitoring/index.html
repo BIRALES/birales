@@ -1,0 +1,121 @@
+{% extends "common/layout.html" %}
+{% block title %}Monitoring{% endblock %}
+{% set active_page = "monitoring" %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="header">
+                        <h4 class="title">Beam Candidates</h4>
+                        <p class="category">Live</p>
+                    </div>
+
+                    <div class="content">
+                        <div class="chart plotly" id="live-beam-candidates-plot"
+                             data-chart-tx="{{ tx }}"
+                             data-chart-beam_id="{{ beam_id }}"
+                             data-chart-min_channel="{{ min_channel }}"
+                             data-chart-max_channel="{{ max_channel }}"
+                             data-chart-min_time="{{ min_time }}"
+                             data-chart-max_time="{{ max_time }}"
+                        >
+
+                        </div>
+                        <div class="footer">
+                            <hr/>
+                            <div class="stats">
+                                <i class="fa fa-history"></i> <span id="beam-candidates-last-updated"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="header">
+                        <h4 class="title">SNR Profile</h4>
+                        <p class="category">Live</p>
+                    </div>
+
+                    <div class="content">
+                        <div class="plotly" id="live-beam-candidates-snr-profile-plot"
+                             data-chart-tx="{{ tx }}"
+                             data-chart-beam_id="{{ beam_id }}"
+                             data-chart-min_channel="{{ min_channel }}"
+                             data-chart-max_channel="{{ max_channel }}"
+                             data-chart-min_time="{{ min_time }}"
+                             data-chart-max_time="{{ max_time }}"
+                        >
+
+                        </div>
+                        <div class="footer">
+                            <hr/>
+                            <div class="stats">
+                                <i class="fa fa-history"></i> <span id="beam-candidates-last-updated"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="header">
+                        <h4 class="title">Orbit Determination Data</h4>
+                        <p class="category">Live</p>
+                    </div>
+                    <div class="content">
+                        <div id="live-beam-candidates-od-table">
+                            <p>Click <a href="{{ url_for('get_orbit_determination_table',
+                                    beam_id=beam_id,
+                                    min_channel=min_channel,
+                                    max_channel=max_channel,
+                                    min_time=min_time,
+                                    max_time=max_time) }}">here</a> for the orbit determination table</p>
+                        </div>
+
+                        <div class="footer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script src="{{ url_for('static', filename='js/plotters/snr_profile.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plotters/doppler_profile.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plotters/manager.js') }}"></script>
+
+    <script>
+        $(document).ready(function () {
+            var socket = io('/');
+            var plotting_manager = new PlottingManager(socket);
+            plotting_manager.init();
+
+            socket.on('connect', function () {
+                log.info('Connected!');
+            });
+
+            socket.on('disconnect', function () {
+                log.error('Disconnected!');
+            });
+
+            socket.on('error', function (err) {
+                log.error('An error has occurred on server side.');
+            });
+
+            socket.on('connect_error', function (err) {
+                log.error('Could not establish a connection');
+            });
+        });
+    </script>
+{% endblock %}

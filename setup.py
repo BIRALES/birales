@@ -1,27 +1,18 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='pybirales',
     version='0.4',
-    packages=['pybirales',
-              'pybirales.base',
-              'pybirales.blobs',
-              'pybirales.configuration',
-              'pybirales.instrument',
-              'pybirales.modules',
-              'pybirales.modules.detection',
-              'pybirales.modules.detection.strategies',
-              'pybirales.modules.monitoring',
-              'pybirales.plotters'],
+    packages=find_packages(),
     url='https://bitbucket.org/lessju/birales',
     license='',
     author='Alessio Magro',
     author_email='alessio.magro@um.edu.mt',
     description='',
-    scripts=['pybirales/scripts/best2_server.py',
-             'pybirales/scripts/best2_client.py',
-             'pybirales/scripts/best2_process_beams.py',
-             'pybirales/birales.py'],
+    scripts=['pybirales/back-end/services/scripts/best2_server.py',
+             'pybirales/back-end/services/scripts/best2_client.py',
+             'pybirales/back-end/services/scripts/best2_process_beams.py',
+             'pybirales/back-end/birales.py'],
     install_requires=['configparser',
                       'futures',
                       'enum34',
@@ -37,7 +28,7 @@ setup(
                       "click",
                       "flask",
                       "flask-compress",
-                      'sklearn'],
+                      'sklearn', 'pandas', 'bson', 'webargs'],
 )
 
 # TODO: Create /var/log/birales logging directory
