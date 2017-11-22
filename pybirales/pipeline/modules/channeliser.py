@@ -1,9 +1,9 @@
-from pybirales.base.definitions import PipelineError
-from pybirales.base.processing_module import ProcessingModule
-from pybirales.blobs.beamformed_data import BeamformedBlob
-from pybirales.blobs.channelised_data import ChannelisedBlob
-from pybirales.blobs.dummy_data import DummyBlob
-from pybirales.blobs.receiver_data import ReceiverBlob
+from pybirales.pipeline.base.definitions import PipelineError
+from pybirales.pipeline.base.processing_module import ProcessingModule
+from pybirales.pipeline.blobs.beamformed_data import BeamformedBlob
+from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
+from pybirales.pipeline.blobs.dummy_data import DummyBlob
+from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
 
 from multiprocessing.pool import ThreadPool
 import numpy as np

@@ -1,58 +1,48 @@
 import click
+from pybirales.birales import BiralesFacade
+from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, CorrelatorPipelineManagerBuilder
 
 
 @click.group()
-@click.argument('configuration', type=click.Path(exists=True))
-@click.option('--debug/--no-debug', default=False, help='Specify whether (or not) you\'d like to log debug messages.')
-@click.pass_context
 def pipelines():
     pass
 
 
-@pipelines.command()
-def standalone_test(configuration, debug):
-    pass
+@pipelines.command(short_help='Run the Detection Pipeline')
+@click.argument('configuration', type=click.Path(exists=True))
+def detection_pipeline(configuration):
+    """
+    Run the Detection Pipeline
+
+    :param configuration: The default configuration file to be used.
+    :return:
+    """
+
+    # Initialise the Birales Facade (BOSS)
+    bf = BiralesFacade(configuration)
+
+    # Build the Pipeline Manager using the Detection Pipeline Manager Builder
+    manager = bf.build_pipeline(DetectionPipelineMangerBuilder())
+
+    # Finally, start the Pipeline
+    manager.start_pipeline()
 
 
-@pipelines.command()
-def test_receiver(configuration, debug):
-    pass
+@pipelines.command(short_help='Run the Correlation Pipeline')
+@click.argument('configuration', type=click.Path(exists=True))
+def correlation_pipeline(configuration):
+    """
+    Run the Correlation Pipeline
 
+    :param configuration: The default configuration file to be used.
+    :return:
+    """
 
-@pipelines.command()
-@click.option('--save-raw/--no-save-raw', default=False, help='Save raw data')
-def birales_pipeline(configuration, debug, save_raw):
-    pass
+    # Initialise the Birales Facade (BOSS)
+    bf = BiralesFacade(configuration)
 
+    # Build the Pipeline Manager using the Correlator Pipeline Manager Builder
+    manager = bf.build_pipeline(CorrelatorPipelineManagerBuilder())
 
-@pipelines.command()
-@click.option('--save-raw/--no-save-raw', default=False, help='Save raw data?')
-def correlator_pipeline(configuration, debug, save_raw):
-    pass
-
-
-@pipelines.command()
-def save_raw_data(configuration, debug):
-    pass
-
-
-@pipelines.command()
-def offline_birales_pipeline(configuration, debug):
-    pass
-
-
-@pipelines.command()
-def offline_correlator(configuration, debug):
-    pass
-
-
-@pipelines.command()
-def multi_pipeline(configuration, debug):
-    pass
-
-
-@pipelines.command()
-@click.option('--save-raw/--no-save-raw', default=False, help='Save raw data')
-@click.option('--save-beam/--no-save-beam', default=False, help='Save beam data')
-def detection_pipeline(configuration, debug, save_raw, save_beam):
-    pass
+    # Finally, start the Pipeline
+    manager.start_pipeline()

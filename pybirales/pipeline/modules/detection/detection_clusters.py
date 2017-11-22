@@ -3,7 +3,7 @@ import datetime
 import logging as log
 import time as time2
 
-from pybirales.base import settings
+from pybirales import settings
 
 np.set_printoptions(precision=20)
 

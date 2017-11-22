@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import logging as log
-from pybirales.base import settings
+from pybirales import settings
 import copy
 
 

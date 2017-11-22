@@ -3,10 +3,10 @@ import os
 import pickle
 import time
 import struct
-from pybirales.base import settings
-from pybirales.base.definitions import PipelineError
-from pybirales.blobs.channelised_data import ChannelisedBlob
-from pybirales.base.processing_module import ProcessingModule
+from pybirales import settings
+from pybirales.pipeline.base.definitions import PipelineError
+from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
+from pybirales.pipeline.base.processing_module import ProcessingModule
 import numpy as np
 import fadvise
 

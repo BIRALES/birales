@@ -1,4 +1,4 @@
-from pybirales.base.blob import DataBlob
+from pybirales.pipeline.base.blob import DataBlob
 
 
 class ReceiverBlob(DataBlob):

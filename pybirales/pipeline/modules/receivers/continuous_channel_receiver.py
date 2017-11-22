@@ -2,10 +2,10 @@ import ctypes
 import logging
 import numpy as np
 from enum import Enum
-from pybirales.base import settings
-from pybirales.base.definitions import PipelineError, ObservationInfo
-from pybirales.base.processing_module import Generator
-from pybirales.blobs.receiver_data import ReceiverBlob
+from pybirales import settings
+from pybirales.pipeline.base.definitions import PipelineError, ObservationInfo
+from pybirales.pipeline.base.processing_module import Generator
+from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
 
 np.set_printoptions(threshold=np.nan)
 

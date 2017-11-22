@@ -6,10 +6,10 @@ import numpy as np
 from pydaq.persisters.channel import ChannelFormatFileManager
 from pydaq.persisters.definitions import FileModes
 
-from pybirales.base.definitions import PipelineError, ObservationInfo
-from pybirales.base.processing_module import ProcessingModule
-from pybirales.blobs.receiver_data import ReceiverBlob
-from pybirales.base import settings
+from pybirales.pipeline.base.definitions import PipelineError, ObservationInfo
+from pybirales.pipeline.base.processing_module import ProcessingModule
+from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
+from pybirales import settings
 
 
 class AAVSChannelReader(ProcessingModule):

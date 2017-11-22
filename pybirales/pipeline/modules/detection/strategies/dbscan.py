@@ -6,10 +6,10 @@ from multiprocessing.dummy import Pool as ThreadPool
 
 import numpy as np
 from astropy.time import Time, TimeDelta
-from pybirales.base import settings
-from pybirales.modules.detection.beam import Beam
-from pybirales.modules.detection.detection_clusters import DetectionCluster
-from pybirales.modules.detection.strategies.strategies import SpaceDebrisDetectionStrategy
+from pybirales import settings
+from pybirales.pipeline.modules.detection.beam import Beam
+from pybirales.pipeline.modules.detection.detection_clusters import DetectionCluster
+from pybirales.pipeline.modules.detection.strategies.strategies import SpaceDebrisDetectionStrategy
 from pybirales.plotters.spectrogram_plotter import plotter
 from sklearn import linear_model
 from sklearn.cluster import DBSCAN

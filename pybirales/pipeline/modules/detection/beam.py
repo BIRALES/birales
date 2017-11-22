@@ -1,8 +1,8 @@
 import numpy as np
 import datetime
-from pybirales.modules.detection.filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter, \
+from pybirales.pipeline.modules.detection.filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter, \
     PepperNoiseFilter
-from pybirales.base import settings
+from pybirales import settings
 import warnings
 
 warnings.filterwarnings('error')

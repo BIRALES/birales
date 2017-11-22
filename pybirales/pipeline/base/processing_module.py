@@ -1,11 +1,11 @@
 import logging
-import threading
+
 from abc import abstractmethod
 from threading import Thread, Event
-from pybirales.base.definitions import NoDataReaderException, InputDataNotValidException, PipelineError
+from pybirales.pipeline.base.definitions import NoDataReaderException, InputDataNotValidException
+from pybirales import settings
 import time
 import logging as log
-import settings
 
 
 class Module(Thread):

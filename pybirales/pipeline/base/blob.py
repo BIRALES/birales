@@ -5,7 +5,7 @@ import threading
 import time
 from multiprocessing import Lock
 
-from pybirales.base.definitions import ObservationInfo
+from pybirales.pipeline.base.definitions import ObservationInfo
 
 
 class DataBlob(object):

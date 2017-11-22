@@ -2,10 +2,10 @@ import logging
 import numpy as np
 import datetime
 
-from pybirales.base.definitions import PipelineError, ObservationInfo
-from pybirales.base.processing_module import ProcessingModule
-from pybirales.blobs.dummy_data import DummyBlob
-from pybirales.base import settings
+from pybirales.pipeline.base.definitions import PipelineError, ObservationInfo
+from pybirales.pipeline.base.processing_module import ProcessingModule
+from pybirales.pipeline.blobs.dummy_data import DummyBlob
+from pybirales import settings
 
 
 class DummyDataGenerator(ProcessingModule):

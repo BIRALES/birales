@@ -1,5 +1,5 @@
-from pybirales.modules.detection.repository import BeamCandidateRepository
-from pybirales.base import settings
+from pybirales.pipeline.modules.detection.repository import BeamCandidateRepository
+from pybirales import settings
 import logging as log
 from multiprocessing.queues import Queue
 import time

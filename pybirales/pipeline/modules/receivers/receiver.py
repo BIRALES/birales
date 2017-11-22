@@ -4,10 +4,10 @@ import logging
 import datetime
 import numpy as np
 from enum import Enum
-from pybirales.base import settings
-from pybirales.base.definitions import PipelineError, ObservationInfo
-from pybirales.base.processing_module import Generator
-from pybirales.blobs.receiver_data import ReceiverBlob
+from pybirales import settings
+from pybirales.pipeline.base.definitions import PipelineError, ObservationInfo
+from pybirales.pipeline.base.processing_module import Generator
+from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
 
 np.set_printoptions(threshold=np.nan)
 
@@ -147,7 +147,7 @@ class Receiver(Generator):
         """ Initialise DAQ library """
 
         # Load library
-        self._daq = ctypes.CDLL("/opt/aavs/lib/libaavsdaq.so")
+        self._daq = ctypes.CDLL(settings.receiver.daq_file_path)
 
         # Define setReceiverConfiguration function
         self._daq.setReceiverConfiguration.argtypes = [ctypes.c_uint16, ctypes.c_uint16, ctypes.c_uint16, ctypes.c_uint8,

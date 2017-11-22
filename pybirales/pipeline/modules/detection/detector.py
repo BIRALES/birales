@@ -1,15 +1,15 @@
 import numpy as np
 from functools import partial
 
-from pybirales.base.processing_module import ProcessingModule
-from pybirales.blobs.channelised_data import ChannelisedBlob
-from pybirales.modules.detection.queue import BeamCandidatesQueue
-from pybirales.modules.detection.repository import ConfigurationRepository
-from pybirales.modules.detection.strategies.m_dbscan import m_detect
+from pybirales.pipeline.base.processing_module import ProcessingModule
+from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
+from pybirales.pipeline.modules.detection.queue import BeamCandidatesQueue
+from pybirales.pipeline.modules.detection.repository import ConfigurationRepository
+from pybirales.pipeline.modules.detection.strategies.m_dbscan import m_detect
 from multiprocessing import Pool
 
-from pybirales.base import settings
-from pybirales.modules.detection.beam import Beam
+from pybirales import settings
+from pybirales.pipeline.modules.detection.beam import Beam
 
 
 class Detector(ProcessingModule):

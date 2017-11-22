@@ -4,11 +4,11 @@ import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib
 
-from pybirales.base.definitions import PipelineError
-from pybirales.base.plotter import Plotter
-from pybirales.blobs.receiver_data import ReceiverBlob
+from pybirales.pipeline.base.definitions import PipelineError
+from pybirales.pipeline.base.plotter import Plotter
+from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
 
-from pybirales.blobs.dummy_data import DummyBlob
+from pybirales.pipeline.blobs.dummy_data import DummyBlob
 
 
 class AntennaPlotter(Plotter):

@@ -3,10 +3,10 @@ import numpy as np
 from time import sleep
 import datetime
 
-from pybirales.base.definitions import PipelineError, ObservationInfo, NoDataReaderException
-from pybirales.base.processing_module import ProcessingModule
-from pybirales.blobs.dummy_data import DummyBlob
-from pybirales.base import settings
+from pybirales.pipeline.base.definitions import PipelineError, ObservationInfo, NoDataReaderException
+from pybirales.pipeline.base.processing_module import ProcessingModule
+from pybirales.pipeline.blobs.dummy_data import DummyBlob
+from pybirales import settings
 import logging as log
 import pickle
 

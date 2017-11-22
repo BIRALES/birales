@@ -1,6 +1,6 @@
 import collections
 from astropy.time import Time
-from pybirales.base import settings
+from pybirales import settings
 
 
 class ObservationInfo(collections.MutableMapping):

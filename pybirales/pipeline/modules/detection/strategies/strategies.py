@@ -1,7 +1,7 @@
 import logging as log
 import sys
 from abc import abstractmethod
-from pybirales.base import settings
+from pybirales import settings
 
 
 class SpaceDebrisDetection(object):

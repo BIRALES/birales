@@ -19,3 +19,5 @@ antennaplotter = None
 corrmatrixpersister= None
 correlator = None
 terminator = None
+manager = None
+observation = None

@@ -1,16 +1,13 @@
-import ast
 import logging
-import re
 import signal
 import time
 import yappi as profiler
-import configparser
 import logging as log
-from logging.config import fileConfig as set_log_config
+
 from matplotlib import pyplot as plt
 from datetime import datetime
-from pybirales.base import settings
-from pybirales.base.definitions import PipelineError, NoDataReaderException
+from pybirales import settings
+from pybirales.pipeline.base.definitions import NoDataReaderException
 from threading import Event
 import os
 
@@ -25,18 +22,6 @@ class PipelineManager(object):
         self._modules = []
         self._plotters = []
         self._module_names = []
-
-        # Config patters
-        self._config_pattern = re.compile("^True|False|[0-9]+(\.[0-9]*)?$")
-
-        # Load configuration file
-        self._configure_pipeline(config_file)
-
-        # Check configuration
-        self._check_configuration()
-
-        # Initialise logging
-        self._initialise_logging(debug)
 
         # Get own configuration
         self._config = None
@@ -68,51 +53,6 @@ class PipelineManager(object):
             logging.info("Ctrl-C detected by process %s, stopping pipeline", os.getpid())
 
             self.stop_pipeline()
-
-    def _configure_pipeline(self, config_file):
-        """ Parse configuration file and set pipeline
-        :param config_file: Configuration file path
-        """
-        parser = configparser.ConfigParser()
-        parser.read(unicode(config_file))
-
-        # Temporary class to create section object in settings file
-        class Section(object):
-            def settings(self):
-                return self.__dict__.keys()
-
-        # Loop over all section in config file
-        for key, value in parser._sections.items():
-            # Create instance to inject into settings file
-            instance = Section()
-
-            # Loop over all config entries in section
-            for k, v in value.items():
-
-                # Check if value is a number of boolean
-                if re.match(self._config_pattern, v) is not None:
-                    setattr(instance, k, ast.literal_eval(v))
-
-                # Check if value is a list
-                elif re.match("^\[.*\]$", re.sub('\s+', '', v)):
-                    setattr(instance, k, ast.literal_eval(v))
-
-                # Otherwise it is a string
-                else:
-                    setattr(instance, k, v)
-
-            # Add object instance to settings
-            setattr(settings, key, instance)
-
-    @staticmethod
-    def _check_configuration():
-        """ Check that an observation entry is in the config file and it contains the required information """
-        if "observation" not in settings.__dict__:
-            raise PipelineError("PipelineManager: observation section not found in configuration file")
-
-        if {"start_center_frequency", "channel_bandwidth", "samples_per_second"} - set(settings.observation.settings()):
-            raise PipelineError("PipelineManager: Missing keys in observation section "
-                                "(need start_center_frequency, bandwidth")
 
     def add_module(self, name, module):
         """ Add a new module instance to the pipeline
@@ -168,8 +108,6 @@ class PipelineManager(object):
         except NoDataReaderException as exception:
             logging.info('Data finished %s', exception.__class__.__name__)
             self.stop_pipeline()
-        except KeyboardInterrupt:
-            logging.info('Keyboard interrupt')
         except Exception as exception:
             logging.exception('Pipeline error: %s', exception.__class__.__name__)
             # An error occurred, force stop all modules
@@ -206,23 +144,6 @@ class PipelineManager(object):
             profiling_file_path = settings.manager.profiler_file_path+'_{:%Y%m%d_%H:%M}.stats'.format(datetime.utcnow())
             log.info('Profiling stopped. Dumping profiling statistics to %s', profiling_file_path)
             stats.save(profiling_file_path, type='callgrind')
-
-    @staticmethod
-    def _initialise_logging(debug):
-        """
-        Initialise logging functionality
-
-        :param debug:
-        :return:
-        """
-
-        set_log_config(settings.manager.loggging_config_file_path)
-        logger = logging.getLogger()
-        # Logging level should be INFO by default
-        logger.setLevel(logging.INFO)
-        if debug:
-            # Change Logging level to DEBUG
-            logger.setLevel(logging.DEBUG)
 
     def is_module_stopped(self):
         for module in self._modules:

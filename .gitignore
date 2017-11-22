@@ -1,9 +1,7 @@
 *.pyc
 .idea/
 data/
-src/build
 *.dat
-*.dat.pkl
 build
 dist
 pybirales.egg-info
@@ -13,7 +11,7 @@ pybirales.egg-info
 *.swp
 *.h5
 *.pkl
-pybirales/backend/plots/*
-pybirales/backend/services/calibrator
-pybirales/frontend/app/static/node_modules
-
+pybirales/pipeline/plots/*
+pybirales/services/calibrator
+pybirales/app/static/node_modules/*
+pybirales/configuration/local.ini

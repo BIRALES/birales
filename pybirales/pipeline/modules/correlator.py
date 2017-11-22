@@ -3,12 +3,12 @@ import logging
 import struct
 import numba
 
-from pybirales.blobs.correlated_data import CorrelatedBlob
-from pybirales.base.definitions import PipelineError
-from pybirales.base.processing_module import ProcessingModule
-from pybirales.blobs.channelised_data import ChannelisedBlob
-from pybirales.blobs.receiver_data import ReceiverBlob
-from pybirales.blobs.dummy_data import DummyBlob
+from pybirales.pipeline.blobs.correlated_data import CorrelatedBlob
+from pybirales.pipeline.base.definitions import PipelineError
+from pybirales.pipeline.base.processing_module import ProcessingModule
+from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
+from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
+from pybirales.pipeline.blobs.dummy_data import DummyBlob
 
 
 # @numba.jit(nopython=True, nogil=True)

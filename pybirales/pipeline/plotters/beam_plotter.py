@@ -3,9 +3,9 @@ import numpy as np
 
 from matplotlib import pyplot as plt
 
-from pybirales.base.definitions import PipelineError
-from pybirales.base.plotter import Plotter
-from pybirales.blobs.beamformed_data import BeamformedBlob
+from pybirales.pipeline.base.definitions import PipelineError
+from pybirales.pipeline.base.plotter import Plotter
+from pybirales.pipeline.blobs.beamformed_data import BeamformedBlob
 
 
 class BeamformedDataPlotter(Plotter):

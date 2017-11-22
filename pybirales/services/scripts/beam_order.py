@@ -6,7 +6,7 @@ from pandas.io.json import json_normalize
 from itertools import chain
 from matplotlib import pyplot as plt
 from matplotlib.offsetbox import AnchoredText
-from pybirales.modules.detection.repository import BeamCandidateRepository, ConfigurationRepository
+from pybirales.pipeline.modules.detection.repository import BeamCandidateRepository, ConfigurationRepository
 from sklearn import linear_model
 
 

@@ -1,4 +1,4 @@
-from pybirales.base.processing_module import ProcessingModule
+from pybirales.pipeline.base.processing_module import ProcessingModule
 import time
 import logging
 

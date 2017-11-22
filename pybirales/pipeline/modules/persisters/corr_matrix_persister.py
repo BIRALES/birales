@@ -4,8 +4,8 @@ import os
 import time
 import h5py
 
-from pybirales.base.definitions import PipelineError
-from pybirales.base.processing_module import ProcessingModule
+from pybirales.pipeline.base.definitions import PipelineError
+from pybirales.pipeline.base.processing_module import ProcessingModule
 
 
 class CorrMatrixPersister(ProcessingModule):

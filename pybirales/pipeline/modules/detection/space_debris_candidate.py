@@ -1,7 +1,7 @@
 import numpy as np
 import datetime
 import logging as log
-from pybirales.base import settings
+from pybirales import settings
 
 
 class DetectionCluster:

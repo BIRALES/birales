@@ -3,9 +3,9 @@ import numpy as np
 
 from matplotlib import pyplot as plt
 
-from pybirales.base.definitions import PipelineError
-from pybirales.base.plotter import Plotter
-from pybirales.blobs.channelised_data import ChannelisedBlob
+from pybirales.pipeline.base.definitions import PipelineError
+from pybirales.pipeline.base.plotter import Plotter
+from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 
 
 class BandpassPlotter(Plotter):
