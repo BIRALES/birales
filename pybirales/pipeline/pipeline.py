@@ -17,7 +17,7 @@ from pybirales.pipeline.modules.terminator import Terminator
 class PipelineManagerBuilder:
     def __init__(self):
         # Initialise the Pipeline Manager
-        self.manager = PipelineManager(settings.manager, settings.manager.debug)
+        self.manager = PipelineManager()
 
     @abc.abstractmethod
     def build(self):
@@ -28,6 +28,8 @@ class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
     def __init__(self):
         PipelineManagerBuilder.__init__(self)
 
+        self.manager.name = 'Detection Pipeline'
+
     def build(self):
         """
         This script runs the multi-pixel pipeline with debris detection enabled,
@@ -36,10 +38,11 @@ class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
         :return:
         """
 
-        receiver = Receiver(settings.receiver)
-
-        if settings.detection.offline:
+        if settings.manager.offline:
             receiver = RawDataReader(settings.rawdatareader)
+            self.manager.name += ' (Offline)'
+        else:
+            receiver = Receiver(settings.receiver)
 
         if settings.manager.save_raw:
             persister_raw = RawPersister(settings.rawpersister, receiver.output_blob)
@@ -68,6 +71,8 @@ class StandAlonePipelineMangerBuilder(PipelineManagerBuilder):
     def __init__(self):
         PipelineManagerBuilder.__init__(self)
 
+        self.manager.name = 'Standalone Pipeline'
+
     def build(self):
         """
         This script runs the standalone test pipeline,
@@ -93,6 +98,8 @@ class TestReceiverPipelineMangerBuilder(PipelineManagerBuilder):
     def __init__(self):
         PipelineManagerBuilder.__init__(self)
 
+        self.manager.name = 'Test Receiver Pipeline'
+
     def build(self):
         """
         This script runs the test receiver pipeline,
@@ -111,6 +118,8 @@ class TestReceiverPipelineMangerBuilder(PipelineManagerBuilder):
 class MultiPipelineMangerBuilder(PipelineManagerBuilder):
     def __init__(self):
         PipelineManagerBuilder.__init__(self)
+
+        self.manager.name = 'Multi Pipeline'
 
     def build(self):
         """
@@ -140,10 +149,14 @@ class CorrelatorPipelineManagerBuilder(PipelineManagerBuilder):
     def __init__(self):
         PipelineManagerBuilder.__init__(self)
 
+        self.manager.name = 'Correlator Pipeline'
+
     def build(self):
-        receiver = Receiver(settings.receiver)
-        if settings.correlator.offline:
+        if settings.manager.offline:
             receiver = RawDataReader(settings.rawdatareader)
+            self.manager.name += ' (Offline)'
+        else:
+            receiver = Receiver(settings.receiver)
 
         if settings.manager.save_raw:
             persister_raw = RawPersister(settings.rawpersister, receiver.output_blob)

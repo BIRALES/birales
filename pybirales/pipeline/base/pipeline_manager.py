@@ -15,9 +15,7 @@ import os
 class PipelineManager(object):
     """ Class to manage the pipeline """
 
-    def __init__(self, config_file, debug=False):
-        logging.info("PyBIRALES: Initialising")
-
+    def __init__(self):
         # Class constructor
         self._modules = []
         self._plotters = []
@@ -40,6 +38,7 @@ class PipelineManager(object):
         signal.signal(signal.SIGINT, self._signal_handler)
 
         self.count = 0
+        self.name = None
 
     def _signal_handler(self, signum, frame):
         """

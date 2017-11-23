@@ -3,30 +3,26 @@ from pybirales.services.calibrator.facade import CalibrationFacade
 import ast
 import configparser
 import logging as log
+import logging.config as log_config
 import os
 import re
 import settings
 
 
-class BiralesFacade:
+class BiralesConfig:
     LOCAL_CONFIG = 'configuration/local.ini'
 
-    def __init__(self, config_file):
-        self._load_configuration(config_file)
+    def __init__(self, config_file_path, config_options):
+        self._parser = None
 
-        # Initialise the facades of the application
-        self._frontend_subsystem = None
-        self._calibration_subsystem = CalibrationFacade()
+        self._load_from_file(config_file_path, config_options)
 
-        self._pipeline_manager = None
-
-        log.info('BIRALES Initialised')
-
-    def _load_configuration(self, config_file):
+    def _load_from_file(self, config_file, config_options):
         """
         Load the configuration of the BIRALES application into the settings.py file
 
         :param config_file: The path to the application configuration file
+        :param config_options: Dictionary that overrides the configuration file settings
         :return: None
         """
 
@@ -35,17 +31,33 @@ class BiralesFacade:
         # Load the configuration file requested by the user
         with open(config_file) as f:
             parser.read_file(f)
-            log.config.fileConfig(config_file, disable_existing_loggers=False)
+            log_config.fileConfig(config_file, disable_existing_loggers=False)
             log.info('Loading configuration file at {}.'.format(config_file))
 
         # Override the default configuration file with the ones specified in the local.ini
         try:
-            with open(os.path.join(os.path.dirname(__file__), BiralesFacade.LOCAL_CONFIG)) as f:
+            with open(os.path.join(os.path.dirname(__file__), BiralesConfig.LOCAL_CONFIG)) as f:
                 parser.read_file(f)
-                log.info('Loading local configuration file at {}.'.format(BiralesFacade.LOCAL_CONFIG))
+                log.info('Loading local configuration file at {}.'.format(BiralesConfig.LOCAL_CONFIG))
         except IOError:
             log.info(
-                'Local config file not found in {}. Using default configuration.'.format(BiralesFacade.LOCAL_CONFIG))
+                'Local config file not found in {}. Using default configuration.'.format(BiralesConfig.LOCAL_CONFIG))
+
+        # Override the configuration settings in the config parser
+        for section in config_options:
+            for (key, value) in config_options[section]:
+                parser.set(section, key, value)
+
+        self._parser = parser
+
+    def load(self):
+        """
+        Use a config parser to build the settings module. This module is accessible through
+        the application
+
+        :param parser: The config parser built from a file
+        :return:
+        """
 
         # Temporary class to create section object in settings file
         class Section(object):
@@ -53,11 +65,11 @@ class BiralesFacade:
                 return self.__dict__.keys()
 
         # Loop over all sections in config file
-        for section in parser.sections():
+        for section in self._parser.sections():
             # Create instance to inject into settings file
             instance = Section()
 
-            for (k, v) in parser.items(section):
+            for (k, v) in self._parser.items(section):
                 # Check if value is a number of boolean
                 if re.match(re.compile("^True|False|[0-9]+(\.[0-9]*)?$"), v) is not None:
                     setattr(instance, k, ast.literal_eval(v))
@@ -76,6 +88,18 @@ class BiralesFacade:
         log.info('Configurations successfully loaded.')
 
         # todo - Validate the loaded configuration file
+
+
+class BiralesFacade:
+    def __init__(self, configuration):
+        # Load the system configuration upon initialisation
+        configuration.load()
+
+        # Initialise the facades of the application
+        self._frontend_subsystem = None
+        self._calibration_subsystem = CalibrationFacade()
+
+        self._pipeline_manager = None
 
     def run_pipeline(self):
         """
@@ -96,10 +120,13 @@ class BiralesFacade:
         :param pipeline_builder:
         :return: None
         """
+        log.info('Building the {} Manager.'.format(pipeline_builder.manager.name))
 
         pipeline_builder.build()
 
         self._pipeline_manager = pipeline_builder.manager
+
+        log.info('{} initialised successfully.'.format(self._pipeline_manager.name))
 
     @staticmethod
     def calibrate(self):
