@@ -5,12 +5,13 @@ from commands.services import services
 
 
 @click.group()
-def cli():
-    pass
+@click.pass_context
+def cli(ctx):
+    return ctx
 
 cli.add_command(pipelines)
 cli.add_command(services)
 
 
 if __name__ == '__main__':
-    cli()
+    cli(obj={})

@@ -3,39 +3,56 @@ from pybirales.birales import BiralesFacade, BiralesConfig
 from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, CorrelatorPipelineManagerBuilder
 
 
+def update_config(config, section, key, value):
+    if config:
+        if section in config:
+            config[section][key] = value
+            return config
+        config[section] = {}
+        return update_config(config, section, key, value)
+    return update_config({}, section, key, value)
+
+
 @click.group()
-@click.option('--option1')
-def pipelines(option1):
-    pass
-
-
-def parse_options(ctx):
-    print(ctx.args)
-    for option in ctx.args:
-        print(option)
-
-    # print({ctx.args[i][2:]: ctx.args[i + 1] for i in range(0, len(ctx.args))})
-
-    return {}
-
-
-@pipelines.command(short_help='Run the Detection Pipeline', context_settings=dict(
-    ignore_unknown_options=True,
-    allow_extra_args=True,
-))
-@click.argument('configuration', type=click.Path(exists=True))
+@click.option('--name', '-n', 'name', default='observation', help='The name of the observation')
+@click.option('--debug/--no-debug', default=False)
 @click.pass_context
-def detection_pipeline(ctx, configuration):
+def pipelines(ctx, name, debug):
+    ctx.obj = {
+        'observation': {
+            'name': name
+        },
+        'manager': {
+            'debug': debug
+        }
+    }
+
+    ctx.obj = update_config(ctx.obj, 'observation', 'name', name)
+    ctx.obj = update_config(ctx.obj, 'manager', 'debug', debug)
+
+
+@pipelines.command(short_help='Run the Detection Pipeline')
+@click.argument('configuration', type=click.Path(exists=True))
+@click.option('--tx', 'tx', default=410.07, help='The transmission frequency in MHz')
+@click.option('--pointing', 'pointing', default=12.3, help='Reference Declination of the Beam Former')
+@click.pass_context
+def detection_pipeline(ctx, configuration, tx, pointing):
     """
+
     Run the Detection Pipeline
 
     :param ctx:
+    :param tx:
+    :param pointing:
     :param configuration: The default configuration file to be used.
     :return:
     """
 
+    ctx.obj = update_config(ctx.obj, 'observation', 'transmitter_frequency', tx)
+    ctx.obj = update_config(ctx.obj, 'beamformer', 'reference_pointing', pointing)
+
     # Load the BIRALES configuration from file
-    config = BiralesConfig(configuration, parse_options(ctx))
+    config = BiralesConfig(configuration, ctx.obj)
 
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)

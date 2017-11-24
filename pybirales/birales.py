@@ -15,14 +15,15 @@ class BiralesConfig:
     def __init__(self, config_file_path, config_options):
         self._parser = None
 
-        self._load_from_file(config_file_path, config_options)
+        self._load_from_file(config_file_path)
 
-    def _load_from_file(self, config_file, config_options):
+        self.update_config(config_options)
+
+    def _load_from_file(self, config_file):
         """
         Load the configuration of the BIRALES application into the settings.py file
 
         :param config_file: The path to the application configuration file
-        :param config_options: Dictionary that overrides the configuration file settings
         :return: None
         """
 
@@ -43,19 +44,25 @@ class BiralesConfig:
             log.info(
                 'Local config file not found in {}. Using default configuration.'.format(BiralesConfig.LOCAL_CONFIG))
 
-        # Override the configuration settings in the config parser
-        for section in config_options:
-            for (key, value) in config_options[section]:
-                parser.set(section, key, value)
-
         self._parser = parser
+
+    def update_config(self, config_options):
+        """
+        Override the configuration settings using an external dictionary
+
+        :param config_options:
+        :return:
+        """
+
+        for section in config_options:
+            for (key, value) in config_options[section].items():
+                self._parser.set(section, key, value)
 
     def load(self):
         """
         Use a config parser to build the settings module. This module is accessible through
         the application
 
-        :param parser: The config parser built from a file
         :return:
         """
 
@@ -71,16 +78,22 @@ class BiralesConfig:
 
             for (k, v) in self._parser.items(section):
                 # Check if value is a number of boolean
-                if re.match(re.compile("^True|False|[0-9]+(\.[0-9]*)?$"), v) is not None:
-                    setattr(instance, k, ast.literal_eval(v))
+                print(k,v)
+                # If value is a string, interpret it
+                if isinstance(v, basestring):
+                    if re.match(re.compile("^True|False|[0-9]+(\.[0-9]*)?$"), v) is not None:
+                        setattr(instance, k, ast.literal_eval(v))
 
-                # Check if value is a list
-                elif re.match("^\[.*\]$", re.sub('\s+', '', v)):
-                    setattr(instance, k, ast.literal_eval(v))
+                    # Check if value is a list
+                    elif re.match("^\[.*\]$", re.sub('\s+', '', v)):
+                        setattr(instance, k, ast.literal_eval(v))
 
-                # Otherwise it is a string
+                    # Otherwise it is a string
+                    else:
+                        setattr(instance, k, v)
                 else:
                     setattr(instance, k, v)
+
 
             # Add object instance to settings
             setattr(settings, section, instance)
