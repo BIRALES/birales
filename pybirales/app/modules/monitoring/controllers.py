@@ -27,6 +27,7 @@ def index(args):
     """
     Serve the client-side application
 
+    :param args:
     :return:
     """
 
