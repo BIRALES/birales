@@ -142,18 +142,20 @@ class BiralesFacade:
         log.info('{} initialised successfully.'.format(self._pipeline_manager.name))
 
     @staticmethod
-    def calibrate(self):
+    def start_server(flask_app):
+        """
+
+        :param flask_app: The flask application
+        :return:
+        """
+
+        flask_app.run(flask_app)
+
+    @staticmethod
+    def calibrate():
         """
         Calibrate the instrument. Run the calibration Routine.
 
         :return:
         """
-        pass
-
-    def start_server(self):
-        """
-
-        :return:
-        """
-
         pass

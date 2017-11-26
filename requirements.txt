@@ -1,3 +1,7 @@
+astropy
+pandas
+webargs
+bson
 aniso8601==1.2.0
 certifi==2016.9.26
 click==6.6

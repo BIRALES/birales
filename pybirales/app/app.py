@@ -1,5 +1,5 @@
-import logging as log
 import click
+import logging as log
 
 from flask import Flask
 from flask_compress import Compress

@@ -3,7 +3,7 @@ import pandas as pd
 from astropy.time import Time, TimeDelta
 from bson import json_util
 from flask import Blueprint, render_template, Response, json
-from pybirales.modules.detection.repository import BeamCandidateRepository
+from pybirales.repository.repository import BeamCandidateRepository
 from webargs import fields
 from webargs.flaskparser import use_args
 

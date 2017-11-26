@@ -24,7 +24,7 @@ setup(
                       "pymongo",
                       "scipy",
                       "scikit-learn",
-                      "h5py",
+                    #  "h5py",
                       "click",
                       "flask",
                       "flask-compress",
