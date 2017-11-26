@@ -149,3 +149,11 @@ class BiralesFacade:
         :return:
         """
         pass
+
+    def start_server(self):
+        """
+
+        :return:
+        """
+
+        pass

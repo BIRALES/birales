@@ -6,7 +6,9 @@ from flask_compress import Compress
 from flask_ini import FlaskIni
 from flask_socketio import SocketIO
 from logging.config import fileConfig
-from pybirales.frontend.app.modules.monitoring.controllers import monitoring_page
+from modules.monitoring.controllers import monitoring_page
+
+socket_io = SocketIO()
 
 
 def configure_flask(config_file_path):
@@ -35,9 +37,6 @@ def configure_flask(config_file_path):
     socket_io.init_app(app, async_mode='threading')
 
     return app
-
-
-socket_io = SocketIO()
 
 
 @click.command()
