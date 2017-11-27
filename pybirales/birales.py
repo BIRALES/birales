@@ -114,6 +114,12 @@ class BiralesFacade:
 
         self._pipeline_manager = None
 
+        # Ensure that the system was initialised correctly
+        self.validate_init()
+
+    def validate_init(self):
+        pass
+
     def run_pipeline(self):
         """
 
