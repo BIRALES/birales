@@ -28,6 +28,8 @@ setup(
                       "click",
                       "flask",
                       "flask-compress",
+                      "flask-socketio",
+                      "flask_ini"
                       'sklearn', 'pandas', 'bson', 'webargs', 'yappi'],
     entry_points={
         'console_scripts': [

@@ -1,7 +1,6 @@
 import pandas as pd
-
 from astropy.time import Time, TimeDelta
-from bson import json_util
+# from pymongo import json_util
 from flask import Blueprint, render_template, Response, json
 from pybirales.repository.repository import BeamCandidateRepository
 from webargs import fields
@@ -48,8 +47,8 @@ def get_beam_candidates(args):
                                                         max_channel=args['max_channel'],
                                                         min_channel=args['min_channel'])
 
-    return Response(json.dumps(detected_beam_candidates[:100], default=json_util.default),
-                    mimetype='application/json; charset=utf-8')
+    return Response(json.dumps(detected_beam_candidates[:100]),
+                               mimetype='application/json; charset=utf-8')
 
 
 @monitoring_page.route('/monitoring/illumination_sequence', methods=['GET', 'POST'])
@@ -76,8 +75,7 @@ def get_illumination_sequence(args):
     df['time'] = pd.to_datetime(df['time'], format='%Y-%m-%dT%H:%M:%S.%f')
     df = df.groupby(['time'], sort=True)['snr'].max()
 
-    return Response(json.dumps(df.to_json(), default=json_util.default),
-                    mimetype='application/json; charset=utf-8')
+    return Response(json.dumps(df.to_json()),mimetype='application/json; charset=utf-8')
 
 
 @monitoring_page.route('/monitoring/beam_candidates/table', methods=['GET', 'POST'])
@@ -95,7 +93,7 @@ def get_orbit_determination_table(args):
                                                    beam_candidate['data']['channel']]
 
     return render_template('od_input.html',
-                           candidates=detected_beam_candidates[:100],
+                           candidates=detected_beam_candidates,
                            beam_id=args['beam_id'],
                            to_time=args['to_time'],
                            from_time=args['from_time'],
