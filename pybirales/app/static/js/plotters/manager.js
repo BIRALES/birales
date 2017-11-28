@@ -4,6 +4,10 @@ var PlottingManager = function (socket) {
     var channels = {};
 
     this.init = function () {
+        // Do initial load
+
+
+
         // Subscribe the plots to a channel
         $.each(channels, function (channel, plots) {
             socket.on(channel, function (data) {

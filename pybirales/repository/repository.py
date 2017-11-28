@@ -11,8 +11,8 @@ class Repository:
         self.client = mongo.MongoClient(self.host, self.port, connect=False)
         self.database = self.client['birales']
 
-        # if settings.database.user_name:
-        # self.client.birales.authenticate('birales_rw', 'arcadia10')
+
+        # self.client.birales.authenticate('birales_ro', 'birales_ro123')
 
     @abstractmethod
     def persist(self, entity):

@@ -1,7 +1,7 @@
 import click
 import logging as log
-
-from flask import Flask, request
+import dateutil.parser
+from flask import Flask, request, Response, json
 from flask_compress import Compress
 from flask_ini import FlaskIni
 from flask_socketio import SocketIO
@@ -9,8 +9,32 @@ from logging.config import fileConfig
 from modules.monitoring import monitoring_page
 from modules.observations import observations_page
 from modules.preferences import preferences_page
+from pybirales.repository.repository import BeamCandidateRepository
 
 socket_io = SocketIO()
+beam_candidates_repo = BeamCandidateRepository()
+
+
+@socket_io.on('beam_candidates')
+def get_beam_candidates(beam_id, from_time, to_time, min_channel, max_channel):
+    if beam_id == 'None':
+        beam_id = None
+    else:
+        beam_id = int(beam_id)
+
+    from_time = dateutil.parser.parse(from_time)
+    to_time = dateutil.parser.parse(to_time)
+    min_channel = float(min_channel)
+    max_channel = float(max_channel)
+
+    detected_beam_candidates = beam_candidates_repo.get(beam_id=beam_id,
+                                                        to_time=to_time,
+                                                        from_time=from_time,
+                                                        max_channel=max_channel,
+                                                        min_channel=min_channel)
+
+    socket_io.emit('beam_candidates', json.dumps(detected_beam_candidates))
+    # return Response(json.dumps(detected_beam_candidates), mimetype='application/json; charset=utf-8')
 
 
 def configure_flask(config_file_path):

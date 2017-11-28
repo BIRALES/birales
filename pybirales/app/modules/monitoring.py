@@ -32,16 +32,15 @@ def index(args):
     :return:
     """
     if not args['from_time']:
-        args['from_time'] = (Time.now() - TimeDelta(3600, format='sec')).datetime
-        args['from_time'] = datetime.datetime(2016, 11, 3, 1, 1, 1)
+        args['from_time'] = (Time.now() - TimeDelta(3600, format='sec'))
 
     if not args['to_time']:
         args['to_time'] = Time.now()
 
-    return render_template('modules/monitoring/index.html',
+    return render_template('modules/monitoring.html',
                            beam_id=args['beam_id'],
-                           to_time=args['to_time'],
-                           from_time=args['from_time'],
+                           to_time=args['to_time'].datetime.isoformat('T'),
+                           from_time=args['from_time'].datetime.isoformat('T'),
                            max_channel=args['max_channel'],
                            min_channel=args['min_channel'])
 

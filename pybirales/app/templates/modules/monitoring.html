@@ -19,25 +19,25 @@
                                 <div class="col-sm-6">
                                     <div class="form-group">
                                         <label>Date From</label>
-                                        <input type="datetime-local" name="date_from" class="form-control" placeholder="Date From" value="">
+                                        <input type="date" class="form-control" id="monitoring-date-from"/>
                                     </div>
                                 </div>
                                 <div class="col-sm-6">
                                     <div class="form-group">
                                         <label>Date To</label>
-                                        <input type="datetime-local" name="date_to" class="form-control" placeholder="Date To" value="">
+                                        <input type="date" class="form-control" id="monitoring-date-to"/>
                                     </div>
                                 </div>
                             </div>
                         </form>
 
-                        <div class="chart plotly" id="live-beam-candidates-plot"
+                        <div class="chart plotly" id="doppler-profile-plot"
                              data-chart-tx="{{ tx }}"
                              data-chart-beam_id="{{ beam_id }}"
                              data-chart-min_channel="{{ min_channel }}"
                              data-chart-max_channel="{{ max_channel }}"
-                             data-chart-min_time="{{ min_time }}"
-                             data-chart-max_time="{{ max_time }}"
+                             data-chart-min_time="{{ from_time }}"
+                             data-chart-max_time="{{ to_time }}"
                         >
 
                         </div>
@@ -62,13 +62,13 @@
                     </div>
 
                     <div class="content">
-                        <div class="chart plotly" id="live-beam-candidates-snr-profile-plot"
+                        <div class="chart plotly" id="snr-profile-plot"
                              data-chart-tx="{{ tx }}"
                              data-chart-beam_id="{{ beam_id }}"
                              data-chart-min_channel="{{ min_channel }}"
                              data-chart-max_channel="{{ max_channel }}"
-                             data-chart-min_time="{{ min_time }}"
-                             data-chart-max_time="{{ max_time }}"
+                             data-chart-min_time="{{ from_time }}"
+                             data-chart-max_time="{{ to_time }}"
                         >
 
                         </div>
@@ -118,14 +118,35 @@
     <script>
         $(document).ready(function () {
             var socket = io('/');
+
+            function update_beam_data(){
+                socket.emit(new Date($("#monitoring-date-from").val()),
+                            new Date($("#monitoring-date-to").val()), '{{ min_channel }}', '{{ max_channel }}')
+            }
+
+            $("#monitoring-date-from").flatpickr({
+                defaultDate: '{{ from_time }}',
+                enableTime: true,
+                time_24hr: true,
+                onValueUpdate: update_beam_data()
+            });
+
+            $("#monitoring-date-to").flatpickr({
+                defaultDate: '{{ to_time }}',
+                enableTime: true,
+                time_24hr: true,
+                onValueUpdate: update_beam_data()
+            });
+
             var plotting_manager = new PlottingManager(socket);
 
-            plotting_manager.addPlot('beam_candidates', new DopplerProfilePlotter('live-beam-candidates-plot'));
-            plotting_manager.addPlot('beam_candidates', new SNRProfilePlot('live-beam-candidates-snr-profile-plot'));
+            plotting_manager.addPlot('beam_candidates', new DopplerProfilePlotter('doppler-profile-plot'));
+            plotting_manager.addPlot('beam_candidates', new SNRProfilePlot('snr-profile-plot'));
             plotting_manager.init();
 
             socket.on('connect', function () {
                 log.info('Connected!');
+                socket.emit('beam_candidates', '{{ beam_id }}', '{{from_time  }}', '{{ to_time }}', '{{ min_channel }}', '{{ max_channel }}')
             });
 
             socket.on('disconnect', function () {
