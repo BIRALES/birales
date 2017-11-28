@@ -29,8 +29,8 @@ setup(
                       "flask",
                       "flask-compress",
                       "flask-socketio",
-                      "flask_ini"
-                      'sklearn', 'pandas', 'bson', 'webargs', 'yappi'],
+                      "flask_ini",
+                      'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow'],
     entry_points={
         'console_scripts': [
             'birales = pybirales.cli.cli:cli',

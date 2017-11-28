@@ -1,10 +1,13 @@
 import pandas as pd
+import logging as log
 from astropy.time import Time, TimeDelta
 # from pymongo import json_util
-from flask import Blueprint, render_template, Response, json
+from flask import Blueprint, render_template, Response, json, request
 from pybirales.repository.repository import BeamCandidateRepository
 from webargs import fields
 from webargs.flaskparser import use_args
+from pybirales.app.app import socket_io
+
 
 monitoring_page = Blueprint('monitoring_page', __name__, template_folder='templates')
 beam_candidates_repo = BeamCandidateRepository()
@@ -12,12 +15,18 @@ MIN_CHANNEL = 409.9921875
 MAX_CHANNEL = 410.0703125
 
 beam_candidates_args = {
-    'beam_id': fields.Int(missing=None),
-    'max_channel': fields.Float(missing=MAX_CHANNEL),
-    'min_channel': fields.Float(missing=MIN_CHANNEL),
-    'from_time': fields.DateTime(missing=(Time.now() - TimeDelta(3600, format='sec')).datetime),
-    'to_time': fields.DateTime(missing=Time.now())
+    'beam_id': fields.Int(missing=None, required=False),
+    'max_channel': fields.Float(missing=MAX_CHANNEL, required=False),
+    'min_channel': fields.Float(missing=MIN_CHANNEL, required=False),
+    'from_time': fields.DateTime(missing=None, required=False),
+    'to_time': fields.DateTime(missing=None, required=False),
 }
+
+
+@monitoring_page.route('/events')
+@socket_io.on('connect')
+def connect():
+    log.info('Client (sid: %s) connectedw', request.sid)
 
 
 @monitoring_page.route('/')
@@ -29,8 +38,13 @@ def index(args):
     :param args:
     :return:
     """
+    if not args['from_time']:
+        args['from_time'] = (Time.now() - TimeDelta(3600, format='sec')).datetime
 
-    return render_template('modules/monitoring/live.html',
+    if not args['to_time']:
+        args['to_time'] = Time.now()
+
+    return render_template('modules/monitoring/index.html',
                            beam_id=args['beam_id'],
                            to_time=args['to_time'],
                            from_time=args['from_time'],
@@ -48,7 +62,7 @@ def get_beam_candidates(args):
                                                         min_channel=args['min_channel'])
 
     return Response(json.dumps(detected_beam_candidates[:100]),
-                               mimetype='application/json; charset=utf-8')
+                    mimetype='application/json; charset=utf-8')
 
 
 @monitoring_page.route('/monitoring/illumination_sequence', methods=['GET', 'POST'])
@@ -75,7 +89,7 @@ def get_illumination_sequence(args):
     df['time'] = pd.to_datetime(df['time'], format='%Y-%m-%dT%H:%M:%S.%f')
     df = df.groupby(['time'], sort=True)['snr'].max()
 
-    return Response(json.dumps(df.to_json()),mimetype='application/json; charset=utf-8')
+    return Response(json.dumps(df.to_json()), mimetype='application/json; charset=utf-8')
 
 
 @monitoring_page.route('/monitoring/beam_candidates/table', methods=['GET', 'POST'])

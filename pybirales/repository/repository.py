@@ -1,7 +1,6 @@
 import logging as log
 import pymongo as mongo
 import sys
-
 from abc import abstractmethod
 
 
@@ -11,7 +10,9 @@ class Repository:
         self.port = 27017
         self.client = mongo.MongoClient(self.host, self.port, connect=False)
         self.database = self.client['birales']
-        self.client.birales.authenticate('birales_rw', 'arcadia10')
+
+        # if settings.database.user_name:
+        #     self.client.birales.authenticate('birales_rw', 'arcadia10')
 
     @abstractmethod
     def persist(self, entity):

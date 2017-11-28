@@ -9,10 +9,28 @@
                 <div class="card">
                     <div class="header">
                         <h4 class="title">Beam Candidates</h4>
+
                         <p class="category">Live</p>
                     </div>
 
                     <div class="content">
+                        <form>
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label>Date From</label>
+                                        <input type="datetime-local" name="date_from" class="form-control" placeholder="Date From" value="">
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label>Date To</label>
+                                        <input type="datetime-local" name="date_to" class="form-control" placeholder="Date To" value="">
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+
                         <div class="chart plotly" id="live-beam-candidates-plot"
                              data-chart-tx="{{ tx }}"
                              data-chart-beam_id="{{ beam_id }}"
@@ -39,11 +57,12 @@
                 <div class="card">
                     <div class="header">
                         <h4 class="title">SNR Profile</h4>
+
                         <p class="category">Live</p>
                     </div>
 
                     <div class="content">
-                        <div class="plotly" id="live-beam-candidates-snr-profile-plot"
+                        <div class="chart plotly" id="live-beam-candidates-snr-profile-plot"
                              data-chart-tx="{{ tx }}"
                              data-chart-beam_id="{{ beam_id }}"
                              data-chart-min_channel="{{ min_channel }}"
@@ -69,11 +88,12 @@
                 <div class="card">
                     <div class="header">
                         <h4 class="title">Orbit Determination Data</h4>
+
                         <p class="category">Live</p>
                     </div>
                     <div class="content">
                         <div id="live-beam-candidates-od-table">
-                            <p>Click <a href="{{ url_for('get_orbit_determination_table',
+                            <p>Click <a href="{{ url_for('monitoring_page.get_orbit_determination_table',
                                     beam_id=beam_id,
                                     min_channel=min_channel,
                                     max_channel=max_channel,
@@ -99,6 +119,9 @@
         $(document).ready(function () {
             var socket = io('/');
             var plotting_manager = new PlottingManager(socket);
+
+            plotting_manager.addPlot('beam_candidates', new DopplerProfilePlotter('live-beam-candidates-plot'));
+            plotting_manager.addPlot('beam_candidates', new SNRProfilePlot('live-beam-candidates-snr-profile-plot'));
             plotting_manager.init();
 
             socket.on('connect', function () {

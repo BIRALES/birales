@@ -33,19 +33,19 @@
 
             <ul class="nav">
                 <li {% if active_page == 'monitoring' %} class="active" {% endif %}>
-                    <a href="{{ url_for('monitoring') }}">
+                    <a href="{{ url_for('monitoring_page.index') }}">
                         <i class="pe-7s-graph"></i>
                         <p>Monitoring</p>
                     </a>
                 </li>
                  <li {% if active_page == 'observations' %} class="active" {% endif %}>
-                    <a href="{{ url_for('observations') }}">
+                    <a href="{{ url_for('observations_page.index') }}">
                         <i class="pe-7s-note2"></i>
                         <p>Observations</p>
                     </a>
                 </li>
                  <li {% if active_page == 'preferences' %} class="active" {% endif %}>
-                    <a href="{{ url_for('preferences') }}">
+                    <a href="{{ url_for('preferences_page.index') }}">
                         <i class="pe-7s-config"></i>
                         <p>Preferences</p>
                     </a>
@@ -106,13 +106,15 @@
     <script src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
     <script src="{{ url_for('static', filename='node_modules/bootstrap/dist/js/bootstrap.min.js') }}"></script>
     <script src="{{ url_for('static', filename='themes/lbd/assets/js/light-bootstrap-dashboard.js') }}"></script>
-    <script src="{{ url_for('static', filename='node_modules/socket.io-client/dist/socket.io.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='node_modules/socket.io-client/dist/socket.io.js') }}"></script>
     <script src="{{ url_for('static', filename='node_modules/plotly.js/dist/plotly.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/helpers/plotly_responsive.js') }}"></script>
+
 
     <script>
         log.setLevel('debug');
     </script>
 {% endblock %}
+
+    <script src="{{ url_for('static', filename='js/helpers/plotly_responsive.js') }}"></script>
 </body>
 </html>

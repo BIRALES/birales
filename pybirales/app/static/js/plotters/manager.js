@@ -2,29 +2,17 @@ var PlottingManager = function (socket) {
     // use an observer design pattern or pub/sub
     var self = this;
     var channels = {};
-    var initialised = false;
 
     this.init = function () {
-        // Add plots here
-         new BeamCandidatesPlotter(),
-                new BeamCandidatesSNRProfilePlotter()
-        self.addPlot(new RawDataTablePlot('measurement-set-table'), 'measurements');
-        self.addPlot(new RadiationPatternPlot('radiation-pattern-plot'), 'measurements');
-        self.addPlot(new DroneAltitudePlot('drone-altitude-plot'), 'measurements');
-        self.addPlot(new BandPassPlot('bandpass-plot'), 'measurements');
-        self.addPlot(new PowerSpectrumPlot('power-spectrum-plot'), 'trace');
-
-        // Update plots
-        $.each(channels, function (channel) {
+        // Subscribe the plots to a channel
+        $.each(channels, function (channel, plots) {
             socket.on(channel, function (data) {
                 self.updatePlots(channel, data);
             });
         });
-
-        initialised = true;
     };
 
-    this.addPlot = function (plot, channel) {
+    this.addPlot = function (channel, plot) {
         if (channels[channel] == undefined) {
             channels[channel] = [];
         }

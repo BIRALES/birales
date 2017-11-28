@@ -19,7 +19,6 @@ function SNRProfilePlot(selector) {
             b: 50,
             t: 10
         },
-        height: 250
     };
 
     this.traces = [{
@@ -67,7 +66,7 @@ SNRProfilePlot.prototype = {
     update: function (beam_candidates) {
         this.traces = this._get_series(beam_candidates);
 
-        Plotly.update(this.selector, this.traces, this.layout);
+        Plotly.extendTraces(this.selector, this.traces, [0]);
 
         log.debug('Updating the', self.name, 'plotter with', beam_candidates.length, 'new candidates');
     }
