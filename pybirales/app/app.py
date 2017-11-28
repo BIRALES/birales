@@ -6,9 +6,9 @@ from flask_compress import Compress
 from flask_ini import FlaskIni
 from flask_socketio import SocketIO
 from logging.config import fileConfig
-from modules.monitoring.controllers import monitoring_page
-from modules.observations.controllers import observations_page
-from modules.preferences.controllers import preferences_page
+from modules.monitoring import monitoring_page
+from modules.observations import observations_page
+from modules.preferences import preferences_page
 
 socket_io = SocketIO()
 
@@ -38,7 +38,7 @@ def configure_flask(config_file_path):
     app.register_blueprint(preferences_page)
 
     # Turn the flask app into a socket.io app
-    socket_io.init_app(app, async_mode='threading')
+    socket_io.init_app(app)
 
     return app
 

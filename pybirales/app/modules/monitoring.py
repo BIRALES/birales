@@ -1,13 +1,12 @@
 import pandas as pd
 import logging as log
+import datetime
 from astropy.time import Time, TimeDelta
-# from pymongo import json_util
-from flask import Blueprint, render_template, Response, json, request
+
+from flask import Blueprint, render_template, Response, json
 from pybirales.repository.repository import BeamCandidateRepository
 from webargs import fields
 from webargs.flaskparser import use_args
-from pybirales.app.app import socket_io
-
 
 monitoring_page = Blueprint('monitoring_page', __name__, template_folder='templates')
 beam_candidates_repo = BeamCandidateRepository()
@@ -23,12 +22,6 @@ beam_candidates_args = {
 }
 
 
-@monitoring_page.route('/events')
-@socket_io.on('connect')
-def connect():
-    log.info('Client (sid: %s) connectedw', request.sid)
-
-
 @monitoring_page.route('/')
 @use_args(beam_candidates_args)
 def index(args):
@@ -40,6 +33,7 @@ def index(args):
     """
     if not args['from_time']:
         args['from_time'] = (Time.now() - TimeDelta(3600, format='sec')).datetime
+        args['from_time'] = datetime.datetime(2016, 11, 3, 1, 1, 1)
 
     if not args['to_time']:
         args['to_time'] = Time.now()

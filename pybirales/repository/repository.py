@@ -12,7 +12,7 @@ class Repository:
         self.database = self.client['birales']
 
         # if settings.database.user_name:
-        #     self.client.birales.authenticate('birales_rw', 'arcadia10')
+        # self.client.birales.authenticate('birales_rw', 'arcadia10')
 
     @abstractmethod
     def persist(self, entity):
