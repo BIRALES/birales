@@ -14,10 +14,11 @@ function SNRProfilePlot(selector) {
             tickformat: ".2f"
         },
         margin: {
-            l: 80,
-            r: 50,
+            l: 45,
+            r: 10,
             b: 50,
-            t: 10
+            t: 20,
+            pad: 4
         },
     };
 

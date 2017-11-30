@@ -9,12 +9,19 @@ function DopplerProfilePlotter(selector) {
             title: this.x_label
         },
         yaxis: {
-            title: self.y_label,
+            title: this.y_label,
             domain: [0.0, 0.6]
         },
         yaxis2: {
             title: 'SNR (dB)',
             domain: [0.7, 1]
+        },
+        margin: {
+            l: 45,
+            r: 10,
+            b: 50,
+            t: 20,
+            pad: 4
         },
     };
 
@@ -68,7 +75,12 @@ DopplerProfilePlotter.prototype = {
     update: function (beam_candidates) {
         this.traces = this._get_series(beam_candidates);
 
-        Plotly.extendTraces(this.selector, this.traces, [0, 1]);
+        var update = {
+            x: [this.traces[0].x, this.traces[1].x],
+            y: [this.traces[0].y, this.traces[1].y],
+        };
+
+        Plotly.extendTraces(this.selector, update, [0, 1]);
 
         log.debug('Updating the', self.name, 'plotter with', beam_candidates.length, 'new candidates');
     }

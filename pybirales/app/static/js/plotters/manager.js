@@ -28,7 +28,7 @@ var PlottingManager = function (socket) {
     this.updatePlots = function (channel, data) {
         log.debug('Updating plots in ' + channel + ' channel');
         $.each(channels[channel], function (channel, plot) {
-            plot.update(data);
+            plot.update(JSON.parse(data));
         })
     };
 };
