@@ -1,4 +1,4 @@
-function SNRProfilePlot(selector) {
+function BeamIlluminationPlot(selector) {
     this.selector = selector;
 
     this.title = "SNR profile";
@@ -35,8 +35,8 @@ function SNRProfilePlot(selector) {
     this.plot = Plotly.newPlot(this.selector, this.traces, this.layout);
 }
 
-SNRProfilePlot.prototype = {
-    constructor: SNRProfilePlot,
+BeamIlluminationPlot.prototype = {
+    constructor: BeamIlluminationPlot,
 
     _get_series: function (beam_candidates) {
         var series = [];

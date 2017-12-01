@@ -1,6 +1,8 @@
 import click
-import logging as log
 import dateutil.parser
+import logging as log
+import pandas as pd
+
 from flask import Flask, request, Response, json
 from flask_compress import Compress
 from flask_ini import FlaskIni
@@ -15,13 +17,11 @@ socket_io = SocketIO()
 beam_candidates_repo = BeamCandidateRepository()
 
 
-@socket_io.on('beam_candidates')
+@socket_io.on('get_beam_candidates')
 def get_beam_candidates(beam_id, from_time, to_time, min_channel, max_channel):
-    if beam_id == 'None':
-        beam_id = None
-    else:
-        beam_id = int(beam_id)
-
+    # todo - improve validation of input parameters
+    if beam_id:
+        int(beam_id)
     from_time = dateutil.parser.parse(from_time)
     to_time = dateutil.parser.parse(to_time)
     min_channel = float(min_channel)
@@ -33,8 +33,24 @@ def get_beam_candidates(beam_id, from_time, to_time, min_channel, max_channel):
                                                         max_channel=max_channel,
                                                         min_channel=min_channel)
 
+    data = {
+        'time': [], 'snr': [], 'channel': [], 'beam_id': []
+    }
+    df = pd.DataFrame(data)
+    for candidate in detected_beam_candidates:
+        for i in range(0, len(candidate['data']['time'])):
+            df = df.append({
+                'time': candidate['data']['time'][i],
+                'snr': candidate['data']['snr'][i],
+                'frequency': candidate['data']['channel'][i],
+                'beam_id': candidate['beam_id'],
+            }, ignore_index=True)
+
+    df['time'] = pd.to_datetime(df['time'], format='%Y-%m-%dT%H:%M:%S.%f')
+    df = df.groupby(['time'], sort=True)['snr'].max()
+
     socket_io.emit('beam_candidates', json.dumps(detected_beam_candidates))
-    # return Response(json.dumps(detected_beam_candidates), mimetype='application/json; charset=utf-8')
+    socket_io.emit('beam_illumination', json.dumps(df.to_json()))
 
 
 def configure_flask(config_file_path):

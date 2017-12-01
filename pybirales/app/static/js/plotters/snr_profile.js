@@ -47,7 +47,7 @@ SNRProfilePlot.prototype = {
                 y: beam_candidate['data']['snr'],
                 text: beam_candidate['data']['channel'],
                 type: 'markers',
-                name: 'beam ' + beam_candidate.beam_id + ' candidate'
+                name: 'beam ' + beam_candidate.beam_id
                 // showlegend: false,
             };
 
@@ -67,7 +67,7 @@ SNRProfilePlot.prototype = {
     update: function (beam_candidates) {
         this.traces = this._get_series(beam_candidates);
 
-        Plotly.extendTraces(this.selector, this.traces, [0]);
+        Plotly.newPlot(this.selector, this.traces, [0]);
 
         log.debug('Updating the', self.name, 'plotter with', beam_candidates.length, 'new candidates');
     }

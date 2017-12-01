@@ -106,6 +106,7 @@
                 </div>
             </div>
         </div>
+      <div id="graph"></div>
     </div>
 {% endblock %}
 
@@ -119,9 +120,10 @@
         $(document).ready(function () {
             var socket = io('/');
 
-            function update_beam_data(){
-                socket.emit(new Date($("#monitoring-date-from").val()),
-                            new Date($("#monitoring-date-to").val()), '{{ min_channel }}', '{{ max_channel }}')
+            function update_beam_data() {
+                log.info('Fetching new data');
+                socket.emit('get_beam_candidates', null, new Date($("#monitoring-date-from").val() + 'Z'),
+                        new Date($("#monitoring-date-to").val() + 'Z'), '{{ min_channel }}', '{{ max_channel }}')
             }
 
             $("#monitoring-date-from").flatpickr({
@@ -129,7 +131,9 @@
                 enableTime: true,
                 time_24hr: true,
                 allowInput: true,
-                onValueUpdate: update_beam_data()
+                onValueUpdate: function () {
+                    update_beam_data();
+                }
             });
 
             $("#monitoring-date-to").flatpickr({
@@ -137,7 +141,9 @@
                 enableTime: true,
                 time_24hr: true,
                 allowInput: true,
-                onValueUpdate: update_beam_data()
+                onValueUpdate: function () {
+                    update_beam_data();
+                }
             });
 
             var plotting_manager = new PlottingManager(socket);
@@ -148,19 +154,19 @@
 
             socket.on('connect', function () {
                 log.info('Connected!');
-                socket.emit('beam_candidates', '{{ beam_id }}', '{{from_time  }}', '{{ to_time }}', '{{ min_channel }}', '{{ max_channel }}')
+                update_beam_data();
             });
 
             socket.on('disconnect', function () {
-                log.error('Disconnected!');
+                log.info('Disconnected!');
             });
 
             socket.on('error', function (err) {
-                log.error('An error has occurred on server side.');
+                log.error('An error has occurred on server side.', err);
             });
 
             socket.on('connect_error', function (err) {
-                log.error('Could not establish a connection');
+                log.error('Could not establish a connection', err);
             });
         });
     </script>

@@ -6,23 +6,28 @@ function DopplerProfilePlotter(selector) {
 
     this.layout = {
         xaxis: {
-            title: this.x_label
+            title: this.x_label,
+            domain: [0.0, 0.65]
         },
         yaxis: {
             title: this.y_label,
-            domain: [0.0, 0.6]
+            domain: [0.0, 0.65]
         },
         yaxis2: {
             title: 'SNR (dB)',
-            domain: [0.7, 1]
+            domain: [0.75, 1]
+        },
+        xaxis2: {
+            title: 'SNR (dB)',
+            domain: [0.75, 1]
         },
         margin: {
-            l: 45,
+            l: 55,
             r: 10,
             b: 50,
             t: 20,
-            pad: 4
-        },
+            pad: 20
+        }
     };
 
     this.traces = [];
@@ -36,6 +41,13 @@ DopplerProfilePlotter.prototype = {
 
     _get_series: function (beam_candidates) {
         var series = [];
+
+        var doppler_series = {
+            x: [],
+            y: [],
+            mode: 'markers'
+        };
+
 
         $.each(beam_candidates, function (j, beam_candidate) {
             var beam_candidates_trace = {
@@ -54,19 +66,30 @@ DopplerProfilePlotter.prototype = {
                 text: beam_candidate['data']['time'],
                 mode: 'scatter',
                 showlegend: false,
-                name: 'beam ' + beam_candidate.beam_id + ' candidate'
+                name: 'beam ' + beam_candidate.beam_id
+            };
+
+             var beam_candidates_snr_trace_time = {
+                x: beam_candidate['data']['snr'],
+                y: beam_candidate['data']['time'],
+                xaxis: 'x2',
+                text: beam_candidate['data']['channel'],
+                type: 'markers',
+                name: 'beam ' + beam_candidate.beam_id,
+                showlegend: false
             };
 
             if (beam_candidate['min_time'] < self._min_time) {
-                self._min_time = (new Date(beam_candidate['min_time'].$date)).toISOString();
+                self._min_time = (new Date(beam_candidate['min_time'])).toISOString();
             }
 
             if (beam_candidate['max_time'] > self._max_time) {
-                self._max_time = (new Date(beam_candidate['max_time'].$date)).toISOString();
+                self._max_time = (new Date(beam_candidate['max_time'])).toISOString();
             }
 
             series.push(beam_candidates_trace);
             series.push(beam_candidates_snr_trace);
+            series.push(beam_candidates_snr_trace_time);
         });
 
         return series;
@@ -75,12 +98,7 @@ DopplerProfilePlotter.prototype = {
     update: function (beam_candidates) {
         this.traces = this._get_series(beam_candidates);
 
-        var update = {
-            x: [this.traces[0].x, this.traces[1].x],
-            y: [this.traces[0].y, this.traces[1].y],
-        };
-
-        Plotly.extendTraces(this.selector, update, [0, 1]);
+        Plotly.newPlot(this.selector, this._get_series(beam_candidates), this.layout);
 
         log.debug('Updating the', self.name, 'plotter with', beam_candidates.length, 'new candidates');
     }
