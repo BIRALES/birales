@@ -16,3 +16,9 @@
 caption {
     padding-left: 15px;
 }
+
+.header .top-corner {
+    position: absolute;
+    top: 15px;
+    right: 30px;
+}

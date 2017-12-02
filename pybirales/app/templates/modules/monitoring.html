@@ -11,6 +11,10 @@
                         <h4 class="title">Beam Candidates</h4>
 
                         <p class="category">Live</p>
+
+                        <div class="top-corner">
+                            <a id="orbit-determination-table" class="btn btn-default">Orbit Determination</a>
+                        </div>
                     </div>
 
                     <div class="content">
@@ -98,31 +102,6 @@
                 </div>
             </div>
         </div>
-
-        <div class="row">
-            <div class="col-md-12">
-                <div class="card">
-                    <div class="header">
-                        <h4 class="title">Orbit Determination Data</h4>
-
-                        <p class="category">Live</p>
-                    </div>
-                    <div class="content">
-                        <div id="live-beam-candidates-od-table">
-                            <p>Click <a href="{{ url_for('monitoring_page.get_orbit_determination_table',
-                                    beam_id=beam_id,
-                                    min_channel=min_channel,
-                                    max_channel=max_channel,
-                                    min_time=min_time,
-                                    max_time=max_time) }}">here</a> for the orbit determination table</p>
-                        </div>
-
-                        <div class="footer"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div id="graph"></div>
     </div>
 {% endblock %}
 
@@ -172,6 +151,18 @@
             $("#monitoring-max-channel").change(function () {
                 update_beam_data();
             });
+
+            $("#orbit-determination-table").click(function () {
+                var get_parameters = {
+                    'from_time': new Date($("#monitoring-date-from").val() + 'Z').toISOString(),
+                    'to_time': new Date($("#monitoring-date-to").val() + 'Z').toISOString(),
+                    'min_channel': $("#monitoring-min-channel").val(),
+                    'max_channel': $("#monitoring-max-channel").val()
+                };
+
+                window.open("/monitoring/beam_candidates/table?" + $.param(get_parameters).replace(/%3A/g, ":"));
+            });
+
 
             var plotting_manager = new PlottingManager(socket);
 
