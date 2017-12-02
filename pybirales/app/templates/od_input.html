@@ -29,9 +29,7 @@
                                     </caption>
                                     <thead>
                                     <tr>
-                                        <th>Timestamp</th>
-                                        <th>MJD</th>
-                                        <th>Time Elapsed (s)</th>
+                                        <th>UTC Timestamp</th>
                                         <th>Doppler (Hz)</th>
                                         <th>Frequency (MHz)</th>
                                         <th>SNR (Db)</th>
@@ -41,8 +39,6 @@
                                     {% for i in range(0, candidate['data']['time'] | length) %}
                                         <tr>
                                             <td>{{ candidate['data']['time'][i].iso }}</td>
-                                            <td>{{ candidate['data']['time'][i].mjd }}</td>
-                                            <td>{{ '-' }}</td>
                                             <td>{{ candidate['data']['doppler_shift'][i] }}</td>
                                             <td>{{ candidate['data']['channel'][i] }}</td>
                                             <td>{{ candidate['data']['snr'][i] }}</td>
