@@ -19,11 +19,11 @@ function DopplerProfilePlotter(selector) {
             domain: [0.75, 1]
         },
         margin: {
-            l: 55,
+            l: 80,
             r: 10,
             b: 50,
             t: 20,
-            pad: 20
+            pad: -50
         }
     };
 
@@ -45,9 +45,10 @@ DopplerProfilePlotter.prototype = {
             var beam_candidates_trace = {
                 x: beam_candidate['data']['channel'],
                 y: beam_candidate['data']['time'],
-                text: beam_candidate['data']['snr'],
+                text: beam_candidate.beam_id,
                 mode: 'markers',
-                name: 'beam ' + beam_candidate.beam_id,
+                legendgroup: 'group_' + j,
+                name: beam_candidate.beam_id,
                 marker: {
                     color: color
                 }
@@ -57,10 +58,11 @@ DopplerProfilePlotter.prototype = {
                 x: beam_candidate['data']['channel'],
                 y: beam_candidate['data']['snr'],
                 yaxis: 'y2',
-                text: beam_candidate['data']['time'],
+                text: beam_candidate.beam_id,
                 mode: 'scatter',
+                legendgroup: 'group_' + j,
                 showlegend: false,
-                name: 'beam ' + beam_candidate.beam_id,
+                name: beam_candidate.beam_id,
                 marker: {
                     color: color
                 }
