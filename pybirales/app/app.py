@@ -33,24 +33,7 @@ def get_beam_candidates(beam_id, from_time, to_time, min_channel, max_channel):
                                                         max_channel=max_channel,
                                                         min_channel=min_channel)
 
-    data = {
-        'time': [], 'snr': [], 'channel': [], 'beam_id': []
-    }
-    df = pd.DataFrame(data)
-    for candidate in detected_beam_candidates:
-        for i in range(0, len(candidate['data']['time'])):
-            df = df.append({
-                'time': candidate['data']['time'][i],
-                'snr': candidate['data']['snr'][i],
-                'frequency': candidate['data']['channel'][i],
-                'beam_id': candidate['beam_id'],
-            }, ignore_index=True)
-
-    df['time'] = pd.to_datetime(df['time'], format='%Y-%m-%dT%H:%M:%S.%f')
-    df = df.groupby(['time'], sort=True)['snr'].max()
-
     socket_io.emit('beam_candidates', json.dumps(detected_beam_candidates))
-    socket_io.emit('beam_illumination', json.dumps(df.to_json()))
 
 
 def configure_flask(config_file_path):

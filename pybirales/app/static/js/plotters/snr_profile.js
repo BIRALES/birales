@@ -5,6 +5,8 @@ function SNRProfilePlot(selector) {
     this.x_label = 'Date';
     this.y_label = 'SNR';
 
+    this.color_map = colorbrewer['Set3'][12];
+
     this.layout = {
         xaxis: {
             title: this.x_label
@@ -41,14 +43,19 @@ SNRProfilePlot.prototype = {
     _get_series: function (beam_candidates) {
         var series = [];
 
+        var c_map = this.color_map;
         $.each(beam_candidates, function (j, beam_candidate) {
+            var color = c_map[(j + 1) % 12];
             var beam_candidates_snr_trace = {
                 x: beam_candidate['data']['time'],
                 y: beam_candidate['data']['snr'],
                 text: beam_candidate['data']['channel'],
                 type: 'markers',
-                name: 'beam ' + beam_candidate.beam_id
-                // showlegend: false,
+                name: 'beam ' + beam_candidate.beam_id,
+                showlegend: true,
+                marker: {
+                    color: color
+                }
             };
 
             if (beam_candidate['min_time'] < self._min_time) {

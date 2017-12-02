@@ -4,20 +4,17 @@ function DopplerProfilePlotter(selector) {
     this.x_label = 'Channel (MHz)';
     this.y_label = 'Timestamp (UTC)';
 
+    this.color_map = colorbrewer['Set3'][12];
+
     this.layout = {
         xaxis: {
-            title: this.x_label,
-            domain: [0.0, 0.65]
+            title: this.x_label
         },
         yaxis: {
             title: this.y_label,
             domain: [0.0, 0.65]
         },
         yaxis2: {
-            title: 'SNR (dB)',
-            domain: [0.75, 1]
-        },
-        xaxis2: {
             title: 'SNR (dB)',
             domain: [0.75, 1]
         },
@@ -42,41 +39,31 @@ DopplerProfilePlotter.prototype = {
     _get_series: function (beam_candidates) {
         var series = [];
 
-        var doppler_series = {
-            x: [],
-            y: [],
-            mode: 'markers'
-        };
-
-
+        var c_map = this.color_map;
         $.each(beam_candidates, function (j, beam_candidate) {
+            var color = c_map[(j + 1) % 12];
             var beam_candidates_trace = {
                 x: beam_candidate['data']['channel'],
                 y: beam_candidate['data']['time'],
                 text: beam_candidate['data']['snr'],
                 mode: 'markers',
-                name: 'beam ' + beam_candidate.beam_id
+                name: 'beam ' + beam_candidate.beam_id,
+                marker: {
+                    color: color
+                }
             };
 
             var beam_candidates_snr_trace = {
                 x: beam_candidate['data']['channel'],
                 y: beam_candidate['data']['snr'],
-                // xaxis: 'x2',
                 yaxis: 'y2',
                 text: beam_candidate['data']['time'],
                 mode: 'scatter',
                 showlegend: false,
-                name: 'beam ' + beam_candidate.beam_id
-            };
-
-             var beam_candidates_snr_trace_time = {
-                x: beam_candidate['data']['snr'],
-                y: beam_candidate['data']['time'],
-                xaxis: 'x2',
-                text: beam_candidate['data']['channel'],
-                type: 'markers',
                 name: 'beam ' + beam_candidate.beam_id,
-                showlegend: false
+                marker: {
+                    color: color
+                }
             };
 
             if (beam_candidate['min_time'] < self._min_time) {
@@ -89,7 +76,6 @@ DopplerProfilePlotter.prototype = {
 
             series.push(beam_candidates_trace);
             series.push(beam_candidates_snr_trace);
-            series.push(beam_candidates_snr_trace_time);
         });
 
         return series;

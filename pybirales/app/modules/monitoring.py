@@ -100,9 +100,9 @@ def get_illumination_sequence(args):
     df['consecutive'] = df['max_idx'].groupby((df['max_idx'] != df['max_idx'].shift()).cumsum()).transform('size')
     df['dt'] = (df.index.to_series() - df.index.to_series().shift()).fillna(0).dt.microseconds
     mask = df['consecutive'] > 1
-    response = df[mask].head()
+    response = df[mask]
 
-    print(response)
+    print(response.head())
 
     return Response(response.reset_index().to_json(), mimetype='application/json; charset=utf-8')
 
