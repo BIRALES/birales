@@ -9,7 +9,7 @@
     margin: 10px 0;
 }
 
-.chart.plotly{
+.chart.plotly {
     height: 450px
 }
 
@@ -21,4 +21,16 @@ caption {
     position: absolute;
     top: 15px;
     right: 30px;
+}
+
+.sidebar {
+    width: 220px;
+}
+
+.sidebar .sidebar-wrapper, body > .navbar-collapse .sidebar-wrapper {
+    width: 220px;
+}
+
+.main-panel {
+    width: calc(100% - 220px);
 }
