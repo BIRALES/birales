@@ -1,75 +1,67 @@
 import click
+import datetime
+import logging as log
+import json
+import sched
+import sys
+import time
 from pybirales.birales import BiralesFacade, BiralesConfig
 from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, CorrelatorPipelineManagerBuilder
-from pybirales.cli.cli import update_config
 
 
-@click.group()
-@click.option('--name', '-n', 'name', default='observation', help='The name of the observation')
-@click.option('--debug/--no-debug', default=False)
-@click.pass_context
-def pipelines(ctx, name, debug):
-    ctx.obj = {
-        'observation': {
-            'name': name
-        },
-        'manager': {
-            'debug': debug
-        }
-    }
-
-    ctx.obj = update_config(ctx.obj, 'observation', 'name', name)
-    ctx.obj = update_config(ctx.obj, 'manager', 'debug', debug)
-
-
-@pipelines.command(short_help='Run the Detection Pipeline')
-@click.argument('configuration', type=click.Path(exists=True))
-@click.option('--tx', 'tx', default=410.07, help='The transmission frequency in MHz')
-@click.option('--pointing', 'pointing', default=12.3, help='Reference Declination of the Beam Former')
-@click.pass_context
-def detection_pipeline(ctx, configuration, tx, pointing):
+def run_pipeline(observation_settings):
     """
+    Run the pipeline using the provided observation settings
 
-    Run the Detection Pipeline
-
-    :param ctx:
-    :param tx:
-    :param pointing:
-    :param configuration: The default configuration file to be used.
+    :param observation_settings: A dictionary of settings read from the scheduler json config file
     :return:
     """
 
-    ctx.obj = update_config(ctx.obj, 'observation', 'transmitter_frequency', tx)
-    ctx.obj = update_config(ctx.obj, 'beamformer', 'reference_pointing', pointing)
-
     # Load the BIRALES configuration from file
-    config = BiralesConfig(configuration, ctx.obj)
+    config = BiralesConfig(observation_settings['config_file'], observation_settings['config_options'])
 
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)
 
-    # Build the Pipeline Manager using the Detection Pipeline Manager Builder
-    manager = bf.build_pipeline(DetectionPipelineMangerBuilder())
+    # Build the Pipeline Manager
+    if observation_settings['pipeline'] == 'detection_pipeline':
+        builder = DetectionPipelineMangerBuilder()
+    elif observation_settings['pipeline'] == 'correlation_pipeline':
+        builder = CorrelatorPipelineManagerBuilder()
+    else:
+        raise Exception('Pipeline not implemented')
 
-    # Finally, start the Pipeline
-    manager.start_pipeline()
+    manager = bf.build_pipeline(builder)
+
+    manager.start_pipeline(observation_settings['duration'])
 
 
-@pipelines.command(short_help='Run the Correlation Pipeline')
-@click.argument('configuration', type=click.Path(exists=True))
-def correlation_pipeline(configuration):
+@click.group()
+@click.option('--schedule', '-s', 'schedule_file', type=click.Path(exists=True), required=True,
+              help='The scheduler json file')
+def scheduler(schedule_file):
     """
-    Run the Correlation Pipeline
+    Schedule a series of observation using a scheduler parameters file
 
-    :param configuration: The default configuration file to be used.
+    :param schedule_file: The path to the schedule parameters file
     :return:
     """
+    scheduled_observations = json.loads(schedule_file)
+    # todo -- need to add validation of the config file
 
-    # Initialise the Birales Facade (BOSS)
-    bf = BiralesFacade(configuration)
+    s = sched.scheduler(time.time, time.sleep)
+    now = datetime.datetime.fromtimestamp(int(time.time()))
+    for observation in scheduled_observations:
+        start_time = datetime.datetime.strptime(observation['start_time'], "%Y-%m-%dT%H:%M:%S")
 
-    # Build the Pipeline Manager using the Correlator Pipeline Manager Builder
-    manager = bf.build_pipeline(CorrelatorPipelineManagerBuilder())
+        # Check that start time is valid
+        wait_seconds = (start_time - now).total_seconds()
+        if wait_seconds < 1:
+            log.error("Scheduled start time must be in the future")
+            sys.exit()
 
-    # Finally, start the Pipeline
-    manager.start_pipeline()
+        log.info("Scheduling {} to run at {}".format(observation['pipeline'], start_time.isoformat()))
+        s.enter(delay=wait_seconds, priority=0, action=run_pipeline, argument=observation)
+
+    log.info('Scheduler initialised.')
+    s.run()
