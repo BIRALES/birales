@@ -15,4 +15,3 @@ env
 pybirales/pipeline/plots/*
 pybirales/services/calibrator
 pybirales/app/static/node_modules
-pybirales/configuration/local.ini
