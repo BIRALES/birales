@@ -1,4 +1,4 @@
-from pybirales.services.calibrator.facade import CalibrationFacade
+from pybirales.services.calibration.calibration import CalibrationFacade
 
 import ast
 import configparser
@@ -53,6 +53,9 @@ class BiralesConfig:
         :param config_options:
         :return:
         """
+
+        if not config_options:
+            return None
 
         for section in config_options:
             for (key, value) in config_options[section].items():
@@ -148,6 +151,16 @@ class BiralesFacade:
 
         return pipeline_builder.manager
 
+    def calibrate(self):
+        """
+        Calibrate the instrument. Run the calibration Routine.
+
+        :return:
+        """
+
+        self._calibration_subsystem.calibrate()
+
+
     @staticmethod
     def start_server(flask_app):
         """
@@ -157,12 +170,3 @@ class BiralesFacade:
         """
 
         flask_app.run(flask_app)
-
-    @staticmethod
-    def calibrate():
-        """
-        Calibrate the instrument. Run the calibration Routine.
-
-        :return:
-        """
-        pass
