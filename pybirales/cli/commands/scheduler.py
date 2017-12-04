@@ -41,7 +41,7 @@ def run_pipeline(observation_settings):
               help='The scheduler json file')
 def scheduler(schedule_file):
     """
-    Schedule a series of observation using a scheduler parameters file
+    Schedule a series of observations
 
     :param schedule_file: The path to the schedule parameters file
     :return:

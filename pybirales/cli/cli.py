@@ -2,6 +2,7 @@ import click
 
 from pybirales.cli.commands.pipelines import pipelines
 from pybirales.cli.commands.services import services
+from pybirales.cli.commands.scheduler import scheduler
 
 
 @click.group()
@@ -9,6 +10,7 @@ from pybirales.cli.commands.services import services
 def cli(ctx):
     return ctx
 
+cli.add_command(scheduler)
 cli.add_command(pipelines)
 cli.add_command(services)
 
