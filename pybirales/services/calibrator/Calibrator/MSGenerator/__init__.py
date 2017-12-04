@@ -1,1 +1,0 @@
-from RunOSKAR import RunOSKAR
