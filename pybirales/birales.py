@@ -10,7 +10,7 @@ from pybirales import settings
 
 
 class BiralesConfig:
-    LOCAL_CONFIG = '~/.birales.ini'
+    LOCAL_CONFIG = '~/.birales/local.ini'
 
     def __init__(self, config_file_path, config_options):
         self._parser = None
@@ -145,6 +145,8 @@ class BiralesFacade:
         self._pipeline_manager = pipeline_builder.manager
 
         log.info('{} initialised successfully.'.format(self._pipeline_manager.name))
+
+        return pipeline_builder.manager
 
     @staticmethod
     def start_server(flask_app):

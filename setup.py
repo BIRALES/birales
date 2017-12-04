@@ -1,3 +1,4 @@
+import os
 from setuptools import setup, find_packages
 
 setup(
@@ -31,6 +32,7 @@ setup(
                       "flask-socketio",
                       "flask_ini",
                       'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow'],
+    data_files=[(os.environ['HOME'] + '/.birales', ['pybirales/configuration/local.ini'])],
     entry_points={
         'console_scripts': [
             'birales = pybirales.cli.cli:cli',
