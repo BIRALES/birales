@@ -12,7 +12,7 @@ def services(ctx):
 @services.command()
 @click.argument('configuration', type=click.Path(exists=True), required=True)
 @click.pass_context
-def calibrate(ctx, configuration):
+def calibration(ctx, configuration):
     # Load the BIRALES configuration from file
     config = BiralesConfig(configuration, ctx.obj)
 

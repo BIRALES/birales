@@ -1,5 +1,6 @@
 import click
 import datetime
+import dateutil.parser
 import logging as log
 import json
 import sched
@@ -36,23 +37,27 @@ def run_pipeline(observation_settings):
     manager.start_pipeline(observation_settings['duration'])
 
 
-@click.group()
-@click.option('--schedule', '-s', 'schedule_file', type=click.Path(exists=True), required=True,
+@click.command()
+@click.option('--schedule', '-s', 'schedule_file_path', type=click.Path(exists=True), required=True,
               help='The scheduler json file')
-def scheduler(schedule_file):
+def scheduler(schedule_file_path):
     """
     Schedule a series of observations
 
-    :param schedule_file: The path to the schedule parameters file
+    :param schedule_file_path: The path to the schedule parameters file
     :return:
     """
-    scheduled_observations = json.loads(schedule_file)
+
+    with open(schedule_file_path) as json_data:
+        scheduled_observations = json.load(json_data)
+        log.info('Loaded schedule from {}'.format(schedule_file_path))
+
     # todo -- need to add validation of the config file
 
     s = sched.scheduler(time.time, time.sleep)
     now = datetime.datetime.fromtimestamp(int(time.time()))
-    for observation in scheduled_observations:
-        start_time = datetime.datetime.strptime(observation['start_time'], "%Y-%m-%dT%H:%M:%S")
+    for obs_name, observation in scheduled_observations.iteritems():
+        start_time = dateutil.parser.parse(observation['config_parameters']['start_time'])
 
         # Check that start time is valid
         wait_seconds = (start_time - now).total_seconds()
@@ -60,8 +65,8 @@ def scheduler(schedule_file):
             log.error("Scheduled start time must be in the future")
             sys.exit()
 
-        log.info("Scheduling {} to run at {}".format(observation['pipeline'], start_time.isoformat()))
-        s.enter(delay=wait_seconds, priority=0, action=run_pipeline, argument=observation)
+        log.info("Observation {}, using the {} is scheduled to run at {}".format(obs_name, ['pipeline'], start_time.isoformat()))
+        # s.enter(delay=wait_seconds, priority=0, action=run_pipeline, argument=observation)
 
-    log.info('Scheduler initialised.')
-    s.run()
+    log.info('Scheduler initialised. {} observations queued.'.format(len(scheduled_observations)))
+    # s.run()

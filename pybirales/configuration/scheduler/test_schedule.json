@@ -9,17 +9,18 @@
       },
       "start_time": "2017-12-09T15:00:00Z",
       "duration": 200
-    },
-    "observation 2": {
-      "pipeline": "pipeline name",
-      "config_file": "config_file",
-      "config_parameters": {
-        "tx": 11,
-        "manager": {
-          "debug": "true"
-        },
-        "start_time": "2017-12-09T15:00:00Z",
-        "duration": 200
-      }
+    }
+  },
+  "observation 2": {
+    "pipeline": "pipeline name",
+    "config_file": "config_file",
+    "config_parameters": {
+      "tx": 11,
+      "manager": {
+        "debug": "true"
+      },
+      "start_time": "2017-12-09T15:00:00Z",
+      "duration": 200
     }
   }
+}
