@@ -1,17 +1,7 @@
 import click
 
-from commands.pipelines import pipelines
-from commands.services import services
-
-
-def update_config(config, section, key, value):
-    if config:
-        if section in config:
-            config[section][key] = value
-            return config
-        config[section] = {}
-        return update_config(config, section, key, value)
-    return update_config({}, section, key, value)
+from pybirales.cli.commands.pipelines import pipelines
+from pybirales.cli.commands.services import services
 
 
 @click.group()

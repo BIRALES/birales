@@ -10,9 +10,7 @@ class Repository:
         self.port = 27017
         self.client = mongo.MongoClient(self.host, self.port, connect=False)
         self.database = self.client['birales']
-
-
-        # self.client.birales.authenticate('birales_ro', 'birales_ro123')
+        self.client.birales.authenticate('birales_ro', 'birales_ro123')
 
     @abstractmethod
     def persist(self, entity):

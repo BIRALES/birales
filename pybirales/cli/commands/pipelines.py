@@ -1,7 +1,7 @@
 import click
 from pybirales.birales import BiralesFacade, BiralesConfig
 from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, CorrelatorPipelineManagerBuilder
-from pybirales.cli.cli import update_config
+from pybirales.cli.helpers import update_config
 
 
 @click.group()

@@ -6,11 +6,11 @@ import logging as log
 import logging.config as log_config
 import os
 import re
-import settings
+from pybirales import settings
 
 
 class BiralesConfig:
-    LOCAL_CONFIG = 'configuration/local.ini'
+    LOCAL_CONFIG = '~/.birales.ini'
 
     def __init__(self, config_file_path, config_options):
         self._parser = None
@@ -37,12 +37,12 @@ class BiralesConfig:
 
         # Override the default configuration file with the ones specified in the local.ini
         try:
-            with open(os.path.join(os.path.dirname(__file__), BiralesConfig.LOCAL_CONFIG)) as f:
+            with open(os.path.expanduser(BiralesConfig.LOCAL_CONFIG)) as f:
                 parser.read_file(f)
                 log.info('Loading local configuration file at {}.'.format(BiralesConfig.LOCAL_CONFIG))
         except IOError:
             log.info(
-                'Local config file not found in {}. Using default configuration.'.format(BiralesConfig.LOCAL_CONFIG))
+                'Local config file not found in {}. Using the default configuration.'.format(BiralesConfig.LOCAL_CONFIG))
 
         self._parser = parser
 
@@ -78,7 +78,7 @@ class BiralesConfig:
 
             for (k, v) in self._parser.items(section):
                 # Check if value is a number of boolean
-                print(k,v)
+
                 # If value is a string, interpret it
                 if isinstance(v, basestring):
                     if re.match(re.compile("^True|False|[0-9]+(\.[0-9]*)?$"), v) is not None:
@@ -93,7 +93,6 @@ class BiralesConfig:
                         setattr(instance, k, v)
                 else:
                     setattr(instance, k, v)
-
 
             # Add object instance to settings
             setattr(settings, section, instance)
