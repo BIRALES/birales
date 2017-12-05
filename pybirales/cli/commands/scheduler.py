@@ -1,13 +1,27 @@
 import click
 import datetime
 import dateutil.parser
-import logging as log
+import humanize
 import json
+import pytz
 import sched
 import sys
+import threading
 import time
 from pybirales.birales import BiralesFacade, BiralesConfig
 from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, CorrelatorPipelineManagerBuilder
+
+
+def message(status, msg):
+    """
+
+    :param status:
+    :param msg:
+    :return:
+    """
+
+    now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+    click.echo('{:%Y-%m-%d %H:%M:%S} {}: {}'.format(now, status, msg))
 
 
 def run_pipeline(observation_settings):
@@ -50,23 +64,44 @@ def scheduler(schedule_file_path):
 
     with open(schedule_file_path) as json_data:
         scheduled_observations = json.load(json_data)
-        log.info('Loaded schedule from {}'.format(schedule_file_path))
+        message('INFO', 'Loaded schedule from {}'.format(schedule_file_path))
 
     # todo -- need to add validation of the config file
 
     s = sched.scheduler(time.time, time.sleep)
-    now = datetime.datetime.fromtimestamp(int(time.time()))
+    now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
     for obs_name, observation in scheduled_observations.iteritems():
         start_time = dateutil.parser.parse(observation['config_parameters']['start_time'])
 
         # Check that start time is valid
         wait_seconds = (start_time - now).total_seconds()
         if wait_seconds < 1:
-            log.error("Scheduled start time must be in the future")
+            message('INFO', "Scheduled start time for {} must be in the future".format(obs_name))
             sys.exit()
 
-        log.info("Observation {}, using the {} is scheduled to run at {}".format(obs_name, ['pipeline'], start_time.isoformat()))
-        # s.enter(delay=wait_seconds, priority=0, action=run_pipeline, argument=observation)
+        message('INFO', "Observation {}, using the {} is scheduled to run at {:%Y-%m-%d %H:%M:%S}".format(
+            obs_name, observation['pipeline'], start_time))
+        s.enter(delay=wait_seconds, priority=0, action=run_pipeline, argument=observation)
 
-    log.info('Scheduler initialised. {} observations queued.'.format(len(scheduled_observations)))
-    # s.run()
+    message('INFO', 'Scheduler initialised. {} observations queued.'.format(len(scheduled_observations)))
+
+    # Start a thread to run the events
+    scheduler_thread = threading.Thread(target=s.run)
+    scheduler_thread.daemon = True
+    scheduler_thread.start()
+
+    try:
+        # Provide feedback to the user on the status of the scheduler
+        while not s.empty():
+            now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+            for observation in s.queue:
+                start_time = dateutil.parser.parse(observation.argument['config_parameters']['start_time'])
+                time_remaining = humanize.naturaltime(now - start_time)
+                message('INFO', 'The {} is scheduled to start in {}'.format(observation.argument['pipeline'],
+                                                                            time_remaining))
+
+            # Do not show the output again for the next N seconds
+            time.sleep(10*60)
+    except KeyboardInterrupt:
+        message('INFO', 'Ctrl-C received. Terminating the scheduler process.')
+        sys.exit()

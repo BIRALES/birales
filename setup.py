@@ -31,7 +31,7 @@ setup(
                       "flask-compress",
                       "flask-socketio",
                       "flask_ini",
-                      'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow'],
+                      'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow', 'humanize'],
     data_files=[(os.environ['HOME'] + '/.birales', ['pybirales/configuration/local.ini'])],
     entry_points={
         'console_scripts': [
