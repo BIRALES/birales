@@ -55,8 +55,8 @@ def configure_flask(config_file_path):
     Compress(app)
 
     # Register Blueprints
-    # app.register_blueprint(monitoring_page)
-    # app.register_blueprint(observations_page)
+    app.register_blueprint(monitoring_page)
+    app.register_blueprint(observations_page)
     app.register_blueprint(preferences_page)
 
     # Turn the flask app into a socket.io app
@@ -73,11 +73,11 @@ def run_server(configuration):
 
     # Start the Flask Application
     socket_io.run(app)
-#
-#
-# if __name__ == "__main__":
-#     # Initialise Flask Application
-#     flask_app = configure_flask('pybirales/configuration/birales.ini')
-#
-#     # Start the Flask Application
-#     socket_io.run(flask_app)
+
+
+if __name__ == "__main__":
+    # Initialise Flask Application
+    flask_app = configure_flask('pybirales/configuration/birales.ini')
+
+    # Start the Flask Application
+    socket_io.run(flask_app)
