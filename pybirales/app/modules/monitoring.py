@@ -1,6 +1,4 @@
 import pandas as pd
-import logging as log
-import datetime
 from astropy.time import Time, TimeDelta
 
 from flask import Blueprint, render_template, Response, json

@@ -13,7 +13,9 @@ setup(
     scripts=['pybirales/services/scripts/best2_server.py',
              'pybirales/services/scripts/best2_client.py',
              'pybirales/services/scripts/best2_process_beams.py',
-             'pybirales/cli/cli.py'],
+             'pybirales/cli/cli.py',
+             'pybirales/app/app.py'
+             ],
     install_requires=['configparser',
                       'futures',
                       'enum34',
@@ -37,7 +39,7 @@ setup(
     entry_points={
         'console_scripts': [
             'birales = pybirales.cli.cli:cli',
-            'birales-frontend = pybirales.app.api:run_server'
+            'birales-frontend = pybirales.app.app:run_server'
         ]
     },
 )
