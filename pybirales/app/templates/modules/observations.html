@@ -1,0 +1,44 @@
+{% extends "common/layout.html" %}
+{% block title %}Observations{% endblock %}
+{% set active_page = "observations" %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="header">
+                        <h4 class="title">Observations</h4>
+                         <p class="category">{{ pagination.info }}</p>
+                    </div>
+
+                    <div class="content table-responsive table-full-width">
+                        <table class="table table-hover table-striped">
+                            <thead>
+                            <tr>
+                                <th>Observation</th>
+                                <th>Date From</th>
+                                <th>Date To</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for observation in observations %}
+                                <tr>
+                                    <td>{{ observation.noise }}</td>
+                                    <td>{{ observation.created_at }}</td>
+                                    <td>n/a</td>
+                                    <td>ready</td>
+                                    <td>actions</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    {{ pagination.links }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

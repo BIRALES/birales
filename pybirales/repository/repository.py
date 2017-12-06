@@ -17,7 +17,7 @@ class Repository:
         pass
 
 
-class ConfigurationRepository(Repository):
+class ObservationsRepository(Repository):
     def __init__(self):
         Repository.__init__(self)
 
