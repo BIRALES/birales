@@ -82,9 +82,11 @@ class PipelineManager(object):
             plot.initialise_plot()
             self._plotters.append(plot)
 
-    def start_pipeline(self):
+    def start_pipeline(self, duration):
         """
         Start running the pipeline
+
+        :param duration: duration of observation in s (0 means run forever)
         :return:
         """
 
@@ -100,9 +102,9 @@ class PipelineManager(object):
 
             # If we have any plotter, go to plotter loop, otherwise wait
             if len(self._plotters) > 0:
-                self.plotting_loop()
+                self.plotting_loop(duration=duration)
             else:
-                self.wait_pipeline()
+                self.wait_pipeline(duration=duration)
 
         except NoDataReaderException as exception:
             logging.info('Data finished %s', exception.__class__.__name__)
@@ -114,12 +116,24 @@ class PipelineManager(object):
         else:
             logging.info('Pipeline stopped')
 
-    def plotting_loop(self):
-        """ Plotting loop """
+    def plotting_loop(self, duration):
+        """
+        Plotting loop
+
+        :param duration: duration of observation in s (0 means run forever)
+        """
+
+        start_time = time.time()
         while True:
             for plotter in self._plotters:
                 plotter.update_plot()
                 logging.info("{} updated".format(plotter.__class__.__name__))
+
+                if time.time() - start_time > duration:
+                    logging.info("Observation run for entire duration ({}s), stopping pipeline".format(duration))
+                    self.stop_pipeline()
+                    break
+
             time.sleep(self._plot_update_rate)
 
     def stop_pipeline(self):
@@ -140,7 +154,8 @@ class PipelineManager(object):
         if settings.manager.profile:
             profiler.stop()
             stats = profiler.get_func_stats()
-            profiling_file_path = settings.manager.profiler_file_path+'_{:%Y%m%d_%H:%M}.stats'.format(datetime.utcnow())
+            profiling_file_path = settings.manager.profiler_file_path + '_{:%Y%m%d_%H:%M}.stats'.format(
+                datetime.utcnow())
             log.info('Profiling stopped. Dumping profiling statistics to %s', profiling_file_path)
             stats.save(profiling_file_path, type='callgrind')
 
@@ -150,18 +165,26 @@ class PipelineManager(object):
                 return True
         return False
 
-    def wait_pipeline(self):
+    def wait_pipeline(self, duration):
         """
         Wait for modules to finish processing. If a module is stopped, the pipeline is
         stopped
+        :param duration: duration of observation in s (0 means run forever)
 
         :return:
         """
 
+        start_time = time.time()
         while True:
             if self.is_module_stopped():
                 self.stop_pipeline()
                 break
+
+            elif time.time() - start_time > duration:
+                logging.info("Observation run for entire duration ({}s), stopping pipeline".format(duration))
+                self.stop_pipeline()
+                break
+
             else:
                 # Suspend the loop for a short time
                 time.sleep(1)

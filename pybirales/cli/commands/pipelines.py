@@ -51,8 +51,8 @@ def detection_pipeline(ctx, configuration, tx, pointing):
     # Build the Pipeline Manager using the Detection Pipeline Manager Builder
     manager = bf.build_pipeline(DetectionPipelineMangerBuilder())
 
-    # Finally, start the Pipeline
-    manager.start_pipeline()
+    # Finally, start the observation
+    bf.start_observation(pipeline_manager=manager)
 
 
 @pipelines.command(short_help='Run the Correlation Pipeline')

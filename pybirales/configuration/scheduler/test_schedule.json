@@ -1,26 +1,14 @@
 {
   "observation 1": {
     "pipeline": "detection_pipeline",
-    "config_file": "config_file",
+    "config_file": "pybirales/configuration/birales.ini",
     "config_parameters": {
       "tx": 11,
       "manager": {
         "debug": "true"
       },
-      "start_time": "2017-12-05T15:02:00Z",
-      "duration": 200
-    }
-  },
-  "observation 2": {
-    "pipeline": "detection_pipeline",
-    "config_file": "config_file",
-    "config_parameters": {
-      "tx": 11,
-      "manager": {
-        "debug": "true"
-      },
-      "start_time": "2017-12-09T16:00:00Z",
-      "duration": 200
+      "start_time": "2017-12-06T19:56:30Z",
+      "duration": 3
     }
   }
 }

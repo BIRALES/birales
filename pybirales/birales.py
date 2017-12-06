@@ -58,8 +58,13 @@ class BiralesConfig:
             return None
 
         for section in config_options:
-            for (key, value) in config_options[section].items():
-                self._parser.set(section, key, value)
+            if isinstance(config_options[section], dict):
+                # If settings is a dictionary, add it as a section
+                for (key, value) in config_options[section].items():
+                    self._parser.set(section, key, value)
+            else:
+                # Else, put the configuration in the observation settings
+                self._parser.set('observation', section, config_options[section])
 
     def load(self):
         """
@@ -110,10 +115,6 @@ class BiralesFacade:
         # Load the system configuration upon initialisation
         configuration.load()
 
-        # Initialise the facades of the application
-        self._frontend_subsystem = None
-        self._calibration_subsystem = CalibrationFacade()
-
         self._pipeline_manager = None
 
         # Ensure that the system was initialised correctly
@@ -122,8 +123,10 @@ class BiralesFacade:
     def validate_init(self):
         pass
 
-    def run_pipeline(self):
+    def start_observation(self, pipeline_manager):
         """
+        Start the observation
+
 
         :return:
         """
@@ -132,8 +135,8 @@ class BiralesFacade:
         # Check if calibration is required
         # Point the telescope
         # Start the chosen pipeline
-        if self._pipeline_manager:
-            self._pipeline_manager.start()
+        if pipeline_manager:
+            pipeline_manager.start_pipeline(settings.observation.duration)
 
     def build_pipeline(self, pipeline_builder):
         """
@@ -150,23 +153,3 @@ class BiralesFacade:
         log.info('{} initialised successfully.'.format(self._pipeline_manager.name))
 
         return pipeline_builder.manager
-
-    def calibrate(self):
-        """
-        Calibrate the instrument. Run the calibration Routine.
-
-        :return:
-        """
-
-        self._calibration_subsystem.calibrate()
-
-
-    @staticmethod
-    def start_server(flask_app):
-        """
-
-        :param flask_app: The flask application
-        :return:
-        """
-
-        flask_app.run(flask_app)
