@@ -77,7 +77,6 @@ def scheduler(schedule_file_path):
     """
     Schedule a series of observations
 
-    :param schedule_file_path: The path to the schedule parameters file
     :return:
     """
 
