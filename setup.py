@@ -32,7 +32,8 @@ setup(
                       "flask-socketio",
                       "flask_ini",
                       'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow', 'humanize'],
-    data_files=[(os.environ['HOME'] + '/.birales', ['pybirales/configuration/local.ini'])],
+    data_files=[(os.environ['HOME'] + '/.birales', ['pybirales/configuration/local.ini']),
+                (os.environ['HOME'] + '/.birales/tcpo', [])],
     entry_points={
         'console_scripts': [
             'birales = pybirales.cli.cli:cli',
