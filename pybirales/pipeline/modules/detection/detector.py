@@ -4,7 +4,7 @@ from functools import partial
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.modules.detection.queue import BeamCandidatesQueue
-from pybirales.pipeline.modules.detection.repository import ConfigurationRepository
+from pybirales.repository.repository import ObservationsRepository
 from pybirales.pipeline.modules.detection.strategies.m_dbscan import m_detect
 from multiprocessing import Pool
 
@@ -20,7 +20,7 @@ class Detector(ProcessingModule):
         self._validate_data_blob(input_blob, valid_blobs=[ChannelisedBlob])
 
         # Repository Layer for saving the configuration to the Data store
-        self._configurations_repository = ConfigurationRepository()
+        self._configurations_repository = ObservationsRepository()
 
         # Data structure that hold the detected debris (for merging)
         self._debris_queue = BeamCandidatesQueue(settings.beamformer.nbeams)

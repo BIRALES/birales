@@ -1,4 +1,4 @@
-from pybirales.pipeline.modules.detection.repository import BeamCandidateRepository
+from pybirales.repository.repository import BeamCandidateRepository
 from pybirales import settings
 import logging as log
 from multiprocessing.queues import Queue

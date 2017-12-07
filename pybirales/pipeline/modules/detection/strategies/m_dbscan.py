@@ -5,7 +5,7 @@ import time
 import numpy as np
 from pybirales import settings
 from pybirales.pipeline.modules.detection.detection_clusters import DetectionCluster
-from pybirales.pipeline.modules.detection.repository import BeamCandidateRepository
+from pybirales.repository.repository import BeamCandidateRepository
 from sklearn import linear_model
 from sklearn.cluster import DBSCAN
 
