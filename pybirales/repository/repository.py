@@ -2,6 +2,7 @@ import logging as log
 import pymongo as mongo
 import sys
 from abc import abstractmethod
+from pybirales import settings
 
 
 class Repository:
@@ -10,7 +11,9 @@ class Repository:
         self.port = 27017
         self.client = mongo.MongoClient(self.host, self.port, connect=False)
         self.database = self.client['birales']
-        self.client.birales.authenticate('birales_ro', 'birales_ro123')
+
+        if settings.database.authentication:
+            self.client.birales.authenticate(settings.database.user, settings.database.password)
 
     @abstractmethod
     def persist(self, entity):
