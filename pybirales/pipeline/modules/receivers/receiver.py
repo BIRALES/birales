@@ -119,7 +119,7 @@ class Receiver(Generator):
         """ Initialise the receiver """
 
         # Configure receiver
-        self._daq.setReceiverConfiguration(self._nants, 1, 1, 1, 1, 1, 1)
+        self._daq.setReceiverConfiguration(self._nants, 1, 1, 1, 1, 1, 1, self._config.frame_size)
 
         # Start receiver
         if self._daq.startReceiver(self._config.interface,
@@ -151,7 +151,7 @@ class Receiver(Generator):
 
         # Define setReceiverConfiguration function
         self._daq.setReceiverConfiguration.argtypes = [ctypes.c_uint16, ctypes.c_uint16, ctypes.c_uint16, ctypes.c_uint8,
-                                                       ctypes.c_uint8, ctypes.c_uint8]
+                                                       ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint16]
         self._daq.setReceiverConfiguration.restype = None
 
         # Define startReceiver function
