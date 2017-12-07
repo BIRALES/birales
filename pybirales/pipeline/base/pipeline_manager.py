@@ -165,11 +165,12 @@ class PipelineManager(object):
                 return True
         return False
 
-    def wait_pipeline(self, duration):
+    def wait_pipeline(self, duration=None):
         """
         Wait for modules to finish processing. If a module is stopped, the pipeline is
         stopped
-        :param duration: duration of observation in s (0 means run forever)
+
+        :param duration: duration of observation in s (Run forever if no time is specified)
 
         :return:
         """
@@ -180,7 +181,7 @@ class PipelineManager(object):
                 self.stop_pipeline()
                 break
 
-            elif time.time() - start_time > duration:
+            elif duration and (time.time() - start_time) > duration:
                 logging.info("Observation run for entire duration ({}s), stopping pipeline".format(duration))
                 self.stop_pipeline()
                 break

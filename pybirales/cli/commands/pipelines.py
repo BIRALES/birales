@@ -7,7 +7,7 @@ from pybirales.cli.helpers import update_config
 @click.group()
 @click.option('--name', '-n', 'name', default='observation', help='The name of the observation')
 @click.option('--debug/--no-debug', default=False)
-@click.option('--duration', 'duration', default=0, help='The duration of the observation (0 to run indefinitely)')
+@click.option('--duration', 'duration', default=None, help='The duration of the observation (0 to run indefinitely)')
 @click.pass_context
 def pipelines(ctx, name, debug, duration):
     ctx.obj = {
