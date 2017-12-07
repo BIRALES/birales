@@ -19,17 +19,16 @@ def index():
     """
     Serve the client-side application
 
-    :param args:
     :return:
     """
 
     page = request.args.get(get_page_parameter(), type=int, default=1)
-
-    observations = observations_repo.database.configurations.find()
-    pagination = Pagination(page=page, total=10,
+    per_page = 10
+    observations = observations_repo.database.configurations.find().skip(page*per_page).limit(per_page)
+    pagination = Pagination(page=page, total=observations.count(),
                             inner_window=5,
                             bs_version=3,
-                            per_page=5,
+                            per_page=per_page,
                             record_name='observations')
 
     return render_template('modules/observations.html',
