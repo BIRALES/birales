@@ -11,6 +11,8 @@ import time
 from pybirales.birales import BiralesFacade, BiralesConfig
 from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, CorrelatorPipelineManagerBuilder
 
+DEFAULT_WAIT_SECONDS = 5
+
 
 def message(status, msg):
     """
@@ -89,17 +91,21 @@ def scheduler(schedule_file_path):
     s = sched.scheduler(time.time, time.sleep)
     now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
     for obs_name, observation in scheduled_observations.iteritems():
-        start_time = dateutil.parser.parse(observation['config_parameters']['start_time'])
+        # If no time is specified, start the pipeline in DEFAULT_WAIT_SECONDS seconds
+        wait_seconds = DEFAULT_WAIT_SECONDS
+        if 'start_time' in observation['config_parameters']:
+            start_time = dateutil.parser.parse(observation['config_parameters']['start_time'])
+            # Check that start time is valid
+            wait_seconds = (start_time - now).total_seconds()
 
         # Check that start time is valid
-        wait_seconds = (start_time - now).total_seconds()
         if wait_seconds < 1:
             message('INFO', "Scheduled start time for {} must be in the future".format(obs_name))
             sys.exit()
 
         message('INFO', "Observation {}, using the {} is scheduled to run at {:%Y-%m-%d %H:%M:%S}".format(
             obs_name, observation['pipeline'], start_time))
-        s.enter(delay=200, priority=0, action=start_observation, argument=(observation,))
+        s.enter(delay=wait_seconds, priority=0, action=start_observation, argument=(observation,))
 
     message('INFO', 'Scheduler initialised. {} observations queued.'.format(len(scheduled_observations)))
 
