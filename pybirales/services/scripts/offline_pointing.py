@@ -21,7 +21,7 @@ config['antenna_locations'] = [[0,      0,  0],
                                [5.6665, 0,  0],
                                [11.333, 0,  0],
                                [16.999, 0,  0],
-                               [0,      10, 0, ],
+                               [0,      10, 0],
                                [5.6665, 10, 0],
                                [11.333, 10, 0],
                                [16.999, 10, 0],
@@ -53,7 +53,7 @@ config['antenna_locations'] = [[0,      0,  0],
 config['pointings'] = [[0, 0]]
 config['reference_declination'] = 64.515
 config['nbeams'] = len(config['pointings'])
-config['start_center_frequency'] = 410.078125
+config['start_center_frequency'] = 410.109375
 config['channel_bandwidth'] = 0.078125
 
 
@@ -274,8 +274,9 @@ if __name__ == "__main__":
 
     # Should be pointing to zenith (regardless of time)
     config['reference_antenna_location'] = [11.6459889, 44.52357778]
-    config['reference_declination'] = 40.781765
+    config['reference_declination'] = 58.918
     config['pointings'] = [[0, 0]]
 
     pointing = Pointing(config, 1, 32)
-    print pointing.weights
+    print('ok')
+    print pointing.weights[0, 0, :]

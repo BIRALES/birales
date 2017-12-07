@@ -25,7 +25,7 @@ class Persister(ProcessingModule):
 
         # Create directory if it doesn't exist
         if not os.path.exists(config.directory):
-            os.mkdir(config.directory)
+            os.makedirs(config.directory)
 
         # Create file
         if config.use_timestamp:
