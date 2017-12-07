@@ -145,7 +145,7 @@ def plot(opts):
 
     # Process only one beam
     if opts.beam != -1 and opts.waterfall:
-        print(frequency[0])
+
         data = data[:,:,opts.beam]
         rms = np.sqrt(np.mean(data.ravel()**2))
         maximum = np.max(data.ravel())
@@ -171,11 +171,11 @@ def plot(opts):
 
     if opts.beam != -1:
         data = data[:,:,opts.beam]
-        rms = np.sqrt(np.mean(data.ravel()**2))
-        maximum = np.max(data.ravel())
+        #rms = np.sqrt(np.mean(data.ravel()**2))
+        #maximum = np.max(data.ravel())
         #data = 10*np.log10(data / rms)
         data = 10 * np.log10(data**2)
-        print "RMS: {}, max: {}\n".format(rms, maximum)
+        #print "RMS: {}, max: {}\n".format(rms, maximum)
 
         fig = plt.figure(figsize=(11, 8))
         ax = fig.add_subplot(2, 2, 2)
@@ -220,8 +220,8 @@ def plot(opts):
         ax = fig.add_subplot(1, 1, 1)
 
         data = np.sum(data, axis=1)
-        data = np.reshape(data, (len(data) / opts.samples, opts.samples, nbeams))
-        data = 10 * np.log10(np.sum(data, axis=1))
+        #idata = np.reshape(data, (len(data) / opts.samples, opts.samples, nbeams))
+        data = 10 * np.log10(data)
 
         # Plot time series
         markers = matplotlib.markers.MarkerStyle.markers.keys()
