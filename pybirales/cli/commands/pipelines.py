@@ -1,15 +1,20 @@
 import click
+import datetime
+from mongoengine import connect
 from pybirales.birales import BiralesFacade, BiralesConfig
 from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, CorrelatorPipelineManagerBuilder
 from pybirales.cli.helpers import update_config
 
 
 @click.group()
-@click.option('--name', '-n', 'name', default='observation', help='The name of the observation')
+@click.option('--name', '-n', 'name', help='The name of the observation')
 @click.option('--debug/--no-debug', default=False)
 @click.option('--duration', 'duration', default=None, help='The duration of the observation (0 to run indefinitely)')
 @click.pass_context
 def pipelines(ctx, name, debug, duration):
+    if not name:
+        name = 'Observation_' + datetime.datetime.utcnow().isoformat('T')
+
     ctx.obj = {
         'observation': {
             'name': name,

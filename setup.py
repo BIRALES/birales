@@ -33,7 +33,7 @@ setup(
                       "flask-compress",
                       "flask-socketio",
                       "flask_ini",
-                      'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow', 'humanize'],
+                      'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow', 'humanize', 'mongoengine'],
     data_files=[(os.environ['HOME'] + '/.birales', ['pybirales/configuration/local.ini']),
                 (os.environ['HOME'] + '/.birales/tcpo', [])],
     entry_points={

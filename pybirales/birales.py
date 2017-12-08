@@ -1,12 +1,13 @@
-from pybirales.services.calibration.calibration import CalibrationFacade
-
+from pybirales.repository.models import Observation
 import ast
 import configparser
+import datetime
 import logging as log
 import logging.config as log_config
 import os
 import re
 from pybirales import settings
+from mongoengine import connect
 
 
 class BiralesConfig:
@@ -120,6 +121,17 @@ class BiralesFacade:
         # Ensure that the system was initialised correctly
         self.validate_init()
 
+        # Connect to the database
+        if settings.database.authentication:
+            connect(
+                db=settings.database.name,
+                username=settings.database.user,
+                password=settings.database.password,
+                port=settings.database.port,
+                host=settings.database.host)
+        else:
+            connect(settings.database.host)
+
     def validate_init(self):
         pass
 
@@ -135,8 +147,16 @@ class BiralesFacade:
         # Check if calibration is required
         # Point the telescope
         # Start the chosen pipeline
+
         if pipeline_manager:
+            observation = Observation(name=settings.observation.name, date_time_start=datetime.datetime.utcnow(),
+                                      settings=settings.__dict__)
+            observation.save()
+
             pipeline_manager.start_pipeline(settings.observation.duration)
+
+            observation.date_time_end = datetime.datetime.utcnow()
+            observation.save()
 
     def build_pipeline(self, pipeline_builder):
         """
