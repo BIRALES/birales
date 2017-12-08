@@ -43,6 +43,8 @@ class Detector(ProcessingModule):
 
         self._doppler_mask = None
 
+        self._observation = None
+
         super(Detector, self).__init__(config, input_blob)
 
         self.name = "Detector"
@@ -107,11 +109,9 @@ class Detector(ProcessingModule):
 
         # If the configuration was not saved AND the number of noise samples is sufficient, save the noise value.
         if not self._config_persisted and self.counter >= settings.detection.n_noise_samples:
-            # self._configurations_repository.persist(obs_info)
-            # self._config_persisted = True
-            observation = Observation.objects.get(id=settings.observation.id)
-            observation.noise_estimate = self._get_noise_estimation(input_data)
-            observation.save()
+            self._observation = Observation.objects.get(id=settings.observation.id)
+            self._observation.noise_estimate = self._get_noise_estimation(input_data)
+            self._observation.save()
             self._config_persisted = True
 
         beam_candidates = []
