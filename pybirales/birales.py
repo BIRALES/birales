@@ -43,7 +43,8 @@ class BiralesConfig:
                 log.info('Loading local configuration file at {}.'.format(BiralesConfig.LOCAL_CONFIG))
         except IOError:
             log.info(
-                'Local config file not found in {}. Using the default configuration.'.format(BiralesConfig.LOCAL_CONFIG))
+                'Local config file not found in {}. Using the default configuration.'.format(
+                    BiralesConfig.LOCAL_CONFIG))
 
         self._parser = parser
 
@@ -67,6 +68,26 @@ class BiralesConfig:
                 # Else, put the configuration in the observation settings
                 self._parser.set('observation', section, config_options[section])
 
+    @staticmethod
+    def _db_connect():
+        """
+        Connect to the database using the loaded settings file
+
+        :return:
+        """
+
+        if settings.database.authentication:
+            connect(
+                db=settings.database.name,
+                username=settings.database.user,
+                password=settings.database.password,
+                port=settings.database.port,
+                host=settings.database.host)
+        else:
+            connect(settings.database.host)
+
+        log.info('Successfully connected to the {} database'.format(settings.database.name))
+
     def load(self):
         """
         Use a config parser to build the settings module. This module is accessible through
@@ -79,6 +100,12 @@ class BiralesConfig:
         class Section(object):
             def settings(self):
                 return self.__dict__.keys()
+
+            def __getitem__(self, item):
+                return self.__dict__[item]
+
+            def __iter__(self):
+                return iter(self.__dict__.keys())
 
         # Loop over all sections in config file
         for section in self._parser.sections():
@@ -108,7 +135,14 @@ class BiralesConfig:
 
         log.info('Configurations successfully loaded.')
 
+        # Connect to the database
+        self._db_connect()
+
         # todo - Validate the loaded configuration file
+
+    # def to_fict(self):
+    #     json = {}
+    #     for section in settings:
 
 
 class BiralesFacade:
@@ -121,17 +155,6 @@ class BiralesFacade:
         # Ensure that the system was initialised correctly
         self.validate_init()
 
-        # Connect to the database
-        if settings.database.authentication:
-            connect(
-                db=settings.database.name,
-                username=settings.database.user,
-                password=settings.database.password,
-                port=settings.database.port,
-                host=settings.database.host)
-        else:
-            connect(settings.database.host)
-
     def validate_init(self):
         pass
 
@@ -139,7 +162,7 @@ class BiralesFacade:
         """
         Start the observation
 
-
+        :param pipeline_manager: The pipeline manager associated with this observation
         :return:
         """
 
