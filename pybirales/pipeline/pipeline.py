@@ -50,7 +50,6 @@ class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
             self.manager.add_module("persister_raw", persister_raw)
         else:
             beamformer = Beamformer(settings.beamformer, receiver.output_blob)
-
         ppf = PFB(settings.channeliser, beamformer.output_blob)
 
         if settings.manager.save_beam:

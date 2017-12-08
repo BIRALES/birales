@@ -20,6 +20,11 @@ class BiralesConfig:
 
         self.update_config(config_options)
 
+        self._loaded = False
+
+    def is_loaded(self):
+        return self._loaded
+
     def _load_from_file(self, config_file):
         """
         Load the configuration of the BIRALES application into the settings.py file
@@ -101,12 +106,6 @@ class BiralesConfig:
             def settings(self):
                 return self.__dict__.keys()
 
-            def __getitem__(self, item):
-                return self.__dict__[item]
-
-            def __iter__(self):
-                return iter(self.__dict__.keys())
-
         # Loop over all sections in config file
         for section in self._parser.sections():
             # Create instance to inject into settings file
@@ -138,17 +137,27 @@ class BiralesConfig:
         # Connect to the database
         self._db_connect()
 
+        self._loaded = True
         # todo - Validate the loaded configuration file
 
-    # def to_fict(self):
-    #     json = {}
-    #     for section in settings:
+    @staticmethod
+    def to_dict():
+        """
+        Return the dictionary representation of the Birales configuration
+
+        :return:
+        """
+        return {section: settings.__dict__[section].__dict__ for section in settings.__dict__.keys() if
+                not section.startswith('__')}
 
 
 class BiralesFacade:
     def __init__(self, configuration):
+        # The configuration associated with this facade Instance
+        self.configuration = configuration
+
         # Load the system configuration upon initialisation
-        configuration.load()
+        self.configuration.load()
 
         self._pipeline_manager = None
 
@@ -165,16 +174,20 @@ class BiralesFacade:
         :param pipeline_manager: The pipeline manager associated with this observation
         :return:
         """
-
         # Ensure status of the pipeline is correct
         # Check if calibration is required
         # Point the telescope
         # Start the chosen pipeline
 
         if pipeline_manager:
-            observation = Observation(name=settings.observation.name, date_time_start=datetime.datetime.utcnow(),
-                                      settings=settings.__dict__)
+            observation = Observation(name=settings.observation.name,
+                                      date_time_start=datetime.datetime.utcnow(),
+                                      settings=self.configuration.to_dict())
             observation.save()
+
+            self.configuration.update_config({'observation': {'id': observation.id}})
+            # Re-load the system configuration upon initialisation
+            self.configuration.load()
 
             pipeline_manager.start_pipeline(settings.observation.duration)
 
@@ -187,6 +200,7 @@ class BiralesFacade:
         :param pipeline_builder:
         :return: None
         """
+
         log.info('Building the {} Manager.'.format(pipeline_builder.manager.name))
 
         pipeline_builder.build()

@@ -8,15 +8,14 @@ from mongoengine import *
 
 
 class Observation(Document):
-    id = ObjectIdField()
     name = StringField(required=True, max_length=200)
     date_time_start = DateTimeField(required=True, default=datetime.datetime.utcnow)
     date_time_end = DateTimeField()
     settings = DynamicField()
+    noise_estimate = FloatField(default=0)
 
 
 class SpaceDebrisCandidate(Document):
-    id = ObjectIdField()
     observation = ReferenceField(Observation, required=True)
     beam_id = IntField(required=True)
     beam_ra = FloatField(required=True)

@@ -5,6 +5,7 @@ from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.modules.detection.queue import BeamCandidatesQueue
 from pybirales.repository.repository import ObservationsRepository
+from pybirales.repository.models import Observation
 from pybirales.pipeline.modules.detection.strategies.m_dbscan import m_detect
 from multiprocessing import Pool
 
@@ -93,6 +94,7 @@ class Detector(ProcessingModule):
         Run the Space Debris Detector pipeline
         :return void
         """
+
         channels = self._get_channels(obs_info)
         time = self._get_time(obs_info)
         doppler_mask = self._get_doppler_mask(channels)
@@ -103,8 +105,13 @@ class Detector(ProcessingModule):
         if settings.detection.doppler_subset:
             input_data = input_data[:, :, doppler_mask, :]
 
-        if not self._config_persisted:
-            self._configurations_repository.persist(obs_info)
+        # If the configuration was not saved AND the number of noise samples is sufficient, save the noise value.
+        if not self._config_persisted and self.counter >= settings.detection.n_noise_samples:
+            # self._configurations_repository.persist(obs_info)
+            # self._config_persisted = True
+            observation = Observation.objects.get(id=settings.observation.id)
+            observation.noise_estimate = self._get_noise_estimation(input_data)
+            observation.save()
             self._config_persisted = True
 
         beam_candidates = []
