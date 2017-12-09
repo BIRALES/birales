@@ -12,8 +12,7 @@ class Repository:
         self.client = mongo.MongoClient(self.host, self.port)
         self.database = self.client['birales']
 
-        if settings.database.authentication:
-            self.client.birales.authenticate(settings.database.user, settings.database.password)
+        self.client.birales.authenticate('birales_rw', 'arcadia10')
 
     @abstractmethod
     def persist(self, entity):
@@ -30,7 +29,7 @@ class ObservationsRepository(Repository):
                                                     {"$set": configuration},
                                                     upsert=True)
             log.info('Configuration data was saved to the database')
-        except mongo.errors.ServerSelectionTimeoutError:
+        except Exception:
             log.error('MongoDB is not running. Exiting.')
             sys.exit(1)
 
@@ -40,7 +39,7 @@ class ObservationsRepository(Repository):
                 '_id': data_set_id
             })
 
-        except mongo.errors.ServerSelectionTimeoutError:
+        except Exception:
             log.error('MongoDB is not running. Exiting.')
             sys.exit(1)
 
@@ -52,10 +51,10 @@ class ObservationsRepository(Repository):
         :return:
         """
         try:
-            result = self.database.configurations.delete_many({"_id": data_set_id})
-            log.info('Deleted %s data sets', result.deleted_count)
+            result = self.database.configurations.remove({"_id": data_set_id})
+            log.info('Deleted %s data sets', result['ok'])
 
-        except mongo.errors.ServerSelectionTimeoutError:
+        except Exception:
             log.error('MongoDB is not running. Exiting.')
             sys.exit(1)
 
@@ -79,10 +78,10 @@ class BeamCandidateRepository(Repository):
             # else:
             #     self.database.beam_candidates.insert_many(to_save)
             for candidate in to_save:
-                self.database.beam_candidates.insert_one(candidate)
+                self.database.beam_candidates.insert(candidate)
 
-        except mongo.errors.ServerSelectionTimeoutError:
-            log.error('MongoDB is not running. Detected beam candidates could not be saved.')
+        except Exception:
+            log.exception('MongoDB is not running. Detected beam candidates could not be saved.')
         else:
             log.info('%s beam candidates were persisted', len(beam_candidates))
 
@@ -109,8 +108,8 @@ class BeamCandidateRepository(Repository):
 
         try:
             beam_candidates = self.database['beam_candidates'].find(query).sort("min_time", mongo.ASCENDING)
-        except mongo.errors.ServerSelectionTimeoutError:
-            log.error('MongoDB is not running. Could not retrieve candidates.')
+        except Exception:
+            log.exception('MongoDB is not running. Could not retrieve candidates.')
         else:
             return list(beam_candidates)
 
@@ -119,9 +118,10 @@ class BeamCandidateRepository(Repository):
             '$or': [{'_id': beam_candidate.id} for beam_candidate in beam_candidates]
         }
         try:
-            result = self.database.beam_candidates.delete_many(query)
+            result = self.database.beam_candidates.remove(query)
 
-        except mongo.errors.ServerSelectionTimeoutError:
-            log.error('MongoDB is not running. Could not delete %s candidates.', len(beam_candidates))
+        except Exception:
+            log.exception('MongoDB is not running. Could not delete %s candidates.', len(beam_candidates))
         else:
-            log.info('Deleted %s beam candidates', result.deleted_count)
+            print(result)
+            log.info('Deleted %s beam candidates', result['ok'])
