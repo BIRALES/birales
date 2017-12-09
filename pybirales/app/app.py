@@ -11,7 +11,7 @@ from pybirales.app.modules.monitoring import monitoring_page
 from pybirales.app.modules.observations import observations_page
 from pybirales.app.modules.preferences import preferences_page
 from pybirales.repository.repository import BeamCandidateRepository
-import settings
+
 
 socket_io = SocketIO()
 
@@ -97,4 +97,4 @@ if __name__ == "__main__":
     flask_app = configure_flask('pybirales/configuration/birales.ini')
 
     # Start the Flask Application
-    socket_io.run(flask_app)
+    socket_io.run(flask_app, host="0.0.0.0", port=8000)

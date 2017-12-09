@@ -1,3 +1,4 @@
+
 # BIRALES processing backend
 
 ## Dependencies
@@ -77,9 +78,9 @@ birales services calibration [OPTIONS] CONFIGURATION
 ```
 
 ### Front-end
-Start the Flask server on port 5000
+Start the Flask server (still in development)
 ```
-birales-frontend start_server --port=5000 --debug
+python pybirales/app/app.py 
 ```
 
 Front-end application will be served on http://127.0.0.1

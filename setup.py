@@ -16,6 +16,8 @@ setup(
              'pybirales/cli/cli.py',
              'pybirales/app/app.py'
              ],
+    include_package_data=True,
+    zip_safe=False,
     install_requires=['configparser',
                       'futures',
                       'enum34',
@@ -27,7 +29,7 @@ setup(
                       "pymongo",
                       "scipy",
                       "scikit-learn",
-                    #  "h5py",
+                      #  "h5py",
                       "click",
                       "flask",
                       "flask-compress",
@@ -35,11 +37,12 @@ setup(
                       "flask_ini",
                       'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow', 'humanize', 'mongoengine', 'pyfits'],
     data_files=[(os.environ['HOME'] + '/.birales', ['pybirales/configuration/local.ini']),
-                (os.environ['HOME'] + '/.birales/tcpo', [])],
+                (os.environ['HOME'] + '/.birales/tcpo', []),
+                (os.environ['HOME'] + '/.birales/fits', [])
+                ],
     entry_points={
         'console_scripts': [
-            'birales = pybirales.cli.cli:cli',
-            'birales-frontend = pybirales.app.app:run_server'
+            'birales = pybirales.cli.cli:cli'
         ]
     },
 )
