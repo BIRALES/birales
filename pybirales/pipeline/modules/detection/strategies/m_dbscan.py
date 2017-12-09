@@ -9,6 +9,8 @@ from pybirales.repository.repository import BeamCandidateRepository
 from sklearn import linear_model
 from sklearn.cluster import DBSCAN
 
+from pybirales.pipeline.plotters.spectrogram_plotter import plotter1
+
 _eps = 5
 _min_samples = 5
 _algorithm = 'kd_tree'
@@ -43,7 +45,7 @@ def _create_clusters(beam):
     try:
         t = time.time()
         cluster_labels = db_scan.fit_predict(data)
-        log.debug('Scipy\'s DBScan took %0.3f s', time.time() - t)
+        log.debug('Beam %s: Scipy\'s DBScan took %0.3f s', beam.id, time.time() - t)
     except ValueError:
         log.exception('DBSCAN failed in beam %s', beam.id)
         return []
@@ -61,7 +63,7 @@ def _create_clusters(beam):
               len(cluster_labels) - len(filtered_cluster_labels),
               len(cluster_labels))
 
-    log.debug('%s unique clusters were detected', len(np.unique(filtered_cluster_labels)))
+    log.debug('Beam %s: %s unique clusters were detected', beam.id, len(np.unique(filtered_cluster_labels)))
 
     # Group the data points in clusters
     clusters = []
@@ -74,7 +76,7 @@ def _create_clusters(beam):
     for label in np.unique(filtered_cluster_labels):
         data_indices = data[np.where(cluster_labels == label)]
 
-        log.debug('beam %s: cluster %s contains %s data points', beam.id, label, len(data_indices[:, 1]))
+        log.debug('Beam %s: cluster %s contains %s data points', beam.id, label, len(data_indices[:, 1]))
 
         channel_indices = data_indices[:, 1]
         time_indices = data_indices[:, 0]
@@ -108,7 +110,8 @@ def _create_clusters(beam):
                       cluster.c, len(channel_indices), cluster.score)
             clusters.append(cluster)
 
-    log.debug('%s candidates (%s valid) created in %0.3f s',
+    log.debug('Beam %s: %s candidates (%s valid) created in %0.3f s',
+              beam.id,
               len(np.unique(filtered_cluster_labels)),
               len(clusters),
               time.time() - tt)
@@ -151,8 +154,8 @@ def m_detect(obs_info, queue, beam):
     # Apply the pre-processing filters to the beam data
     try:
         t1 = time.time()
-        # if settings.detection.debug_candidates:
-        #     plotter1.plot(beam, 'detection/input_beam/' + str(beam.id) + '_' + str(_ref_time), beam.id == 0)
+        # if settings.detection.debug_candidates and beam.id == 11:
+        #     plotter1.plot(beam, 'detection/input_beam/' + str(beam.id) + '_' + str(_ref_time), beam.id == 11)
         beam.apply_filters()
 
         # if settings.detection.debug_candidates:
@@ -164,7 +167,7 @@ def m_detect(obs_info, queue, beam):
         t3 = time.time()
         for candidate in candidates:
             queue.enqueue(candidate)
-        log.debug('Beam %s: Enqueuing of clusters took %0.3f s', beam.id, time.time() - t3)
+        log.debug('Beam %s: Enqueuing of %s clusters took %0.3f s', beam.id, len(candidates), time.time() - t3)
 
     except Exception:
         log.exception('Something went wrong with process')

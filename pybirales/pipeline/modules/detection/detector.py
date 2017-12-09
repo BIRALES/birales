@@ -1,4 +1,7 @@
 import numpy as np
+import pyfits
+from astropy.io import fits
+from astropy.table import Table, vstack
 from functools import partial
 
 from pybirales.pipeline.base.processing_module import ProcessingModule
@@ -21,7 +24,7 @@ class Detector(ProcessingModule):
         self._validate_data_blob(input_blob, valid_blobs=[ChannelisedBlob])
 
         # Repository Layer for saving the configuration to the Data store
-        self._configurations_repository = ObservationsRepository()
+        # self._configurations_repository = ObservationsRepository()
 
         # Data structure that hold the detected debris (for merging)
         self._debris_queue = BeamCandidatesQueue(settings.beamformer.nbeams)
@@ -45,6 +48,8 @@ class Detector(ProcessingModule):
 
         self._observation = None
 
+        # self._fits = fits.open('test.fits', mode='update')
+
         super(Detector, self).__init__(config, input_blob)
 
         self.name = "Detector"
@@ -67,10 +72,10 @@ class Detector(ProcessingModule):
             self.mean_noise = np.mean(self.noise)
         return float(self.mean_noise)
 
-    def _get_doppler_mask(self, channels):
+    def _get_doppler_mask(self, tx, channels):
         if self._doppler_mask is None:
-            a = settings.observation.transmitter_frequency + settings.detection.doppler_range[0] * 1e-6
-            b = settings.observation.transmitter_frequency + settings.detection.doppler_range[1] * 1e-6
+            a = tx + settings.detection.doppler_range[0] * 1e-6
+            b = tx + settings.detection.doppler_range[1] * 1e-6
 
             self._doppler_mask = np.bitwise_and(channels < b, channels > a)
 
@@ -82,7 +87,7 @@ class Detector(ProcessingModule):
                                       obs_info['start_center_frequency'] + obs_info['channel_bandwidth'] * obs_info[
                                           'nchans'],
                                       obs_info['channel_bandwidth'])
-            self.channels = self.channels[self._get_doppler_mask(self.channels)]
+            self.channels = self.channels[self._get_doppler_mask(obs_info['transmitter_frequency'], self.channels)]
 
         return self.channels
 
@@ -97,9 +102,10 @@ class Detector(ProcessingModule):
         :return void
         """
 
+
         channels = self._get_channels(obs_info)
         time = self._get_time(obs_info)
-        doppler_mask = self._get_doppler_mask(channels)
+        doppler_mask = self._get_doppler_mask(obs_info['transmitter_frequency'], channels)
 
         # estimate the noise from the data
         obs_info['noise'] = self._get_noise_estimation(input_data)
@@ -125,6 +131,20 @@ class Detector(ProcessingModule):
         if settings.detection.multi_proc:
             func = partial(m_detect, obs_info, self._debris_queue)
             beam_candidates = self.pool.map(func, beams)
+        else:
+            for beam in beams:
+                beam_candidates.append(m_detect(obs_info, self._debris_queue, beam))
+                if beam.id == 11:
+                    try:
+                        t1 = fits.open('filtered.fits')
+                        new = np.vstack([t1[0].data, beam.snr])
+                        fits.writeto('filtered.fits', new, overwrite=True)
+                    except IOError:
+                        fits.writeto('filtered.fits', beam.snr, overwrite=True)
+                    finally:
+                        print(fits.info('filtered.fits'))
+
+                    # pyfits.append('test'+str(self.counter)+'.fits', beam.snr, verify=True)
 
         self._debris_queue.set_candidates(beam_candidates)
 

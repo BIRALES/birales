@@ -9,6 +9,7 @@ from pybirales.pipeline.blobs.dummy_data import DummyBlob
 from pybirales import settings
 import logging as log
 import pickle
+import time
 
 
 class RawDataReader(ProcessingModule):
@@ -62,14 +63,16 @@ class RawDataReader(ProcessingModule):
 
     def process(self, obs_info, input_data, output_data):
         # Read next data set
+
         data = self._f.read(self._nsamp * self._nants * 8)
         data = np.frombuffer(data, np.complex64)
-
         try:
             data = data.reshape((1, 1, self._nsamp, self._nants))
         except ValueError:
+            # Sleep the thread before calling a no data - wait for the other modules to finish
+            # todo - this could be handled better
+            time.sleep(20)
             raise NoDataReaderException
-            sys.exit()
 
         output_data[:] = data
         sleep(0.5)

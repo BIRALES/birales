@@ -8,12 +8,14 @@ import os
 import re
 from pybirales import settings
 from mongoengine import connect
+from pybirales.services.calibration.calibration import CalibrationFacade
+from pybirales.app.app import run
 
 
 class BiralesConfig:
     LOCAL_CONFIG = '~/.birales/local.ini'
 
-    def __init__(self, config_file_path, config_options):
+    def __init__(self, config_file_path, config_options=None):
         self._parser = None
 
         self._load_from_file(config_file_path)
@@ -210,3 +212,16 @@ class BiralesFacade:
         log.info('{} initialised successfully.'.format(self._pipeline_manager.name))
 
         return pipeline_builder.manager
+
+    def calibrate(self):
+        """
+
+        :return:
+        """
+
+        cf = CalibrationFacade()
+        cf.calibrate()
+
+
+    def start_server(self, configuration):
+        run(configuration)

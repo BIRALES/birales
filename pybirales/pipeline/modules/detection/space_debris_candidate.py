@@ -201,6 +201,7 @@ class DetectionCluster:
             },
             'beam_id': self.beam_id,
             'tx': settings.observation.transmitter_frequency,
+            'observation': settings.observation.id,
             'min_time': self.min_time.datetime,
             'max_time': self.max_time.datetime,
             'min_channel': self.min_channel,
