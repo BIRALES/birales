@@ -11,9 +11,9 @@ from pybirales.app.modules.monitoring import monitoring_page
 from pybirales.app.modules.observations import observations_page
 from pybirales.app.modules.preferences import preferences_page
 from pybirales.repository.repository import BeamCandidateRepository
+import settings
 
 socket_io = SocketIO()
-beam_candidates_repo = BeamCandidateRepository()
 
 
 @socket_io.on('get_beam_candidates')
@@ -25,6 +25,8 @@ def get_beam_candidates(beam_id, from_time, to_time, min_channel, max_channel):
     to_time = dateutil.parser.parse(to_time)
     min_channel = float(min_channel)
     max_channel = float(max_channel)
+
+    beam_candidates_repo = BeamCandidateRepository()
 
     detected_beam_candidates = beam_candidates_repo.get(beam_id=beam_id,
                                                         to_time=to_time,
@@ -44,7 +46,7 @@ def configure_flask(config_file_path):
     """
 
     # Initialise logging
-    log.config.fileConfig(config_file_path)
+    # log.config.fileConfig(config_file_path)
 
     app = Flask(__name__)
 
@@ -65,14 +67,29 @@ def configure_flask(config_file_path):
     return app
 
 
+def run(configuration):
+    # Initialise Flask Application
+
+    app = Flask(__name__)
+    app.config['DEBUG'] = True
+    app.config['secret_key'] = 'secret!'
+
+    # Register Blueprints
+    app.register_blueprint(monitoring_page)
+    app.register_blueprint(observations_page)
+    app.register_blueprint(preferences_page)
+
+    # Turn the flask app into a socket.io app
+    socket_io.init_app(app)
+
+    # Start the Flask Application
+    socket_io.run(app, host="0.0.0.0", port=8000)
+
+
 @click.command()
 @click.argument('configuration', type=click.Path(exists=True), default='pybirales/configuration/birales.ini')
 def run_server(configuration):
-    # Initialise Flask Application
-    app = configure_flask(configuration)
-
-    # Start the Flask Application
-    socket_io.run(app)
+    run(configuration)
 
 
 if __name__ == "__main__":

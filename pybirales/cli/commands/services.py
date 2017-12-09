@@ -23,6 +23,19 @@ def calibration(ctx, configuration):
 
 
 @services.command()
+@click.argument('configuration', type=click.Path(exists=True), required=True)
+@click.pass_context
+def run_server(ctx, configuration):
+    # Load the BIRALES configuration from file
+    config = BiralesConfig(configuration, ctx.obj)
+
+    # Initialise the Birales Facade (BOSS)
+    bf = BiralesFacade(configuration=config)
+
+    bf.start_server(configuration)
+
+
+@services.command()
 def init_roach():
     pass
 

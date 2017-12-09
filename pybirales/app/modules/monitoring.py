@@ -1,4 +1,11 @@
-import pandas as pd
+import warnings
+
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore",category=FutureWarning)
+    import pandas as pd
+
+warnings.filterwarnings("ignore", message="numpy.dtype size changed")
+warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 from astropy.time import Time, TimeDelta
 
 from flask import Blueprint, render_template, Response, json
@@ -6,10 +13,12 @@ from pybirales.repository.repository import BeamCandidateRepository
 from webargs import fields
 from webargs.flaskparser import use_args
 from pandas.io.json import json_normalize
+
 from itertools import chain
 
+
 monitoring_page = Blueprint('monitoring_page', __name__, template_folder='templates')
-beam_candidates_repo = BeamCandidateRepository()
+
 MIN_CHANNEL = 409
 MAX_CHANNEL = 411
 
@@ -48,6 +57,7 @@ def index(args):
 @monitoring_page.route('/monitoring/beam_candidates', methods=['GET', 'POST'])
 @use_args(beam_candidates_args)
 def get_beam_candidates(args):
+    beam_candidates_repo = BeamCandidateRepository()
     detected_beam_candidates = beam_candidates_repo.get(beam_id=args['beam_id'],
                                                         to_time=args['to_time'],
                                                         from_time=args['from_time'],
@@ -61,6 +71,7 @@ def get_beam_candidates(args):
 @monitoring_page.route('/monitoring/illumination_sequence', methods=['GET', 'POST'])
 @use_args(beam_candidates_args)
 def get_illumination_sequence(args):
+    beam_candidates_repo = BeamCandidateRepository()
     detected_beam_candidates = beam_candidates_repo.get(beam_id=args['beam_id'],
                                                         to_time=args['to_time'],
                                                         from_time=args['from_time'],
@@ -108,6 +119,7 @@ def get_illumination_sequence(args):
 @monitoring_page.route('/monitoring/beam_candidates/table', methods=['GET', 'POST'])
 @use_args(beam_candidates_args)
 def get_orbit_determination_table(args):
+    beam_candidates_repo = BeamCandidateRepository()
     detected_beam_candidates = beam_candidates_repo.get(beam_id=args['beam_id'],
                                                         to_time=args['to_time'],
                                                         from_time=args['from_time'],

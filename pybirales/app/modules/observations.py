@@ -6,7 +6,7 @@ from astropy.time import Time, TimeDelta
 from flask_paginate import Pagination, get_page_parameter
 
 observations_page = Blueprint('observations_page', __name__, template_folder='templates')
-observations_repo = ObservationsRepository()
+
 
 observations_args = {
     'from_time': fields.DateTime(missing=None, required=False),
@@ -22,6 +22,7 @@ def index():
     :return:
     """
 
+    observations_repo = ObservationsRepository()
     page = request.args.get(get_page_parameter(), type=int, default=1)
     per_page = 10
     observations = observations_repo.database.configurations.find().skip(page*per_page).limit(per_page)
