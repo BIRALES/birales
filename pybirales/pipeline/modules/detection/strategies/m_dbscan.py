@@ -8,8 +8,7 @@ from pybirales.pipeline.modules.detection.detection_clusters import DetectionClu
 from pybirales.repository.repository import BeamCandidateRepository
 from sklearn import linear_model
 from sklearn.cluster import DBSCAN
-
-from pybirales.pipeline.plotters.spectrogram_plotter import plotter1
+from astropy.io import fits
 
 _eps = 5
 _min_samples = 5
@@ -91,7 +90,6 @@ def _create_clusters(beam):
 
         # Create a Detection Cluster from the cluster data
         tr = time.time()
-        a = [_ref_time + t * _time_delta for t in beam.time[time_indices]]
 
         trd = time.time() - tr
 
@@ -123,6 +121,19 @@ def _create_clusters(beam):
     return clusters
 
 
+def save_fits(data, data_type, beam_id):
+    if beam_id in settings.detection.visualise_beams:
+        fits_filename = os.path.join(os.environ['HOME'], settings.detection.visualise_fits_dir,
+                                     settings.observation.name,
+                                     '{}_{}.fits'.format(data_type, beam_id))
+        try:
+            t1 = fits.open(fits_filename)
+            new_data = np.vstack([t1[0].data, data])
+            fits.writeto(fits_filename, new_data, overwrite=True)
+        except IOError:
+            fits.writeto(fits_filename, data, overwrite=True)
+
+
 def m_detect(obs_info, queue, beam):
     """
     The core detection algorithm to be applied to the incoming data
@@ -134,12 +145,13 @@ def m_detect(obs_info, queue, beam):
     :param beam:
     :return:
     """
+
     # ref_time = Time(obs_info['timestamp'])
     # time_delta = TimeDelta(obs_info['sampling_time'], format='sec')
 
     ref_time = np.datetime64(obs_info['timestamp'])
 
-    time_delta = np.timedelta64(int(obs_info['sampling_time']*1e9), 'ns')
+    time_delta = np.timedelta64(int(obs_info['sampling_time'] * 1e9), 'ns')
 
     # print(obs_info['timestamp'])
     #
@@ -156,8 +168,9 @@ def m_detect(obs_info, queue, beam):
         t1 = time.time()
         # if settings.detection.debug_candidates and beam.id == 11:
         #     plotter1.plot(beam, 'detection/input_beam/' + str(beam.id) + '_' + str(_ref_time), beam.id == 11)
+        save_fits(beam.snr, 'raw', beam.id)
         beam.apply_filters()
-
+        save_fits(beam.snr, 'filtered', beam.id)
         # if settings.detection.debug_candidates:
         #     plotter2.plot(beam, 'detection/filtered_beam/' + str(beam.id) + '_' + str(_ref_time), beam.id == 0)
 

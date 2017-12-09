@@ -1,13 +1,13 @@
 import numpy as np
-import pyfits
 from astropy.io import fits
-from astropy.table import Table, vstack
 from functools import partial
+import os
+import shutil
+import logging as log
 
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.modules.detection.queue import BeamCandidatesQueue
-from pybirales.repository.repository import ObservationsRepository
 from pybirales.repository.models import Observation
 from pybirales.pipeline.modules.detection.strategies.m_dbscan import m_detect
 from multiprocessing import Pool
@@ -53,6 +53,11 @@ class Detector(ProcessingModule):
         super(Detector, self).__init__(config, input_blob)
 
         self.name = "Detector"
+
+        if settings.detection.visualise_beams:
+            log.debug('Create fits directory for observation')
+            os.makedirs(
+                os.path.join(os.environ['HOME'], settings.detection.visualise_fits_dir, settings.observation.name))
 
     def _tear_down(self):
         self.pool.close()
@@ -102,7 +107,6 @@ class Detector(ProcessingModule):
         :return void
         """
 
-
         channels = self._get_channels(obs_info)
         time = self._get_time(obs_info)
         doppler_mask = self._get_doppler_mask(obs_info['transmitter_frequency'], channels)
@@ -134,17 +138,6 @@ class Detector(ProcessingModule):
         else:
             for beam in beams:
                 beam_candidates.append(m_detect(obs_info, self._debris_queue, beam))
-                if beam.id == 11:
-                    try:
-                        t1 = fits.open('filtered.fits')
-                        new = np.vstack([t1[0].data, beam.snr])
-                        fits.writeto('filtered.fits', new, overwrite=True)
-                    except IOError:
-                        fits.writeto('filtered.fits', beam.snr, overwrite=True)
-                    finally:
-                        print(fits.info('filtered.fits'))
-
-                    # pyfits.append('test'+str(self.counter)+'.fits', beam.snr, verify=True)
 
         self._debris_queue.set_candidates(beam_candidates)
 
