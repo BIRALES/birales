@@ -14,9 +14,6 @@ from sklearn.cluster import DBSCAN
 _eps = 5
 _min_samples = 5
 _algorithm = 'kd_tree'
-_r2_threshold = 0.90
-_merge_threshold = 0.20
-_n_proc = 32
 _linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
 db_scan = DBSCAN(eps=_eps, min_samples=_min_samples, algorithm=_algorithm, n_jobs=-1)
 _ref_time = None
@@ -30,13 +27,9 @@ def _create_clusters(beam):
     :return:
     """
 
-    global r
-
     # Select the data points that are non-zero and transform them in a time (x), channel (y) nd-array
     ndx = np.where(beam.snr > 0)
-
     data = np.column_stack(ndx)
-    # c_data = np.hstack((data, beam.snr[ndx].reshape(ndx[0].shape[0], 1)))
 
     if not np.any(data):
         return []
