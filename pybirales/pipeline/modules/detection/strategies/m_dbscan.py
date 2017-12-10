@@ -50,10 +50,6 @@ def _create_clusters(beam):
         log.exception('DBSCAN failed in beam %s', beam.id)
         return []
 
-    # if settings.detection.debug_candidates:
-    #     plotter.plot_detections(beam, 'detection/db_scan/' + str(beam.id) + '_' + str(_ref_time), beam.id == 15,
-    #                             cluster_labels=cluster_labels, cluster_data=data)
-
     # Select only those labels which were not classified as noise (-1)
     filtered_cluster_labels = cluster_labels[cluster_labels > -1]
 
@@ -148,16 +144,9 @@ def m_detect(obs_info, queue, beam):
     :return:
     """
 
-    # ref_time = Time(obs_info['timestamp'])
-    # time_delta = TimeDelta(obs_info['sampling_time'], format='sec')
-
     ref_time = np.datetime64(obs_info['timestamp'])
 
     time_delta = np.timedelta64(int(obs_info['sampling_time'] * 1e9), 'ns')
-
-    # print(obs_info['timestamp'])
-    #
-    # print(datetime.datetime.strptime(obs_info['timestamp'], "%Y-%m-%dT%H:%M:%S.%f"))
 
     global _time_delta, _ref_time, _debris_queue, r
     _ref_time = ref_time
@@ -168,13 +157,9 @@ def m_detect(obs_info, queue, beam):
     # Apply the pre-processing filters to the beam data
     try:
         t1 = time.time()
-        # if settings.detection.debug_candidates and beam.id == 11:
-        #     plotter1.plot(beam, 'detection/input_beam/' + str(beam.id) + '_' + str(_ref_time), beam.id == 11)
         save_fits(beam.snr, 'raw', beam.id)
         beam.apply_filters()
         save_fits(beam.snr, 'filtered', beam.id)
-        # if settings.detection.debug_candidates:
-        #     plotter2.plot(beam, 'detection/filtered_beam/' + str(beam.id) + '_' + str(_ref_time), beam.id == 0)
 
         candidates = _create_clusters(beam)
         log.debug('Beam %s: Create clusters took %0.3f s', beam.id, time.time() - t1)
