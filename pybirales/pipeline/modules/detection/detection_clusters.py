@@ -14,13 +14,11 @@ class DetectionCluster:
         Initialisation of the Detection cluster Object
 
         :param model: The model which will determine if cluster is linear as expected
-        :param beam:
         :param time_data:
         :param channels:
         :param snr:
 
         :type time_data: numpy.array of Time
-        :type beam: Beam
         :type channels: numpy.array of floats
         :type snr: numpy.array of floats
         """
@@ -54,7 +52,11 @@ class DetectionCluster:
     def fit_model(self, model, channel_data, time_data):
         """
         Compare the detections cluster data against a model
-        todo - this function has to be refactored
+        todo - this function should be refactored
+
+        :param model:
+        :param channel_data:
+        :param time_data:
         :return:
         """
 
@@ -109,7 +111,6 @@ class DetectionCluster:
             self.c = model.estimator_.intercept_
 
             self.channel_data = np.array([channel[0] for channel in channels])
-            # self.time_data = [Time(t, format='unix') for t in time]
             self.time_data = [np.datetime64(int(t*1e9), 'ns') for t in time]
             self.snr_data = np.array(snr)
 
@@ -160,6 +161,7 @@ class DetectionCluster:
     def _pd(a, b):
         """
         Calculate the percentage difference between two values
+
         :param a:
         :param b:
         :return:
@@ -182,6 +184,7 @@ class DetectionCluster:
 
         :param cluster:
         :type cluster: DetectionCluster
+
         :return: DetectionCluster
         """
 
@@ -202,6 +205,7 @@ class DetectionCluster:
     def saved(self):
         """
         Mark this cluster as already saved to the database
+
         :return: void
         """
 
@@ -209,26 +213,49 @@ class DetectionCluster:
 
     @staticmethod
     def _get_doppler_shift(transmission_frequency, reflected_frequency):
+        """
+
+        :param transmission_frequency:
+        :param reflected_frequency:
+        :return:
+        """
         return (reflected_frequency - transmission_frequency) * 1e6
 
     @staticmethod
     def _time_elapsed(elapsed_time):
+        """
+
+        :param elapsed_time:
+        :return:
+        """
         return elapsed_time
 
     @staticmethod
     def _time(time):
-        # ref_time = self.beam.data_set.config['timestamp'] / 1000.
-
         return time
-        # return Time(time, format='unix')
 
     def _timestamp(self, elapsed_time):
+        """
+
+        :param elapsed_time:
+        :return:
+        """
         return self._time(elapsed_time).iso
 
     def _get_mjd2000(self, elapsed_time):
+        """
+
+        :param elapsed_time:
+        :return:
+        """
         return self._time(elapsed_time).mjd
 
     def to_json(self):
+        """
+        Return a json representation of the DetectionCluster
+
+        :return:
+        """
         max_snr_mask = np.argmax(self.snr_data)
         return {
             '_id': self.id,

@@ -1,10 +1,9 @@
 import numpy as np
-import datetime
 from pybirales.pipeline.modules.detection.filters import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter, \
     PepperNoiseFilter
-from pybirales import settings
 import warnings
 
+# todo - is this needed?
 warnings.filterwarnings('error')
 
 
