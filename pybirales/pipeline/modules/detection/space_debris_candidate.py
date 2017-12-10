@@ -49,6 +49,9 @@ class DetectionCluster:
         """
         Compare the detections cluster data against a model
 
+        :param model:
+        :param channel_data:
+        :param time_data:
         :return:
         """
 
@@ -175,18 +178,35 @@ class DetectionCluster:
 
     @staticmethod
     def _time(time):
-        # ref_time = self.beam.data_set.config['timestamp'] / 1000.
+        """
+
+        :param time:
+        :return:
+        """
 
         return time
-        # return Time(time, format='unix')
 
     def _timestamp(self, elapsed_time):
+        """
+
+        :param elapsed_time:
+        :return:
+        """
         return self._time(elapsed_time).iso
 
     def _get_mjd2000(self, elapsed_time):
+        """
+
+        :param elapsed_time:
+        :return:
+        """
         return self._time(elapsed_time).mjd
 
     def to_json(self):
+        """
+
+        :return:
+        """
         return {
             '_id': self.id,
             'beam': {
