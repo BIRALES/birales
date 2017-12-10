@@ -1,19 +1,17 @@
 import numpy as np
-from astropy.io import fits
-from functools import partial
 import os
-import shutil
 import logging as log
 
-from pybirales.pipeline.base.processing_module import ProcessingModule
-from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
-from pybirales.pipeline.modules.detection.queue import BeamCandidatesQueue
-from pybirales.repository.models import Observation
-from pybirales.pipeline.modules.detection.strategies.m_dbscan import m_detect
+from functools import partial
 from multiprocessing import Pool
 
 from pybirales import settings
+from pybirales.pipeline.base.processing_module import ProcessingModule
+from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.modules.detection.beam import Beam
+from pybirales.pipeline.modules.detection.strategies.m_dbscan import m_detect
+from pybirales.pipeline.modules.detection.queue import BeamCandidatesQueue
+from pybirales.repository.models import Observation
 
 
 class Detector(ProcessingModule):
@@ -22,9 +20,6 @@ class Detector(ProcessingModule):
     def __init__(self, config, input_blob=None):
         # Ensure that the input blob is of the expected format
         self._validate_data_blob(input_blob, valid_blobs=[ChannelisedBlob])
-
-        # Repository Layer for saving the configuration to the Data store
-        # self._configurations_repository = ObservationsRepository()
 
         # Data structure that hold the detected debris (for merging)
         self._debris_queue = BeamCandidatesQueue(settings.beamformer.nbeams)
@@ -47,8 +42,6 @@ class Detector(ProcessingModule):
         self._doppler_mask = None
 
         self._observation = None
-
-        # self._fits = fits.open('test.fits', mode='update')
 
         super(Detector, self).__init__(config, input_blob)
 
@@ -104,7 +97,11 @@ class Detector(ProcessingModule):
     def process(self, obs_info, input_data, output_data):
         """
         Run the Space Debris Detector pipeline
-        :return void
+
+        :param obs_info:
+        :param input_data:
+        :param output_data:
+        :return:
         """
 
         channels = self._get_channels(obs_info)
