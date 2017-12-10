@@ -1,14 +1,15 @@
 import logging as log
+import numpy as np
 import os
 import time
 
-import numpy as np
+from astropy.io import fits
 from pybirales import settings
 from pybirales.pipeline.modules.detection.detection_clusters import DetectionCluster
 from pybirales.repository.repository import BeamCandidateRepository
+from pybirales.pipeline.base.timing import timeit
 from sklearn import linear_model
 from sklearn.cluster import DBSCAN
-from astropy.io import fits
 
 _eps = 5
 _min_samples = 5
@@ -134,14 +135,15 @@ def save_fits(data, data_type, beam_id):
             fits.writeto(fits_filename, data, overwrite=True)
 
 
+@timeit
 def m_detect(obs_info, queue, beam):
     """
     The core detection algorithm to be applied to the incoming data
 
     To be run in parallel using the multi-processing queue
 
-    :param ref_time:
-    :param time_delta:
+    :param obs_info:
+    :param queue:
     :param beam:
     :return:
     """
