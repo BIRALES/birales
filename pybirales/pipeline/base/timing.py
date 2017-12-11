@@ -1,9 +1,14 @@
 import logging as log
 import time
 
+from pybirales import settings
+
 
 def timeit(method):
     def timed(*args, **kw):
+        if not settings.manager.profile_timeit:
+            return method(*args, **kw)
+
         start = time.time()
         result = method(*args, **kw)
         end = time.time()
