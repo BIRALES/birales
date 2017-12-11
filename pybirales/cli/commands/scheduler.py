@@ -40,7 +40,10 @@ def monitoring_thread(s):
             obs_settings = observation.argument[0]
             start_time = dateutil.parser.parse(obs_settings['config_parameters']['start_time'])
             time_remaining = humanize.naturaltime(now - start_time)
-            message('INFO', 'The {} is scheduled to start in {}'.format(obs_settings['pipeline'], time_remaining))
+            message('INFO', 'The {} for the "{}" observation is scheduled to start in {}'.format(
+                obs_settings['pipeline'],
+                obs_settings['name'],
+                time_remaining))
 
         # Do not show the output again for the next N seconds
         time.sleep(60)
@@ -65,7 +68,7 @@ def start_observation(observation_settings):
         builder = DetectionPipelineMangerBuilder()
     elif observation_settings['pipeline'] == 'correlation_pipeline':
         builder = CorrelatorPipelineManagerBuilder()
-    elif observation_settings['pipeline'] == 'stand_alone_pipeline':
+    elif observation_settings['pipeline'] == 'standalone_pipeline':
         builder = StandAlonePipelineMangerBuilder()
     else:
         raise Exception('Pipeline not implemented')
@@ -110,8 +113,13 @@ def scheduler(schedule_file_path):
         start_msg = "Observation {}, using the {} is scheduled to start NOW".format(
                 obs_name, observation['pipeline'])
         if 'start_time' in observation['config_parameters']:
-            start_msg = "Observation {}, using the {} is scheduled to run at {:%Y-%m-%d %H:%M:%S}".format(
-                obs_name, observation['pipeline'], start_time)
+            start_msg = "Observation {}, using the {} is scheduled to run at {:%Y-%m-%d %H:%M:%S}"\
+                .format(obs_name, observation['pipeline'], start_time)
+
+        if 'duration' in observation['config_parameters']:
+            start_msg += ' and will run for {} seconds'.format(observation['config_parameters']['duration'])
+        else:
+            start_msg += ' and will run indefinitely'
 
         message('INFO', start_msg)
 
