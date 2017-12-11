@@ -9,7 +9,8 @@ import sys
 import threading
 import time
 from pybirales.birales import BiralesFacade, BiralesConfig
-from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, CorrelatorPipelineManagerBuilder
+from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, CorrelatorPipelineManagerBuilder, \
+    StandAlonePipelineMangerBuilder
 
 DEFAULT_WAIT_SECONDS = 5
 
@@ -64,6 +65,8 @@ def start_observation(observation_settings):
         builder = DetectionPipelineMangerBuilder()
     elif observation_settings['pipeline'] == 'correlation_pipeline':
         builder = CorrelatorPipelineManagerBuilder()
+    elif observation_settings['pipeline'] == 'stand_alone_pipeline':
+        builder = StandAlonePipelineMangerBuilder()
     else:
         raise Exception('Pipeline not implemented')
 
@@ -93,6 +96,7 @@ def scheduler(schedule_file_path):
     for obs_name, observation in scheduled_observations.iteritems():
         # If no time is specified, start the pipeline in DEFAULT_WAIT_SECONDS seconds
         wait_seconds = DEFAULT_WAIT_SECONDS
+        start_time = datetime.datetime.utcnow()
         if 'start_time' in observation['config_parameters']:
             start_time = dateutil.parser.parse(observation['config_parameters']['start_time'])
             # Check that start time is valid
@@ -103,8 +107,14 @@ def scheduler(schedule_file_path):
             message('INFO', "Scheduled start time for {} must be in the future".format(obs_name))
             sys.exit()
 
-        message('INFO', "Observation {}, using the {} is scheduled to run at {:%Y-%m-%d %H:%M:%S}".format(
-            obs_name, observation['pipeline'], start_time))
+        start_msg = "Observation {}, using the {} is scheduled to start NOW".format(
+                obs_name, observation['pipeline'])
+        if 'start_time' in observation['config_parameters']:
+            start_msg = "Observation {}, using the {} is scheduled to run at {:%Y-%m-%d %H:%M:%S}".format(
+                obs_name, observation['pipeline'], start_time)
+
+        message('INFO', start_msg)
+
         s.enter(delay=wait_seconds, priority=0, action=start_observation, argument=(observation,))
 
     message('INFO', 'Scheduler initialised. {} observations queued.'.format(len(scheduled_observations)))

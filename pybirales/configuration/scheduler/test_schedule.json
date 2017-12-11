@@ -10,5 +10,17 @@
       "start_time": "2017-12-06T19:56:30Z",
       "duration": 3
     }
+  },
+  "observation 2": {
+    "pipeline": "detection_pipeline",
+    "config_file": "pybirales/configuration/birales.ini",
+    "config_parameters": {
+      "tx": 11,
+      "manager": {
+        "debug": "true"
+      },
+      "start_time": "2017-12-06T19:56:30Z",
+      "duration": 3
+    }
   }
 }

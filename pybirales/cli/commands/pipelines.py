@@ -1,6 +1,5 @@
 import click
 import datetime
-from mongoengine import connect
 from pybirales.birales import BiralesFacade, BiralesConfig
 from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, CorrelatorPipelineManagerBuilder, StandAlonePipelineMangerBuilder
 from pybirales.cli.helpers import update_config
@@ -96,7 +95,7 @@ def stand_alone_pipeline(configuration):
     bf = BiralesFacade(configuration)
 
     # Build the Pipeline Manager using the Correlator Pipeline Manager Builder
-    manager = bf.build_pipeline(StandAlonePipelineMnaagerBuilder())
+    manager = bf.build_pipeline(StandAlonePipelineMangerBuilder())
 
     # Finally, start the observation
     bf.start_observation(pipeline_manager=manager)
