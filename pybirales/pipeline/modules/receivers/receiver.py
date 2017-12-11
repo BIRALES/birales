@@ -102,6 +102,8 @@ class Receiver(Generator):
             obs_info['nants'] = self._nants
             obs_info['npols'] = self._npols
 
+            obs_info['transmitter_frequency'] = settings.observation.transmitter_frequency
+
             # Get output blob
             output_data = self.request_output_blob()
 
