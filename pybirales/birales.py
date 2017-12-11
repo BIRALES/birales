@@ -45,6 +45,15 @@ class BiralesConfig:
             log_config.fileConfig(config_file, disable_existing_loggers=False)
             log.info('Loading configuration file at {}.'.format(config_file))
 
+        # Add backend configuration
+        filepath = "pybirales/configuration/backend/roach_backend.ini"
+        try:
+            with open(filepath) as f:
+                parser.read_file(f)
+                log.info('Loading backend configuration file at {}.'.format(filepath))
+        except IOError:
+            log.info('Local config file not found in {}. Using the default configuration.'.format(filepath))
+
         # Override the default configuration file with the ones specified in the local.ini
         try:
             with open(os.path.expanduser(BiralesConfig.LOCAL_CONFIG)) as f:
@@ -171,8 +180,6 @@ class BiralesFacade:
 
         self._calibration = CalibrationFacade()
 
-
-
     def validate_init(self):
         pass
 
@@ -186,7 +193,7 @@ class BiralesFacade:
 
         if not settings.manager.offline:
             # Initialisation of the backend system
-            # self._backend.initialise()
+            self._backend.start()
 
             # Point the BEST Antenna
             self._instrument.move_to_declination(settings.beamformer.reference_declination)

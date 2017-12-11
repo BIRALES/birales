@@ -8,11 +8,11 @@ from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
 from multiprocessing.pool import ThreadPool
 import numpy as np
 import logging
-import numba
+# import numba
 import math
 
 
-@numba.jit(nopython=True, nogil=True)
+# @numba.jit(nopython=True, nogil=True)
 def apply_fir_filter(data, fir_filter, output, ntaps, nchans):
     """
     Optimised filter function using numpy and numba
