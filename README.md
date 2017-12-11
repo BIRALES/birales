@@ -4,6 +4,7 @@
 ## Dependencies
 * Python 2.7
 * MongoDB
+* NPM 3+
 
 ## Installation
 
@@ -12,8 +13,8 @@ The BIRALES space debris detection system was built in Python 2.7 for the Ubuntu
 The MongoDB database can be installed through:
 
 ```
-sudo apt-key adv â€”keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
-echo â€œdeb http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
+sudo apt-key adv —keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
+echo “deb http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
 sudo apt-get update
 sudo apt-get install -y mongodb-org
 sudo mongod start 
@@ -36,6 +37,12 @@ mkdir build
 cd build
 cmake ..
 sudo  make install
+```
+
+The front-end dependencies can be installed through NPM
+```
+cd pybirales/app/static/
+npm install
 ```
 
 This completes the procedure needed to install the PyBirales application.
