@@ -35,6 +35,7 @@ setup(
                       "flask-compress",
                       "flask-socketio",
                       "flask_ini",
+                      "flask_paginate",
                       'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow', 'humanize', 'mongoengine', 'pyfits'],
     data_files=[(os.environ['HOME'] + '/.birales', ['pybirales/configuration/local.ini']),
                 (os.environ['HOME'] + '/.birales/tcpo', []),
@@ -42,7 +43,8 @@ setup(
                 ],
     entry_points={
         'console_scripts': [
-            'birales = pybirales.cli.cli:cli'
+            'birales = pybirales.cli.cli:cli',
+            'birales-frontend = pybirales.app.app:main'
         ]
     },
 )

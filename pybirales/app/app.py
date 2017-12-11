@@ -92,9 +92,12 @@ def run_server(configuration):
     run(configuration)
 
 
-if __name__ == "__main__":
+def main():
     # Initialise Flask Application
     flask_app = configure_flask('pybirales/configuration/birales.ini')
 
     # Start the Flask Application
     socket_io.run(flask_app, host="0.0.0.0", port=8000)
+
+if __name__ == "__main__":
+    main()
