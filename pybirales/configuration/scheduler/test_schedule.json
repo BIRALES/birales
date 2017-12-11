@@ -3,11 +3,14 @@
     "pipeline": "detection_pipeline",
     "config_file": "pybirales/configuration/birales.ini",
     "config_parameters": {
-      "tx": 410,
-      "manager": {
-        "debug": "true"
+      "observation": {
+        "transmitter_frequency": 411
       },
-      "start_time": "2017-12-11T18:50:30Z",
+      "manager": {
+        "debug": true,
+        "offline": true
+      },
+      "start_time": "2017-12-11T18:57:30Z",
       "duration": 30
     }
   },
@@ -15,11 +18,13 @@
     "pipeline": "detection_pipeline",
     "config_file": "pybirales/configuration/birales.ini",
     "config_parameters": {
-      "tx": 410,
-      "manager": {
-        "debug": "true"
+      "observation": {
+        "transmitter_frequency": 412
       },
-      "start_time": "2017-12-11T18:55:58Z"
+      "manager": {
+        "debug": true
+      },
+      "start_time": "2017-12-11T19:55:58Z"
     }
   }
 }
