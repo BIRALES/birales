@@ -9,7 +9,7 @@ from pybirales import settings
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.modules.detection.beam import Beam
-from pybirales.pipeline.modules.detection.strategies.m_dbscan import m_detect
+from pybirales.pipeline.modules.detection.dbscan_detection import detect
 from pybirales.pipeline.modules.detection.queue import BeamCandidatesQueue
 from pybirales.repository.models import Observation
 
@@ -49,8 +49,9 @@ class Detector(ProcessingModule):
 
         if settings.detection.visualise_beams:
             log.debug('Create fits directory for observation')
-            os.makedirs(
-                os.path.join(os.environ['HOME'], settings.detection.visualise_fits_dir, settings.observation.name))
+            os.makedirs(os.path.join(os.environ['HOME'],
+                                     settings.detection.visualise_fits_dir,
+                                     settings.observation.name))
 
     def _tear_down(self):
         self.pool.close()
@@ -121,7 +122,6 @@ class Detector(ProcessingModule):
             self._observation.save()
             self._config_persisted = True
 
-        beam_candidates = []
         beams = [Beam(beam_id=n_beam,
                       obs_info=obs_info,
                       channels=channels,
@@ -130,11 +130,10 @@ class Detector(ProcessingModule):
                  for n_beam in range(settings.detection.beam_range[0], settings.detection.beam_range[1])]
 
         if settings.detection.multi_proc:
-            func = partial(m_detect, obs_info, self._debris_queue)
+            func = partial(detect, obs_info, self._debris_queue)
             beam_candidates = self.pool.map(func, beams)
         else:
-            for beam in beams:
-                beam_candidates.append(m_detect(obs_info, self._debris_queue, beam))
+            beam_candidates = [detect(obs_info, self._debris_queue, beam) for beam in beams]
 
         self._debris_queue.set_candidates(beam_candidates)
 
