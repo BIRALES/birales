@@ -7,7 +7,7 @@
       "manager": {
         "debug": "true"
       },
-      "start_time": "2017-12-11T16:56:30Z",
+      "start_time": "2017-12-11T18:50:30Z",
       "duration": 30
     }
   },
@@ -19,8 +19,7 @@
       "manager": {
         "debug": "true"
       },
-      "start_time": "2017-12-11T16:58:30Z",
-      "duration": 30
+      "start_time": "2017-12-11T18:55:58Z"
     }
   }
 }
