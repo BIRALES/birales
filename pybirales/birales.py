@@ -9,6 +9,8 @@ import re
 from pybirales import settings
 from mongoengine import connect
 from pybirales.services.calibration.calibration import CalibrationFacade
+from pybirales.services.instrument.backend import Backend
+from pybirales.services.instrument.best2 import BEST2
 from pybirales.app.app import run
 
 
@@ -163,8 +165,13 @@ class BiralesFacade:
 
         self._pipeline_manager = None
 
-        # Ensure that the system was initialised correctly
-        self.validate_init()
+        self._instrument = BEST2()
+
+        self._backend = Backend()
+
+        self._calibration = CalibrationFacade()
+
+
 
     def validate_init(self):
         pass
@@ -176,9 +183,20 @@ class BiralesFacade:
         :param pipeline_manager: The pipeline manager associated with this observation
         :return:
         """
-        # Ensure status of the pipeline is correct
+
+        # Initialisation of the backend system
+        # self._backend.initialise()
+
+        # Point the BEST Antenna
+        self._instrument.move_to_declination(settings.beamformer.reference_declination)
+
         # Check if calibration is required
-        # Point the telescope
+        # self.calibrate()
+
+        # Ensure that the status of the Backend/BEST/Pipeline is correct.
+        # Perform any necessary checks before starting the pipeline
+        # self.validate_init()
+
         # Start the chosen pipeline
 
         if pipeline_manager:
@@ -219,9 +237,4 @@ class BiralesFacade:
         :return:
         """
 
-        cf = CalibrationFacade()
-        cf.calibrate()
-
-
-    def start_server(self, configuration):
-        run(configuration)
+        self._calibration.calibrate()
