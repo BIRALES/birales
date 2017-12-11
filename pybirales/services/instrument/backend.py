@@ -1,7 +1,6 @@
 import numpy as np
 import logging
 import struct
-import corr
 import time
 import sys
 

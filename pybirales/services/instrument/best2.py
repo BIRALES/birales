@@ -3,7 +3,7 @@ import time
 import logging
 import re
 
-from pybirales.backend.pipeline.base.definitions import PipelineError
+from pybirales.pipeline.base.definitions import PipelineError
 
 
 class BEST2(object):

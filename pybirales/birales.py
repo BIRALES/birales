@@ -184,14 +184,15 @@ class BiralesFacade:
         :return:
         """
 
-        # Initialisation of the backend system
-        # self._backend.initialise()
+        if not settings.manager.offline:
+            # Initialisation of the backend system
+            # self._backend.initialise()
 
-        # Point the BEST Antenna
-        self._instrument.move_to_declination(settings.beamformer.reference_declination)
+            # Point the BEST Antenna
+            self._instrument.move_to_declination(settings.beamformer.reference_declination)
 
-        # Check if calibration is required
-        # self.calibrate()
+            # Check if calibration is required
+            # self.calibrate()
 
         # Ensure that the status of the Backend/BEST/Pipeline is correct.
         # Perform any necessary checks before starting the pipeline
