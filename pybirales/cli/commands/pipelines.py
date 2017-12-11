@@ -2,7 +2,7 @@ import click
 import datetime
 from mongoengine import connect
 from pybirales.birales import BiralesFacade, BiralesConfig
-from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, CorrelatorPipelineManagerBuilder
+from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, CorrelatorPipelineManagerBuilder, StandAlonePipelineMangerBuilder
 from pybirales.cli.helpers import update_config
 
 
@@ -77,6 +77,26 @@ def correlation_pipeline(configuration):
 
     # Build the Pipeline Manager using the Correlator Pipeline Manager Builder
     manager = bf.build_pipeline(CorrelatorPipelineManagerBuilder())
+
+    # Finally, start the observation
+    bf.start_observation(pipeline_manager=manager)
+
+
+@pipelines.command(short_help='Run the stand alone Pipeline')
+@click.argument('configuration', type=click.Path(exists=True))
+def stand_alone_pipeline(configuration):
+    """
+    Run the Stand Alone Pipeline
+
+    :param configuration: The default configuration file to be used.
+    :return:
+    """
+
+    # Initialise the Birales Facade (BOSS)
+    bf = BiralesFacade(configuration)
+
+    # Build the Pipeline Manager using the Correlator Pipeline Manager Builder
+    manager = bf.build_pipeline(StandAlonePipelineMnaagerBuilder())
 
     # Finally, start the observation
     bf.start_observation(pipeline_manager=manager)
