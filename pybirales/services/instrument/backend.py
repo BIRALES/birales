@@ -8,12 +8,37 @@ import numpy as np
 
 from pybirales import settings
 
+class Singleton:
+    """ Singleton object """
 
+    def __init__(self, decorated):
+        self._decorated = decorated
+
+    def Instance(self):
+        try:
+            return self._instance
+        except AttributeError:
+            self._instance = self._decorated()
+            return self._instance
+
+    def __call__(self):
+        """
+        Enforces that Initialiser is not Called
+
+        :raises TypeError: if attempted.
+        """
+        raise TypeError('Singletons must be accessed through `Instance()`.')
+
+    def __instancecheck__(self, inst):
+        return isinstance(inst, self._decorated)
+
+
+@Singleton
 class Backend(object):
     def __init__(self):
         """ BiralesBackend constructor """
         # Connect to ROACH
-        self._roach = corr.katcp_wrapper.FpgaClient(settings.roach_backend.header_file)
+        self._roach = corr.katcp_wrapper.FpgaClient(settings.feng_configuration.roach_name)
 
         # Check if connection was successful
         if not self._roach.is_connected:
@@ -33,6 +58,10 @@ class Backend(object):
         if not self._roach.is_connected:
             raise Exception("BiralesBackend: Cannot start backend on unconnected roach")
 
+        # Check if roach is already programmed
+        # if self._roach.status() == "program" and self.read_startup_time() != 0:
+        #     return
+
         # Get configuration
         config_files = settings.roach_config_files
         config = settings.feng_configuration
@@ -43,7 +72,7 @@ class Backend(object):
         # If required, load bitstream and initialise control software register to 0
         if program_fpga:
             logging.info("Programming roach")
-            self._program_roach(config.bistream)
+            self._program_roach(config.bitstream)
             self._roach.write_int('ctrl_sw', 0)
         else:
             logging.info("Skipping programming")
@@ -52,7 +81,7 @@ class Backend(object):
         self._write_base_header(config, header)
 
         # Set number of antennas
-        self._roach.write_int('n_ant', len(settings.instrument.antenna_locations))
+        self._roach.write_int('n_ant', len(settings.beamformer.antenna_locations))
 
         logging.info("Setting frequency channel to %d".format(settings.roach_observation.freq_channel))
         self._roach.write_int('channel1', settings.roach_observation.freq_channel)
@@ -61,7 +90,7 @@ class Backend(object):
         adc_map = '----------------------------------------------------------------'
         adc_map += '----------------------------------------------------------------'
         antennas = []
-        with open(config_files.birales_antenna_order.conf, "r") as f:
+        with open(config_files.antenna_order, "r") as f:
             ant_list = f.readlines()
             for i in xrange(len(ant_list)):
                 antennas += [ant_list[i].split()]
@@ -72,28 +101,26 @@ class Backend(object):
         self._write_header('adc_map', adc_map, header)
 
         # Set up 10GbE interface for data transmission
-        logging.info("Starting interface %s" % config.gbe_0)
-        self._roach.write_int(config.gbe_0 + '_destip', config.gbe_0_dest_ip)
+        gbe_0 = getattr(config, 'gbe-0')
+        gbe_0_dest_ip = getattr(config, 'gbe-0_dest_ip')
+        gbe_0_dest_port = getattr(config, 'gbe-0_dest_port')
+        gbe_0_pkt_len = getattr(config, 'gbe-0_pkt_len')
+        logging.info("Starting interface %s" % gbe_0)
+        self._roach.write_int(gbe_0 + '_destip', gbe_0_dest_ip)
         time.sleep(0.3)
-        self._roach.write_int(config.gbe_0 + '_destport', config.gbe_0_dest_port)
+        self._roach.write_int(gbe_0 + '_destport', gbe_0_dest_port)
         time.sleep(0.3)
-        self._roach.write_int(config.gbe_0 + '_len', config.gbe_0_pkt_len)
+        self._roach.write_int(gbe_0 + '_len', gbe_0_pkt_len)
         time.sleep(0.3)
-        ipconv = str(int((config.gbe_0_dest_ip & 255 * 256 * 256 * 256) >> 24))
-        ipconv += "." + str(int((config.gbe_0_dest_ip & 255 * 256 * 256) >> 16))
-        ipconv += "." + str(int((config.gbe_0_dest_ip & 255 * 256) >> 8))
-        ipconv += "." + str(int(config.gbe_0_dest_ip & 255))
+        ipconv = str(int((gbe_0_dest_ip & 255 * 256 * 256 * 256) >> 24))
+        ipconv += "." + str(int((gbe_0_dest_ip & 255 * 256 * 256) >> 16))
+        ipconv += "." + str(int((gbe_0_dest_ip & 255 * 256) >> 8))
+        ipconv += "." + str(int(gbe_0_dest_ip & 255))
 
-        logging.info("Set UDP packets destination IP:Port to %s:%d" % (ipconv, config.gbe_0_dest_port))
-        logging.info("Set packetizer register to %d \n  UDP Packets size will be %d Bytes" % (
-            config.gbe_0_pkt_len, (config.gbe_0_pkt_len + 1) * 8))
-        logging.info("Packet format will be:\n      - 8 Bytes for the sequence counter")
-        logging.info("- %d groups of %d antennas (4 Bytes for Real and 4 Bytes for Imag each)" % (
-            config.gbe_0_pkt_len / len(antennas), len(antennas)))
-
+        logging.info("Set UDP packets destination IP:Port to %s:%d" % (ipconv, gbe_0_dest_port))
         ip = 3232238524
         mac = (0 << 40) + (96 << 32) + ip
-        self._roach.tap_start('tap0', config.gbe_0, mac, ip, config.gbe_0_dest_port)
+        self._roach.tap_start('tap0', gbe_0, mac, ip, gbe_0_dest_port)
         time.sleep(0.3)
         logging.info("UDP packets started")
 
@@ -137,7 +164,7 @@ class Backend(object):
 
         # Download calibration coefficients if required
         if calibrate:
-            # Call calibration routines
+            self.load_calibration_coefficients(config_files.amp_eq_file, config_files.phase_eq_file)
             # os.system('./birales_load_coeff.py -A eq/eq_amp_1.txt -P eq/eq_phs_1.txt')
             pass
 
@@ -224,7 +251,13 @@ class Backend(object):
 
     def read_startup_time(self):
         """ Read ROACH startup time """
-        return struct.unpack(">I", self._roach.read('header', 4, 0))[0]
+        if not self._roach.is_connected():
+            return 0
+
+        try:
+            return struct.unpack(">I", self._roach.read('header', 4, 0))[0]
+        except:
+            return 0
 
     # --------------------------------------- Helper methods ------------------------------------
 
@@ -277,7 +310,7 @@ class Backend(object):
         while not ready:
             ready = (int(time.time() * 10) % 5) == 0
         trig_time = time.time()
-        self._arm_sync()  # implicitally affects all FPGAs
+        self._arm_sync()  # Implicitly affects all FPGAs
         self._send_sync()
         return int(trig_time)
 
@@ -316,8 +349,10 @@ class Backend(object):
 
     def _write_base_header(self, config, header):
         """ Write base header configuration """
-        for i in range(len(config)):
-            self._write_header(config.items()[i][0], header)
+        for k, v in config.__dict__.iteritems():
+            if k in ["__len__", "adc_curve", "header", "bitstream", "adc_debug", "roach_name", "katcp_port"]:
+                continue
+            self._write_header(k, v, header)
 
     def _write_header(self, field, value, header):
         """ Write header value """
@@ -328,7 +363,7 @@ class Backend(object):
         if record[3] == 'numarr':
             to_write = struct.pack('>32L', value)
         if record[3] == 'str':
-            to_write = value.ljust(record[1])
+            to_write = str(value).ljust(record[1])
 
         self._roach.write("header", to_write, record[0])
 
@@ -346,7 +381,6 @@ class Backend(object):
 
     @staticmethod
     def _head_get_info(key, header):
-        # print "Looking for key=%s in header list (len=%d)"%(key,len(header))
         for i in range(len(header)):
             if header[i][2] == key:
                 return header[i]
