@@ -1,7 +1,7 @@
 import numpy as np
 import logging
 import struct
-import numba
+# import numba
 
 from pybirales.pipeline.blobs.correlated_data import CorrelatedBlob
 from pybirales.pipeline.base.definitions import PipelineError

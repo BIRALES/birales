@@ -35,8 +35,9 @@ setup(
                       "flask-compress",
                       "flask-socketio",
                       "flask_ini",
-                      "flask_paginate",
-                      'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow', 'humanize', 'mongoengine', 'pyfits'],
+                      "fadvise",
+                      'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow', 'humanize', 'mongoengine', 'pyfits',
+                      'corr'],
     data_files=[(os.environ['HOME'] + '/.birales', ['pybirales/configuration/local.ini']),
                 (os.environ['HOME'] + '/.birales/tcpo', []),
                 (os.environ['HOME'] + '/.birales/fits', [])
