@@ -16,7 +16,8 @@ class CalibrationFacade:
     def __init__(self):
         self._real_vis_dir = os.environ['HOME'] + '/.birales/'
 
-    def _tcpo_config_adapter(self):
+    @staticmethod
+    def _tcpo_config_adapter():
         antennas = {}
         ant_locations = np.array(settings.beamformer.antenna_locations)
         for i in range(ant_locations.shape[0]):
