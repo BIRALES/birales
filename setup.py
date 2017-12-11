@@ -26,7 +26,7 @@ setup(
                       "numpy",
                       "matplotlib",
                       "numba",
-                      "pymongo",
+                      "pymongo==2.8.1",
                       "scipy",
                       "scikit-learn",
                       #  "h5py",
