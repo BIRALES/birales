@@ -45,8 +45,8 @@ def check_doppler_range(channels, tx):
     return (dp > settings.detection.doppler_range[0]).all() and (dp < settings.detection.doppler_range[1]).all()
 
 
-def _create_detection_clusters(beam, cluster_labels, label):
-    data_indices = beam.snr[np.where(cluster_labels == label)]
+def _create_detection_clusters(data, beam, cluster_labels, label):
+    data_indices = data[np.where(cluster_labels == label)]
 
     log.debug('Beam %s: cluster %s contains %s data points', beam.id, label, len(data_indices[:, 1]))
 
@@ -94,6 +94,9 @@ def _detect_clusters(beam):
     # Perform DBScan on the cluster data
     c_labels = _db_scan(beam.id, data)
 
+    if not np.any(c_labels):
+        return []
+
     # Select only those labels which were not classified as noise (-1)
     filtered_c_labels = c_labels[c_labels > -1]
 
@@ -109,7 +112,7 @@ def _detect_clusters(beam):
     append = clusters.append
     unique_c_labels = np.unique(filtered_c_labels).tolist()
     for label in unique_c_labels:
-        cluster = _create_detection_clusters(beam, c_labels, label)
+        cluster = _create_detection_clusters(data, beam, c_labels, label)
         if cluster:
             append(cluster)
 
