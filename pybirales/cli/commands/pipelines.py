@@ -71,8 +71,11 @@ def correlation_pipeline(configuration):
     :return:
     """
 
+    # Load the BIRALES configuration from file
+    config = BiralesConfig(configuration)
+
     # Initialise the Birales Facade (BOSS)
-    bf = BiralesFacade(configuration)
+    bf = BiralesFacade(configuration=config)
 
     # Build the Pipeline Manager using the Correlator Pipeline Manager Builder
     manager = bf.build_pipeline(CorrelatorPipelineManagerBuilder())
@@ -91,8 +94,11 @@ def stand_alone_pipeline(configuration):
     :return:
     """
 
+    # Load the BIRALES configuration from file
+    config = BiralesConfig(configuration)
+
     # Initialise the Birales Facade (BOSS)
-    bf = BiralesFacade(configuration)
+    bf = BiralesFacade(configuration=config)
 
     # Build the Pipeline Manager using the Correlator Pipeline Manager Builder
     manager = bf.build_pipeline(StandAlonePipelineMangerBuilder())

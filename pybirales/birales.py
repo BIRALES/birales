@@ -176,7 +176,7 @@ class BiralesFacade:
 
         self._instrument = BEST2()
 
-        self._backend = Backend()
+        self._backend = Backend.Instance()
 
         self._calibration = CalibrationFacade()
 
@@ -193,10 +193,10 @@ class BiralesFacade:
 
         if not settings.manager.offline:
             # Initialisation of the backend system
-            self._backend.start()
+            self._backend.start(program_fpga=True, equalize=True, calibrate=True)
 
             # Point the BEST Antenna
-            self._instrument.move_to_declination(settings.beamformer.reference_declination)
+            # self._instrument.move_to_declination(settings.beamformer.reference_declination)
 
             # Check if calibration is required
             # self.calibrate()

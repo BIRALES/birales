@@ -74,6 +74,11 @@ class ContinuousChannelReceiver(Generator):
                                            ('nants', self._nants)],
                             datatype=self._datatype)
 
+    def start_generator(self):
+        """ Start receiving data """
+        self._initialise_library()
+        self._initialise_receiver()
+
     def _get_callback_function(self):
         def data_callback(data, timestamp):
             """ Data callback

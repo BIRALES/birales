@@ -94,13 +94,24 @@ class Generator(Module):
 
         pass
 
+    @abstractmethod
+    def start_generator(self):
+        """ Starts the generator. This is called by run """
+        pass
+
     def run(self):
         """
         Thread body
         :return:
         """
 
+        # Clear stop
         self._stop.clear()
+
+        # Start generator
+        self.start_generator()
+
+        # Wait for stop command
         while not self._stop.is_set():
             time.sleep(1)
 

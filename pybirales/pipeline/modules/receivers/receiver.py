@@ -8,6 +8,7 @@ from pybirales import settings
 from pybirales.pipeline.base.definitions import PipelineError, ObservationInfo
 from pybirales.pipeline.base.processing_module import Generator
 from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
+from pybirales.services.instrument.backend import Backend
 
 np.set_printoptions(threshold=np.nan)
 
@@ -34,7 +35,7 @@ class Receiver(Generator):
         self._validate_data_blob(input_blob, valid_blobs=[type(None)])
 
         # Sanity checks on configuration
-        if {'nsamp', 'nants', 'nsubs', 'port', 'interface', 'frame_size', 'start_time',
+        if {'nsamp', 'nants', 'nsubs', 'port', 'interface', 'frame_size',
             'frames_per_block', 'nblocks', 'nbits', 'complex', 'npols'} - set(config.settings()) != set():
             raise PipelineError("Receiver: Missing keys on configuration "
                                 "(nsamp, nants, nsubs, npols, ports, interface, frame_size, frames_per_block, nblocks)")
@@ -45,7 +46,6 @@ class Receiver(Generator):
         self._npols = config.npols
         self._complex = config.complex
         self._samples_per_second = settings.observation.samples_per_second
-        self._start_time = config.start_time
 
         # Define data type
         if self._nbits == 64 and self._complex:
@@ -63,8 +63,6 @@ class Receiver(Generator):
         # Initialise DAQ
         self._callback_type = ctypes.CFUNCTYPE(None, ctypes.POINTER(ctypes.c_int8), ctypes.c_double, ctypes.c_uint, ctypes.c_uint)
         self._daq = None
-        self._initialise_library()
-        self._initialise_receiver()
 
         # Processing module name
         self.name = "Receiver"
@@ -77,6 +75,12 @@ class Receiver(Generator):
                                            ('nsamp', self._nsamp),
                                            ('nants', self._nants)],
                             datatype=self._datatype)
+
+    def start_generator(self):
+        """ Start receiving data """
+        backend = Backend.Instance()
+        self._initialise_library()
+        self._initialise_receiver(backend.read_startup_time())
 
     def _get_callback_function(self):
         def data_callback(data, timestamp, arg1, arg2):
@@ -117,7 +121,7 @@ class Receiver(Generator):
 
         return self._callback_type(data_callback)
 
-    def _initialise_receiver(self):
+    def _initialise_receiver(self, start_time):
         """ Initialise the receiver """
 
         # Configure receiver
@@ -136,7 +140,7 @@ class Receiver(Generator):
             raise PipelineError("Receiver: Failed to set receiver port %d" % self._config.port)
 
         # Start data consumer
-        if self._daq.startBiralesConsumer(self._nsamp, self._start_time,
+        if self._daq.startBiralesConsumer(self._nsamp, start_time,
                                           self._samples_per_second) != Result.Success.value:
             raise PipelineError("Receiver: Failed to start data consumer")
 
