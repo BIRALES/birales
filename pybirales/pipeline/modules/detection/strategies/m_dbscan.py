@@ -3,6 +3,10 @@ import numpy as np
 import os
 import time
 
+import warnings
+warnings.filterwarnings("ignore", message="numpy.dtype size changed")
+warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
+
 from astropy.io import fits
 from pybirales import settings
 from pybirales.pipeline.modules.detection.detection_clusters import DetectionCluster
@@ -10,6 +14,7 @@ from pybirales.repository.repository import BeamCandidateRepository
 from pybirales.pipeline.base.timing import timeit
 from sklearn import linear_model
 from sklearn.cluster import DBSCAN
+
 
 _eps = 5
 _min_samples = 5
