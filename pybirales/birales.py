@@ -14,56 +14,59 @@ from pybirales.services.instrument.best2 import BEST2
 
 
 class BiralesConfig:
-    LOCAL_CONFIG = '~/.birales/local.ini'
+    LOCAL_CONFIG = os.path.join(os.environ['HOME'], '.birales/local.ini')
 
     def __init__(self, config_file_path, config_options=None):
-        self._parser = None
+        """
+        Initialise the BIRALES configuration
 
+        :param config_file_path: The path to the BIRALES configuration file
+        :param config_options: Configuration options to override the default config settings
+        :return:
+        """
+
+        self._parser = configparser.RawConfigParser()
+
+        # Load the BIRALES config settings
         self._load_from_file(config_file_path)
 
+        # Load the logging configuration file
+        log_config.fileConfig(config_file_path, disable_existing_loggers=False)
+
+        # Load the ROACH backend settings
+        self._load_from_file(self._parser.get('receiver', 'backend_config_filepath'))
+
+        # Override the default configuration file with the ones specified in the local.ini
+        self._load_from_file(BiralesConfig.LOCAL_CONFIG)
+
+        # Update the configuration with settings passed on in the config_options dictionary
         self.update_config(config_options)
 
+        # Specify whether the configuration settings were loaded in the settings.py package
         self._loaded = False
 
     def is_loaded(self):
+        """
+
+        :return:
+        """
         return self._loaded
 
-    def _load_from_file(self, config_file):
+    def _load_from_file(self, config_filepath):
         """
         Load the configuration of the BIRALES application into the settings.py file
 
-        :param config_file: The path to the application configuration file
+        :param config_filepath: The path to the configuration file
         :return: None
         """
 
-        parser = configparser.RawConfigParser()
-
         # Load the configuration file requested by the user
-        with open(config_file) as f:
-            parser.read_file(f)
-            log_config.fileConfig(config_file, disable_existing_loggers=False)
-            log.info('Loading configuration file at {}.'.format(config_file))
-
-        # Add backend configuration
-        filepath = "pybirales/configuration/backend/roach_backend.ini"
         try:
-            with open(filepath) as f:
-                parser.read_file(f)
-                log.info('Loading backend configuration file at {}.'.format(filepath))
+            with open(config_filepath) as f:
+                self._parser.read_file(f)
+                log.info('Loaded configuration file at {}.'.format(config_filepath))
         except IOError:
-            log.info('Local config file not found in {}. Using the default configuration.'.format(filepath))
-
-        # Override the default configuration file with the ones specified in the local.ini
-        try:
-            with open(os.path.expanduser(BiralesConfig.LOCAL_CONFIG)) as f:
-                parser.read_file(f)
-                log.info('Loading local configuration file at {}.'.format(BiralesConfig.LOCAL_CONFIG))
-        except IOError:
-            log.info(
-                'Local config file not found in {}. Using the default configuration.'.format(
-                    BiralesConfig.LOCAL_CONFIG))
-
-        self._parser = parser
+            log.info('Config file at {} was not found'.format(config_filepath))
 
     def update_config(self, config_options):
         """
@@ -124,10 +127,9 @@ class BiralesConfig:
             instance = Section()
 
             for (k, v) in self._parser.items(section):
-                # Check if value is a number of boolean
-
                 # If value is a string, interpret it
                 if isinstance(v, basestring):
+                    # Check if value is a number of boolean
                     if re.match(re.compile("^True|False|[0-9]+(\.[0-9]*)?$"), v) is not None:
                         setattr(instance, k, ast.literal_eval(v))
 
