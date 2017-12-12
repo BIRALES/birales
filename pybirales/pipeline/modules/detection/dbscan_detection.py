@@ -35,7 +35,6 @@ def _db_scan(beam_id, data):
     try:
         # Perform clustering on the data and returns cluster labels the points are associated with
         return db_scan.fit_predict(data)
-
     except ValueError:
         return []
 
@@ -59,7 +58,7 @@ def _create_detection_clusters(data, beam, cluster_labels, label):
 
     # If cluster is 'small' do not consider it
     if len(channel_indices) < _min_samples:
-        log.debug('Ignoring small cluster with %s data points', len(channel_indices))
+        log.debug('Beam %s: Ignoring small cluster with %s data points', beam.id, len(channel_indices))
         return None
 
     # If cluster is not withing physical doppler range limits
@@ -75,7 +74,8 @@ def _create_detection_clusters(data, beam, cluster_labels, label):
 
     # Add only those clusters that are linear
     if cluster.is_linear(threshold=0.9) and cluster.is_valid():
-        log.debug('Cluster with m:%3.2f, c:%3.2f, n:%s and r:%0.2f is considered to be linear.', cluster.m,
+        log.debug('Beam %s: Cluster with m:%3.2f, c:%3.2f, n:%s and r:%0.2f is considered to be linear.', beam.id,
+                  cluster.m,
                   cluster.c, len(channel_indices), cluster.score)
         return cluster
 
@@ -98,7 +98,9 @@ def _detect_clusters(beam):
     # Perform DBScan on the cluster data
     c_labels = _db_scan(beam.id, data)
 
-    if not np.any(c_labels):
+    log.debug('Beam %s: DBSCAN identified %s cluster labels', beam.id, len(c_labels))
+
+    if len(c_labels) < 1:
         return []
 
     # Select only those labels which were not classified as noise (-1)
@@ -157,7 +159,7 @@ def detect(obs_info, queue, beam):
     _time_delta = np.timedelta64(int(obs_info['sampling_time'] * 1e9), 'ns')
 
     # Associate a beam candidate repository to the queue
-    queue.set_repository(BeamCandidateRepository())
+    # queue.set_repository(BeamCandidateRepository())
 
     # Save the raw data as a fits file
     save_fits(beam.snr, 'raw', beam.id)
