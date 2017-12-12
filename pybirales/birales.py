@@ -11,7 +11,6 @@ from mongoengine import connect
 from pybirales.services.calibration.calibration import CalibrationFacade
 from pybirales.services.instrument.backend import Backend
 from pybirales.services.instrument.best2 import BEST2
-from pybirales.app.app import run
 
 
 class BiralesConfig:
@@ -174,11 +173,17 @@ class BiralesFacade:
 
         self._pipeline_manager = None
 
-        self._instrument = BEST2()
-
-        self._backend = Backend.Instance()
-
         self._calibration = CalibrationFacade()
+
+        self._instrument = None
+
+        self._backend = None
+
+        # If this is not an offline observation, initialise the backend sub systems
+        if not settings.manager.offline:
+            self._instrument = BEST2()
+
+            self._backend = Backend.Instance()
 
     def validate_init(self):
         pass

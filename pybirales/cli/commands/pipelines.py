@@ -86,7 +86,7 @@ def correlation_pipeline(configuration):
 
 @pipelines.command(short_help='Run the stand alone Pipeline')
 @click.argument('configuration', type=click.Path(exists=True))
-def stand_alone_pipeline(configuration):
+def standalone_pipeline(configuration):
     """
     Run the Stand Alone Pipeline
 
@@ -100,7 +100,7 @@ def stand_alone_pipeline(configuration):
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)
 
-    # Build the Pipeline Manager using the Correlator Pipeline Manager Builder
+    # Build the Pipeline Manager using the Stand Alone Pipeline Manager Builder
     manager = bf.build_pipeline(StandAlonePipelineMangerBuilder())
 
     # Finally, start the observation
