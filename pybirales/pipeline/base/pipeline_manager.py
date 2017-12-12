@@ -165,6 +165,9 @@ class PipelineManager(object):
                 return True
         return False
 
+    def all_modules_stopped(self):
+        return all([module.is_stopped for module in self._modules])
+
     def wait_pipeline(self, duration=None):
         """
         Wait for modules to finish processing. If a module is stopped, the pipeline is
@@ -177,10 +180,17 @@ class PipelineManager(object):
 
         start_time = time.time()
         while True:
-            if self.is_module_stopped():
+            # If one module stop without setting the stop bit (such as through a signal
+            # handler, stop all the pipeline
+            if self.is_module_stopped() and not self._stop.is_set():
                 self.stop_pipeline()
                 break
 
+            # If all modules have stopped, we are ready
+            elif self.all_modules_stopped():
+                break
+
+            # If the observation duration has elapsed stop pipeline
             elif duration and (time.time() - start_time) > duration:
                 logging.info("Observation run for entire duration ({}s), stopping pipeline".format(duration))
                 self.stop_pipeline()

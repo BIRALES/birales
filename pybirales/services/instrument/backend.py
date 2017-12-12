@@ -59,8 +59,8 @@ class Backend(object):
             raise Exception("BiralesBackend: Cannot start backend on unconnected roach")
 
         # Check if roach is already programmed
-        # if self._roach.status() == "program" and self.read_startup_time() != 0:
-        #     return
+        if self._roach.status() == "program" and self.read_startup_time() != 0:
+            return
 
         # Get configuration
         config_files = settings.roach_config_files

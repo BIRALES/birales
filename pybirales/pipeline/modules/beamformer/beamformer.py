@@ -39,11 +39,11 @@ class Beamformer(ProcessingModule):
             raise PipelineError("Beamformer: Missing keys on configuration "
                                 "(nbeams, nants, antenna_locations, pointings)")
         self._nbeams = config.nbeams
-        
+
         self._disable_antennas = None
         if 'disable_antennas' in config.settings():
             self._disable_antennas = config.disable_antennas
-        
+
         # Make sure that antenna locations is a list
         if type(config.antenna_locations) is not list:
             raise PipelineError("Beamformer: Expected list of antennas with long/lat/height as antenna locations")
@@ -97,7 +97,6 @@ class Beamformer(ProcessingModule):
             self._pointing = Pointing(self._config, nsubs, nants)
             if self._disable_antennas is not None:
                 self._pointing.disable_antennas(self._disable_antennas)
-            
 
     def process(self, obs_info, input_data, output_data):
 
@@ -125,6 +124,7 @@ class Beamformer(ProcessingModule):
         logging.info('Stopping %s module', self.name)
         self._stop.set()
 
+
 class Pointing(object):
     """ Pointing class which periodically updates pointing weights """
 
@@ -136,7 +136,7 @@ class Pointing(object):
 
         # Make sure that we have enough pointing
         if len(config.pointings) != config.nbeams:
-           logging.error("Pointing: Mismatch between number of beams and number of beam pointings")
+            logging.error("Pointing: Mismatch between number of beams and number of beam pointings")
 
         # Initialise Pointing
         array = config.antenna_locations
@@ -170,12 +170,11 @@ class Pointing(object):
         for beam in range(self._nbeams):
             self.point_array(beam, self._reference_declination, self._pointings[beam][0], self._pointings[beam][1])
 
-
         # Ignore AstropyWarning
         warnings.simplefilter('ignore', category=AstropyWarning)
 
     def disable_antennas(self, antennas):
-	""" Disable any antennas """
+        """ Disable any antennas """
         for antenna in antennas:
             logging.info("Disabling antenna {}".format(antenna))
             self.weights[:, :, antenna] = np.zeros((self._nsubs, self._nbeams))
@@ -225,7 +224,7 @@ class Pointing(object):
 
         # Point beam to required ALT AZ
         logging.info("Beam {0}. LAT: {1:0.2f}, HA: {2:0.2f}, DEC: {3:0.2f}, ALT: {4:0.2f}, AZ: {5:0.2f}".format(
-                      beam, self._reference_location[1], ha.deg, ref_dec + delta_dec, alt.deg, az.deg))
+            beam, self._reference_location[1], ha.deg, ref_dec + delta_dec, alt.deg, az.deg))
         self.point_array_static(beam, alt, az)
 
     @staticmethod
@@ -344,4 +343,3 @@ class AntennaArray(object):
         self._y = [positions[i][1] for i in range(len(positions))]
         self._z = [positions[i][2] for i in range(len(positions))]
         self._height = [0 for i in range(len(positions))]
-

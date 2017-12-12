@@ -61,7 +61,8 @@ class Receiver(Generator):
         receiver_instance = self
 
         # Initialise DAQ
-        self._callback_type = ctypes.CFUNCTYPE(None, ctypes.POINTER(ctypes.c_int8), ctypes.c_double, ctypes.c_uint, ctypes.c_uint)
+        self._callback_type = ctypes.CFUNCTYPE(None, ctypes.POINTER(ctypes.c_int8), ctypes.c_double, ctypes.c_uint,
+                                               ctypes.c_uint)
         self._daq = None
 
         # Processing module name
@@ -81,6 +82,16 @@ class Receiver(Generator):
         backend = Backend.Instance()
         self._initialise_library()
         self._initialise_receiver(backend.read_startup_time())
+
+    def stop(self):
+        """ Stop generator """
+        logging.info('Stopping %s module', self.name)
+
+        if self._daq.stopBiralesConsumer() != Result.Failure.value and \
+                self._daq.stopReceiver() != Result.Failure.value:
+            self._stop.set()
+        else:
+            logging.critical("Failed to stop Receiver!")
 
     def _get_callback_function(self):
         def data_callback(data, timestamp, arg1, arg2):
@@ -156,12 +167,14 @@ class Receiver(Generator):
         self._daq = ctypes.CDLL(settings.receiver.daq_file_path)
 
         # Define setReceiverConfiguration function
-        self._daq.setReceiverConfiguration.argtypes = [ctypes.c_uint16, ctypes.c_uint16, ctypes.c_uint16, ctypes.c_uint8,
+        self._daq.setReceiverConfiguration.argtypes = [ctypes.c_uint16, ctypes.c_uint16, ctypes.c_uint16,
+                                                       ctypes.c_uint8,
                                                        ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint16]
         self._daq.setReceiverConfiguration.restype = None
 
         # Define startReceiver function
-        self._daq.startReceiver.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32]
+        self._daq.startReceiver.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint32, ctypes.c_uint32,
+                                            ctypes.c_uint32]
         self._daq.startReceiver.restype = ctypes.c_int
 
         # Define addReceiverPort function
@@ -175,3 +188,11 @@ class Receiver(Generator):
         # Define setBeamConsumerCallback function
         self._daq.setBiralesConsumerCallback.argtypes = [self._callback_type]
         self._daq.setBiralesConsumerCallback.restype = ctypes.c_int
+
+        # Define stopBiralesConsumer
+        self._daq.stopBiralesConsumer.argtypes = []
+        self._daq.stopBiralesConsumer.restype = ctypes.c_int
+
+        # Define stopReceiver function
+        self._daq.stopReceiver.argtypes = []
+        self._daq.stopReceiver.restype = ctypes.c_int
