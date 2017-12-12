@@ -1,13 +1,15 @@
+import datetime
+import fadvise
+import numpy as np
 import os
 import pickle
-import time
 import struct
+import time
+
 from pybirales import settings
 from pybirales.pipeline.base.definitions import PipelineError
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.base.processing_module import ProcessingModule
-import numpy as np
-import fadvise
 
 
 class Persister(ProcessingModule):
@@ -21,7 +23,8 @@ class Persister(ProcessingModule):
             raise PipelineError("Persister: Missing keys on configuration. (directory)")
 
         # Create directory if it doesn't exist
-        directory = settings.persisters.directory
+        directory = os.path.join(settings.persisters.directory, '{:%Y_%M_%d}'.format(datetime.datetime.now()),
+                                 settings.observation.name)
         filename = settings.observation.name + self._config.filename_suffix
         if not os.path.exists(directory):
             os.makedirs(directory)

@@ -1,8 +1,10 @@
-import numpy as np
-import pickle
-import os
-import time
+import datetime
+import fadvise
 import h5py
+import numpy as np
+import os
+import pickle
+import time
 
 from pybirales import settings
 from pybirales.pipeline.base.definitions import PipelineError
@@ -27,7 +29,8 @@ class CorrMatrixPersister(ProcessingModule):
             raise PipelineError("Persister: Missing keys on configuration. (directory, filename, use_timestamp)")
 
         # Create directory if it doesn't exist
-        directory = settings.persisters.directory
+        directory = os.path.join(settings.persisters.directory, '{:%Y_%M_%d}'.format(datetime.datetime.now()),
+                                 settings.observation.name)
         filename = settings.observation.name + self._config.filename_suffix
         if not os.path.exists(directory):
             os.makedirs(directory)
