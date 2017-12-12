@@ -3,6 +3,8 @@ from pybirales.pipeline.modules.detection.filters import RemoveBackgroundNoiseFi
     PepperNoiseFilter
 import warnings
 
+from pybirales import settings
+
 # todo - is this needed?
 warnings.filterwarnings('error')
 
@@ -29,7 +31,7 @@ class Beam:
 
         self.observation_name = obs_info['settings']['observation']['name']
         self.tx = obs_info['transmitter_frequency']
-        self.configuration_id = obs_info['configuration_id']
+        self.observation_id = settings.observation.id
         self.name = 'Observation ' + self.observation_name
 
         self.noise = obs_info['noise']
@@ -85,7 +87,7 @@ class Beam:
             'beam_id': self.id,
             'beam_ra': self.ra,
             'beam_dec': self.dec,
-            'configuration_id': self.configuration_id,
+            'observation_id': self.observation_id,
             'beam_noise': self.noise,
             'tx': self.tx,
         }

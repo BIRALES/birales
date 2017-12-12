@@ -11,6 +11,7 @@ from mongoengine import connect
 from pybirales.services.calibration.calibration import CalibrationFacade
 from pybirales.services.instrument.backend import Backend
 from pybirales.services.instrument.best2 import BEST2
+from pybirales.app.app import run
 
 
 class BiralesConfig:
@@ -254,3 +255,7 @@ class BiralesFacade:
         """
 
         self._calibration.calibrate()
+
+
+    def start_server(self):
+        run()

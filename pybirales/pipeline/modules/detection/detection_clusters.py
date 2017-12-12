@@ -258,7 +258,11 @@ class DetectionCluster:
         """
         max_snr_mask = np.argmax(self.snr_data)
         return {
-            '_id': self.id,
+            #'_id': self.id,
+            'observation': self.beam_config['observation_id'],
+            'beam_ra': self.beam_config['beam_ra'],
+            'beam_dec': self.beam_config['beam_dec'],
+            'beam_id': self.beam_config['beam_id'],
             'beam': {
                 'id': self.beam_config['beam_id'],
                 'ra': self.beam_config['beam_ra'],
@@ -269,14 +273,12 @@ class DetectionCluster:
                 'c': self.c,
                 'score': self.score,
             },
-            'beam_id': self.beam_config['beam_id'],
             'tx': self.beam_config['tx'],
             'min_time': self.min_time,
             'max_time': self.max_time,
             'min_channel': self.min_channel,
             'max_channel': self.max_channel,
             'created_at': datetime.datetime.utcnow(),
-            'configuration_id': self.beam_config['configuration_id'],
             'noise': self.beam_config['beam_noise'],
             'size': len(self.channel_data),
             'data': {

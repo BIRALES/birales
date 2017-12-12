@@ -20,7 +20,7 @@ def index():
     :return:
     """
 
-    page = request.args.get(get_page_parameter(), type=int, default=1)
+    page = request.args.get(get_page_parameter(), type=int, default=0)
     per_page = 10
     observations = Observation.objects.skip(page*per_page).limit(per_page)
     pagination = Pagination(page=page, total=observations.count(),

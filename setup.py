@@ -17,6 +17,7 @@ setup(
              'pybirales/app/app.py'
              ],
     include_package_data=True,
+    #package_data={'pybirales/app/templates': ['*'], 'pybirales/app/static': ['*']},
     zip_safe=False,
     install_requires=['configparser',
                       'futures',

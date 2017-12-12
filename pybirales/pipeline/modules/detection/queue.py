@@ -108,12 +108,12 @@ class BeamCandidatesQueue:
 
         # Delete old clusters that were merged
         for candidate in candidates_to_delete:
-            bc = BeamCandidate(candidate.to_json())
+            bc = BeamCandidate(**candidate.to_json())
             bc.delete()
 
         # Add new clusters
         for candidate in candidates_to_save:
-            bc = BeamCandidate(candidate.to_json())
+            bc = BeamCandidate(**candidate.to_json())
             bc.save()
             candidate.to_save = False
 

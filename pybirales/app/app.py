@@ -1,17 +1,15 @@
+from bson import json_util
 import click
 import dateutil.parser
-import logging as log
 
 from flask import Flask, json
 from flask_compress import Compress
 from flask_ini import FlaskIni
 from flask_socketio import SocketIO
-from logging.config import fileConfig
 from pybirales.app.modules.monitoring import monitoring_page
 from pybirales.app.modules.observations import observations_page
 from pybirales.app.modules.preferences import preferences_page
-from pybirales.repository.repository import BeamCandidateRepository
-
+from pybirales.repository.models import BeamCandidate
 
 socket_io = SocketIO()
 
@@ -26,15 +24,13 @@ def get_beam_candidates(beam_id, from_time, to_time, min_channel, max_channel):
     min_channel = float(min_channel)
     max_channel = float(max_channel)
 
-    beam_candidates_repo = BeamCandidateRepository()
+    detected_beam_candidates = BeamCandidate.get(beam_id=beam_id,
+                                                 to_time=to_time,
+                                                 from_time=from_time,
+                                                 max_channel=max_channel,
+                                                 min_channel=min_channel)
 
-    detected_beam_candidates = beam_candidates_repo.get(beam_id=beam_id,
-                                                        to_time=to_time,
-                                                        from_time=from_time,
-                                                        max_channel=max_channel,
-                                                        min_channel=min_channel)
-
-    socket_io.emit('beam_candidates', json.dumps(detected_beam_candidates))
+    socket_io.emit('beam_candidates', detected_beam_candidates.to_json())
 
 
 def configure_flask(config_file_path):
@@ -67,7 +63,7 @@ def configure_flask(config_file_path):
     return app
 
 
-def run(configuration):
+def run():
     # Initialise Flask Application
 
     app = Flask(__name__)
@@ -98,6 +94,7 @@ def main():
 
     # Start the Flask Application
     socket_io.run(flask_app, host="0.0.0.0", port=8000)
+
 
 if __name__ == "__main__":
     main()

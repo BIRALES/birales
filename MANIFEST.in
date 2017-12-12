@@ -1,0 +1,2 @@
+recursive-include pybirales/app/templates *
+recursive-include pybirales/app/static *

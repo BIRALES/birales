@@ -26,9 +26,9 @@
                             <tbody>
                             {% for observation in observations %}
                                 <tr>
-                                    <td>{{ observation.noise }}</td>
-                                    <td>{{ observation.created_at }}</td>
-                                    <td>n/a</td>
+                                    <td>{{ observation.name }}</td>
+                                    <td>{{ observation.date_time_start }}</td>
+                                    <td>{{ observation.date_time_end }}</td>
                                     <td>ready</td>
                                     <td>actions</td>
                                 </tr>

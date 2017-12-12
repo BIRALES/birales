@@ -1,7 +1,7 @@
 import warnings
 
 with warnings.catch_warnings():
-    warnings.filterwarnings("ignore",category=FutureWarning)
+    warnings.filterwarnings("ignore", category=FutureWarning)
     import pandas as pd
 
 warnings.filterwarnings("ignore", message="numpy.dtype size changed")
@@ -9,13 +9,13 @@ warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 from astropy.time import Time, TimeDelta
 
 from flask import Blueprint, render_template, Response, json
-from pybirales.repository.repository import BeamCandidateRepository
+from pybirales.repository.models import BeamCandidate
 from webargs import fields
 from webargs.flaskparser import use_args
 from pandas.io.json import json_normalize
+from mongoengine.queryset.visitor import Q
 
 from itertools import chain
-
 
 monitoring_page = Blueprint('monitoring_page', __name__, template_folder='templates')
 
@@ -57,12 +57,7 @@ def index(args):
 @monitoring_page.route('/monitoring/beam_candidates', methods=['GET', 'POST'])
 @use_args(beam_candidates_args)
 def get_beam_candidates(args):
-    beam_candidates_repo = BeamCandidateRepository()
-    detected_beam_candidates = beam_candidates_repo.get(beam_id=args['beam_id'],
-                                                        to_time=args['to_time'],
-                                                        from_time=args['from_time'],
-                                                        max_channel=args['max_channel'],
-                                                        min_channel=args['min_channel'])
+    detected_beam_candidates = beam_candidates(request=args)
 
     return Response(json.dumps(detected_beam_candidates[:100]),
                     mimetype='application/json; charset=utf-8')
@@ -71,12 +66,7 @@ def get_beam_candidates(args):
 @monitoring_page.route('/monitoring/illumination_sequence', methods=['GET', 'POST'])
 @use_args(beam_candidates_args)
 def get_illumination_sequence(args):
-    beam_candidates_repo = BeamCandidateRepository()
-    detected_beam_candidates = beam_candidates_repo.get(beam_id=args['beam_id'],
-                                                        to_time=args['to_time'],
-                                                        from_time=args['from_time'],
-                                                        max_channel=args['max_channel'],
-                                                        min_channel=args['min_channel'])
+    detected_beam_candidates = beam_candidates(request=args)
 
     # flatten results
     raw = json_normalize(detected_beam_candidates)[
@@ -119,12 +109,7 @@ def get_illumination_sequence(args):
 @monitoring_page.route('/monitoring/beam_candidates/table', methods=['GET', 'POST'])
 @use_args(beam_candidates_args)
 def get_orbit_determination_table(args):
-    beam_candidates_repo = BeamCandidateRepository()
-    detected_beam_candidates = beam_candidates_repo.get(beam_id=args['beam_id'],
-                                                        to_time=args['to_time'],
-                                                        from_time=args['from_time'],
-                                                        max_channel=args['max_channel'],
-                                                        min_channel=args['min_channel'])
+    detected_beam_candidates = beam_candidates(request=args)
 
     for beam_candidate in detected_beam_candidates:
         beam_candidate['data']['time'] = [Time(t) for t in beam_candidate['data']['time']]
@@ -138,3 +123,16 @@ def get_orbit_determination_table(args):
                            from_time=args['from_time'],
                            max_channel=args['max_channel'],
                            min_channel=args['min_channel'])
+
+
+def beam_candidates(request):
+    """
+
+    :param request:
+    :return:
+    """
+    return BeamCandidate.get(beam_id=request['beam_id'],
+                                 to_time=request['to_time'],
+                                 from_time=request['from_time'],
+                                 max_channel=request['max_channel'],
+                                 min_channel=request['min_channel'])

@@ -32,7 +32,7 @@ def run_server(ctx, configuration):
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)
 
-    bf.start_server(configuration)
+    bf.start_server()
 
 
 @services.command()
