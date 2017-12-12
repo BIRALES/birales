@@ -23,16 +23,17 @@ class RawPersister(ProcessingModule):
 
         # Create directory if it doesn't exist
         directory = settings.persisters.directory
+        filename = settings.observation.name + self._config.filename_suffix
         if not os.path.exists(directory):
             os.makedirs(directory)
 
         # Create file
         if config.use_timestamp:
-            file_path = os.path.join(directory, "%s_%s" % (self._config.filename_suffix, str(time.time())))
+            file_path = os.path.join(directory, "%s_%s" % (filename, str(time.time())))
         else:
             if 'filename' not in config.settings():
                 raise PipelineError("Raw Persister: Filename required when not using timestamp")
-            file_path = os.path.join(directory, self._config.filename_suffix + '.dat')
+            file_path = os.path.join(directory, filename + '.dat')
 
         # Open file (if file exists, remove first)
         if os.path.exists(file_path):

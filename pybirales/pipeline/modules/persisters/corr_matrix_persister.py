@@ -28,16 +28,17 @@ class CorrMatrixPersister(ProcessingModule):
 
         # Create directory if it doesn't exist
         directory = settings.persisters.directory
+        filename = settings.observation.name + self._config.filename_suffix
         if not os.path.exists(directory):
             os.makedirs(directory)
 
         # Create file
         if config.use_timestamp:
-            self._filepath = os.path.join(directory, "%s_%s" % (config.filename_suffix, str(time.time())))
+            self._filepath = os.path.join(directory, "%s_%s" % (filename, str(time.time())))
         else:
             if 'filename' not in config.settings():
                 raise PipelineError("CorrMatrixPersister: filename required when not using timestamp")
-            self._filepath = os.path.join(directory, config.filename_suffix + '.h5')
+            self._filepath = os.path.join(directory, filename + '.h5')
 
         # Variable to check whether meta file has been written
         self._head_filepath = self._filepath + '.pkl'
