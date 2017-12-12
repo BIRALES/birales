@@ -1,21 +1,27 @@
 import glob
 import logging
-import os
-
 import numpy as np
-from pydaq.persisters.channel import ChannelFormatFileManager
-from pydaq.persisters.definitions import FileModes
+import os
 
 from pybirales.pipeline.base.definitions import PipelineError, ObservationInfo
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
 from pybirales import settings
 
+from pydaq.persisters.channel import ChannelFormatFileManager
+from pydaq.persisters.definitions import FileModes
+
 
 class AAVSChannelReader(ProcessingModule):
     """ Receiver """
 
     def __init__(self, config, input_blob=None):
+        """
+
+        :param config:
+        :param input_blob:
+        :return:
+        """
 
         # This module does not need an input block
         if input_blob is not None:

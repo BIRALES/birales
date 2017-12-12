@@ -1,21 +1,26 @@
-import sys
-import numpy as np
-from time import sleep
 import datetime
+import numpy as np
+import logging as log
+import pickle
+import sys
+import time
 
 from pybirales.pipeline.base.definitions import PipelineError, ObservationInfo, NoDataReaderException
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.dummy_data import DummyBlob
 from pybirales import settings
-import logging as log
-import pickle
-import time
 
 
 class RawDataReader(ProcessingModule):
     """ Raw data reader """
 
     def __init__(self, config, input_blob=None):
+        """
+
+        :param config:
+        :param input_blob:
+        :return:
+        """
 
         # This module does not need an input_blob
         self._validate_data_blob(input_blob, valid_blobs=[type(None)])
@@ -42,9 +47,9 @@ class RawDataReader(ProcessingModule):
             sys.exit()
 
         try:
-            self._config = pickle.load(open(config.config_filepath, 'rb'))
+            self._config = pickle.load(open(self._filepath + config.config_ext, 'rb'))
         except IOError:
-            log.error('Config PKL file was not found in %s. Exiting.', config.config_filepath)
+            log.error('Config PKL file was not found in %s. Exiting.', self._filepath + config.config_ext)
             sys.exit()
 
         # Processing module name
@@ -53,6 +58,7 @@ class RawDataReader(ProcessingModule):
     def generate_output_blob(self):
         """
         Generate the output blob
+
         :return:
         """
         return DummyBlob(self._config, [('npols', self._npols),
@@ -62,7 +68,13 @@ class RawDataReader(ProcessingModule):
                          datatype=np.complex64)
 
     def process(self, obs_info, input_data, output_data):
-        # Read next data set
+        """
+
+        :param obs_info:
+        :param input_data:
+        :param output_data:
+        :return:
+        """
 
         data = self._f.read(self._nsamp * self._nants * 8)
         data = np.frombuffer(data, np.complex64)
@@ -75,7 +87,7 @@ class RawDataReader(ProcessingModule):
             raise NoDataReaderException
 
         output_data[:] = data
-        sleep(0.5)
+        time.sleep(0.5)
 
         # output_data = self.generate_corrdata()
         # Create observation information
