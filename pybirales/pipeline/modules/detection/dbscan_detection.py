@@ -132,8 +132,8 @@ def save_fits(data, data_type, beam_id):
                                      settings.observation.name,
                                      '{}_{}.fits'.format(data_type, beam_id))
         try:
-            t1 = fits.open(fits_filename)
-            new_data = np.vstack([t1[0].data, data])
+            fits_file = fits.open(fits_filename)
+            new_data = np.vstack([fits_file[0].data, data])
             fits.writeto(fits_filename, new_data, overwrite=True)
         except IOError:
             fits.writeto(fits_filename, data, overwrite=True)

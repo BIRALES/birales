@@ -15,7 +15,7 @@ class Observation(Document):
     noise_estimate = FloatField(default=0)
 
 
-class SpaceDebrisCandidate(Document):
+class BeamCandidate(Document):
     observation = ReferenceField(Observation, required=True)
     beam_id = IntField(required=True)
     beam_ra = FloatField(required=True)

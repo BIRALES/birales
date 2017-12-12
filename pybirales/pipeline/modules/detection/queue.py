@@ -1,4 +1,6 @@
 from pybirales import settings
+from pybirales.repository.models import BeamCandidate
+
 import logging as log
 
 
@@ -13,7 +15,7 @@ class BeamCandidatesQueue:
 
         self.queue = [[] for _ in range(n_beams)]
         self._max_size = 20
-        self.repository = None
+        # self.repository = None
         self.beam_id = None
 
         self.candidates_to_delete = []
@@ -25,7 +27,7 @@ class BeamCandidatesQueue:
         :param repository:
         :return:
         """
-        self.repository = repository
+        # self.repository = repository
 
     def set_candidates(self, candidates):
         """
@@ -105,13 +107,17 @@ class BeamCandidatesQueue:
         candidates_to_delete = [candidate for queue in self.queue for candidate in queue if candidate.to_delete]
 
         # Delete old clusters that were merged
-        if candidates_to_delete:
-            self.repository.delete(candidates_to_delete)
+        for candidate in candidates_to_delete:
+            bc = BeamCandidate(candidate.to_json())
+            bc.delete()
 
         # Add new clusters
-        if candidates_to_save:
-            self.repository.persist(candidates_to_save)
-            log.info('Saved %s candidates, Deleted %s candidates', len(candidates_to_save), len(candidates_to_delete))
+        for candidate in candidates_to_save:
+            bc = BeamCandidate(candidate.to_json())
+            bc.save()
+            candidate.to_save = False
+
+        log.info('Saved %s candidates, Deleted %s candidates', len(candidates_to_save), len(candidates_to_delete))
 
         # Garbage collect - remove candidates marked for deletion from queue
         for q, queue in enumerate(self.queue):

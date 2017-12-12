@@ -1,8 +1,6 @@
 from flask import Blueprint, render_template, request
-from pybirales.repository.repository import ObservationsRepository
+from pybirales.repository.models import Observation
 from webargs import fields
-from webargs.flaskparser import use_args
-from astropy.time import Time, TimeDelta
 from flask_paginate import Pagination, get_page_parameter
 
 observations_page = Blueprint('observations_page', __name__, template_folder='templates')
@@ -22,10 +20,9 @@ def index():
     :return:
     """
 
-    observations_repo = ObservationsRepository()
     page = request.args.get(get_page_parameter(), type=int, default=1)
     per_page = 10
-    observations = observations_repo.database.configurations.find().skip(page*per_page).limit(per_page)
+    observations = Observation.objects.skip(page*per_page).limit(per_page)
     pagination = Pagination(page=page, total=observations.count(),
                             inner_window=5,
                             bs_version=3,

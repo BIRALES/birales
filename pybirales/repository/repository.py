@@ -3,7 +3,7 @@ import pymongo as mongo
 import sys
 from abc import abstractmethod
 from pybirales import settings
-
+from pybirales.repository.models import BeamCandidate
 
 class Repository:
     def __init__(self):
@@ -19,67 +19,16 @@ class Repository:
         pass
 
 
-class ObservationsRepository(Repository):
-    def __init__(self):
-        Repository.__init__(self)
-
-    def persist(self, configuration):
-        try:
-            self.database.configurations.update_one({'_id': configuration['configuration_id']},
-                                                    {"$set": configuration},
-                                                    upsert=True)
-            log.info('Configuration data was saved to the database')
-        except Exception:
-            log.error('MongoDB is not running. Exiting.')
-            sys.exit(1)
-
-    def get(self, data_set_id):
-        try:
-            return self.database.configurations.find_one({
-                '_id': data_set_id
-            })
-
-        except Exception:
-            log.error('MongoDB is not running. Exiting.')
-            sys.exit(1)
-
-    def destroy(self, data_set_id):
-        """
-        Delete this data set from the database
-
-        @param data_set_id The id of the data_set that is to be deleted
-        :return:
-        """
-        try:
-            result = self.database.configurations.remove({"_id": data_set_id})
-            log.info('Deleted %s data sets', result['ok'])
-
-        except Exception:
-            log.error('MongoDB is not running. Exiting.')
-            sys.exit(1)
-
-
 class BeamCandidateRepository(Repository):
     def __init__(self):
         Repository.__init__(self)
         self.collection = 'beam_candidates'
 
     def persist(self, beam_candidates):
-        if not beam_candidates:
-            log.warning('No beam space debris candidates were found.')
-            return False
-
         try:
-            # Get JSON representation of candidates
-            to_save = [candidate.to_json() for candidate in beam_candidates]
-            # Save candidates to the database
-            # if len(beam_candidates) is 1:
-            #     self.database.beam_candidates.insert_one(to_save[0])
-            # else:
-            #     self.database.beam_candidates.insert_many(to_save)
-            for candidate in to_save:
-                self.database.beam_candidates.insert(candidate)
-
+            for candidate in beam_candidates:
+                bc = BeamCandidate.from_json(candidate.to_json)
+                bc.save()
         except Exception:
             log.exception('MongoDB is not running. Detected beam candidates could not be saved.')
         else:
