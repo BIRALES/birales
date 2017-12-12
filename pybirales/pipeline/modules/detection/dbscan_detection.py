@@ -41,6 +41,10 @@ def _db_scan(beam_id, data):
 
 
 def check_doppler_range(channels, tx):
+    # If Doppler filtering is disabled, all candidates are valid
+    if not settings.detection.doppler_subset:
+        return True
+
     dp = (channels - tx) * 1e6
     return (dp > settings.detection.doppler_range[0]).all() and (dp < settings.detection.doppler_range[1]).all()
 
