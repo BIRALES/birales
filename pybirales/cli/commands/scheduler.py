@@ -13,6 +13,7 @@ from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, Correlat
     StandAlonePipelineMangerBuilder
 
 DEFAULT_WAIT_SECONDS = 5
+OBS_PADDING = datetime.timedelta(seconds=60)
 
 
 def message(status, msg):
@@ -78,6 +79,66 @@ def start_observation(observation_settings):
     bf.start_observation(pipeline_manager=manager)
 
 
+def obs_overlaps_schedule(schedule, start_time, end_time):
+    """
+    Check if this observation overlaps with the ones already scheduled
+
+    :param schedule: A dictionary of scheduled observations
+    :param start_time:
+    :param end_time:
+    :return:
+    """
+
+    # If schedule is empty, there is no overlap
+    if not schedule:
+        return False
+
+    # Check if this observation overlaps with the ones already scheduled
+    for obs, time_range in schedule.iteritems():
+        obs2_start = time_range[0] - OBS_PADDING
+        obs2_end = time_range[1] + OBS_PADDING
+
+        # Check for time ranges where duration is not defined:
+        if not (obs2_end and end_time):
+            # If there is an observation that has no end and starts before this observation
+            if not obs2_end and obs2_start < start_time:
+                return obs
+
+            # If this observation starts before and does not end
+            if not end_time and start_time < obs2_start:
+                return obs
+
+        # If this observation overlaps another time range
+        elif (start_time <= obs2_end) and (obs2_start <= end_time):
+            return obs
+
+    # The observation start and end date does not overlap with any scheduled observation
+    return False
+
+
+def start_message(observation, start_time, end_time):
+    """
+    Build a human friendly message, indicating when the observation will start and for how long it will run
+
+    :param observation: The observation parameters
+    :param start_time: The start time of the observation
+    :param end_time: The end time of the observation
+    :return:
+    """
+
+    start_msg = "Observation {}, using the {} is scheduled to start NOW".format(
+        observation['name'], observation['pipeline'])
+
+    if 'start_time' in observation['config_parameters']:
+        start_msg = "Observation {}, using the {} is scheduled to run at {:%Y-%m-%d %H:%M:%S}".format(
+            observation['name'], observation['pipeline'], start_time)
+
+    if end_time:
+        start_msg += ' and will run for {} seconds'.format(observation['config_parameters']['duration'])
+    else:
+        start_msg += ' and will run indefinitely'
+
+
 @click.command()
 @click.option('--schedule', '-s', 'schedule_file_path', type=click.Path(exists=True), required=True,
               help='The scheduler json file')
@@ -85,6 +146,7 @@ def scheduler(schedule_file_path):
     """
     Schedule a series of observations
 
+    :param schedule_file_path: The file path to the schedule
     :return:
     """
 
@@ -102,6 +164,7 @@ def scheduler(schedule_file_path):
         wait_seconds = DEFAULT_WAIT_SECONDS
         start_time = datetime.datetime.utcnow()
         end_time = None
+        observation['name'] = obs_name
         if 'duration' in observation['config_parameters']:
             end_time = dateutil.parser.parse(observation['config_parameters']['start_time']) + datetime.timedelta(
                 seconds=observation['config_parameters']['duration'])
@@ -116,46 +179,16 @@ def scheduler(schedule_file_path):
             message('INFO', "Scheduled start time for {} must be in the future".format(obs_name))
             sys.exit()
 
-        # Check if this observation overlaps with the ones already scheduled
-        if scheduler_time_range:
-            for obs, time_range in scheduler_time_range.iteritems():
-                overlap = False
-
-                # Check for time ranges where duration is not defined:
-                if not (time_range[1] and end_time):
-                    # If there is an observation that has no end and starts before this observation
-                    if not time_range[1] and time_range[0] < start_time:
-                        overlap = True
-
-                    # If this observation starts before and does not end
-                    if not end_time and start_time < time_range[0]:
-                        overlap = True
-
-                # If this observation overlaps another time range
-                elif (start_time <= time_range[1]) and (time_range[0] <= end_time):
-                    overlap = True
-
-                if overlap:
-                    message('ERROR',"The observation '{}' overlaps the time range specified in observation '{}'".format(
-                                obs_name, obs))
-                    sys.exit()
+        overlapped_obs = obs_overlaps_schedule(scheduler_time_range, start_time, end_time)
+        if overlapped_obs:
+            message('ERROR', "The observation '{}' overlaps the time range specified in observation '{}'".format(
+                        obs_name, overlapped_obs))
+            sys.exit()
 
         scheduler_time_range[obs_name] = (start_time, end_time)
+        message('INFO', start_message(observation, start_time, end_time))
 
-        start_msg = "Observation {}, using the {} is scheduled to start NOW".format(
-            obs_name, observation['pipeline'])
-        if 'start_time' in observation['config_parameters']:
-            start_msg = "Observation {}, using the {} is scheduled to run at {:%Y-%m-%d %H:%M:%S}" \
-                .format(obs_name, observation['pipeline'], start_time)
-
-        if end_time:
-            start_msg += ' and will run for {} seconds'.format(observation['config_parameters']['duration'])
-        else:
-            start_msg += ' and will run indefinitely'
-
-        message('INFO', start_msg)
-        observation['name'] = obs_name
-
+        # Schedule the observation
         s.enter(delay=wait_seconds, priority=0, action=start_observation, argument=(observation,))
 
     message('INFO', 'Scheduler initialised. {} observations queued.'.format(len(scheduled_observations)))
