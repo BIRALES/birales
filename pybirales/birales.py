@@ -25,6 +25,7 @@ class BiralesConfig:
         :return:
         """
 
+        # The configuration parser of the BIRALES system
         self._parser = configparser.RawConfigParser()
 
         # Load the BIRALES config settings
