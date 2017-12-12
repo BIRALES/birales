@@ -1,4 +1,3 @@
-import logging
 import os
 import pickle
 import time
@@ -15,7 +14,6 @@ class RawPersister(ProcessingModule):
     """ Raw data persister """
 
     def __init__(self, config, input_blob=None):
-
         # Call superclass initialiser
         super(RawPersister, self).__init__(config, input_blob)
 
@@ -24,26 +22,27 @@ class RawPersister(ProcessingModule):
             raise PipelineError("Persister: Missing keys on configuration. (directory)")
 
         # Create directory if it doesn't exist
-        if not os.path.exists(config.directory):
-            os.makedirs(config.directory)
+        directory = settings.persisters.directory
+        if not os.path.exists(directory):
+            os.makedirs(directory)
 
         # Create file
         if config.use_timestamp:
-            filepath = os.path.join(config.directory, "%s_%s" % (config.filename, str(time.time())))
+            file_path = os.path.join(directory, "%s_%s" % (self._config.filename_suffix, str(time.time())))
         else:
             if 'filename' not in config.settings():
-                raise PipelineError("Persister: filename required when not using timestamp")
-            filepath = os.path.join(config.directory, config.filename + '.dat')
+                raise PipelineError("Raw Persister: Filename required when not using timestamp")
+            file_path = os.path.join(directory, self._config.filename_suffix + '.dat')
 
         # Open file (if file exists, remove first)
-        if os.path.exists(filepath):
-            os.remove(filepath)
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
-        self._file = open(filepath, "wb+")
+        self._file = open(file_path, "wb+")
         fadvise.set_advice(self._file, fadvise.POSIX_FADV_SEQUENTIAL)
 
         # Variable to check whether meta file has been written
-        self._head_filepath = filepath + '.pkl'
+        self._head_filepath = file_path + '.pkl'
         self._head_written = False
 
         # Processing module name
@@ -54,8 +53,7 @@ class RawPersister(ProcessingModule):
         Generate the output blob
         :return:
         """
-        return ReceiverBlob(self._config, self._input.shape,
-                         datatype=np.complex64)
+        return ReceiverBlob(self._config, self._input.shape, datatype=np.complex64)
 
     def process(self, obs_info, input_data, output_data):
 

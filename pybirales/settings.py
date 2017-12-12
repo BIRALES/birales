@@ -16,6 +16,7 @@ rawdatareader = None
 channelplotter = None
 bandpassplotter = None
 antennaplotter = None
+persisters = None
 corrmatrixpersister= None
 correlator = None
 terminator = None

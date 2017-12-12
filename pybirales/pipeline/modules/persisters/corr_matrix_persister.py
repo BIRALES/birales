@@ -4,16 +4,22 @@ import os
 import time
 import h5py
 
+from pybirales import settings
 from pybirales.pipeline.base.definitions import PipelineError
 from pybirales.pipeline.base.processing_module import ProcessingModule
 
 
 class CorrMatrixPersister(ProcessingModule):
-    """ Dummy data generator """
 
     def __init__(self, config, input_blob=None):
+        """
 
-        # Call superclass initialiser
+        :param config:
+        :param input_blob:
+        :return:
+        """
+
+        # Call superclass initializer
         super(CorrMatrixPersister, self).__init__(config, input_blob)
 
         # Sanity checks on configuration
@@ -21,16 +27,17 @@ class CorrMatrixPersister(ProcessingModule):
             raise PipelineError("Persister: Missing keys on configuration. (directory, filename, use_timestamp)")
 
         # Create directory if it doesn't exist
-        if not os.path.exists(config.directory):
-            os.makedirs(config.directory)
+        directory = settings.persisters.directory
+        if not os.path.exists(directory):
+            os.makedirs(directory)
 
         # Create file
         if config.use_timestamp:
-            self._filepath = os.path.join(config.directory, "%s_%s" % (config.filename, str(time.now())))
+            self._filepath = os.path.join(directory, "%s_%s" % (config.filename_suffix, str(time.time())))
         else:
             if 'filename' not in config.settings():
                 raise PipelineError("CorrMatrixPersister: filename required when not using timestamp")
-            self._filepath = os.path.join(config.directory, config.filename + '.h5')
+            self._filepath = os.path.join(directory, config.filename_suffix + '.h5')
 
         # Variable to check whether meta file has been written
         self._head_filepath = self._filepath + '.pkl'
@@ -44,11 +51,22 @@ class CorrMatrixPersister(ProcessingModule):
         self.name = "CorrMatrixPersister"
 
     def generate_output_blob(self):
-        """ Generate output data blob """
+        """
+        Generate output data blob
+
+        :return:
+        """
+
         return None
 
     def _create_hdf5_file(self, obs_info):
-        """ Create HDF5 file for storing correlation matrix"""
+        """
+        Create HDF5 file for storing correlation matrix
+
+        :param obs_info:
+        :return:
+        """
+
         f = h5py.File(self._filepath, "w")
 
         dset = f.create_dataset("Vis", (obs_info['nsamp'], obs_info['nsubs'], obs_info['nbaselines'],
@@ -77,7 +95,14 @@ class CorrMatrixPersister(ProcessingModule):
         f.close()
 
     def process(self, obs_info, input_data, output_data):
-        """ Save correlation matrix to file """
+        """
+        Save correlation matrix to file
+
+        :param obs_info:
+        :param input_data:
+        :param output_data:
+        :return:
+        """
 
         # If first time running, create and initialise file
         if self._counter == 0:
