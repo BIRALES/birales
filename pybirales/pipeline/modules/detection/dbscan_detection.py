@@ -9,7 +9,6 @@ warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 from astropy.io import fits
 from pybirales import settings
 from pybirales.pipeline.modules.detection.detection_clusters import DetectionCluster
-from pybirales.repository.repository import BeamCandidateRepository
 from pybirales.pipeline.base.timing import timeit
 from sklearn import linear_model
 from sklearn.cluster import DBSCAN
