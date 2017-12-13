@@ -275,7 +275,7 @@ if __name__ == "__main__":
     # Should be pointing to zenith (regardless of time)
     config['reference_antenna_location'] = [11.6459889, 44.52357778]
     config['reference_declination'] = 58.918
-    config['pointings'] = [[0, 0]]
+    config['pointings'] = [[-1.6, 0]]
 
     pointing = Pointing(config, 1, 32)
     print('ok')

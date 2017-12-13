@@ -1,4 +1,11 @@
+import logging
+
 import click
+import time
+
+from pybirales.services.instrument.backend import Backend
+
+from pybirales.services.instrument.best2 import BEST2
 
 from pybirales.birales import BiralesFacade, BiralesConfig
 
@@ -36,10 +43,45 @@ def run_server(ctx, configuration):
 
 
 @services.command()
-def init_roach():
-    pass
+@click.argument('configuration', type=click.Path(exists=True), required=True)
+@click.pass_context
+def init_roach(ctx, configuration):
+    # Load the BIRALES configuration from file
+    config = BiralesConfig(configuration, ctx.obj)
+
+    # Initialise the Birales Facade (BOSS)
+    BiralesFacade(configuration=config)
+
+    # Initialise the roach
+    backend = Backend.Instance()
+    time.sleep(2)
+    backend.start()
 
 
 @services.command()
-def best_pointing():
-    pass
+@click.argument('configuration', type=click.Path(exists=True), required=True)
+@click.option('--pointing', default=-90, help='Where to point BEST-II [Default: no pointing]')
+@click.pass_context
+def best_pointing(ctx, configuration, pointing):
+    # Load the BIRALES configuration from file
+    config = BiralesConfig(configuration, ctx.obj)
+
+    # Initialise the Birales Facade (BOSS)
+    bf = BiralesFacade(configuration=config)
+
+    time.sleep(1)
+
+    # Get BEST-II instance
+    best2 = BEST2.Instance()
+
+    time.sleep(1)
+
+    # Point BEST-II or get current pointing
+    if pointing != -90:
+        best2.move_to_declination(pointing)
+    else:
+        logging.info("BEST-II pointing to {}".format(best2.current_pointing))
+
+    # Clean up server
+    best2.stop_best2_server()
+
