@@ -211,7 +211,7 @@ class BiralesFacade:
             self._backend.start(program_fpga=True, equalize=True, calibrate=True)
 
             # Point the BEST Antenna
-            if not settings.instrument.enable_pointing:
+            if settings.instrument.enable_pointing:
                 self._instrument.move_to_declination(settings.beamformer.reference_declination)
 
         # Ensure that the status of the Backend/BEST/Pipeline is correct.
