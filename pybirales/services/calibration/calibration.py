@@ -99,6 +99,8 @@ class CalibrationFacade:
             time.sleep(3)
         real_vis_process.start()
         real_vis_process.join()
+        coeffs_file = main_dir + '/coeffs_no_geom.txt'
+        self._get_calibration_coeffs(coeffs_file)
 
         shutil.rmtree(main_dir, ignore_errors=True)
 
@@ -128,3 +130,17 @@ class CalibrationFacade:
                         cr += 1
 
         return bas_ant_no
+
+    @staticmethod
+    def _get_calibration_coeffs(coeff_file):
+
+        dict_real = {}
+        dict_imag = {}
+
+        calib_coeffs = np.loadtxt(coeff_file, dtype=np.complex)
+
+        for i in range(len(calib_coeffs)):
+            dict_real['a' + str(i)] = calib_coeffs[i].real
+            dict_imag['a' + str(i)] = calib_coeffs[i].imag
+
+        return dict_real, dict_imag
