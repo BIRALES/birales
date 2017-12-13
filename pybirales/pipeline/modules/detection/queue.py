@@ -117,7 +117,9 @@ class BeamCandidatesQueue:
             bc.save()
             candidate.to_save = False
 
-        log.info('Saved %s candidates, Deleted %s candidates', len(candidates_to_save), len(candidates_to_delete))
+        log.info('Beam %s: Saved %s candidates, Deleted %s candidates', self.beam_id,
+                 len(candidates_to_save),
+                 len(candidates_to_delete))
 
         # Garbage collect - remove candidates marked for deletion from queue
         for q, queue in enumerate(self.queue):
