@@ -25,8 +25,8 @@ class CorrMatrixPersister(ProcessingModule):
         super(CorrMatrixPersister, self).__init__(config, input_blob)
 
         # Sanity checks on configuration
-        if {'directory', 'filename', 'use_timestamp'} - set(config.settings()) != set():
-            raise PipelineError("Persister: Missing keys on configuration. (directory, filename, use_timestamp)")
+        if {'filename_suffix', 'use_timestamp'} - set(config.settings()) != set():
+            raise PipelineError("Persister: Missing keys on configuration. (filename_suffix, use_timestamp)")
 
         # Create directory if it doesn't exist
         directory = os.path.join(settings.persisters.directory, '{:%Y_%M_%d}'.format(datetime.datetime.now()),
@@ -39,8 +39,8 @@ class CorrMatrixPersister(ProcessingModule):
         if config.use_timestamp:
             self._filepath = os.path.join(directory, "%s_%s" % (filename, str(time.time())))
         else:
-            if 'filename' not in config.settings():
-                raise PipelineError("CorrMatrixPersister: filename required when not using timestamp")
+            if 'filename_suffix' not in config.settings():
+                raise PipelineError("CorrMatrixPersister: filename_suffix required when not using timestamp")
             self._filepath = os.path.join(directory, filename + '.h5')
 
         # Variable to check whether meta file has been written

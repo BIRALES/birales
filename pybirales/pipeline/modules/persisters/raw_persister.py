@@ -20,8 +20,8 @@ class RawPersister(ProcessingModule):
         super(RawPersister, self).__init__(config, input_blob)
 
         # Sanity checks on configuration
-        if {'directory'} - set(config.settings()) != set():
-            raise PipelineError("Persister: Missing keys on configuration. (directory)")
+        if {'filename_suffix'} - set(config.settings()) != set():
+            raise PipelineError("Persister: Missing keys on configuration. (filename_suffix)")
 
         # Create directory if it doesn't exist
         directory = os.path.join(settings.persisters.directory, '{:%Y_%M_%d}'.format(datetime.datetime.now()),
@@ -34,8 +34,8 @@ class RawPersister(ProcessingModule):
         if config.use_timestamp:
             file_path = os.path.join(directory, "%s_%s" % (filename, str(time.time())))
         else:
-            if 'filename' not in config.settings():
-                raise PipelineError("Raw Persister: Filename required when not using timestamp")
+            if 'filename_suffix' not in config.settings():
+                raise PipelineError("Raw Persister: filename_suffix required when not using timestamp")
             file_path = os.path.join(directory, filename + '.dat')
 
         # Open file (if file exists, remove first)
