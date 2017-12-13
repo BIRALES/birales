@@ -6,7 +6,7 @@ import re
 
 from pybirales.pipeline.base.definitions import PipelineError
 from pybirales.utilities.singleton import Singleton
-from services.instrument.best2_server import SdebTCPServer
+from pybirales.services.instrument.best2_server import SdebTCPServer
 
 
 @Singleton
