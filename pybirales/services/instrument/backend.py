@@ -6,31 +6,8 @@ import time
 import corr
 import numpy as np
 
+from pybirales.utilities.singleton import Singleton
 from pybirales import settings
-
-class Singleton:
-    """ Singleton object """
-
-    def __init__(self, decorated):
-        self._decorated = decorated
-
-    def Instance(self):
-        try:
-            return self._instance
-        except AttributeError:
-            self._instance = self._decorated()
-            return self._instance
-
-    def __call__(self):
-        """
-        Enforces that Initialiser is not Called
-
-        :raises TypeError: if attempted.
-        """
-        raise TypeError('Singletons must be accessed through `Instance()`.')
-
-    def __instancecheck__(self, inst):
-        return isinstance(inst, self._decorated)
 
 
 @Singleton
@@ -60,6 +37,7 @@ class Backend(object):
 
         # Check if roach is already programmed
         if self._roach.status() == "program" and self.read_startup_time() != 0:
+            logging.info("ROACH already set up, skipping start")
             return
 
         # Get configuration
@@ -70,103 +48,109 @@ class Backend(object):
         header = self._get_header_keys(config_files.header_file)
 
         # If required, load bitstream and initialise control software register to 0
-        if program_fpga:
-            logging.info("Programming roach")
-            self._program_roach(config.bitstream)
-            self._roach.write_int('ctrl_sw', 0)
-        else:
-            logging.info("Skipping programming")
+        while True:
+            if program_fpga:
+                logging.info("Programming roach")
+                self._program_roach(config.bitstream)
+                self._roach.write_int('ctrl_sw', 0)
+            else:
+                logging.info("Skipping programming")
 
-        # Write base configuration
-        self._write_base_header(config, header)
+            # Write base configuration
+            self._write_base_header(config, header)
 
-        # Set number of antennas
-        self._roach.write_int('n_ant', len(settings.beamformer.antenna_locations))
+            # Set number of antennas
+            self._roach.write_int('n_ant', len(settings.beamformer.antenna_locations))
 
-        logging.info("Setting frequency channel to %d".format(settings.roach_observation.freq_channel))
-        self._roach.write_int('channel1', settings.roach_observation.freq_channel)
+            logging.info("Setting frequency channel to %d".format(settings.roach_observation.freq_channel))
+            self._roach.write_int('channel1', settings.roach_observation.freq_channel)
 
-        # Set ADC map
-        adc_map = '----------------------------------------------------------------'
-        adc_map += '----------------------------------------------------------------'
-        antennas = []
-        with open(config_files.antenna_order, "r") as f:
-            ant_list = f.readlines()
-            for i in xrange(len(ant_list)):
-                antennas += [ant_list[i].split()]
-                antennas[i][1] = self._antenna_map[int(antennas[i][1])]
-                adc_map = adc_map[:antennas[i][1] * 4] + antennas[i][0] + adc_map[antennas[i][1] * 4 + 4:]
-                self._roach.write('ant_list', struct.pack('>I', antennas[i][1]), i * 4)
+            # Set ADC map
+            adc_map = '----------------------------------------------------------------'
+            adc_map += '----------------------------------------------------------------'
+            antennas = []
+            with open(config_files.antenna_order, "r") as f:
+                ant_list = f.readlines()
+                for i in xrange(len(ant_list)):
+                    antennas += [ant_list[i].split()]
+                    antennas[i][1] = self._antenna_map[int(antennas[i][1])]
+                    adc_map = adc_map[:antennas[i][1] * 4] + antennas[i][0] + adc_map[antennas[i][1] * 4 + 4:]
+                    self._roach.write('ant_list', struct.pack('>I', antennas[i][1]), i * 4)
 
-        self._write_header('adc_map', adc_map, header)
+            self._write_header('adc_map', adc_map, header)
 
-        # Set up 10GbE interface for data transmission
-        gbe_0 = getattr(config, 'gbe-0')
-        gbe_0_dest_ip = getattr(config, 'gbe-0_dest_ip')
-        gbe_0_dest_port = getattr(config, 'gbe-0_dest_port')
-        gbe_0_pkt_len = getattr(config, 'gbe-0_pkt_len')
-        logging.info("Starting interface %s" % gbe_0)
-        self._roach.write_int(gbe_0 + '_destip', gbe_0_dest_ip)
-        time.sleep(0.3)
-        self._roach.write_int(gbe_0 + '_destport', gbe_0_dest_port)
-        time.sleep(0.3)
-        self._roach.write_int(gbe_0 + '_len', gbe_0_pkt_len)
-        time.sleep(0.3)
-        ipconv = str(int((gbe_0_dest_ip & 255 * 256 * 256 * 256) >> 24))
-        ipconv += "." + str(int((gbe_0_dest_ip & 255 * 256 * 256) >> 16))
-        ipconv += "." + str(int((gbe_0_dest_ip & 255 * 256) >> 8))
-        ipconv += "." + str(int(gbe_0_dest_ip & 255))
+            # Set up 10GbE interface for data transmission
+            gbe_0 = getattr(config, 'gbe-0')
+            gbe_0_dest_ip = getattr(config, 'gbe-0_dest_ip')
+            gbe_0_dest_port = getattr(config, 'gbe-0_dest_port')
+            gbe_0_pkt_len = getattr(config, 'gbe-0_pkt_len')
+            logging.info("Starting interface %s" % gbe_0)
+            self._roach.write_int(gbe_0 + '_destip', gbe_0_dest_ip)
+            time.sleep(0.3)
+            self._roach.write_int(gbe_0 + '_destport', gbe_0_dest_port)
+            time.sleep(0.3)
+            self._roach.write_int(gbe_0 + '_len', gbe_0_pkt_len)
+            time.sleep(0.3)
+            ipconv = str(int((gbe_0_dest_ip & 255 * 256 * 256 * 256) >> 24))
+            ipconv += "." + str(int((gbe_0_dest_ip & 255 * 256 * 256) >> 16))
+            ipconv += "." + str(int((gbe_0_dest_ip & 255 * 256) >> 8))
+            ipconv += "." + str(int(gbe_0_dest_ip & 255))
 
-        logging.info("Set UDP packets destination IP:Port to %s:%d" % (ipconv, gbe_0_dest_port))
-        ip = 3232238524
-        mac = (0 << 40) + (96 << 32) + ip
-        self._roach.tap_start('tap0', gbe_0, mac, ip, gbe_0_dest_port)
-        time.sleep(0.3)
-        logging.info("UDP packets started")
+            logging.info("Set UDP packets destination IP:Port to %s:%d" % (ipconv, gbe_0_dest_port))
+            ip = 3232238524
+            mac = (0 << 40) + (96 << 32) + ip
+            self._roach.tap_start('tap0', gbe_0, mac, ip, gbe_0_dest_port)
+            time.sleep(0.3)
+            logging.info("UDP packets started")
 
-        # Set FFT shift
-        time.sleep(0.1)
-        self._change_ctrl_sw_bits(0, 10, config.fft_shift)
+            # Set FFT shift
+            time.sleep(0.1)
+            self._change_ctrl_sw_bits(0, 10, config.fft_shift)
 
-        # Perform amplitude equalization if required
-        if equalize:
-            logging.info("Performing amplitude equalization")
-            self._change_ctrl_sw_bits(20, 20, 1)
-        else:
-            logging.info("Skipping amplitude equalization")
-            self._change_ctrl_sw_bits(20, 20, 0)
+            # Perform amplitude equalization if required
+            if equalize:
+                logging.info("Performing amplitude equalization")
+                self._change_ctrl_sw_bits(20, 20, 1)
+            else:
+                logging.info("Skipping amplitude equalization")
+                self._change_ctrl_sw_bits(20, 20, 0)
 
-        # Calibrating ADCs
-        logging.info("Calibrating ADCs")
-        self._adc_cal()
-        time.sleep(0.05)
-        self._roach.write_int('adc_spi_ctrl', 1)
-        time.sleep(.05)
-        self._roach.write_int('adc_spi_ctrl', 0)
-        time.sleep(.05)
-        for i in range(5):
-            time.sleep(0.5)
-            self._check_adc_sync()
+            # Calibrating ADCs
+            logging.info("Calibrating ADCs")
+            self._adc_cal()
+            time.sleep(0.05)
+            self._roach.write_int('adc_spi_ctrl', 1)
+            time.sleep(.05)
+            self._roach.write_int('adc_spi_ctrl', 0)
+            time.sleep(.05)
+            for i in range(5):
+                time.sleep(0.5)
+                self._check_adc_sync()
 
-        # Arm the F-Engine
-        logging.info("Arming F Engine and setting FFT Shift")
-        trig_time = self._feng_arm()
-        logging.info('Armed. Expect trigger at %s local (%s UTC).' % (
-            time.strftime('%H:%M:%S', time.localtime(trig_time)), time.strftime('%H:%M:%S', time.gmtime(trig_time))))
-        logging.info("Updating header BRAM with %s=%d" % ('t_zero', trig_time))
-        self._write_header('t_zero', trig_time, header)
-        logging.info("Read from header t_zero=%d" % (self._read_header('t_zero', header)))
-        logging.info("Updating header BRAM with %s=%d" % ('fft_shift', config.fft_shift))
-        self._write_header('fft_shift', config.fft_shift, header)
-        logging.info("Read from header fft_shift=%d" % (self._read_header('fft_shift', header)))
+            # Arm the F-Engine
+            logging.info("Arming F Engine and setting FFT Shift")
+            trig_time = self._feng_arm()
+            logging.info('Armed. Expect trigger at %s local (%s UTC).' % (
+                time.strftime('%H:%M:%S', time.localtime(trig_time)), time.strftime('%H:%M:%S', time.gmtime(trig_time))))
+            logging.info("Updating header BRAM with %s=%d" % ('t_zero', trig_time))
+            self._write_header('t_zero', trig_time, header)
+            logging.info("Read from header t_zero=%d" % (self._read_header('t_zero', header)))
+            logging.info("Updating header BRAM with %s=%d" % ('fft_shift', config.fft_shift))
+            self._write_header('fft_shift', config.fft_shift, header)
+            logging.info("Read from header fft_shift=%d" % (self._read_header('fft_shift', header)))
 
-        self._arm_sync()
+            self._arm_sync()
+
+            logging.info("Verifying ADC signals...please hold on")
+            bit_ptp = self._adc_bit_ptp()
+            if bit_ptp < 1:
+                logging.info("FPGA <--> ADC sync OK (adc_bit_ptp reporting %3.1f)" % bit_ptp)
+                break
+            logging.warning("FPGA <--> ADC sync NOT OK (adc_bit_ptp reporting %3.1f), retrying..." % bit_ptp)
 
         # Download calibration coefficients if required
         if calibrate:
             self.load_calibration_coefficients(config_files.amp_eq_file, config_files.phase_eq_file)
-            # os.system('./birales_load_coeff.py -A eq/eq_amp_1.txt -P eq/eq_phs_1.txt')
-            pass
 
         # Reset interface
         logging.info("Resetting gbe interface")
@@ -182,17 +166,21 @@ class Backend(object):
 
         logging.info("Birales ROACH backend initialised")
 
-    def load_calibration_coefficients(self, amplitude_filepath, phase_filepath):
+    def load_calibration_coefficients(self, amplitude_filepath=None, phase_filepath=None,
+                                      amplitude=None, phase=None):
         """ Load amplitude coefficients """
-        with open(amplitude_filepath, 'r') as f:
-            coefficients = f.readlines()
+        if amplitude_filepath is not None:
+            with open(amplitude_filepath, 'r') as f:
+                amplitude = {}
+                for item in f.readlines():
+                    c = item[:-1].split()
+                    amplitude[c[0]] = float(c[1])
+
         amplitude_coefficients = np.zeros([32, 1024 / 4], dtype=float)  # 32 antennas, 1024 chans
         values = []
         indices = []
-        for coeff in coefficients:
-            c = coeff[:-1].split()
-            index = int(c[0].lstrip('a'))
-            val = float(c[1])
+        for k, val in amplitude.iteritems():
+            index = int(k.lstrip('a'))
             indices += [index]
             values += [val]
             amplitude_coefficients[index, :] = val  # give all channels the same coeff
@@ -200,19 +188,22 @@ class Backend(object):
         for a in range(len(indices)):
             amp_header[indices[a]] = values[a]
 
-        with open(phase_filepath, 'r') as f:
-            coeffs = f.readlines()
+        if phase_filepath is not None:
+            with open(phase_filepath, 'r') as f:
+                phase = {}
+                for item in f.readlines():
+                    c = item[:-1].split()
+                    phase[c[0]] = float(c[1])
+
         phs_coeffs = np.zeros([32, 1024 / 4], dtype=complex)  # 32 ants, 1024 chans
         values = []
         indices = []
-        for coeff in coeffs:
-            c = coeff[:-1].split()
-            # c is ['aXX','1.234'] pairs
-            index = int(c[0].lstrip('a'))
-            val = np.exp(1j * float(c[1]) * np.pi / 180.)
-            phs_coeffs[index, :] = val  # give all channels the same coeff
+        for k, val in phase.iteritems():
+            index = int(k.lstrip('a'))
+            value = np.exp(1j * val * np.pi / 180.)
+            phs_coeffs[index, :] = value  # give all channels the same coeff
             indices += [index]
-            values += [float(c[1])]
+            values += [val]
         phs_header = np.zeros([32], dtype=float)  # 32 ants
         for a in range(len(indices)):
             phs_header[indices[a]] = values[a]
@@ -512,3 +503,24 @@ class Backend(object):
         else:
             clipbits = bitwidth
         return np.clip(np.round(np.real(coeff)*2**bp), -2**clipbits-1, 2**clipbits-1)
+
+    def _get_adc_power(self, antenna):
+        adc_levels_acc_len = 32
+        adc_bits = 12
+
+        self._roach.write_int('adc_sw_adc_sel', antenna)
+        time.sleep(.05)
+        rv = self._roach.read_uint('adc_sw_adc_sum_sq')
+
+        pwrX = float(rv)
+        rmsX = np.sqrt(pwrX / adc_levels_acc_len) / (2 ** (adc_bits - 1))
+        bitsX = max(np.log2(rmsX * (2 ** adc_bits)), 0.)
+
+        return rmsX * 2 ** (adc_bits - 1), bitsX
+
+    def _adc_bit_ptp(self):
+        allin = []
+        for i in range(len(settings.beamformer.antenna_locations)):
+            rmsA, powA = self._get_adc_power(i)
+            allin += [powA]
+        return np.ptp(allin)

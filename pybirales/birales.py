@@ -185,9 +185,13 @@ class BiralesFacade:
 
         # If this is not an offline observation, initialise the backend sub systems
         if not settings.manager.offline:
-            self._instrument = BEST2()
-
+            self._instrument = BEST2.Instance()
             self._backend = Backend.Instance()
+
+    def __del__(self):
+        """ Perform required cleanup """
+        if self._instrument is not None:
+            self._instrument.disconnect()
 
     def validate_init(self):
         pass
@@ -207,15 +211,11 @@ class BiralesFacade:
             # Point the BEST Antenna
             # self._instrument.move_to_declination(settings.beamformer.reference_declination)
 
-            # Check if calibration is required
-            # self.calibrate()
-
         # Ensure that the status of the Backend/BEST/Pipeline is correct.
         # Perform any necessary checks before starting the pipeline
-        # self.validate_init()
+        self.validate_init()
 
         # Start the chosen pipeline
-
         if pipeline_manager:
             observation = Observation(name=settings.observation.name,
                                       date_time_start=datetime.datetime.utcnow(),
@@ -223,6 +223,7 @@ class BiralesFacade:
             observation.save()
 
             self.configuration.update_config({'observation': {'id': observation.id}})
+
             # Re-load the system configuration upon initialisation
             self.configuration.load()
 
