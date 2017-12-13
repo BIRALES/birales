@@ -24,3 +24,4 @@ manager = None
 observation = None
 calibration = None
 database=None
+instrument=None
