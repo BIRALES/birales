@@ -48,7 +48,7 @@ class BiralesConfig:
         self.update_config(config_options)
 
         # Override the logger's debug level
-        log.getLogger().setLevel(settings.logger_root.level)
+        log.getLogger().setLevel(self._parser.get('logger_root', 'level'))
 
         # Specify whether the configuration settings were loaded in the settings.py package
         self._loaded = False
@@ -264,11 +264,10 @@ class BiralesFacade:
 
         return pipeline_builder.manager
 
-    def calibrate(self, correlator_pipeline_manager, backend_interface):
+    def calibrate(self, correlator_pipeline_manager):
         """
         Calibration routine, which will use the correlator pipeline manager
 
-        :param backend_interface:
         :param correlator_pipeline_manager:
         :return:
         """
@@ -281,11 +280,10 @@ class BiralesFacade:
         log.info('Generating calibration coefficients')
 
         # Load Coefficients to ROACH
-        backend_interface.load_calibration_coefficients(amplitude_filepath=None,
-                                                        phase_filepath=None,
-                                                        amplitude=None,
-                                                        phase=None)
-        log.info('Calibration coefficients loaded to the ROACH')
+        if self._backend:
+            self._backend.load_calibration_coefficients(amplitude_filepath=None, phase_filepath=None, amplitude=None,
+                                                            phase=None)
+            log.info('Calibration coefficients loaded to the ROACH')
 
     @staticmethod
     def start_server():

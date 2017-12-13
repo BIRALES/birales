@@ -14,7 +14,7 @@ from pybirales import settings
 
 class CalibrationFacade:
     def __init__(self):
-        self._real_vis_dir = os.environ['HOME'] + '/.birales/'
+        self._real_vis_dir = settings.calibration.real_vis_dir
 
     @staticmethod
     def _tcpo_config_adapter():
@@ -57,11 +57,11 @@ class CalibrationFacade:
         tm.from_dict(self._tcpo_config_adapter())
 
         # Setup RealVisCal
-        transit_run_file = self._real_vis_dir + sc.real_vis_dir + sc.real_vis_file
-        calib_check_path = self._real_vis_dir + sc.real_vis_dir + 'calib_plot.png'
-        model_vis_dir = main_dir + '/MSets'
-        model_vis_generated = main_dir + '/model_vis.txt'
-        coeffs_out = main_dir + '/coeffs_pointing.txt'
+        transit_run_file = os.path.join(self._real_vis_dir, sc.real_vis_file)
+        calib_check_path = os.path.join(self._real_vis_dir, 'calib_plot.png')
+        model_vis_dir = os.path.join(main_dir, 'MSets')
+        model_vis_generated = os.path.join(main_dir, 'model_vis.txt')
+        coeffs_out = os.path.join(main_dir, 'coeffs_pointing.txt')
 
         time_steps = int(tm.ObsLength / tm.TimeAverage)
         no_of_antennas = tm.antennas.shape[0]
