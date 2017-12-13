@@ -1,4 +1,3 @@
-
 import logging
 import struct
 import time
@@ -131,7 +130,8 @@ class Backend(object):
             logging.info("Arming F Engine and setting FFT Shift")
             trig_time = self._feng_arm()
             logging.info('Armed. Expect trigger at %s local (%s UTC).' % (
-                time.strftime('%H:%M:%S', time.localtime(trig_time)), time.strftime('%H:%M:%S', time.gmtime(trig_time))))
+                time.strftime('%H:%M:%S', time.localtime(trig_time)),
+                time.strftime('%H:%M:%S', time.gmtime(trig_time))))
             logging.info("Updating header BRAM with %s=%d" % ('t_zero', trig_time))
             self._write_header('t_zero', trig_time, header)
             logging.info("Read from header t_zero=%d" % (self._read_header('t_zero', header)))
@@ -168,7 +168,17 @@ class Backend(object):
 
     def load_calibration_coefficients(self, amplitude_filepath=None, phase_filepath=None,
                                       amplitude=None, phase=None):
-        """ Load amplitude coefficients """
+        """
+        Load coefficients
+
+        :param amplitude_filepath:
+        :param phase_filepath:
+        :param amplitude:
+        :param phase:
+        :return:
+        """
+
+        # Load amplitude coefficients
         if amplitude_filepath is not None:
             with open(amplitude_filepath, 'r') as f:
                 amplitude = {}
@@ -262,7 +272,16 @@ class Backend(object):
         time.sleep(0.1)
 
     def _change_ctrl_sw_bits(self, lsb, msb, val, ctrl='ctrl_sw'):
-        """ Change control software bits """
+        """
+
+        :param lsb:
+        :param msb:
+        :param val:
+        :param ctrl:
+        :return:
+        """
+                
+        # Change control software bits
         num_bits = msb - lsb + 1
         if val > (2 ** num_bits - 1):
             raise ValueError("ERROR: Attempting to write value to ctrl_sw which exceeds available bit width")
@@ -489,20 +508,20 @@ class Backend(object):
     @staticmethod
     def _get_complex_fp(coeff, bitwidth, bp, signed=True):
         if signed:
-            clipbits = bitwidth-1
+            clipbits = bitwidth - 1
         else:
             clipbits = bitwidth
-        real = np.clip(np.round(np.real(coeff)*2**bp), -2**clipbits-1, 2**clipbits-1)
-        imag = np.clip(np.round(np.imag(coeff)*2**bp), -2**clipbits-1, 2**clipbits-1)
-        return np.array(real+1j*imag)
+        real = np.clip(np.round(np.real(coeff) * 2 ** bp), -2 ** clipbits - 1, 2 ** clipbits - 1)
+        imag = np.clip(np.round(np.imag(coeff) * 2 ** bp), -2 ** clipbits - 1, 2 ** clipbits - 1)
+        return np.array(real + 1j * imag)
 
     @staticmethod
     def _get_real_fp(coeff, bitwidth, bp, signed=False):
         if signed:
-            clipbits = bitwidth-1
+            clipbits = bitwidth - 1
         else:
             clipbits = bitwidth
-        return np.clip(np.round(np.real(coeff)*2**bp), -2**clipbits-1, 2**clipbits-1)
+        return np.clip(np.round(np.real(coeff) * 2 ** bp), -2 ** clipbits - 1, 2 ** clipbits - 1)
 
     def _get_adc_power(self, antenna):
         adc_levels_acc_len = 32
