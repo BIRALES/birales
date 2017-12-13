@@ -8,6 +8,7 @@ from pybirales.services.instrument.backend import Backend
 from pybirales.services.instrument.best2 import BEST2
 
 from pybirales.birales import BiralesFacade, BiralesConfig
+from pybirales.pipeline.pipeline import CorrelatorPipelineManagerBuilder
 
 
 @click.group()
@@ -26,7 +27,15 @@ def calibration(ctx, configuration):
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)
 
-    bf.calibrate()
+    # Build the Pipeline Manager using the Correlator Pipeline Manager Builder
+    manager = bf.build_pipeline(CorrelatorPipelineManagerBuilder())
+
+    # Initialise the ROACH
+    backend = Backend.Instance()
+    time.sleep(2)
+
+    # Calibrate the Instrument
+    bf.calibrate(correlator_pipeline_manager=manager, backend_interface=backend)
 
 
 @services.command()
@@ -39,6 +48,7 @@ def run_server(ctx, configuration):
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)
 
+    # Start the Flask server
     bf.start_server()
 
 

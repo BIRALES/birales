@@ -1,17 +1,19 @@
-from pybirales.repository.models import Observation
 import ast
-import configparser
 import datetime
 import logging as log
 import logging.config as log_config
 import os
 import re
-from pybirales import settings
+
+import configparser
 from mongoengine import connect
+
+from pybirales import settings
+from pybirales.app.app import run
+from pybirales.repository.models import Observation
 from pybirales.services.calibration.calibration import CalibrationFacade
 from pybirales.services.instrument.backend import Backend
 from pybirales.services.instrument.best2 import BEST2
-from pybirales.app.app import run
 
 
 class BiralesConfig:
@@ -209,7 +211,8 @@ class BiralesFacade:
             self._backend.start(program_fpga=True, equalize=True, calibrate=True)
 
             # Point the BEST Antenna
-            # self._instrument.move_to_declination(settings.beamformer.reference_declination)
+            if not settings.instrument.enable_poiting:
+                self._instrument.move_to_declination(settings.beamformer.reference_declination)
 
         # Ensure that the status of the Backend/BEST/Pipeline is correct.
         # Perform any necessary checks before starting the pipeline
@@ -249,14 +252,29 @@ class BiralesFacade:
 
         return pipeline_builder.manager
 
-    def calibrate(self):
+    def calibrate(self, correlator_pipeline_manager, backend_interface):
         """
+        Calibration routine, which will use the correlator pipeline manager
 
+        :param backend_interface:
+        :param correlator_pipeline_manager:
         :return:
         """
 
+        # Run the correlator pipeline to get model visibilities
+        self.start_observation(pipeline_manager=correlator_pipeline_manager)
+
+        # Generate the calibration_coefficients
         self._calibration.calibrate()
+        log.info('Generating calibration coefficients')
 
+        # Load Coefficients to ROACH
+        backend_interface.load_calibration_coefficients(amplitude_filepath=None,
+                                                        phase_filepath=None,
+                                                        amplitude=None,
+                                                        phase=None)
+        log.info('Calibration coefficients loaded to the ROACH')
 
-    def start_server(self):
+    @staticmethod
+    def start_server():
         run()
