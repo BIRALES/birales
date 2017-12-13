@@ -47,7 +47,7 @@ class BiralesConfig:
         self.update_config(config_options)
 
         # Override the logger's debug level
-        log.getLogger().setLevel(settings.logger_root.level)
+        log.getLogger().setLevel(self._parser.get('logger_root', 'level'))
 
         # Specify whether the configuration settings were loaded in the settings.py package
         self._loaded = False
