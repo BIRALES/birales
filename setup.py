@@ -42,7 +42,8 @@ setup(
                       'corr'],
     data_files=[(os.environ['HOME'] + '/.birales', ['pybirales/configuration/local.ini']),
                 (os.environ['HOME'] + '/.birales/tcpo', []),
-                (os.environ['HOME'] + '/.birales/fits', [])
+                (os.environ['HOME'] + '/.birales/fits', []),
+                ('/var/log/birales', [])
                 ],
     entry_points={
         'console_scripts': [
