@@ -6,6 +6,7 @@ import os
 import re
 
 import configparser
+import signal
 from mongoengine import connect
 
 from pybirales import settings
@@ -45,6 +46,9 @@ class BiralesConfig:
 
         # Update the configuration with settings passed on in the config_options dictionary
         self.update_config(config_options)
+
+        # Override the logger's debug level
+        log.getLogger().setLevel(self._parser.get('logger_root', 'level'))
 
         # Specify whether the configuration settings were loaded in the settings.py package
         self._loaded = False
@@ -185,15 +189,23 @@ class BiralesFacade:
 
         self._backend = None
 
+        # Set interrupt signal handler
+        signal.signal(signal.SIGINT, self._signal_handler)
+
         # If this is not an offline observation, initialise the backend sub systems
         if not settings.manager.offline:
             self._instrument = BEST2.Instance()
             self._backend = Backend.Instance()
 
-    def __del__(self):
-        """ Perform required cleanup """
+    def _signal_handler(self, signum, frame):
+        """ Capturing interrupt signal """
+        log.info("Ctrl-C detected by process %s, stopping pipeline", os.getpid())
+
+        if self._pipeline_manager is not None:
+            self._pipeline_manager.stop_pipeline()
+
         if self._instrument is not None:
-            self._instrument.disconnect()
+            self._instrument.stop_best2_server()
 
     def validate_init(self):
         pass
@@ -211,7 +223,7 @@ class BiralesFacade:
             self._backend.start(program_fpga=True, equalize=True, calibrate=True)
 
             # Point the BEST Antenna
-            if not settings.instrument.enable_pointing:
+            if settings.instrument.enable_pointing:
                 self._instrument.move_to_declination(settings.beamformer.reference_declination)
 
         # Ensure that the status of the Backend/BEST/Pipeline is correct.
@@ -252,11 +264,10 @@ class BiralesFacade:
 
         return pipeline_builder.manager
 
-    def calibrate(self, correlator_pipeline_manager, backend_interface):
+    def calibrate(self, correlator_pipeline_manager):
         """
         Calibration routine, which will use the correlator pipeline manager
 
-        :param backend_interface:
         :param correlator_pipeline_manager:
         :return:
         """
@@ -269,11 +280,10 @@ class BiralesFacade:
         log.info('Generating calibration coefficients')
 
         # Load Coefficients to ROACH
-        backend_interface.load_calibration_coefficients(amplitude_filepath=None,
-                                                        phase_filepath=None,
-                                                        amplitude=None,
-                                                        phase=None)
-        log.info('Calibration coefficients loaded to the ROACH')
+        if self._backend:
+            self._backend.load_calibration_coefficients(amplitude_filepath=None, phase_filepath=None, amplitude=None,
+                                                            phase=None)
+            log.info('Calibration coefficients loaded to the ROACH')
 
     @staticmethod
     def start_server():

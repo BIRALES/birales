@@ -37,13 +37,6 @@ class BEST2(object):
         # Keep track of current pointing
         self.get_current_declination()
 
-    def disconnect(self):
-        """ Class destructor """
-        self._socket.close()
-        if self._best2_server is not None:
-            self._stop_server = True
-        self._connected = False
-
     def _connect(self):
         """ Connect to server """
         try:
@@ -70,11 +63,12 @@ class BEST2(object):
 
     def stop_best2_server(self):
         """ Stop BEST-2 server """
-        logging.info("Stopping BEST-II server")
-        self._socket.close()
-        if self._best2_server is not None:
-            self._stop_server = True
-        self._connected = False
+        if self._connected:
+            logging.info("Stopping BEST-II server")
+            self._socket.close()
+            if self._best2_server is not None:
+                self._stop_server = True
+            self._connected = False
 
     def get_current_declination(self):
         """ Get current BEST2 declination

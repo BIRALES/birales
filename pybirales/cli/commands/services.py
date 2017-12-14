@@ -30,12 +30,8 @@ def calibration(ctx, configuration):
     # Build the Pipeline Manager using the Correlator Pipeline Manager Builder
     manager = bf.build_pipeline(CorrelatorPipelineManagerBuilder())
 
-    # Initialise the ROACH
-    backend = Backend.Instance()
-    time.sleep(2)
-
     # Calibrate the Instrument
-    bf.calibrate(correlator_pipeline_manager=manager, backend_interface=backend)
+    bf.calibrate(correlator_pipeline_manager=manager)
 
 
 @services.command()

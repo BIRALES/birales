@@ -58,7 +58,7 @@ class RemoveTransmitterChannelFilter(BeamDataFilter):
         #     beam.snr[peak][peak_snr > 0.0] -= mean
         #     beam.snr[peak][peak_snr < 0.0] = 0.0
 
-        log.debug('Filter: Transmitter frequency removed from filtered beam %s', beam.id)
+        log.debug('Beam %s: Transmitter frequency removed', beam.id)
 
 
 class RemoveBackgroundNoiseFilter(BeamDataFilter):
@@ -81,7 +81,7 @@ class RemoveBackgroundNoiseFilter(BeamDataFilter):
             beam.snr[beam.snr < threshold] = 0.
         except Exception:
             print(beam.snr)
-        log.debug('Filter: Background noise removed from input beam %s', beam.id)
+        log.debug('Beam %s: Background noise removed', beam.id)
 
 
 class PepperNoiseFilter(BeamDataFilter):
@@ -112,7 +112,7 @@ class MedianFilter(BeamDataFilter):
 
         # from scipy.ndimage import median_filter
         # beam.snr = median_filter(beam.snr, size=2) - beam.snr
-        log.debug('Filter: Median filter applied on beam %s', beam.id)
+        log.debug('Beam %s: Median filter applied', beam.id)
 
 
 class InputDataFilter:
@@ -152,4 +152,4 @@ class TransmitterInputDataFilter(InputDataFilter):
             beam.snr[peak][peak_snr > 0.0] -= mean
             beam.snr[peak][peak_snr < 0.0] = 0.0
 
-        log.debug('Filter: Transmitter frequency removed from filtered beam %s', beam.id)
+        log.debug('Beam %s: Transmitter frequency removed', beam.id)
