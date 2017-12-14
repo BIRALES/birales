@@ -15,6 +15,8 @@ from pybirales import settings
 class CalibrationFacade:
     def __init__(self):
         self._real_vis_dir = settings.calibration.real_vis_dir
+        self.dict_real = {}
+        self.dict_imag = {}
 
     @staticmethod
     def _tcpo_config_adapter():
@@ -36,7 +38,7 @@ class CalibrationFacade:
             'start_time': "21-11-2017 11:18:48.000",
         }
 
-    def calibrate(self):
+    def calibrate(self, main_dir):
         """
         Run the calibration Routine
 
@@ -47,9 +49,6 @@ class CalibrationFacade:
 
         log.info('Running the calibration routine.')
 
-        # Create temp dir
-        main_dir = tmp.tempdir
-
         sc = settings.calibration
 
         # Create TM instance and load json
@@ -57,8 +56,9 @@ class CalibrationFacade:
         tm.from_dict(self._tcpo_config_adapter())
 
         # Setup RealVisCal
-        transit_run_file = os.path.join(self._real_vis_dir, sc.real_vis_file)
-        calib_check_path = os.path.join(self._real_vis_dir, 'calib_plot.png')
+        real_vis_dir = main_dir
+        transit_run_file = os.path.join(main_dir, sc.real_vis_file)
+        calib_check_path = os.path.join(main_dir, 'calib_plot.png')
         model_vis_dir = os.path.join(main_dir, 'MSets')
         model_vis_generated = os.path.join(main_dir, 'model_vis.txt')
         coeffs_out = os.path.join(main_dir, 'coeffs_pointing.txt')
@@ -78,7 +78,7 @@ class CalibrationFacade:
 
         # RealVisGenPipeline process creation
         real_vis_pipeline = RealVisPipelineBuilder.RealVisPipelineBuilder()
-        real_vis_pipeline.setup(params={'actual_vis_directory': self._real_vis_dir + sc.real_vis_dir, 'model_vis_directory': model_vis_dir,
+        real_vis_pipeline.setup(params={'actual_vis_directory': real_vis_dir, 'model_vis_directory': model_vis_dir,
                                         'model_vis_list_path': model_vis_generated, 'total_time_samples': time_steps,
                                         'selfcal': sc.selfcal, 'stefcal': sc.stefcal, 'no_of_antennas': no_of_antennas,
                                         'coeffs_filepath': coeffs_out, 'transit_run': sc.transit_run,
@@ -99,10 +99,10 @@ class CalibrationFacade:
             time.sleep(3)
         real_vis_process.start()
         real_vis_process.join()
-        coeffs_file = main_dir + '/coeffs_no_geom.txt'
-        self._get_calibration_coeffs(coeffs_file)
+        coeff_file = main_dir + '/coeffs_no_geom.txt'
+        self.dict_real, self.dict_imag = self._get_calibration_coeffs(coeff_file)
 
-        shutil.rmtree(main_dir, ignore_errors=True)
+        # shutil.rmtree(main_dir, ignore_errors=True)
 
     @staticmethod
     def _get_antenna_base_line(auto_corr, no_of_antennas):
@@ -141,6 +141,6 @@ class CalibrationFacade:
 
         for i in range(len(calib_coeffs)):
             dict_real['a' + str(i)] = calib_coeffs[i].real
-            dict_imag['a' + str(i)] = calib_coeffs[i].imag
+            dict_imag['a' + str(i)] = np.angle(calib_coeffs[i], deg=True)
 
         return dict_real, dict_imag

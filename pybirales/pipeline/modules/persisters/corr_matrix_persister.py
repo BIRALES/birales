@@ -29,8 +29,12 @@ class CorrMatrixPersister(ProcessingModule):
             raise PipelineError("Persister: Missing keys on configuration. (filename_suffix, use_timestamp)")
 
         # Create directory if it doesn't exist
+<<<<<<< Updated upstream
         directory = os.path.join(settings.calibration.real_vis_dir, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
                                  settings.observation.name)
+=======
+        directory = os.path.join(settings.calibration.real_vis_dir, settings.observation.name)
+>>>>>>> Stashed changes
         filename = settings.observation.name + self._config.filename_suffix
         if not os.path.exists(directory):
             os.makedirs(directory)
@@ -72,6 +76,7 @@ class CorrMatrixPersister(ProcessingModule):
         """
 
         f = h5py.File(self._filepath, "w")
+        print(self._filepath)
 
         dset = f.create_dataset("Vis", (obs_info['nsamp'], obs_info['nsubs'], obs_info['nbaselines'],
                                         obs_info['nstokes']),

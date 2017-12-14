@@ -314,13 +314,15 @@ class BiralesFacade:
         self.start_observation(pipeline_manager=correlator_pipeline_manager)
 
         # Generate the calibration_coefficients
-        self._calibration.calibrate()
+        directory = str(os.path.join(settings.calibration.real_vis_dir, settings.observation.name))
+        print(directory)
+        self._calibration.calibrate(directory)
         log.info('Generating calibration coefficients')
 
         # Load Coefficients to ROACH
         if self._backend:
-            self._backend.load_calibration_coefficients(amplitude_filepath=None, phase_filepath=None, amplitude=None,
-                                                            phase=None)
+            self._backend.load_calibration_coefficients(amplitude=self._calibration.dict_real,
+                                                        phase=self._calibration.dict_imag)
             log.info('Calibration coefficients loaded to the ROACH')
 
     @staticmethod
