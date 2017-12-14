@@ -38,6 +38,7 @@ setup(
                       "flask_ini",
                       "fadvise",
                       'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow', 'humanize', 'mongoengine', 'pyfits',
+                      'construct==2.5.5-reupload',
                       'corr'],
     data_files=[(os.environ['HOME'] + '/.birales', ['pybirales/configuration/local.ini']),
                 (os.environ['HOME'] + '/.birales/tcpo', []),
