@@ -19,7 +19,7 @@ def services(ctx):
 
 @services.command()
 @click.argument('configuration', type=click.Path(exists=True), required=True)
-@click.option('--name', '-n', 'name', help='The name of the observation', required=True)
+@click.option('--name', '-n', 'name', help='The name of the observation')
 @click.pass_context
 def calibration(ctx, configuration, name):
     if not name:
