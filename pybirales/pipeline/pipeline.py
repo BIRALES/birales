@@ -44,26 +44,39 @@ class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
         else:
             receiver = Receiver(settings.receiver)
 
+        # Saving raw data options
         if settings.manager.save_raw:
             persister_raw = RawPersister(settings.rawpersister, receiver.output_blob)
             beamformer = Beamformer(settings.beamformer, persister_raw.output_blob)
             self.manager.add_module("persister_raw", persister_raw)
         else:
             beamformer = Beamformer(settings.beamformer, receiver.output_blob)
+
+        # Channeliser
         ppf = PFB(settings.channeliser, beamformer.output_blob)
 
-        if settings.manager.save_beam:
+        # Persisting beam and detector options
+        if settings.manager.detector_enabled and settings.manager.save_beam:
             persister = Persister(settings.persister, ppf.output_blob)
             detector = Detector(settings.detection, persister.output_blob)
+            self.manager.add_module("detector", detector)
             self.manager.add_module("persister", persister)
-        else:
+        elif settings.manager.detector_enabled and not settings.manager.save_beam:
             detector = Detector(settings.detection, ppf.output_blob)
+            self.manager.add_module("detector", detector)
+        elif not settings.manager.detector_enabled and settings.manager.save_beam:
+            persister = Persister(settings.persister, ppf.output_blob)
+            terminator = Terminator(settings.terminator, persister.output_blob)
+            self.manager.add_module("persister", persister)
+            self.manager.add_module("terminator", terminator)
+        else:
+            terminator = Terminator(settings.terminator, ppf.output_blob)
+            self.manager.add_module("terminator", terminator)
 
         # Add modules to pipeline manager
         self.manager.add_module("receiver", receiver)
         self.manager.add_module("beamformer", beamformer)
         self.manager.add_module("ppf", ppf)
-        self.manager.add_module("detector", detector)
 
 
 class StandAlonePipelineMangerBuilder(PipelineManagerBuilder):
