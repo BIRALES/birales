@@ -6,6 +6,8 @@ from flask import Flask, json
 from flask_compress import Compress
 from flask_ini import FlaskIni
 from flask_socketio import SocketIO
+from mongoengine import connect
+
 from pybirales.app.modules.monitoring import monitoring_page
 from pybirales.app.modules.observations import observations_page
 from pybirales.app.modules.preferences import preferences_page
@@ -91,6 +93,16 @@ def run_server(configuration):
 def main():
     # Initialise Flask Application
     flask_app = configure_flask('pybirales/configuration/birales.ini')
+    config = flask_app.iniconfig
+    if config.get('database', 'authentication'):
+        connect(
+            db=config.get('database', 'name'),
+            username=config.get('database', 'user'),
+            password=config.get('database', 'password'),
+            port=config.getint('database', 'port'),
+            host=config.get('database', 'host'))
+    else:
+        connect(config.get('database', 'host'))
 
     # Start the Flask Application
     socket_io.run(flask_app, host="0.0.0.0", port=8000)
