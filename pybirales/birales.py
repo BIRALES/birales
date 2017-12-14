@@ -2,6 +2,8 @@ import ast
 import datetime
 import logging as log
 import logging.config as log_config
+from logging.handlers import TimedRotatingFileHandler
+
 import os
 import re
 
@@ -35,9 +37,6 @@ class BiralesConfig:
         # Load the BIRALES config settings
         self._load_from_file(config_file_path)
 
-        # Load the logging configuration file
-        log_config.fileConfig(config_file_path, disable_existing_loggers=False)
-
         # Load the ROACH backend settings
         self._load_from_file(self._parser.get('receiver', 'backend_config_filepath'))
 
@@ -47,8 +46,7 @@ class BiralesConfig:
         # Update the configuration with settings passed on in the config_options dictionary
         self.update_config(config_options)
 
-        # Override the logger's debug level
-        log.getLogger().setLevel(self._parser.get('logger_root', 'level'))
+        self._set_logging_config(config_file_path)
 
         # Specify whether the configuration settings were loaded in the settings.py package
         self._loaded = False
@@ -95,6 +93,32 @@ class BiralesConfig:
             else:
                 # Else, put the configuration in the observation settings
                 self._parser.set('observation', section, config_options[section])
+
+    def _set_logging_config(self, config_filepath):
+        """
+
+        :param config_filepath:
+        :return:
+        """
+
+        # Load the logging configuration file
+        log_config.fileConfig(config_filepath, disable_existing_loggers=False)
+
+        # Override the logger's debug level
+        log.getLogger().setLevel(self._parser.get('logger_root', 'level'))
+
+        # Create directory for file log
+        directory = os.path.join(self._parser.get('handler_rot_handler', 'log_directory'),
+                                 '{:%Y_%m_%d}'.format(datetime.datetime.now()))
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        log_path = os.path.join(directory, self._parser.get('observation', 'name') + '.log')
+
+        handler = TimedRotatingFileHandler(log_path, when="h", interval=1, backupCount=5, utc=True)
+        formatter = log.Formatter(self._parser.get('formatter_formatter', 'format'))
+        handler.setFormatter(formatter)
+        log.getLogger().addHandler(handler)
 
     @staticmethod
     def _db_connect():

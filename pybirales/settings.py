@@ -26,3 +26,4 @@ calibration = None
 database = None
 instrument = None
 logger_root = None
+# handler_file_handler = None
