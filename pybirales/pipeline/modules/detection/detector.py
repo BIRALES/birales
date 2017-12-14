@@ -86,7 +86,9 @@ class Detector(ProcessingModule):
                                       obs_info['start_center_frequency'] + obs_info['channel_bandwidth'] * obs_info[
                                           'nchans'],
                                       obs_info['channel_bandwidth'])
-            self.channels = self.channels[self._get_doppler_mask(obs_info['transmitter_frequency'], self.channels)]
+
+            if settings.detection.doppler_subset:
+                self.channels = self.channels[self._get_doppler_mask(obs_info['transmitter_frequency'], self.channels)]
 
         return self.channels
 

@@ -1,14 +1,14 @@
+import datetime
 import logging
-
-import click
 import time
 
-from pybirales.services.instrument.backend import Backend
-
-from pybirales.services.instrument.best2 import BEST2
+import click
 
 from pybirales.birales import BiralesFacade, BiralesConfig
+from pybirales.cli.helpers import update_config
 from pybirales.pipeline.pipeline import CorrelatorPipelineManagerBuilder
+from pybirales.services.instrument.backend import Backend
+from pybirales.services.instrument.best2 import BEST2
 
 
 @click.group()
@@ -19,8 +19,20 @@ def services(ctx):
 
 @services.command()
 @click.argument('configuration', type=click.Path(exists=True), required=True)
+@click.option('--name', '-n', 'name', help='The name of the observation')
 @click.pass_context
-def calibration(ctx, configuration):
+def calibration(ctx, configuration, name):
+    if not name:
+        name = 'Calibration_Observation_' + datetime.datetime.utcnow().isoformat('T')
+
+    ctx.obj = {
+        'observation': {
+            'name': name
+        }
+    }
+
+    ctx.obj = update_config(ctx.obj, 'observation', 'name', name)
+
     # Load the BIRALES configuration from file
     config = BiralesConfig(configuration, ctx.obj)
 

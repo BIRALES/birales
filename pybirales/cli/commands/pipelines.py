@@ -63,16 +63,18 @@ def detection_pipeline(ctx, configuration, tx, pointing):
 
 @pipelines.command(short_help='Run the Correlation Pipeline')
 @click.argument('configuration', type=click.Path(exists=True))
-def correlation_pipeline(configuration):
+@click.pass_context
+def correlation_pipeline(ctx, configuration):
     """
     Run the Correlation Pipeline
 
+    :param ctx:
     :param configuration: The default configuration file to be used.
     :return:
     """
 
     # Load the BIRALES configuration from file
-    config = BiralesConfig(configuration)
+    config = BiralesConfig(configuration, ctx.obj)
 
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)
