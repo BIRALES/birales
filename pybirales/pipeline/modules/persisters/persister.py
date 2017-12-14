@@ -23,7 +23,7 @@ class Persister(ProcessingModule):
             raise PipelineError("Persister: Missing keys on configuration. (filename_suffix)")
 
         # Create directory if it doesn't exist
-        directory = os.path.join(settings.persisters.directory, '{:%Y_%M_%d}'.format(datetime.datetime.now()),
+        directory = os.path.join(settings.persisters.directory, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
                                  settings.observation.name)
         filename = settings.observation.name + self._config.filename_suffix
         if not os.path.exists(directory):

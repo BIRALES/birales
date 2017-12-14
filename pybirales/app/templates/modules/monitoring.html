@@ -36,7 +36,6 @@
                                     <div class="form-group">
                                         <label>Min Channel</label>
                                         <input type="number" class="form-control" id="monitoring-min-channel"
-                                               value="{{ min_channel }}"
                                                step="0.0001"/>
                                     </div>
                                 </div>
@@ -44,21 +43,13 @@
                                     <div class="form-group">
                                         <label>Max Channel</label>
                                         <input type="number" class="form-control" id="monitoring-max-channel"
-                                               value="{{ max_channel }}"
                                                step="0.0001"/>
                                     </div>
                                 </div>
                             </div>
                         </form>
 
-                        <div class="chart plotly responsive-plot" id="doppler-profile-plot"
-                             data-chart-tx="{{ tx }}"
-                             data-chart-beam_id="{{ beam_id }}"
-                             data-chart-min_channel="{{ min_channel }}"
-                             data-chart-max_channel="{{ max_channel }}"
-                             data-chart-min_time="{{ from_time }}"
-                             data-chart-max_time="{{ to_time }}"
-                        >
+                        <div class="chart plotly responsive-plot" id="doppler-profile-plot">
 
                         </div>
                         <div class="footer">
@@ -82,14 +73,7 @@
                     </div>
 
                     <div class="content">
-                        <div class="chart plotly responsive-plot" id="snr-profile-plot"
-                             data-chart-tx="{{ tx }}"
-                             data-chart-beam_id="{{ beam_id }}"
-                             data-chart-min_channel="{{ min_channel }}"
-                             data-chart-max_channel="{{ max_channel }}"
-                             data-chart-min_time="{{ from_time }}"
-                             data-chart-max_time="{{ to_time }}"
-                        >
+                        <div class="chart plotly responsive-plot" id="snr-profile-plot">
 
                         </div>
                         <div class="footer">
@@ -113,54 +97,88 @@
 
     <script>
         $(document).ready(function () {
+            var ORBIT_DETERMINATION_URL = "/monitoring/beam_candidates/table?";
+
             var socket = io('/');
+
+            var date_from = $('#monitoring-date-from');
+            var date_to = $('#monitoring-date-to');
+            var min_channel = $('#monitoring-min-channel');
+            var max_channel = $('#monitoring-max-channel');
+
+            var default_data = {
+                date_from: '{{ from_time }}',
+                date_to: '{{ to_time }}',
+                min_channel: {{ min_channel }},
+                max_channel: {{ max_channel }}
+            };
+
+            function get_default_value(key) {
+                var stored_value = localStorage.getItem(key);
+                if (stored_value !== null) {
+                    // If selector is found in local storage, restore it
+                    return stored_value;
+                }
+
+                var default_server_value = default_data[key];
+                if (default_server_value !== null) {
+                    // Set the value of the selector, with the default sent by the server
+                    return default_data[key];
+                }
+
+                return null;
+            }
+
+            min_channel.val(get_default_value('min_channel')).change(function () {
+                update_beam_data();
+                localStorage.setItem('min_channel', this.value);
+            });
+
+            max_channel.val(get_default_value('max_channel')).change(function () {
+                update_beam_data();
+                localStorage.setItem('max_channel', this.value);
+            });
 
             function update_beam_data() {
                 log.info('Fetching new data');
                 socket.emit('get_beam_candidates', null,
-                        new Date($("#monitoring-date-from").val() + 'Z'),
-                        new Date($("#monitoring-date-to").val() + 'Z'),
-                        $("#monitoring-min-channel").val(),
-                        $("#monitoring-max-channel").val())
+                        new Date(date_from.val() + 'Z'),
+                        new Date(date_to.val() + 'Z'),
+                        $(min_channel.val()),
+                        $(max_channel.val()))
             }
 
-            $("#monitoring-date-from").flatpickr({
-                defaultDate: '{{ from_time }}',
+            date_from.flatpickr({
+                defaultDate: get_default_value('date_from'),
                 enableTime: true,
                 time_24hr: true,
                 allowInput: true,
                 onValueUpdate: function () {
                     update_beam_data();
+                    localStorage.setItem('date_from', this.input.value);
                 }
             });
 
-            $("#monitoring-date-to").flatpickr({
-                defaultDate: '{{ to_time }}',
+            date_to.flatpickr({
+                defaultDate: get_default_value('date_to'),
                 enableTime: true,
                 time_24hr: true,
                 allowInput: true,
                 onValueUpdate: function () {
                     update_beam_data();
+                    localStorage.setItem('date_to', this.input.value);
                 }
-            });
-
-            $("#monitoring-min-channel").change(function () {
-                update_beam_data();
-            });
-
-            $("#monitoring-max-channel").change(function () {
-                update_beam_data();
             });
 
             $("#orbit-determination-table").click(function () {
                 var get_parameters = {
-                    'from_time': new Date($("#monitoring-date-from").val() + 'Z').toISOString(),
-                    'to_time': new Date($("#monitoring-date-to").val() + 'Z').toISOString(),
-                    'min_channel': $("#monitoring-min-channel").val(),
-                    'max_channel': $("#monitoring-max-channel").val()
+                    'from_time': new Date(date_from.val() + 'Z').toISOString(),
+                    'to_time': new Date(date_to.val() + 'Z').toISOString(),
+                    'min_channel': min_channel.val(),
+                    'max_channel': max_channel.val()
                 };
 
-                window.open("/monitoring/beam_candidates/table?" + $.param(get_parameters).replace(/%3A/g, ":"));
+                window.open(ORBIT_DETERMINATION_URL + $.param(get_parameters).replace(/%3A/g, ":"));
             });
 
 
@@ -186,6 +204,14 @@
             socket.on('connect_error', function (err) {
                 log.error('Could not establish a connection', err);
             });
+
+            window.onbeforeunload = function () {
+                localStorage.setItem('date_from', date_from.val());
+                localStorage.setItem('date_to', date_to.val());
+                localStorage.setItem('min_channel', min_channel.val());
+                localStorage.setItem('max_channel', max_channel.val());
+            };
+
         });
     </script>
 {% endblock %}
