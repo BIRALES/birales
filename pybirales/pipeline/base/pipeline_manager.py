@@ -34,24 +34,8 @@ class PipelineManager(object):
 
         self._stop = Event()
 
-        # Set interrupt signal handler
-        signal.signal(signal.SIGINT, self._signal_handler)
-
         self.count = 0
         self.name = None
-
-    def _signal_handler(self, signum, frame):
-        """
-        Capturing interrupt signal
-
-        :param signum:
-        :param frame:
-        :return:
-        """
-        if not self._stop.is_set():
-            logging.info("Ctrl-C detected by process %s, stopping pipeline", os.getpid())
-
-            self.stop_pipeline()
 
     def add_module(self, name, module):
         """ Add a new module instance to the pipeline
