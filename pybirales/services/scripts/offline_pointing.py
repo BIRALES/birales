@@ -132,24 +132,27 @@ class Pointing(object):
         :param pointing_time: Time of observation (in format astropy time)
         :return: The phaseshift in radians for each antenna
         """
+        # Type conversions if required
+        ref_dec = Angle(ref_dec, u.deg)
+        delta_dec = Angle(delta_dec, u.deg)
+        dec = ref_dec + delta_dec
+
+        # Declination depends on DEC divide by DEC
+        ha = ha / np.cos(dec.rad)
 
         # We must have a positive hour angle and non-zero
         if ha < 0:
             ha = Angle(ha + 360, u.deg)
-        elif ha < 0.000001:
-            ha = Angle(0.000001, u.deg)
+        elif ha < 0.0001:
+            ha = Angle(0.0001, u.deg)
         else:
             ha = Angle(ha, u.deg)
 
-        # Type conversions if required
-        ref_dec = Angle(ref_dec, u.deg)
-        delta_dec = Angle(delta_dec, u.deg)
-
         # Convert RA DEC to ALT AZ
-        alt, az = self._ha_dec_to_alt_az(ha, ref_dec + delta_dec, self._reference_location)
+        alt, az = self._ha_dec_to_alt_az(ha, dec, self._reference_location)
 
         # Point beam to required ALT AZ
-        print("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, ref_dec + delta_dec, alt.deg, az.deg))
+        print("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, dec, alt.deg, az.deg))
         self.point_array_static(beam, alt, az)
 
     @staticmethod
@@ -275,8 +278,8 @@ if __name__ == "__main__":
     # Should be pointing to zenith (regardless of time)
     config['reference_antenna_location'] = [11.6459889, 44.52357778]
     config['reference_declination'] = 58.918
-    config['pointings'] = [[-1.6, 0]]
+    config['pointings'] = [[0, 0], [-1.6, 0.5], [0, 0.5], [1.6, -1]]
+    config['nbeams'] = len(config['pointings'])
 
     pointing = Pointing(config, 1, 32)
-    print('ok')
-    print pointing.weights[0, 0, :]
+    print pointing.weights
