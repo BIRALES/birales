@@ -39,13 +39,14 @@ class RawDataReader(ProcessingModule):
         # Call superclass initialiser
         super(RawDataReader, self).__init__(config, input_blob)
 
-        # Open file
+        # Load the data file
         try:
             self._f = open(self._filepath, 'rb')
         except IOError:
             log.error('Data not found in %s. Exiting.', self._filepath)
             sys.exit()
 
+        # Load the PKL file
         try:
             self._config = pickle.load(open(self._filepath + config.config_ext, 'rb'))
         except IOError:

@@ -296,8 +296,9 @@ class BiralesFacade:
         :return:
         """
 
-        # Run the correlator pipeline to get model visibilities
-        self.start_observation(pipeline_manager=correlator_pipeline_manager)
+        if settings.calibration.generate_corrmatrix:
+            # Run the correlator pipeline to get model visibilities
+            self.start_observation(pipeline_manager=correlator_pipeline_manager)
 
         # Generate the calibration_coefficients
         self._calibration.calibrate()
@@ -306,7 +307,7 @@ class BiralesFacade:
         # Load Coefficients to ROACH
         if self._backend:
             self._backend.load_calibration_coefficients(amplitude_filepath=None, phase_filepath=None, amplitude=None,
-                                                            phase=None)
+                                                        phase=None)
             log.info('Calibration coefficients loaded to the ROACH')
 
     @staticmethod

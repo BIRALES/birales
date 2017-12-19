@@ -28,20 +28,8 @@ class CorrMatrixPersister(ProcessingModule):
         if {'filename_suffix', 'use_timestamp'} - set(config.settings()) != set():
             raise PipelineError("Persister: Missing keys on configuration. (filename_suffix, use_timestamp)")
 
-        # Create directory if it doesn't exist
-        directory = os.path.join(settings.calibration.real_vis_dir, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
-                                 settings.observation.name)
-        filename = settings.observation.name + self._config.filename_suffix
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-        # Create file
-        if config.use_timestamp:
-            self._filepath = os.path.join(directory, "%s_%s" % (filename, str(time.time())))
-        else:
-            if 'filename_suffix' not in config.settings():
-                raise PipelineError("CorrMatrixPersister: filename_suffix required when not using timestamp")
-            self._filepath = os.path.join(directory, filename + '.h5')
+        # Get the destination file path of the persisted data
+        self._filepath = self._get_filepath(config) + '.h5'
 
         # Variable to check whether meta file has been written
         self._head_filepath = self._filepath + '.pkl'
@@ -53,6 +41,27 @@ class CorrMatrixPersister(ProcessingModule):
 
         # Processing module name
         self.name = "CorrMatrixPersister"
+
+    def _get_filepath(self, config):
+        """
+        Return the file path of the persisted data
+
+        :param config:
+        :return:
+        """
+
+        # Create directory if it doesn't exist
+        directory = os.path.join(settings.calibration.tmp_dir, settings.observation.name)
+        filename = settings.observation.name + self._config.filename_suffix
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        if config.use_timestamp:
+            return os.path.join(directory, "%s_%s" % (filename, str(time.time())))
+        else:
+            if 'filename_suffix' not in config.settings():
+                raise PipelineError("CorrMatrixPersister: filename_suffix required when not using timestamp")
+            return os.path.join(directory, filename)
 
     def generate_output_blob(self):
         """

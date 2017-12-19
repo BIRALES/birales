@@ -1,8 +1,8 @@
 import logging as log
 import os
-import tempfile as tmp
 import time
 import shutil
+import pickle
 
 from pytcpo.Pipelines.ModelVisibilitiesPipeline import ModelVisPipelineBuilder
 from pytcpo.Pipelines.RealVisibilitiesPipeline import RealVisPipelineBuilder
@@ -14,7 +14,14 @@ from pybirales import settings
 
 class CalibrationFacade:
     def __init__(self):
-        self._real_vis_dir = settings.calibration.real_vis_dir
+        # Create TM instance and load configuration json
+        self._tm = TM.Instance()
+        self._tm.from_dict(self._tcpo_config_adapter())
+
+        self.obs_info = None
+        # Load the observation settings only if the pipeline is running in offline mode
+        if settings.manager.offline:
+            self.obs_info = self._load_pkl_file(settings.rawdatareader.filepath)
 
     @staticmethod
     def _tcpo_config_adapter():
@@ -27,7 +34,7 @@ class CalibrationFacade:
             'antennas': antennas,
             'starting_channel': settings.observation.start_center_frequency,
             'bandwith': settings.observation.channel_bandwidth,
-            'longitude_centre':  settings.beamformer.reference_antenna_location[0],
+            'longitude_centre': settings.beamformer.reference_antenna_location[0],
             'latitude_centre': settings.beamformer.reference_antenna_location[1],
             'PCDec': settings.beamformer.reference_declination,
             't_average': settings.calibration.t_average,
@@ -36,71 +43,87 @@ class CalibrationFacade:
             'start_time': "21-11-2017 11:18:48.000",
         }
 
-    def calibrate(self):
+    @staticmethod
+    def _load_pkl_file(filepath):
         """
-        Run the calibration Routine
+        Load Pickle file
 
-        Adapted from TCPO / python / Scripts / Pipelines / CalibrationPipelineMultiProcessing.py
+        :param filepath:
+        :return:
+        """
+
+        try:
+            return pickle.load(open(filepath + '.pkl', 'rb'))
+        except IOError:
+            raise BaseException("PKL file not found in {}".format(filepath))
+
+    def _get_correlation_matrix_filepath(self):
+        """
+        Return the filepath of the correlation matrix data
 
         :return:
         """
 
-        log.info('Running the calibration routine.')
+        if settings.calibration.h5_filepath:
+            return settings.calibration.h5_filepath
 
-        # Create temp dir
-        main_dir = tmp.tempdir
+        # Create directory if it doesn't exist
+        directory = self._get_tmp_directory()
+        filename = settings.observation.name + settings.corrmatrixpersister.filename_suffix
+        filepath = os.path.join(directory, filename + '.h5')
+        if os.path.exists(filepath):
+            return filepath
 
-        sc = settings.calibration
+        raise BaseException("Correlation Matrix data was not found in {}".format(directory))
 
-        # Create TM instance and load json
-        tm = TM.Instance()
-        tm.from_dict(self._tcpo_config_adapter())
+    @staticmethod
+    def _get_tmp_directory():
+        """
 
-        # Setup RealVisCal
-        transit_run_file = os.path.join(self._real_vis_dir, sc.real_vis_file)
-        calib_check_path = os.path.join(self._real_vis_dir, 'calib_plot.png')
-        model_vis_dir = os.path.join(main_dir, 'MSets')
-        model_vis_generated = os.path.join(main_dir, 'model_vis.txt')
-        coeffs_out = os.path.join(main_dir, 'coeffs_pointing.txt')
+        :return:
+        """
+
+        directory = os.path.join(settings.calibration.tmp_dir, settings.observation.name)
+
+        if os.path.exists(directory):
+            return directory
+
+        raise BaseException("Temporary calibration directory not found in {}".format(directory))
+
+    def _get_real_vis_pipeline_parameters(self, config, calib_dir, tm):
+        """
+
+        :param config:
+        :param tm:
+        :return:
+        """
 
         time_steps = int(tm.ObsLength / tm.TimeAverage)
         no_of_antennas = tm.antennas.shape[0]
+        bas_ant_no = self._get_antenna_base_line(config.auto_corr, no_of_antennas)
 
-        bas_ant_no = self._get_antenna_base_line(sc.auto_corr, no_of_antennas)
-
-        # ModelVisGenPipeline process creation
-        model_vis_pipeline = ModelVisPipelineBuilder.ModelVisPipelineBuilder()
-        model_vis_pipeline.setup(
-            params={'TM_instance': tm, 'source': main_dir, 'model_file': main_dir + '/model_vis.txt'})
-
-        model_vis_manager = model_vis_pipeline.build()
-        model_vis_process = PipelineParallelisation(model_vis_manager)
-
-        # RealVisGenPipeline process creation
-        real_vis_pipeline = RealVisPipelineBuilder.RealVisPipelineBuilder()
-        real_vis_pipeline.setup(params={'actual_vis_directory': self._real_vis_dir + sc.real_vis_dir, 'model_vis_directory': model_vis_dir,
-                                        'model_vis_list_path': model_vis_generated, 'total_time_samples': time_steps,
-                                        'selfcal': sc.selfcal, 'stefcal': sc.stefcal, 'no_of_antennas': no_of_antennas,
-                                        'coeffs_filepath': coeffs_out, 'transit_run': sc.transit_run,
-                                        'baseline_no': bas_ant_no,
-                                        'coeff_test_run': sc.coeff_test, 'main_dir': main_dir,
-                                        'calibration_dec': sc.calibration_dec,
-                                        'pointing_ra': tm.PCRA, 'pointing_dec': tm.PCDec, 'antennas': tm.antennas,
-                                        'longitude': tm.cen_lon, 'latitude': tm.cen_lat,
-                                        'calib_check_path': calib_check_path,
-                                        'frequency': tm.StartFreq, 'bandwith': tm.Bandwith,
-                                        'transit_file': transit_run_file})
-
-        real_vis_manager = real_vis_pipeline.build()
-        real_vis_process = PipelineParallelisation(real_vis_manager)
-
-        if sc.model_generation is True:
-            model_vis_process.start()
-            time.sleep(3)
-        real_vis_process.start()
-        real_vis_process.join()
-
-        shutil.rmtree(main_dir, ignore_errors=True)
+        return {'actual_vis_directory': calib_dir,
+                'model_vis_directory': os.path.join(calib_dir, 'MSets'),
+                'model_vis_list_path': os.path.join(calib_dir, 'model_vis.txt'),
+                'total_time_samples': time_steps,
+                'selfcal': config.selfcal,
+                'stefcal': config.stefcal,
+                'no_of_antennas': no_of_antennas,
+                'coeffs_filepath': os.path.join(calib_dir, 'coeffs_pointing.txt'),
+                'transit_run': config.transit_run,
+                'baseline_no': bas_ant_no,
+                'coeff_test_run': config.coeff_test,
+                'main_dir': calib_dir,
+                'calibration_dec': config.calibration_dec,
+                'pointing_ra': tm.PCRA,
+                'pointing_dec': tm.PCDec,
+                'antennas': tm.antennas,
+                'longitude': tm.cen_lon,
+                'latitude': tm.cen_lat,
+                'calib_check_path': os.path.join(calib_dir, 'calib_plot.png'),
+                'frequency': tm.StartFreq,
+                'bandwith': tm.Bandwith,
+                'transit_file': self._get_correlation_matrix_filepath()}
 
     @staticmethod
     def _get_antenna_base_line(auto_corr, no_of_antennas):
@@ -128,3 +151,43 @@ class CalibrationFacade:
                         cr += 1
 
         return bas_ant_no
+
+    def calibrate(self):
+        """
+        Run the calibration Routine
+
+        Adapted from TCPO / python / Scripts / Pipelines / CalibrationPipelineMultiProcessing.py
+
+        :return:
+        """
+
+        log.info('Running the calibration routine.')
+
+        calib_dir = self._get_tmp_directory()
+
+        model_vis_pipeline = ModelVisPipelineBuilder.ModelVisPipelineBuilder()
+        model_vis_pipeline.setup(
+            params={'TM_instance': self._tm, 'source': str(calib_dir),
+                    'model_file': str(calib_dir + '/model_vis.txt')})
+
+        model_vis_process = PipelineParallelisation(model_vis_pipeline.build())
+
+        # RealVisGenPipeline process creation
+        real_vis_pipeline = RealVisPipelineBuilder.RealVisPipelineBuilder()
+        real_vis_pipeline.setup(
+            params=self._get_real_vis_pipeline_parameters(settings.calibration, calib_dir, self._tm))
+
+        real_vis_process = PipelineParallelisation(real_vis_pipeline.build())
+
+        if settings.calibration.model_generation:
+            log.info('Starting Model Visibilities Process')
+            model_vis_process.start()
+            time.sleep(3)
+
+        log.info('Starting Real Visibilities Process')
+        real_vis_process.start()
+        real_vis_process.join()
+
+        log.info('Calibration routine finished')
+
+        # shutil.rmtree(main_dir, ignore_errors=True)
