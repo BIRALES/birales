@@ -28,6 +28,9 @@ class Backend(object):
         self._antenna_map = [0, 8, 16, 24, 1, 9, 17, 25, 2, 10, 18, 26, 3, 11, 19, 27, 4, 12,
                              20, 28, 5, 13, 21, 29, 6, 14, 22, 30, 7, 15, 23, 31]
 
+        self._coefficients_order = [0, 8, 16, 24, 4, 12, 20, 28, 1, 9, 17, 25, 5, 13, 21, 29,
+                                    2, 10, 18, 26, 6, 14, 22, 30, 3, 11, 19, 27, 7, 15, 23, 31]
+
     def start(self, program_fpga=False, equalize=False, calibrate=False):
         """ Start the ROACH-II backend """
         # Check if roach is connected
@@ -185,6 +188,12 @@ class Backend(object):
                 for item in f.readlines():
                     c = item[:-1].split()
                     amplitude[c[0]] = float(c[1])
+        else:
+            # Coefficients coming from dictionaries, need to re-order
+            new_amplitude = {}
+            for k, v in amplitude.iteritems():
+                new_amplitude[k] = self._coefficients_order[int(k.lstrip('a'))]
+            amplitude = new_amplitude
 
         amplitude_coefficients = np.zeros([32, 1024 / 4], dtype=float)  # 32 antennas, 1024 chans
         values = []
@@ -198,12 +207,19 @@ class Backend(object):
         for a in range(len(indices)):
             amp_header[indices[a]] = values[a]
 
+        # Load phase coefficients
         if phase_filepath is not None:
             with open(phase_filepath, 'r') as f:
                 phase = {}
                 for item in f.readlines():
                     c = item[:-1].split()
                     phase[c[0]] = float(c[1])
+        else:
+            # Coefficients coming from dictionaries, need to re-order
+            new_phase = {}
+            for k, v in phase.iteritems():
+                new_phase[k] = self._coefficients_order[int(k.lstrip('a'))]
+            phase = new_phase
 
         phs_coeffs = np.zeros([32, 1024 / 4], dtype=complex)  # 32 ants, 1024 chans
         values = []
@@ -280,7 +296,7 @@ class Backend(object):
         :param ctrl:
         :return:
         """
-                
+
         # Change control software bits
         num_bits = msb - lsb + 1
         if val > (2 ** num_bits - 1):

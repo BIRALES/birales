@@ -31,8 +31,10 @@ caption {
     width: 220px;
 }
 
-.main-panel {
-    width: calc(100% - 220px);
+@media (min-width: 992px) {
+    .main-panel {
+        width: calc(100% - 220px);
+    }
 }
 
 .pagination {

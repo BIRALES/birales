@@ -29,18 +29,16 @@ class BEST2(object):
 
         # Create socket
         self._connected = False
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._socket = None
 
         # Connect to server
         self._connect()
-
-        # Keep track of current pointing
-        self.get_current_declination()
 
     def _connect(self):
         """ Connect to server """
         try:
             # Check if server is already running
+            self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._socket.connect((self._ip, self._port))
             self._connected = True
             logging.info("Connected to existing backend server")
@@ -52,14 +50,20 @@ class BEST2(object):
 
             time.sleep(1)
 
+            self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._socket.connect((self._ip, self._port))
             self._connected = True
+
+        # Keep track of current pointing
+        self.get_current_declination()
 
     def start_best2_server(self):
         """ Start BEST-2 server"""
         self._best2_server = SdebTCPServer(("", self._port))
         while not self._stop_server:
             self._best2_server.handle_request()
+        self._stop_server = False
+        logging.info("BEST-II server stopped")
 
     def stop_best2_server(self):
         """ Stop BEST-2 server """
@@ -68,6 +72,13 @@ class BEST2(object):
             self._socket.close()
             if self._best2_server is not None:
                 self._stop_server = True
+                while self._stop_server:
+                    logging.info("Waiting for BEST-II server to stop")
+                    time.sleep(1)
+
+                self._best2_server.server_close()
+                del self._best2_server
+                self._best2_server = None
             self._connected = False
 
     def get_current_declination(self):
@@ -192,8 +203,12 @@ if __name__ == "__main__":
     log.addHandler(ch)
 
     best2 = BEST2.Instance()
-    logging.info("Current declination is {}".format(best2.current_pointing))
-
-    best2.move_to_declination(41)
 
     best2.stop_best2_server()
+
+    best2 = BEST2.Instance()
+
+    best2.move_to_declination(30)
+
+    best2.stop_best2_server()
+

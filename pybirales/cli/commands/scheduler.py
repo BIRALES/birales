@@ -3,11 +3,16 @@ import datetime
 import dateutil.parser
 import humanize
 import json
+
+import os
 import pytz
 import sched
 import sys
 import threading
 import time
+
+import signal
+
 from pybirales.birales import BiralesFacade, BiralesConfig
 from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, CorrelatorPipelineManagerBuilder, \
     StandAlonePipelineMangerBuilder
@@ -57,6 +62,17 @@ def start_observation(observation_settings):
     :param observation_settings: A dictionary of settings read from the scheduler json config file
     :return:
     """
+    bf = None
+
+    def _signal_handler(signum, frame):
+        """ Capturing interrupt signal """
+        message('INFO', "Ctrl-C detected by process %s, stopping pipeline" % os.getpid())
+
+        if bf is not None:
+            bf.stop_observation()
+
+    # Set interrupt signal handler
+    signal.signal(signal.SIGINT, _signal_handler)
 
     # Load the BIRALES configuration from file
     config = BiralesConfig(observation_settings['config_file'], observation_settings['config_parameters'])
@@ -76,8 +92,8 @@ def start_observation(observation_settings):
 
     manager = bf.build_pipeline(builder)
 
+    # Start observation
     bf.start_observation(pipeline_manager=manager)
-
 
 def obs_overlaps_schedule(schedule, start_time, end_time):
     """
@@ -198,7 +214,10 @@ def scheduler(schedule_file_path):
     monitor.start()
 
     try:
+        # Run scheduler
         s.run()
+
+        #
     except KeyboardInterrupt:
         message('INFO', 'Ctrl-C received. Terminating the scheduler process.')
         sys.exit()

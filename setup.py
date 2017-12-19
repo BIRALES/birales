@@ -26,7 +26,7 @@ setup(
                       "numpy",
                       "matplotlib",
                       "numba",
-                      "pymongo==2.8.1",
+                      "pymongo==2.8.*",
                       "scipy",
                       "scikit-learn",
                       "ephem",

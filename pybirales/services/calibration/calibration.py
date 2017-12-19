@@ -23,6 +23,8 @@ class CalibrationFacade:
         if settings.manager.offline:
             self.obs_info = self._load_pkl_file(settings.rawdatareader.filepath)
 
+        self.dict_real = {}
+        self.dict_imag = {}
     @staticmethod
     def _tcpo_config_adapter():
         antennas = {}
@@ -152,6 +154,20 @@ class CalibrationFacade:
 
         return bas_ant_no
 
+    @staticmethod
+    def _get_calibration_coeffs(coeff_file):
+
+        dict_real = {}
+        dict_imag = {}
+
+        calib_coeffs = np.loadtxt(coeff_file, dtype=np.complex)
+
+        for i in range(len(calib_coeffs)):
+            dict_real['a' + str(i)] = calib_coeffs[i].real
+            dict_imag['a' + str(i)] = np.angle(calib_coeffs[i], deg=True)
+
+        return dict_real, dict_imag
+
     def calibrate(self):
         """
         Run the calibration Routine
@@ -189,5 +205,9 @@ class CalibrationFacade:
         real_vis_process.join()
 
         log.info('Calibration routine finished')
+
+        coeff_file = os.path.join(calib_dir, 'coeffs_no_geom.txt')
+        self.dict_real, self.dict_imag = self._get_calibration_coeffs(coeff_file)
+
 
         # shutil.rmtree(main_dir, ignore_errors=True)
