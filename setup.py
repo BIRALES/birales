@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pybirales',
-    version='1.0',
+    version='2.0',
     packages=find_packages(),
     url='https://bitbucket.org/lessju/birales',
     license='',
