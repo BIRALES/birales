@@ -25,6 +25,7 @@ class CalibrationFacade:
 
         self.dict_real = {}
         self.dict_imag = {}
+
     @staticmethod
     def _tcpo_config_adapter():
         antennas = {}
@@ -208,6 +209,5 @@ class CalibrationFacade:
 
         coeff_file = os.path.join(calib_dir, 'coeffs_no_geom.txt')
         self.dict_real, self.dict_imag = self._get_calibration_coeffs(coeff_file)
-
 
         # shutil.rmtree(main_dir, ignore_errors=True)
