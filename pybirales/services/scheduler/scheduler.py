@@ -13,7 +13,7 @@ import logging as log
 from pybirales.birales import BiralesFacade, BiralesConfig
 from pybirales.services.scheduler.exceptions import NoObservationsQueuedException, ObservationScheduledInPastException, \
     ObservationsConflictException
-from pybirales.services.scheduler.observation import ScheduledObservation
+from pybirales.services.scheduler.observation import ScheduledObservation, ScheduledCalibrationObservation
 
 
 def monitor_worker(scheduler):
@@ -57,28 +57,12 @@ def run_observation(observation):
     manager = bf.build_pipeline(observation.pipeline_builder)
 
     # Start observation
-    bf.start_observation(pipeline_manager=manager)
-
-
-def run_calibration(observation):
-    """
-    Run calibration routine
-
-    :param observation:
-    :return:
-    """
-
-    # Load the BIRALES configuration from file
-    config = BiralesConfig(observation.config_file, observation.parameters)
-
-    # Initialise the Birales Facade (BOSS)
-    bf = BiralesFacade(configuration=config)
-
-    # Build the Pipeline Manager using the Correlator Pipeline Manager Builder
-    manager = bf.build_pipeline(observation.pipeline_builder)
+    if isinstance(observation, ScheduledObservation):
+        bf.start_observation(pipeline_manager=manager)
 
     # Calibrate the Instrument
-    bf.calibrate(correlator_pipeline_manager=manager)
+    if isinstance(observation, ScheduledCalibrationObservation):
+        bf.calibrate(correlator_pipeline_manager=manager)
 
 
 class Scheduler:
@@ -95,7 +79,7 @@ class Scheduler:
         self._scheduler = sched.scheduler(time.time, time.sleep)
 
         # A queue of observation objects
-        self._observation_queue = []
+        self._observations_queue = []
 
         # The maximum amount of time BIRALES will run before re-calibrating (specified in hours)
         self._max_uncalibrated_threshold = 24
@@ -152,8 +136,15 @@ class Scheduler:
         """
 
         # Check if there are scheduled observations
-        if not self._observation_queue:
+        if not self._observations_queue:
             raise NoObservationsQueuedException()
+
+        # Schedule the observations
+        now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+        for observation in self._observations_queue:
+            wait_seconds = (observation.start_time_padded - now).total_seconds()
+            if wait_seconds < 1:
+                self._scheduler.enter(delay=wait_seconds, priority=0, action=run_observation, argument=(observation,))
 
         # Start the monitoring thread
         self._monitor_thread.start()
@@ -179,8 +170,8 @@ class Scheduler:
             self._add_observation(observation)
 
         # Show that start time of all the observations to the user
-        log.info('{} observations queued.'.format(len(self._observation_queue)))
-        for observation in self._observation_queue:
+        log.info('{} observations queued.'.format(len(self._observations_queue)))
+        for observation in self._observations_queue:
             log.info(observation.start_message())
 
     def _add_observation(self, observation):
@@ -195,31 +186,29 @@ class Scheduler:
         now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
 
         try:
+            # Check if observation is in the future
+            self._is_future_observation(now, observation)
+
+            # Check if this observation conflicts with the scheduled observation
             self._observation_conflict(observation)
-
-            wait_seconds = (observation.start_time_padded - now).total_seconds()
-
-            if wait_seconds < 1:
-                raise ObservationScheduledInPastException(observation.parameters, observation.start_time_padded)
 
         except ObservationsConflictException:
             log.error("Observation '{}', could not be scheduled".format(observation.name))
         except ObservationScheduledInPastException:
             log.error("Observation '{}' could not be scheduled".format(observation.name))
         else:
-            # Add the observation to the queue
-            self._observation_queue.append(observation)
+            # Check if calibration is required, if yes schedule a calibration routine
+            calibration_observation = self._get_calibration_observation(observation)
+            if calibration_observation:
+                self._observations_queue.append(calibration_observation)
 
-            # Schedule the observation
-            self._scheduler.enter(delay=wait_seconds,
-                                  priority=0,
-                                  action=run_observation,
-                                  argument=(observation,))
+            # Add the observation to the queue
+            self._observations_queue.append(observation)
 
             log.info("Observation '{}', queued successfully".format(observation.name))
 
-    def _is_calibration_required(self):
-        pass
+    def _get_calibration_observation(self, observation):
+        return True
 
     def _add_calibration_observation(self):
         """
@@ -227,7 +216,8 @@ class Scheduler:
 
         :return:
         """
-        pass
+
+        return None
 
     def _get_earliest_calibration(self):
         """
@@ -237,6 +227,13 @@ class Scheduler:
         """
 
         pass
+
+    @staticmethod
+    def _is_future_observation(now, observation):
+        wait_seconds = (observation.start_time_padded - now).total_seconds()
+
+        if wait_seconds < 1:
+            raise ObservationScheduledInPastException(observation.parameters, observation.start_time_padded)
 
     def _observation_conflict(self, observation):
         """
@@ -251,7 +248,7 @@ class Scheduler:
         start_time = observation.start_time_padded
         end_time = observation.end_time_padded
 
-        for scheduled_observation in self._observation_queue:
+        for scheduled_observation in self._observations_queue:
             so_start = scheduled_observation.start_time_padded
             so_end = scheduled_observation.end_time_padded
 

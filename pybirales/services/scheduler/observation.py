@@ -91,10 +91,11 @@ class ScheduledObservation:
 
         raise PipelineIsNotAvailableException(pipeline_name)
 
-# class ScheduledCalibration(ScheduledObservation):
-#     def __init__(self):
-#         super(ScheduledCalibration, self).__init__()
-#         self.start_time = None
-#         self.end_time = None
-#         self.duration = None
-#         self.parameters = None
+
+class ScheduledCalibrationObservation(ScheduledObservation):
+    def __init__(self):
+        super(ScheduledCalibrationObservation, self).__init__()
+        self.start_time = None
+        self.end_time = None
+        self.duration = None
+        self.parameters = None
