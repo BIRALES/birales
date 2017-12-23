@@ -14,29 +14,8 @@ from pybirales.birales import BiralesFacade, BiralesConfig
 from pybirales.services.scheduler.exceptions import NoObservationsQueuedException, ObservationScheduledInPastException, \
     ObservationsConflictException
 from pybirales.services.scheduler.observation import ScheduledObservation, ScheduledCalibrationObservation
-
-
-def monitor_worker(scheduler):
-    """
-    Start the monitoring thread
-
-    :return:
-    """
-
-    while not scheduler.empty():
-        now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
-        for observation in scheduler.queue:
-            obs_settings = observation.argument[0]
-            start_time = dateutil.parser.parse(obs_settings['config_parameters']['start_time'])
-            time_remaining = humanize.naturaltime(now - start_time)
-
-            log.info('The %s for the "%s" observation is scheduled to start in %s',
-                     obs_settings['pipeline'],
-                     obs_settings['name'],
-                     time_remaining)
-
-        # Do not show the output again for the next N seconds
-        time.sleep(60)
+from pybirales.services.scheduler.queue import ObservationsQueue
+from pybirales.services.scheduler.monitoring import monitor_worker
 
 
 def run_observation(observation):
@@ -79,7 +58,7 @@ class Scheduler:
         self._scheduler = sched.scheduler(time.time, time.sleep)
 
         # A queue of observation objects
-        self._observations_queue = []
+        self._observations_queue = ObservationsQueue()
 
         # The maximum amount of time BIRALES will run before re-calibrating (specified in hours)
         self._max_uncalibrated_threshold = 24
@@ -174,41 +153,8 @@ class Scheduler:
         for observation in self._observations_queue:
             log.info(observation.start_message())
 
-    def _add_observation(self, observation):
-        """
-        Schedule an observation
-
-        :param observation: The observation to be scheduled
-        :type observation: ScheduledObservation
-        :return:
-        """
-
-        now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
-
-        try:
-            # Check if observation is in the future
-            self._is_future_observation(now, observation)
-
-            # Check if this observation conflicts with the scheduled observation
-            self._observation_conflict(observation)
-
-        except ObservationsConflictException:
-            log.error("Observation '{}', could not be scheduled".format(observation.name))
-        except ObservationScheduledInPastException:
-            log.error("Observation '{}' could not be scheduled".format(observation.name))
-        else:
-            # Check if calibration is required, if yes schedule a calibration routine
-            calibration_observation = self._get_calibration_observation(observation)
-            if calibration_observation:
-                self._observations_queue.append(calibration_observation)
-
-            # Add the observation to the queue
-            self._observations_queue.append(observation)
-
-            log.info("Observation '{}', queued successfully".format(observation.name))
-
-    def _get_calibration_observation(self, observation):
-        return True
+    def _is_calibration_required(self):
+        pass
 
     def _add_calibration_observation(self):
         """
@@ -228,43 +174,4 @@ class Scheduler:
 
         pass
 
-    @staticmethod
-    def _is_future_observation(now, observation):
-        wait_seconds = (observation.start_time_padded - now).total_seconds()
 
-        if wait_seconds < 1:
-            raise ObservationScheduledInPastException(observation.parameters, observation.start_time_padded)
-
-    def _observation_conflict(self, observation):
-        """
-        Check that the passed on observation does not conflict with the queued observations
-
-        :param observation: The observation to be scheduled
-        :type observation: ScheduledObservation
-        :raises ObservationsConflictException: The observation conflicts with the queued observations
-        :return: None
-        """
-
-        start_time = observation.start_time_padded
-        end_time = observation.end_time_padded
-
-        for scheduled_observation in self._observations_queue:
-            so_start = scheduled_observation.start_time_padded
-            so_end = scheduled_observation.end_time_padded
-
-            # Check for time ranges where duration is not defined:
-            if not (so_end and end_time):
-                # If there is an observation that has no end and starts before this observation
-                if not so_end and so_start < start_time:
-                    raise ObservationsConflictException(observation, scheduled_observation)
-
-                # If this observation starts before and does not end
-                if not end_time and start_time < so_start:
-                    raise ObservationsConflictException(observation, scheduled_observation)
-
-            # If this observation overlaps another time range
-            elif (start_time <= so_end) and (so_start <= end_time):
-                raise ObservationsConflictException(observation, scheduled_observation)
-        else:
-            # No overlap detected
-            log.info('No overlap detected between scheduled observations')

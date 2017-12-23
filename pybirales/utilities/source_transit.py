@@ -35,7 +35,7 @@ def get_calibration_source_declination(source_name):
     return np.math.degrees(ephem.degrees(v['dec']))
 
 
-def get_next_tranist(source_name, date=None):
+def _ephem_compute(source_name, date=None):
     """ Get the next transit time for the give source"""
 
     # Check whether calibration source is valid
@@ -54,19 +54,53 @@ def get_next_tranist(source_name, date=None):
     ephemline = '%s,f,%s,%s,%s,%d' % (v['name'], v['ra'], v['dec'], np.log10(v['flux']), epoch)
     body = ephem.readdb(ephemline)
     body.compute(obs)
+
+    return body
+
+
+def get_next_transit(source_name, date=None):
+    body = _ephem_compute(source_name, date)
     next_transit = obs.next_transit(body)
     time_to_transit = next_transit - obs.date
 
     return next_transit, time_to_transit * 24 * 3600
 
 
+def get_previous_transit(source_name, date=None):
+    body = _ephem_compute(source_name, date)
+    previous_transit = obs.previous_transit(body)
+    time_to_transit = previous_transit - obs.date
+
+    return previous_transit.datetime(), time_to_transit * 24 * 3600
+
+
+def get_best_calibration_obs(observation_date):
+    min_time_to_transit = datetime.timedelta(minutes=30)
+    max_flux = -1
+    chosen_obs = None
+    for source, v in calibration_sources.iteritems():
+        previous_transit_time, ttt = get_previous_transit(source, observation_date)
+
+        if previous_transit_time > observation_date:
+            continue
+
+        if v['flux'] > max_flux and min_time_to_transit < (observation_date - previous_transit_time):
+            max_flux = v['flux']
+            chosen_obs = {
+                'name': source,
+                'parameters': v,
+                'transit_time': previous_transit_time
+            }
+
+    return chosen_obs
+
+
 if __name__ == "__main__":
     for k, v in calibration_sources.iteritems():
-        date, seconds = get_next_tranist(k, datetime.datetime.now())
+        date, seconds = get_next_transit(k, datetime.datetime.now())
         print "%+8s : RA: %11s  DEC: %11s  FLUX: %8s  TRANSIT (UTC): %-20s" % (
             k,
             v['ra'],
             v['dec'],
             v['flux'],
             date)
-
