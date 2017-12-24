@@ -1,9 +1,9 @@
-from pybirales.services.scheduler.exceptions import PipelineIsNotAvailableException
-from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, CorrelatorPipelineManagerBuilder, \
-    StandAlonePipelineMangerBuilder
 import datetime
-import dateutil.parser
+
 import pytz
+from pybirales.services.instrument.best2 import BEST2
+from pybirales.services.scheduler.exceptions import ObservationScheduledInPastException
+from pybirales.pipeline.pipeline import CorrelatorPipelineManagerBuilder
 
 
 class ScheduledObservation:
@@ -11,7 +11,7 @@ class ScheduledObservation:
     OBS_END_PADDING = datetime.timedelta(seconds=60)
     OBS_START_PADDING = datetime.timedelta(seconds=60)
 
-    def __init__(self, name, config_file, pipeline_name, dec, start_time, duration=None, start_time_padding=None):
+    def __init__(self, name, config_file, pipeline_builder, dec, start_time, duration=None, nxt_obs=None, prv_obs=None):
         """
         Initialisation function for the Scheduled Observation
 
@@ -20,39 +20,47 @@ class ScheduledObservation:
 
         self.name = name
         self.config_file = config_file
-        self.pipeline_name = pipeline_name
+        self.pipeline_name = pipeline_builder.manager.name
         self.declination = dec
         self.start_time = start_time
         self.duration = duration
         self.end_time = None
 
-        self.pipeline_builder = self._get_builder(self.pipeline_name)
+        self.pipeline_builder = pipeline_builder
         self.created_at = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
-        self.wait_seconds = ScheduledObservation.DEFAULT_WAIT_SECONDS
 
+        self._next_observation = nxt_obs
+        self._prev_observation = prv_obs
+
+        # Set the default time padding at the end of the observation
         self.end_time_padding = ScheduledObservation.OBS_END_PADDING
+
+        # Set the default time padding at the start of the observation
         self.start_time_padding = ScheduledObservation.OBS_START_PADDING
 
-        if start_time_padding:
-            self.start_time_padding = start_time_padding
+        if prv_obs:
+            # Set the time taken to move the instrument from the previous declination to this observation declination
+            # todo this need to be changed every time a previous observation is added
+            self.start_time_padding = BEST2().pointing_time(dec1=prv_obs.declination, dec2=self.declination)
 
         if self.duration:
             self.end_time = start_time + self.duration
 
-        """
-        if 'duration' in self.parameters:
-            self.end_time = dateutil.parser.parse(self.parameters['start_time']) + datetime.timedelta(
-                seconds=self.parameters['duration'])
-            self.duration = self.parameters['duration']
+    @property
+    def next_observation(self):
+        return self._next_observation
 
-            self.end_time_padded = self.end_time + ScheduledObservation.OBS_END_PADDING
+    @next_observation.setter
+    def next_observation(self, observation):
+        self._next_observation = observation
 
-        if 'start_time' in self.parameters:
-            self.start_time = dateutil.parser.parse(self.parameters['start_time'])
+    @property
+    def prev_observation(self):
+        return self._prev_observation
 
-            # todo - This should be set dynamically depending on previous pointing
-            self.start_time_padded = self.start_time - ScheduledObservation.OBS_START_PADDING
-        """
+    @prev_observation.setter
+    def prev_observation(self, observation):
+        self._prev_observation = observation
 
     def start_message(self):
         """
@@ -74,26 +82,6 @@ class ScheduledObservation:
 
         return start_msg
 
-    @staticmethod
-    def _get_builder(pipeline_name):
-        """
-        Return the pipeline manager builder by name
-
-        @todo - this can converted into a util class an be accessible by any module
-        :param pipeline_name: The name of the pipeline builder
-        :raises PipelineIsNotAvailableException: The pipeline with the supplied pipeline_name does not exist
-        :return:
-        """
-
-        if pipeline_name == 'detection_pipeline':
-            return DetectionPipelineMangerBuilder()
-        elif pipeline_name == 'correlation_pipeline':
-            return CorrelatorPipelineManagerBuilder()
-        elif pipeline_name == 'standalone_pipeline':
-            return StandAlonePipelineMangerBuilder()
-
-        raise PipelineIsNotAvailableException(pipeline_name)
-
     @property
     def start_time_padded(self):
         """
@@ -112,11 +100,20 @@ class ScheduledObservation:
         """
         return self.end_time + self.end_time_padded
 
+    def is_in_future(self):
+        now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+        wait_seconds = (self.start_time_padded - now).total_seconds()
+
+        if wait_seconds < 1:
+            raise ObservationScheduledInPastException(self)
+
 
 class ScheduledCalibrationObservation(ScheduledObservation):
-    def __init__(self, name, config_file, dec, start_time, start_time_padding=None):
-
-        pipeline_name = 'correlator_pipeline'
+    def __init__(self, source, config_file, prv_obs):
+        name = '{}_{}.calibration'.format(source['name'], source['date'])
+        dec = source['parameters']['dec']
+        start_time = source['transit_time']
         duration = 3600
-        super(ScheduledCalibrationObservation, self).__init__(name, config_file, pipeline_name, dec, start_time,
-                                                              duration, start_time_padding)
+
+        ScheduledObservation.__init__(self, name, config_file, CorrelatorPipelineManagerBuilder(), dec, start_time,
+                                      duration, prv_obs)

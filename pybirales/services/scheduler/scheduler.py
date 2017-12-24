@@ -1,21 +1,20 @@
 import datetime
-import dateutil.parser
-import humanize
 import json
-
-import pytz
+import logging as log
 import sched
 import sys
 import threading
 import time
-import logging as log
+from operator import attrgetter
+import dateutil.parser
 
+import pytz
 from pybirales.birales import BiralesFacade, BiralesConfig
-from pybirales.services.scheduler.exceptions import NoObservationsQueuedException, ObservationScheduledInPastException, \
-    ObservationsConflictException
-from pybirales.services.scheduler.observation import ScheduledObservation, ScheduledCalibrationObservation
-from pybirales.services.scheduler.queue import ObservationsQueue
+from pybirales.services.scheduler.exceptions import NoObservationsQueuedException, IncorrectScheduleFormat
 from pybirales.services.scheduler.monitoring import monitor_worker
+from pybirales.services.scheduler.observation import ScheduledObservation, ScheduledCalibrationObservation
+from pybirales.services.scheduler.schedule import Schedule
+from pybirales.pipeline.pipeline import get_builder_by_id
 
 
 def run_observation(observation):
@@ -44,7 +43,7 @@ def run_observation(observation):
         bf.calibrate(correlator_pipeline_manager=manager)
 
 
-class Scheduler:
+class ObservationsScheduler:
     # By default, all observation have a delayed start by this amount
     DEFAULT_WAIT_SECONDS = 5
 
@@ -58,7 +57,7 @@ class Scheduler:
         self._scheduler = sched.scheduler(time.time, time.sleep)
 
         # A queue of observation objects
-        self._observations_queue = ObservationsQueue()
+        self._schedule = Schedule()
 
         # The maximum amount of time BIRALES will run before re-calibrating (specified in hours)
         self._max_uncalibrated_threshold = 24
@@ -69,43 +68,26 @@ class Scheduler:
         # Monitoring thread that will output the status of the scheduler at specific intervals
         self._monitor_thread = threading.Thread(target=monitor_worker, args=(self._scheduler,))
 
-    def load_from_json_schedule(self, schedule_file_path):
+    def load_from_file(self, schedule_file_path, file_format='json'):
         """
         Schedule a series of observations described in a JSON input file
 
-        :param schedule_file_path: The file path to the schedule in JSON format
+        :param schedule_file_path: The file path to the schedule
+        :param file_format: The format of the schedule
         :return: None
         """
 
-        # Open JSON file and convert it to a dictionary that can be iterated on
-        with open(schedule_file_path) as json_data:
-            scheduled_observations = json.load(json_data)
+        obs = []
+        if format is 'json':
+            # Open JSON file and convert it to a dictionary that can be iterated on
+            with open(schedule_file_path) as json_data:
+                obs = json.load(json_data)
 
-        # Create ScheduledObservation objects from the input file
-        observations = [ScheduledObservation(name=obs_name, params=obs) for obs_name, obs in
-                        scheduled_observations.iteritems()]
-
-        # Schedule the observations
-        self._add_observations(observations)
-
-    @staticmethod
-    def load_from_tdm_schedule(schedule_file_path):
-        """
-        Schedule a series of observations described in a TDM input file
-
-        :param schedule_file_path: The file path to the schedule in TDM format
-        :return: None
-        """
-
-        # todo - Implement the functionality (follow JSON variant's implementation)
-        # Open TDM file and convert it to a dictionary that can be iterated on
-        #
-
-        # Create ScheduledObservation objects from the input file
-        #
-
-        # Schedule the observations
-        # self._add_observations(observations)
+        if obs:
+            # Schedule the observations
+            self._add_observations(obs)
+        else:
+            raise IncorrectScheduleFormat
 
     def start(self):
         """
@@ -115,12 +97,12 @@ class Scheduler:
         """
 
         # Check if there are scheduled observations
-        if not self._observations_queue:
+        if not self._schedule.is_empty():
             raise NoObservationsQueuedException()
 
         # Schedule the observations
         now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
-        for observation in self._observations_queue:
+        for observation in self._schedule:
             wait_seconds = (observation.start_time_padded - now).total_seconds()
             if wait_seconds < 1:
                 self._scheduler.enter(delay=wait_seconds, priority=0, action=run_observation, argument=(observation,))
@@ -135,43 +117,37 @@ class Scheduler:
             log.info('Ctrl-C received. Terminating the scheduler process.')
             sys.exit()
 
-    def _add_observations(self, observations):
+    def _add_observations(self, scheduled_observations):
         """
         Schedule a list of observations
 
-        :param observations: A list of observation objects to be scheduled
-        :type observations: list of ScheduledObservation objects
+        :param scheduled_observations: A list of observation objects to be scheduled
+        :type scheduled_observations: list of ScheduledObservation objects
         :return:
         """
 
+        # Create ScheduledObservation objects from the input file
+        observations = []
+        for obs_name, obs in scheduled_observations.iteritems():
+            # todo - parameters should be handled better than this
+            so = ScheduledObservation(name=obs_name,
+                                      config_file=obs['config_parameters']['config_file'],
+                                      pipeline_builder=get_builder_by_id(obs['config_parameters']['pipeline_manager']),
+                                      dec=obs['config_parameters']['dec'],
+                                      start_time=dateutil.parser.parse(obs['config_parameters']['start_time']),
+                                      duration=obs['config_parameters']['duration'])
+            observations.append(so)
+
+        # It is assumed that the list is sorted by date
+        sorted_observations = sorted(observations, key=attrgetter('ScheduledObservation.start_time_padded'))
         # Schedule the observations
-        for observation in observations:
-            self._add_observation(observation)
+        for observation in sorted_observations:
+            self._schedule.add_observation(observation)
 
         # Show that start time of all the observations to the user
-        log.info('{} observations queued.'.format(len(self._observations_queue)))
-        for observation in self._observations_queue:
+        log.info('{} observations and {} calibration observations queued.'.format(
+            self._schedule.n_observations, self._schedule.n_calibrations))
+
+    def _output_start_messages(self):
+        for observation in self._schedule:
             log.info(observation.start_message())
-
-    def _is_calibration_required(self):
-        pass
-
-    def _add_calibration_observation(self):
-        """
-        Schedule a calibration observation
-
-        :return:
-        """
-
-        return None
-
-    def _get_earliest_calibration(self):
-        """
-        Determine the earliest scheduled calibration routine
-
-        :return:
-        """
-
-        pass
-
-

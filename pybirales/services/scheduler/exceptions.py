@@ -19,13 +19,7 @@ class NoObservationsQueuedException(Exception):
         Exception.__init__(self, "No observations are queued")
 
 
-class PipelineIsNotAvailableException(Exception):
-    # A list of available pipelines
-    AVAILABLE_PIPELINES = ['detection_pipeline', 'correlator_pipeline', 'standalone_pipeline']
-
-    def __init__(self, pipeline_name):
-        available_pipelines = "({})".format(', '.join(['%s'] * len(self.AVAILABLE_PIPELINES)))
-        Exception.__init__(self, "The '{}' pipeline is not available. Please choose one from the following list: {}"
-                           .format(pipeline_name, available_pipelines))
-
-        self.pipeline_name = pipeline_name
+class IncorrectScheduleFormat(Exception):
+    def __init__(self):
+        Exception.__init__(self, "The format of the schedule is incorrect. "
+                                 "Please ensure that the schedule is a valid JSON or TDM file")
