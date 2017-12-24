@@ -20,79 +20,120 @@ epoch = 1950
 
 
 def get_calibration_sources():
-    """ Return a list of known calibration sources"""
+    """
+    Return a list of known calibration sources
+
+    :return:
+    """
+
     return calibration_sources.keys()
 
 
 def get_calibration_source_declination(source_name):
-    """Get calibration source declination"""
+    """
+    Get the declination of the calibration source
+
+    :param source_name:
+    :return:
+    """
 
     # Check whether calibration source is valid
     if source_name not in calibration_sources.keys():
         raise Exception("{} not a known calibration source".format(source_name))
 
-    v = calibration_sources[source_name]
-    return np.math.degrees(ephem.degrees(v['dec']))
+    c_v = calibration_sources[source_name]
+
+    return np.math.degrees(ephem.degrees(c_v['dec']))
 
 
-def _ephem_compute(source_name, date=None):
-    """ Get the next transit time for the give source"""
+def _ephem_compute(source_name, obs_date=None):
+    """
+    Compute the ephem body
+
+    :param source_name:
+    :param obs_date:
+    :return:
+    """
 
     # Check whether calibration source is valid
     if source_name not in calibration_sources.keys():
         raise Exception("{} not a known calibration source".format(source_name))
 
-    if date is None:
-        date = ephem.julian_date()
+    if obs_date is None:
+        obs_date = ephem.julian_date()
     else:
-        date = ephem.julian_date(date)
-    obs.date = ephem.date(date - 2415020)
+        obs_date = ephem.julian_date(obs_date)
+    obs.date = ephem.date(obs_date - 2415020)
 
     # Calculate next transit time
-    v = calibration_sources[source_name]
+    c_v = calibration_sources[source_name]
 
-    ephemline = '%s,f,%s,%s,%s,%d' % (v['name'], v['ra'], v['dec'], np.log10(v['flux']), epoch)
-    body = ephem.readdb(ephemline)
+    ephem_line = '%s,f,%s,%s,%s,%d' % (c_v['name'], c_v['ra'], c_v['dec'], np.log10(v['flux']), epoch)
+    body = ephem.readdb(ephem_line)
     body.compute(obs)
 
     return body
 
 
-def get_next_transit(source_name, date=None):
-    body = _ephem_compute(source_name, date)
+def get_next_transit(source_name, obs_date=None):
+    """
+    Get the first transit time of a source after an obs_date
+
+    :param source_name:
+    :param obs_date:
+    :return:
+    """
+    body = _ephem_compute(source_name, obs_date)
     next_transit = obs.next_transit(body)
     time_to_transit = next_transit - obs.date
 
     return next_transit, time_to_transit * 24 * 3600
 
 
-def get_previous_transit(source_name, date=None):
-    body = _ephem_compute(source_name, date)
+def get_previous_transit(source_name, obs_date=None):
+    """
+    Get the last transit time of a source before an obs_date
+
+    :param source_name:
+    :param obs_date:
+    :return:
+    """
+    body = _ephem_compute(source_name, obs_date)
     previous_transit = obs.previous_transit(body)
     time_to_transit = previous_transit - obs.date
 
     return previous_transit.datetime(), time_to_transit * 24 * 3600
 
 
-def get_best_calibration_obs(observation_date):
-    min_time_to_transit = datetime.timedelta(minutes=30)
-    max_flux = -1
-    chosen_obs = None
-    for source, v in calibration_sources.iteritems():
-        previous_transit_time, ttt = get_previous_transit(source, observation_date)
+def get_best_calibration_obs(from_date, to_date):
+    """
 
-        if previous_transit_time > observation_date:
-            continue
+    Return the possible/available calibration sources for a future observation date
 
-        if v['flux'] > max_flux and min_time_to_transit < (observation_date - previous_transit_time):
-            max_flux = v['flux']
-            chosen_obs = {
-                'name': source,
-                'parameters': v,
-                'transit_time': previous_transit_time
-            }
+    :param from_date:
+    :param to_date:
+    :return: A dictionary of available sources together with their parameters
+    """
+    if from_date is None:
+        from_date = to_date - datetime.timedelta(days=2)
 
-    return chosen_obs
+    if to_date <= from_date:
+        raise ValueError("TO date cannot be before FROM date")
+
+    # Account for time to calibrate
+    max_to_date = to_date - datetime.timedelta(minutes=30)
+
+    available_calibration_sources = []
+    for source, source_parameters in calibration_sources.iteritems():
+        previous_transit_time, ttt = get_previous_transit(source, max_to_date)
+
+        if from_date < previous_transit_time < max_to_date:
+            source_parameters['name'] = source
+            source_parameters['transit_time'] = previous_transit_time
+
+            available_calibration_sources.append(source_parameters)
+
+    return available_calibration_sources
 
 
 if __name__ == "__main__":
