@@ -1,6 +1,6 @@
 import datetime
 import logging as log
-from pybirales.services.scheduler.exceptions import ObservationsConflictException
+from pybirales.services.scheduler.exceptions import ObservationsConflictException, ObservationScheduledInPastException
 from pybirales.services.scheduler.observation import ScheduledCalibrationObservation, ScheduledObservation
 from pybirales.utilities.source_transit import get_best_calibration_obs
 
@@ -85,11 +85,16 @@ class Schedule:
         :return:
         """
 
-        # Check if observation is in the future
-        new_obs.is_in_future()
+        try:
+            # Check if observation is in the future
+            new_obs.is_in_future()
 
-        # Check if this observation conflicts with the scheduled observation - todo
-        self._conflicts(self._head, new_obs)
+            # Check if this observation conflicts with the scheduled observation - todo
+            self._conflicts(self._head, new_obs)
+        except ObservationScheduledInPastException:
+            log.error('Could not schedule this observation %s', new_obs.name)
+        except ObservationsConflictException:
+            log.error('Could not schedule this observation %s', new_obs.name)
 
         if self._head is None:
             # First observation must always be a calibration observation
