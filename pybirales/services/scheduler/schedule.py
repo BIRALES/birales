@@ -6,7 +6,7 @@ from pybirales.utilities.source_transit import get_best_calibration_obs
 
 
 class Schedule:
-    def __init__(self):
+    def __init__(self, time_to_calibrate, recalibration_time):
         self._head = None
         self._tail = None
 
@@ -14,7 +14,9 @@ class Schedule:
         self.n_observations = 0
 
         # Maximum amount of time allowed before the instrument needs to be re-calibrated (in hours)
-        self._recalibration_time = datetime.timedelta(hours=24)
+        self._recalibration_time = recalibration_time
+
+        self._time_to_calibrate = time_to_calibrate
 
     def __len__(self):
         return self.n_calibrations + self.n_observations
@@ -169,7 +171,7 @@ class Schedule:
         from_time = None
         if observation.prev_observation:
             from_time = observation.prev_observation.end_time_padded
-        available_sources = get_best_calibration_obs(from_time, observation.start_time_padded)
+        available_sources = get_best_calibration_obs(from_time, observation.start_time_padded, self._time_to_calibrate)
 
         max_flux = -1
         best_obs = None

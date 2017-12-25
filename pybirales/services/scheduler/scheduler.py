@@ -56,14 +56,15 @@ class ObservationsScheduler:
         # The sched scheduler instance
         self._scheduler = sched.scheduler(time.time, time.sleep)
 
-        # A queue of observation objects
-        self._schedule = Schedule()
-
         # The maximum amount of time BIRALES will run before re-calibrating (specified in hours)
-        self._max_uncalibrated_threshold = 24
+        self._max_uncalibrated_threshold = datetime.timedelta(hours=24)
 
         # Estimated time taken for a calibration observation (specified in minutes)
-        self._calibration_time = 30
+        self._calibration_time = datetime.timedelta(minutes=30)
+
+        # A queue of observation objects
+        self._schedule = Schedule(time_to_calibrate=self._calibration_time,
+                                  recalibration_time=self._max_uncalibrated_threshold)
 
         # Monitoring thread that will output the status of the scheduler at specific intervals
         self._monitor_thread = threading.Thread(target=monitor_worker, args=(self._scheduler,))

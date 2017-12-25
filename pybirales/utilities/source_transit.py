@@ -105,13 +105,14 @@ def get_previous_transit(source_name, obs_date=None):
     return previous_transit.datetime(), time_to_transit * 24 * 3600
 
 
-def get_best_calibration_obs(from_date, to_date):
+def get_best_calibration_obs(from_date, to_date, time_to_calibrate):
     """
 
     Return the possible/available calibration sources for a future observation date
 
     :param from_date:
     :param to_date:
+    :param minutes_to_calibrate:
     :return: A dictionary of available sources together with their parameters
     """
     if from_date is None:
@@ -121,7 +122,7 @@ def get_best_calibration_obs(from_date, to_date):
         raise ValueError("TO date cannot be before FROM date")
 
     # Account for time to calibrate
-    max_to_date = to_date - datetime.timedelta(minutes=30)
+    max_to_date = to_date - time_to_calibrate
 
     available_calibration_sources = []
     for source, source_parameters in calibration_sources.iteritems():
