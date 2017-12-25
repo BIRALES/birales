@@ -110,7 +110,6 @@ class Schedule:
             calibration_obs.next_observation = None
 
             self._tail.next_observation = calibration_obs
-            self._tail.next = calibration_obs
 
             self._increment(calibration_obs)
 
@@ -120,7 +119,6 @@ class Schedule:
         new_obs.next_observation = None
 
         self._tail.next_observation = new_obs
-        self._tail.next = new_obs
 
         self._increment(new_obs)
 

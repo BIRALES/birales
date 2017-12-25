@@ -11,7 +11,7 @@ class ScheduledObservation:
     OBS_END_PADDING = datetime.timedelta(seconds=60)
     OBS_START_PADDING = datetime.timedelta(seconds=60)
 
-    def __init__(self, name, config_file, pipeline_builder, dec, start_time, duration=None, nxt_obs=None, prv_obs=None):
+    def __init__(self, name, config_file, pipeline_builder, dec, start_time, duration=None):
         """
         Initialisation function for the Scheduled Observation
 
@@ -29,8 +29,8 @@ class ScheduledObservation:
         self.pipeline_builder = pipeline_builder
         self.created_at = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
 
-        self._next_observation = nxt_obs
-        self._prev_observation = prv_obs
+        self._next_observation = None
+        self._prev_observation = None
 
         # Set the default time padding at the end of the observation
         self.end_time_padding = ScheduledObservation.OBS_END_PADDING
@@ -38,28 +38,47 @@ class ScheduledObservation:
         # Set the default time padding at the start of the observation
         self.start_time_padding = ScheduledObservation.OBS_START_PADDING
 
-        if prv_obs:
-            # Set the time taken to move the instrument from the previous declination to this observation declination
-            # todo this need to be changed every time a previous observation is added
-            self.start_time_padding = BEST2().pointing_time(dec1=prv_obs.declination, dec2=self.declination)
-
         if self.duration:
             self.end_time = start_time + self.duration
 
     @property
     def next_observation(self):
+        """
+        Get the next observation
+        :return:
+        """
         return self._next_observation
 
     @next_observation.setter
     def next_observation(self, observation):
+        """
+
+        :param observation:
+        :return:
+        """
+
+        # The padding of the observation following this one needs to be updated
+        observation.start_time_padding = BEST2().pointing_time(dec1=self.declination, dec2=observation.declination)
+
+        # Set the next observation
         self._next_observation = observation
 
     @property
     def prev_observation(self):
+        """
+
+        :return:
+        """
+
         return self._prev_observation
 
     @prev_observation.setter
     def prev_observation(self, observation):
+        """
+
+        :param observation:
+        :return:
+        """
         self._prev_observation = observation
 
     def start_message(self):
@@ -101,6 +120,12 @@ class ScheduledObservation:
         return self.end_time + self.end_time_padded
 
     def is_in_future(self):
+        """
+        Check that this observation is in the future
+
+        :return:
+        """
+
         now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
         wait_seconds = (self.start_time_padded - now).total_seconds()
 
@@ -109,11 +134,13 @@ class ScheduledObservation:
 
 
 class ScheduledCalibrationObservation(ScheduledObservation):
-    def __init__(self, source, config_file, prv_obs):
+    def __init__(self, source, config_file):
         name = '{}_{}.calibration'.format(source['name'], source['date'])
         dec = source['parameters']['dec']
         start_time = source['transit_time']
         duration = 3600
 
-        ScheduledObservation.__init__(self, name, config_file, CorrelatorPipelineManagerBuilder(), dec, start_time,
-                                      duration, prv_obs)
+        pipeline_builder = CorrelatorPipelineManagerBuilder()
+
+        ScheduledObservation.__init__(self, name, config_file, pipeline_builder, dec, start_time,
+                                      duration)
