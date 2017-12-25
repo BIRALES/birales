@@ -87,7 +87,7 @@ class ObservationsScheduler:
             # Schedule the observations
             self._add_observations(obs)
         else:
-            raise IncorrectScheduleFormat
+            raise IncorrectScheduleFormat(schedule_file_path)
 
     def start(self):
         """

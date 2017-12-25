@@ -20,6 +20,7 @@ class NoObservationsQueuedException(Exception):
 
 
 class IncorrectScheduleFormat(Exception):
-    def __init__(self):
-        Exception.__init__(self, "The format of the schedule is incorrect. "
-                                 "Please ensure that the schedule is a valid JSON or TDM file")
+    def __init__(self, schedule_file_path):
+        Exception.__init__(self, "The format of the schedule at {} is incorrect. " +
+                           "Please ensure that the schedule is a valid JSON or TDM file"
+                           .format(schedule_file_path))
