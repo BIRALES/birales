@@ -78,7 +78,7 @@ class ObservationsScheduler:
         """
 
         obs = []
-        if format is 'json':
+        if file_format is 'json':
             # Open JSON file and convert it to a dictionary that can be iterated on
             with open(schedule_file_path) as json_data:
                 obs = json.load(json_data)
