@@ -1,5 +1,5 @@
-import datetime
 import logging as log
+
 from pybirales.services.scheduler.exceptions import ObservationsConflictException, ObservationScheduledInPastException
 from pybirales.services.scheduler.observation import ScheduledCalibrationObservation, ScheduledObservation
 from pybirales.utilities.source_transit import get_best_calibration_obs
@@ -7,6 +7,13 @@ from pybirales.utilities.source_transit import get_best_calibration_obs
 
 class Schedule:
     def __init__(self, time_to_calibrate, recalibration_time):
+        """
+        The schedule representation of the scheduler
+
+        :param time_to_calibrate: The time needed for a calibration routine
+        :param recalibration_time: Maximum amount of time before the instrument needs to be re-calibrated (in hours)
+        :return:
+        """
         self._head = None
         self._tail = None
 
@@ -16,6 +23,7 @@ class Schedule:
         # Maximum amount of time allowed before the instrument needs to be re-calibrated (in hours)
         self._recalibration_time = recalibration_time
 
+        # The time needed for a calibration routine
         self._time_to_calibrate = time_to_calibrate
 
     def __len__(self):
@@ -78,27 +86,39 @@ class Schedule:
         log.debug("Checking if `{}` is in conflict with `{}`".format(new_obs.name, scheduled_observation.name))
         return self._conflicts(scheduled_observation.next_observation, new_obs)
 
+    def _is_valid(self, observation):
+        """
+        Determine if the observation is valid
+
+        :param observation:
+        :return:
+        """
+        try:
+            # Check if observation is in the future
+            observation.is_in_future()
+
+            # Check if this observation conflicts with the scheduled observation
+            self._conflicts(self._head, observation)
+        except ObservationScheduledInPastException:
+            log.error('Could not schedule this observation %s', observation.name)
+        except ObservationsConflictException:
+            log.error('Could not schedule this observation %s', observation.name)
+
+        return True
+
     def add_observation(self, new_obs):
         """
+        Add a new observation to the schedule
 
         :param new_obs:
         :return:
         """
 
-        try:
-            # Check if observation is in the future
-            new_obs.is_in_future()
-
-            # Check if this observation conflicts with the scheduled observation - todo
-            self._conflicts(self._head, new_obs)
-        except ObservationScheduledInPastException:
-            log.error('Could not schedule this observation %s', new_obs.name)
-        except ObservationsConflictException:
-            log.error('Could not schedule this observation %s', new_obs.name)
+        self._is_valid(new_obs)
 
         if self._head is None:
             # First observation must always be a calibration observation
-            self._head = self._find_calibration_source_for(new_obs)
+            self._head = self._create_calibration_observation(new_obs)
             self._tail = new_obs
 
             self._head.next_observation = self._tail
@@ -109,90 +129,65 @@ class Schedule:
 
             return new_obs
 
-        calibration_obs = self._calibrate_for(new_obs)
-        if calibration_obs:
-            calibration_obs.prev_observation = self._tail
-            calibration_obs.next_observation = None
+        if new_obs.is_calibration_needed(self._head):
+            # Get a new calibration observation and add it to the schedule
+            found_calibration_obs = self._create_calibration_observation(new_obs)
 
-            self._tail.next_observation = calibration_obs
+            if found_calibration_obs:
+                self._append(found_calibration_obs)
 
-            self._increment(calibration_obs)
+        # Add the new observation whether a calibration observation is found or not
+        self._append(new_obs)
 
-            return self.add_observation(new_obs)
+        return new_obs
+
+    def _append(self, new_obs):
+        """
+        Add the new observation to the tail of the schedule.
+
+        :param new_obs: The observation to be added
+        :return:
+        """
 
         new_obs.prev_observation = self._tail
         new_obs.next_observation = None
 
         self._tail.next_observation = new_obs
+        self._tail = new_obs
 
         self._increment(new_obs)
 
-        return new_obs
-
-    def _calibrate_for(self, observation):
+    def _create_calibration_observation(self, observation):
         """
-        Return the calibration routine that is closest to the observation
-
-        :param observation:
-        :return:
-        """
-
-        closest_calibration = None
-        current_obs = self._head
-        min_time_delta = -1
-        while current_obs is not None:
-            if not isinstance(current_obs, ScheduledCalibrationObservation):
-                current_obs = current_obs.next_observation
-                continue
-
-            # Time between observation and calibration routine
-            time_delta = (observation.start_time_padded - current_obs.end_time).total_seconds()
-
-            # Check that time delta is the smallest, and that it is less than the minimum re-calibration time
-            if time_delta < min_time_delta and time_delta < self._recalibration_time.total_seconds():
-                min_time_delta = time_delta
-                closest_calibration = current_obs
-
-            current_obs = current_obs.next_observation
-
-        # No calibration for this observation found - or its too early for this observation
-        if not closest_calibration:
-            # Find the next available slot to schedule a calibration
-            return self._find_calibration_source_for(observation)
-
-        return closest_calibration
-
-    def _find_calibration_source_for(self, observation):
-        """
-        Find an optimal calibration date for an observation.
+        Return a calibration observation for the given observation.
 
         :param observation: The observation for which we want a calibration routine
         :return:
         """
 
-        # Get the available calibration sources on this day (with a time delta)
         from_time = None
         if observation.prev_observation:
             from_time = observation.prev_observation.end_time_padded
+
+        # Get the available calibration sources on this day (with a time delta)
         available_sources = get_best_calibration_obs(from_time, observation.start_time_padded, self._time_to_calibrate)
 
         max_flux = -1
-        best_obs = None
+        calibration_obs = None
         for source in available_sources:
             # Create a calibration object for the closest_observation observation
-            calibration_observation = ScheduledCalibrationObservation(source, observation.config_file,
-                                                                      prv_obs=observation)
+            tmp_obs = ScheduledCalibrationObservation(source, observation.config_file)
 
             try:
                 # Check if this observation conflicts with the scheduled observation
-                self._conflicts(self._head, calibration_observation)
+                self._conflicts(self._head, tmp_obs)
 
                 if source['flux'] > max_flux:
-                    best_obs = calibration_observation
+                    calibration_obs = tmp_obs
             except ObservationsConflictException:
-                log.warning("Calibration observation '{}' could not be scheduled".format(calibration_observation.name))
+                log.debug("Calibration observation '{}' could not be scheduled".format(tmp_obs.name))
 
-        return best_obs
+        return calibration_obs
 
     def __iter__(self):
         """

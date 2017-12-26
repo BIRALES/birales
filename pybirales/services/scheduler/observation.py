@@ -11,6 +11,9 @@ class ScheduledObservation:
     OBS_END_PADDING = datetime.timedelta(seconds=60)
     OBS_START_PADDING = datetime.timedelta(seconds=60)
 
+    # Recalibrate every 24 hours
+    RECALIBRATION_TIME = datetime.timedelta(hours=24)
+
     def __init__(self, name, config_file, pipeline_builder, dec, start_time, duration=None):
         """
         Initialisation function for the Scheduled Observation
@@ -132,6 +135,28 @@ class ScheduledObservation:
         if wait_seconds < 1:
             raise ObservationScheduledInPastException(self)
 
+    def is_calibration_needed(self, obs):
+        """
+        Traverse the schedule and return the first valid calibration observation
+        that meets the minimum recalibration time criteria
+
+        :param obs: An observation node in the schedule
+        :return:
+        """
+        if obs is None:
+            return True
+
+        if isinstance(obs, ScheduledCalibrationObservation):
+            # Time between observation and calibration routine
+            time_to_calibration = (self.start_time_padded - obs.end_time)
+
+            # Check that it is less than the minimum re-calibration time
+            if time_to_calibration < self.RECALIBRATION_TIME:
+                return False
+
+        # Get next observation is schedule
+        return self.is_calibration_needed(obs.next_observation)
+
 
 class ScheduledCalibrationObservation(ScheduledObservation):
     def __init__(self, source, config_file):
@@ -144,3 +169,18 @@ class ScheduledCalibrationObservation(ScheduledObservation):
 
         ScheduledObservation.__init__(self, name, config_file, pipeline_builder, dec, start_time,
                                       duration)
+
+    def is_calibration_needed(self, obs):
+        """
+        Overridden function from Parent. Given that self is a calibration instance, fetch the next
+        observation in schedule
+
+        :param obs:
+        :return:
+        """
+        if obs is None:
+            return True
+
+        return self.is_calibration_needed(obs.next_observation)
+
+

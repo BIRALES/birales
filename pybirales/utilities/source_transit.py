@@ -112,7 +112,7 @@ def get_best_calibration_obs(from_date, to_date, time_to_calibrate):
 
     :param from_date:
     :param to_date:
-    :param minutes_to_calibrate:
+    :param time_to_calibrate:
     :return: A dictionary of available sources together with their parameters
     """
     if from_date is None:
