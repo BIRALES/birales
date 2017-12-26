@@ -9,7 +9,7 @@ from pybirales.services.scheduler.scheduler import ObservationsScheduler
 @click.option('--schedule_file', '-s', 'schedule_file_path', type=click.Path(exists=True), required=True,
               help='The scheduler json file')
 @click.option('--format', '-f', 'file_format', default='json', help='The format of the schedule file [tdm/json]')
-def scheduler(schedule_file_path, file_format):
+def scheduler2(schedule_file_path, file_format):
     """
     Schedule a series of observations
 

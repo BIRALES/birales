@@ -14,9 +14,9 @@ from pybirales.pipeline.modules.readers.raw_data_reader import RawDataReader
 from pybirales.pipeline.modules.receivers.receiver import Receiver
 from pybirales.pipeline.modules.terminator import Terminator
 
-AVAILABLE_PIPELINES_BUILDERS = ['detection_pipeline_builder',
-                                'correlation_pipeline_builder',
-                                'standalone_pipeline_builder']
+AVAILABLE_PIPELINES_BUILDERS = ['detection_pipeline',
+                                'correlation_pipeline',
+                                'standalone_pipeline']
 
 
 def get_builder_by_id(builder_id):
@@ -33,11 +33,11 @@ def get_builder_by_id(builder_id):
     if builder_id not in AVAILABLE_PIPELINES_BUILDERS:
         raise PipelineBuilderIsNotAvailableException(builder_id, AVAILABLE_PIPELINES_BUILDERS)
 
-    if builder_id == 'detection_pipeline_builder':
+    if builder_id == 'detection_pipeline':
         return DetectionPipelineMangerBuilder()
-    elif builder_id == 'correlation_pipeline_builder':
+    elif builder_id == 'correlation_pipeline':
         return CorrelatorPipelineManagerBuilder()
-    elif builder_id == 'standalone_pipeline_builder':
+    elif builder_id == 'standalone_pipeline':
         return StandAlonePipelineMangerBuilder()
 
 

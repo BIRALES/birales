@@ -2,6 +2,7 @@
 import datetime
 import numpy as np
 import ephem
+import pytz
 
 # Define instrument position and list calibration sources
 latitude = 44.523733
@@ -68,7 +69,7 @@ def _ephem_compute(source_name, obs_date=None):
     # Calculate next transit time
     c_v = calibration_sources[source_name]
 
-    ephem_line = '%s,f,%s,%s,%s,%d' % (c_v['name'], c_v['ra'], c_v['dec'], np.log10(v['flux']), epoch)
+    ephem_line = '%s,f,%s,%s,%s,%d' % (c_v['name'], c_v['ra'], c_v['dec'], np.log10(c_v['flux']), epoch)
     body = ephem.readdb(ephem_line)
     body.compute(obs)
 
@@ -102,7 +103,7 @@ def get_previous_transit(source_name, obs_date=None):
     previous_transit = obs.previous_transit(body)
     time_to_transit = previous_transit - obs.date
 
-    return previous_transit.datetime(), time_to_transit * 24 * 3600
+    return previous_transit.datetime().replace(tzinfo=pytz.utc), time_to_transit * 24 * 3600
 
 
 def get_best_calibration_obs(from_date, to_date, time_to_calibrate):

@@ -32,7 +32,7 @@ def run_observation(observation):
     bf = BiralesFacade(configuration=config)
 
     # Build the pipeline manager
-    manager = bf.build_pipeline(observation.pipeline_builder)
+    manager = bf.build_pipeline(pipeline_builder=get_builder_by_id(observation.pipeline_name))
 
     # Start observation
     if isinstance(observation, ScheduledObservation):
@@ -79,7 +79,7 @@ class ObservationsScheduler:
         """
 
         obs = []
-        if file_format is 'json':
+        if file_format == 'json':
             # Open JSON file and convert it to a dictionary that can be iterated on
             with open(schedule_file_path) as json_data:
                 obs = json.load(json_data)
@@ -131,16 +131,19 @@ class ObservationsScheduler:
         observations = []
         for obs_name, obs in scheduled_observations.iteritems():
             # todo - parameters should be handled better than this
-            so = ScheduledObservation(name=obs_name,
-                                      config_file=obs['config_parameters']['config_file'],
-                                      pipeline_builder=get_builder_by_id(obs['config_parameters']['pipeline_manager']),
-                                      dec=obs['config_parameters']['dec'],
-                                      start_time=dateutil.parser.parse(obs['config_parameters']['start_time']),
-                                      duration=obs['config_parameters']['duration'])
-            observations.append(so)
+            try:
+                so = ScheduledObservation(name=obs_name,
+                                          config_file=obs['config_file'],
+                                          pipeline_name=obs['pipeline'],
+                                          dec=obs['config_parameters']['beamformer']['reference_declination'],
+                                          start_time=dateutil.parser.parse(obs['config_parameters']['start_time']),
+                                          duration=obs['config_parameters']['duration'])
+                observations.append(so)
+            except KeyError:
+                log.exception('An error occurred. Some parameters are missing.')
 
         # It is assumed that the list is sorted by date
-        sorted_observations = sorted(observations, key=attrgetter('ScheduledObservation.start_time_padded'))
+        sorted_observations = sorted(observations, key=attrgetter('start_time_padded'))
         # Schedule the observations
         for observation in sorted_observations:
             self._schedule.add_observation(observation)

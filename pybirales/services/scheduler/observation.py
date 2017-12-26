@@ -3,7 +3,6 @@ import datetime
 import pytz
 from pybirales.services.instrument.best2 import BEST2
 from pybirales.services.scheduler.exceptions import ObservationScheduledInPastException
-from pybirales.pipeline.pipeline import CorrelatorPipelineManagerBuilder
 
 
 class ScheduledObservation:
@@ -14,7 +13,7 @@ class ScheduledObservation:
     # Recalibrate every 24 hours
     RECALIBRATION_TIME = datetime.timedelta(hours=24)
 
-    def __init__(self, name, config_file, pipeline_builder, dec, start_time, duration=None):
+    def __init__(self, name, config_file, pipeline_name, dec, start_time, duration=None):
         """
         Initialisation function for the Scheduled Observation
 
@@ -23,17 +22,16 @@ class ScheduledObservation:
 
         self.name = name
         self.config_file = config_file
-        self.pipeline_name = pipeline_builder.manager.name
+        self.pipeline_name = pipeline_name
         self.declination = dec
         self.start_time = start_time
-        self.duration = duration
-        self.end_time = None
-
-        self.pipeline_builder = pipeline_builder
+        self.duration = datetime.timedelta(seconds=duration)
         self.created_at = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
 
+        self.end_time = None
         self._next_observation = None
         self._prev_observation = None
+        self.pipeline_builder = None
 
         # Set the default time padding at the end of the observation
         self.end_time_padding = ScheduledObservation.OBS_END_PADDING
@@ -160,14 +158,14 @@ class ScheduledObservation:
 
 class ScheduledCalibrationObservation(ScheduledObservation):
     def __init__(self, source, config_file):
-        name = '{}_{}.calibration'.format(source['name'], source['date'])
-        dec = source['parameters']['dec']
+        name = '{}_{}.calibration'.format(source['name'], source['transit_time'])
+        dec = source['dec']
         start_time = source['transit_time']
         duration = 3600
 
-        pipeline_builder = CorrelatorPipelineManagerBuilder()
+        pipeline_name = 'correlator_pipeline'
 
-        ScheduledObservation.__init__(self, name, config_file, pipeline_builder, dec, start_time,
+        ScheduledObservation.__init__(self, name, config_file, pipeline_name, dec, start_time,
                                       duration)
 
     def is_calibration_needed(self, obs):

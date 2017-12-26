@@ -100,9 +100,9 @@ class Schedule:
             # Check if this observation conflicts with the scheduled observation
             self._conflicts(self._head, observation)
         except ObservationScheduledInPastException:
-            log.error('Could not schedule this observation %s', observation.name)
+            log.exception('Observation not valid. The `%s` could not scheduled', observation.name)
         except ObservationsConflictException:
-            log.error('Could not schedule this observation %s', observation.name)
+            log.exception('Observation not valid. The `%s` could not scheduled', observation.name)
 
         return True
 
