@@ -1,8 +1,13 @@
 import datetime
+import logging as log
 
+import dateutil.parser
 import pytz
+
 from pybirales.services.instrument.best2 import BEST2
-from pybirales.services.scheduler.exceptions import ObservationScheduledInPastException
+from pybirales.services.scheduler.exceptions import ObservationScheduledInPastException, IncorrectObservationParameters
+from pybirales.pipeline.base.definitions import PipelineBuilderIsNotAvailableException
+from pybirales.pipeline.pipeline import AVAILABLE_PIPELINES_BUILDERS
 
 
 class ScheduledObservation:
@@ -13,7 +18,7 @@ class ScheduledObservation:
     # Recalibrate every 24 hours
     RECALIBRATION_TIME = datetime.timedelta(hours=24)
 
-    def __init__(self, name, config_file, pipeline_name, dec, start_time, duration=None):
+    def __init__(self, name, pipeline_name, config_file, params):
         """
         Initialisation function for the Scheduled Observation
 
@@ -21,11 +26,23 @@ class ScheduledObservation:
         """
 
         self.name = name
-        self.config_file = config_file
         self.pipeline_name = pipeline_name
-        self.declination = dec
-        self.start_time = start_time
-        self.duration = datetime.timedelta(seconds=duration)
+
+        if self.pipeline_name not in AVAILABLE_PIPELINES_BUILDERS:
+            raise PipelineBuilderIsNotAvailableException(pipeline_name, AVAILABLE_PIPELINES_BUILDERS)
+
+        self.config_file = config_file
+        self.parameters = params
+
+        self.declination = params['beamformer']['reference_declination']
+        try:
+            self.start_time = params['start_time']
+            if not isinstance(self.start_time, datetime.datetime):
+                self.start_time = dateutil.parser.parse(params['start_time'])
+        except ValueError:
+            log.exception('Invalid start time for observation `{}`'.format(name))
+            raise IncorrectObservationParameters
+        self.duration = datetime.timedelta(seconds=params['duration'])
         self.created_at = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
 
         self.end_time = None
@@ -34,13 +51,13 @@ class ScheduledObservation:
         self.pipeline_builder = None
 
         # Set the default time padding at the end of the observation
-        self.end_time_padding = ScheduledObservation.OBS_END_PADDING
+        self._end_time_padding = ScheduledObservation.OBS_END_PADDING
 
         # Set the default time padding at the start of the observation
-        self.start_time_padding = ScheduledObservation.OBS_START_PADDING
+        self._start_time_padding = ScheduledObservation.OBS_START_PADDING
 
         if self.duration:
-            self.end_time = start_time + self.duration
+            self.end_time = self.start_time + self.duration
 
     @property
     def next_observation(self):
@@ -109,7 +126,11 @@ class ScheduledObservation:
 
         :return:
         """
-        return self.start_time + self.start_time_padding
+        return self.start_time + self._start_time_padding
+
+    @start_time_padded.setter
+    def start_time_padded(self, padding):
+        self._start_time_padding = padding
 
     @property
     def end_time_padded(self):
@@ -118,7 +139,11 @@ class ScheduledObservation:
 
         :return:
         """
-        return self.end_time + self.end_time_padded
+        return self.end_time + self._end_time_padding
+
+    @end_time_padded.setter
+    def end_time_padded(self, padding):
+        self._end_time_padding = padding
 
     def is_in_future(self):
         """
@@ -157,16 +182,20 @@ class ScheduledObservation:
 
 
 class ScheduledCalibrationObservation(ScheduledObservation):
+    CALIBRATION_TIME = 3600
+
     def __init__(self, source, config_file):
-        name = '{}_{}.calibration'.format(source['name'], source['transit_time'])
-        dec = source['dec']
-        start_time = source['transit_time']
-        duration = 3600
+        name = '{}_{:%Y-%m-%dT%H:%M}.calib'.format(source['name'], source['transit_time'])
+        params = {
+            'beamformer':
+                {'reference_declination': source['dec']},
+            'start_time': source['transit_time'],
+            'duration': self.CALIBRATION_TIME,
+        }
 
-        pipeline_name = 'correlator_pipeline'
+        pipeline_name = 'correlation_pipeline'
 
-        ScheduledObservation.__init__(self, name, config_file, pipeline_name, dec, start_time,
-                                      duration)
+        ScheduledObservation.__init__(self, name, pipeline_name, config_file, params)
 
     def is_calibration_needed(self, obs):
         """
@@ -180,5 +209,3 @@ class ScheduledCalibrationObservation(ScheduledObservation):
             return True
 
         return self.is_calibration_needed(obs.next_observation)
-
-

@@ -1,6 +1,7 @@
 import logging as log
 
-from pybirales.services.scheduler.exceptions import ObservationsConflictException, ObservationScheduledInPastException
+from pybirales.services.scheduler.exceptions import ObservationsConflictException, ObservationScheduledInPastException, \
+    InvalidObservationException
 from pybirales.services.scheduler.observation import ScheduledCalibrationObservation, ScheduledObservation
 from pybirales.utilities.source_transit import get_best_calibration_obs
 
@@ -58,7 +59,7 @@ class Schedule:
         """
 
         if scheduled_observation is None:
-            log.info('Observation `{}` does not overlap with the scheduled observations')
+            log.debug('Observation `{}` does not overlap with the scheduled observations'.format(new_obs.name))
             return False
 
         start_time = new_obs.start_time_padded
@@ -99,10 +100,12 @@ class Schedule:
 
             # Check if this observation conflicts with the scheduled observation
             self._conflicts(self._head, observation)
-        except ObservationScheduledInPastException:
-            log.exception('Observation not valid. The `%s` could not scheduled', observation.name)
-        except ObservationsConflictException:
-            log.exception('Observation not valid. The `%s` could not scheduled', observation.name)
+        except ObservationScheduledInPastException as e:
+            log.exception(e.msg)
+            return False
+        except ObservationsConflictException as e:
+            log.exception(e.msg)
+            return False
 
         return True
 
@@ -114,7 +117,8 @@ class Schedule:
         :return:
         """
 
-        self._is_valid(new_obs)
+        if not self._is_valid(new_obs):
+            raise InvalidObservationException()
 
         if self._head is None:
             # First observation must always be a calibration observation

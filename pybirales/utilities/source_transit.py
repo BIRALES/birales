@@ -117,7 +117,7 @@ def get_best_calibration_obs(from_date, to_date, time_to_calibrate):
     :return: A dictionary of available sources together with their parameters
     """
     if from_date is None:
-        from_date = to_date - datetime.timedelta(days=2)
+        from_date = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
 
     if to_date <= from_date:
         raise ValueError("TO date cannot be before FROM date")

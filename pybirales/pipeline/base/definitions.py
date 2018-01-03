@@ -75,8 +75,8 @@ class InputDataNotValidException(PipelineError):
 
 class PipelineBuilderIsNotAvailableException(Exception):
     def __init__(self, builder_id, available_builders):
-        available_pipelines = "({})".format(', '.join(['%s'] * len(available_builders)))
-        Exception.__init__(self, "The '{}' pipeline is not available. Please choose one from the following list: {}"
+        available_pipelines = ', '.join(available_builders)
+        Exception.__init__(self, "The '{}' pipeline is not available. Please choose one from the following: {}"
                            .format(builder_id, available_pipelines))
 
         self.builder_id = builder_id

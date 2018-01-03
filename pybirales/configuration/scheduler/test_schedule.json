@@ -7,13 +7,16 @@
         "transmitter_frequency": 411
       },
       "manager": {
-        "debug": true,
+       "debug": true,
         "offline": true
       },
-      "start_time": "2017-12-11T18:57:30Z",
-      "duration": 30
-    }
-  },
+      "beamformer": {
+        "reference_declination": 30
+      },
+      "start_time": "2018-01-03T22:00:00Z",
+      "duration": 400
+	}
+    },
   "observation 2": {
     "pipeline": "detection_pipeline",
     "config_file": "pybirales/configuration/birales.ini",
@@ -22,9 +25,14 @@
         "transmitter_frequency": 412
       },
       "manager": {
-        "debug": true
+       "debug": true,
+        "offline": true
       },
-      "start_time": "2017-12-11T19:55:58Z"
+      "beamformer": {
+        "reference_declination": 30
+      },
+      "start_time": "2018-01-03T23:00:00Z",
+      "duration": 30000
     }
   }
 }

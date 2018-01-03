@@ -316,7 +316,7 @@ class BiralesFacade:
 
         # Generate the calibration_coefficients
         directory = str(os.path.join(settings.calibration.real_vis_dir, settings.observation.name))
-        print(directory)
+
         self._calibration.calibrate(directory)
         log.info('Generating calibration coefficients')
 

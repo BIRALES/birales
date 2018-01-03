@@ -6,15 +6,17 @@ import sys
 import threading
 import time
 from operator import attrgetter
-import dateutil.parser
 
+import dateutil.parser
 import pytz
+
 from pybirales.birales import BiralesFacade, BiralesConfig
-from pybirales.services.scheduler.exceptions import NoObservationsQueuedException, IncorrectScheduleFormat
+from pybirales.pipeline.pipeline import get_builder_by_id
+from pybirales.services.scheduler.exceptions import NoObservationsQueuedException, IncorrectScheduleFormat, \
+    InvalidObservationException
 from pybirales.services.scheduler.monitoring import monitor_worker
 from pybirales.services.scheduler.observation import ScheduledObservation, ScheduledCalibrationObservation
 from pybirales.services.scheduler.schedule import Schedule
-from pybirales.pipeline.pipeline import get_builder_by_id
 
 
 def run_observation(observation):
@@ -82,7 +84,11 @@ class ObservationsScheduler:
         if file_format == 'json':
             # Open JSON file and convert it to a dictionary that can be iterated on
             with open(schedule_file_path) as json_data:
-                obs = json.load(json_data)
+                try:
+                    obs = json.load(json_data)
+                except ValueError:
+                    log.exception('JSON file at {} is malformed.'.format(schedule_file_path))
+                    raise IncorrectScheduleFormat(schedule_file_path)
 
         if obs:
             # Schedule the observations
@@ -98,14 +104,14 @@ class ObservationsScheduler:
         """
 
         # Check if there are scheduled observations
-        if not self._schedule.is_empty():
+        if self._schedule.is_empty():
             raise NoObservationsQueuedException()
 
         # Schedule the observations
         now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
         for observation in self._schedule:
             wait_seconds = (observation.start_time_padded - now).total_seconds()
-            if wait_seconds < 1:
+            if wait_seconds > 1:
                 self._scheduler.enter(delay=wait_seconds, priority=0, action=run_observation, argument=(observation,))
 
         # Start the monitoring thread
@@ -130,23 +136,29 @@ class ObservationsScheduler:
         # Create ScheduledObservation objects from the input file
         observations = []
         for obs_name, obs in scheduled_observations.iteritems():
-            # todo - parameters should be handled better than this
             try:
                 so = ScheduledObservation(name=obs_name,
                                           config_file=obs['config_file'],
                                           pipeline_name=obs['pipeline'],
-                                          dec=obs['config_parameters']['beamformer']['reference_declination'],
-                                          start_time=dateutil.parser.parse(obs['config_parameters']['start_time']),
-                                          duration=obs['config_parameters']['duration'])
+                                          params=obs['config_parameters'])
                 observations.append(so)
             except KeyError:
-                log.exception('An error occurred. Some parameters are missing.')
+                log.exception('An incorrect parameter was specified in observation `{}`'.format(obs_name))
+                log.warning('Observation `{}` was not added to the schedule'.format(obs_name))
+                continue
+            except InvalidObservationException:
+                log.exception('An incorrect parameter was specified in observation `{}`'.format(obs_name))
+                log.warning('Observation `{}` was not added to the schedule'.format(obs_name))
+                continue
 
         # It is assumed that the list is sorted by date
         sorted_observations = sorted(observations, key=attrgetter('start_time_padded'))
         # Schedule the observations
         for observation in sorted_observations:
-            self._schedule.add_observation(observation)
+            try:
+                self._schedule.add_observation(observation)
+            except InvalidObservationException:
+                log.warning('Observation `{}` was not added to the schedule'.format(observation.name))
 
         # Show that start time of all the observations to the user
         log.info('{} observations and {} calibration observations queued.'.format(
