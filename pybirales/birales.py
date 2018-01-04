@@ -35,18 +35,16 @@ class BiralesConfig:
         # The configuration parser of the BIRALES system
         self._parser = configparser.RawConfigParser()
 
-        # Load the BIRALES config settings
-        self._load_from_file(config_file_path)
+        # Set the configurations from file (can be multiple files)
+        for config_file in config_file_path:
+            self._load_from_file(config_file)
 
         # Load the ROACH backend settings
-        backend_path = os.path.join(os.path.dirname(config_file_path),
+        backend_path = os.path.join(os.path.dirname(config_file_path[0]),
                                     self._parser.get('receiver', 'backend_config_filepath'))
         self._load_from_file(backend_path)
 
-        # Override the default configuration file with the ones specified in the local.ini
-        self._load_from_file(BiralesConfig.LOCAL_CONFIG)
-
-        # Update the configuration with settings passed on in the config_options dictionary
+        # Override the configuration with settings passed on in the config_options dictionary
         self.update_config(config_options)
 
         self._set_logging_config(config_file_path)
@@ -73,7 +71,7 @@ class BiralesConfig:
         try:
             with open(config_filepath) as f:
                 self._parser.read_file(f)
-                log.info('Loaded configuration file at {}.'.format(config_filepath))
+                log.info('Loaded the {} configuration file.'.format(config_filepath))
         except IOError:
             log.info('Config file at {} was not found'.format(config_filepath))
 

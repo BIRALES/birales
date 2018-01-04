@@ -19,10 +19,6 @@ class CalibrationFacade:
         self._tm.from_dict(self._tcpo_config_adapter())
 
         self.obs_info = None
-        # Load the observation settings only if the pipeline is running in offline mode
-        if settings.manager.offline:
-            self.obs_info = self._load_pkl_file(settings.rawdatareader.filepath)
-
         self.dict_real = {}
         self.dict_imag = {}
 
@@ -177,6 +173,10 @@ class CalibrationFacade:
 
         :return:
         """
+
+        # Load the observation settings only if the pipeline is running in offline mode
+        if settings.manager.offline:
+            self.obs_info = self._load_pkl_file(settings.rawdatareader.filepath)
 
         log.info('Running the calibration routine.')
 
