@@ -69,7 +69,7 @@ class ObservationsScheduler:
                                   recalibration_time=self._max_uncalibrated_threshold)
 
         # Monitoring thread that will output the status of the scheduler at specific intervals
-        self._monitor_thread = threading.Thread(target=monitor_worker, args=(self._scheduler,))
+        self._monitor_thread = threading.Thread(target=monitor_worker, args=(self._scheduler,), name='Monitoring')
 
     def load_from_file(self, schedule_file_path, file_format='json'):
         """
@@ -117,12 +117,17 @@ class ObservationsScheduler:
         # Start the monitoring thread
         self._monitor_thread.start()
 
-        try:
-            # Start the scheduler
-            self._scheduler.run()
-        except KeyboardInterrupt:
-            log.info('Ctrl-C received. Terminating the scheduler process.')
-            sys.exit()
+        # Start the scheduler
+        self._scheduler.run()
+
+    def stop(self):
+        log.info('Cancelling {} observations from schedule'.format(len(self._scheduler.queue)))
+        for event in self._scheduler.queue:
+            self._scheduler.cancel(event)
+            log.debug('The `{}` observation was cancelled'.format(event.argument[0].name))
+
+        if self._scheduler.empty():
+            log.info('Scheduler was cleared from all events. Please wait for the monitoring thread to terminate.')
 
     def _add_observations(self, scheduled_observations):
         """

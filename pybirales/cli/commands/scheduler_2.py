@@ -28,15 +28,19 @@ def scheduler2(schedule_file_path, config_file_path, file_format):
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)
 
+    # The Scheduler responsible for the scheduling of observations
+    s = ObservationsScheduler()
+
     try:
-        s = ObservationsScheduler()
         s.load_from_file(schedule_file_path, file_format)
         s.start()
     except KeyboardInterrupt:
-        log.info('Ctrl-C received. Terminating the scheduler process.')
+        log.info('Ctrl-C received. Terminating the scheduler process.ws')
+        s.stop()
     except NoObservationsQueuedException:
         log.info('Could not run Scheduler since no valid observations could be scheduled.')
     except SchedulerException:
         log.exception('A fatal Scheduler error has occurred. Terminating the scheduler process.')
+        s.stop()
     else:
         log.info('Scheduler finished successfully.')
