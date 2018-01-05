@@ -5,7 +5,8 @@ from pybirales.services.scheduler.exceptions import ObservationsConflictExceptio
     InvalidObservationException
 from pybirales.services.scheduler.observation import ScheduledCalibrationObservation, ScheduledObservation
 from pybirales.utilities.source_transit import get_best_calibration_obs
-import settings
+from pybirales import settings
+import pytz
 
 
 class Schedule:
@@ -183,7 +184,7 @@ class Schedule:
         :return:
         """
 
-        from_time = None
+        from_time = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
         if observation.prev_observation:
             from_time = observation.prev_observation.end_time_padded
 
@@ -210,7 +211,8 @@ class Schedule:
         if calibration_obs:
             log.info('The `{}` observation was chosen for calibration.'.format(calibration_obs.name))
         else:
-            log.warning('No suitable calibration source was found')
+            log.warning('No suitable calibration source was found between {:%Y-%m-%dT%H:%M} and {:%Y-%m-%dT%H:%M}'
+                        .format(from_time, observation.start_time_padded))
 
         return calibration_obs is not None, calibration_obs
 
