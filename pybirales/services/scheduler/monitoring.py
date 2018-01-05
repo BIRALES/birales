@@ -17,7 +17,7 @@ def monitor_worker(scheduler):
     time_counter = 0
     while not scheduler.empty():
         # Process every N iterations
-        if time_counter % 60:
+        if time_counter % 60 == 0:
             now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
             for event in scheduler.queue:
                 observation = event.argument[0]

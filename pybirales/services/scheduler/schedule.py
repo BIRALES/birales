@@ -121,24 +121,32 @@ class Schedule:
             raise InvalidObservationException()
 
         if self._head is None:
-            # First observation must always be a calibration observation
-            self._head = self._create_calibration_observation(new_obs)
-            self._tail = new_obs
-
+            # Add this observation to the head of the schedule
+            self._head = new_obs
             self._head.next_observation = self._tail
+
+            # If a calibration observation is possible, schedule a calibration observation
+            # before scheduling the (space debris) observation
+            calibration_possible, calibration_obs = self._create_calibration_observation(new_obs)
+            if calibration_possible:
+                self._head = calibration_obs
+                self._head.next_observation = new_obs
+                self._increment(calibration_obs)
+
+            self._tail = new_obs
+            self._tail.next_observation = None
             self._tail.prev_observation = self._head
 
-            self._increment(self._head)
-            self._increment(self._tail)
+            self._increment(new_obs)
 
             return new_obs
 
         if new_obs.is_calibration_needed(self._head):
             # Get a new calibration observation and add it to the schedule
-            found_calibration_obs = self._create_calibration_observation(new_obs)
+            calibration_possible, calibration_obs = self._create_calibration_observation(new_obs)
 
-            if found_calibration_obs:
-                self._append(found_calibration_obs)
+            if calibration_possible:
+                self._append(calibration_obs)
 
         # Add the new observation whether a calibration observation is found or not
         self._append(new_obs)
@@ -181,6 +189,7 @@ class Schedule:
 
         max_flux = -1
         calibration_obs = None
+
         for source in available_sources:
             # Create a calibration object for the closest_observation observation
             tmp_obs = ScheduledCalibrationObservation(source, observation.config_file)
@@ -194,7 +203,12 @@ class Schedule:
             except ObservationsConflictException:
                 log.debug("Calibration observation '{}' could not be scheduled".format(tmp_obs.name))
 
-        return calibration_obs
+        if calibration_obs:
+            log.info('The `{}` observation was chosen for calibration.'.format(calibration_obs.name))
+        else:
+            log.warning('No suitable calibration source was found')
+
+        return calibration_obs is not None, calibration_obs
 
     def __iter__(self):
         """
