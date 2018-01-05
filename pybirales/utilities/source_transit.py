@@ -1,7 +1,8 @@
 #!/usr/bin/python
 import datetime
-import numpy as np
+
 import ephem
+import numpy as np
 import pytz
 
 # Define instrument position and list calibration sources

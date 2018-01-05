@@ -216,7 +216,7 @@ class BiralesFacade:
 
         # Set interrupt signal handler if not already set
         if signal.getsignal(signal.SIGINT) == signal.SIG_DFL:
-            log.info("Setting signal handler in BiralesFacede")
+            log.info("Setting signal handler in BiralesFacade")
             signal.signal(signal.SIGINT, self._signal_handler)
         else:
             log.info("Signal handler already set, not setting it in BiralesFacade")

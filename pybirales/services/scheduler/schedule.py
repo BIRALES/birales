@@ -156,6 +156,9 @@ class Schedule:
         new_obs.prev_observation = self._tail
         new_obs.next_observation = None
 
+        # The new observation's start time has to account for the time taken to move the antenna
+        # new_obs.update_start_time_padding(self._tail)
+
         self._tail.next_observation = new_obs
         self._tail = new_obs
 

@@ -2,15 +2,17 @@ import datetime
 import logging as log
 
 import dateutil.parser
+import humanize
 import pytz
 
-from pybirales.services.instrument.best2 import BEST2
-from pybirales.services.scheduler.exceptions import ObservationScheduledInPastException, IncorrectObservationParameters
 from pybirales.pipeline.base.definitions import PipelineBuilderIsNotAvailableException
 from pybirales.pipeline.pipeline import AVAILABLE_PIPELINES_BUILDERS
+from pybirales.services.instrument.best2 import pointing_time
+from pybirales.services.scheduler.exceptions import ObservationScheduledInPastException, IncorrectObservationParameters
+from pybirales.utilities.source_transit import get_calibration_source_declination
 
 
-class ScheduledObservation:
+class ScheduledObservation(object):
     DEFAULT_WAIT_SECONDS = 5
     OBS_END_PADDING = datetime.timedelta(seconds=60)
     OBS_START_PADDING = datetime.timedelta(seconds=60)
@@ -74,9 +76,18 @@ class ScheduledObservation:
         :param observation:
         :return:
         """
+        if self.declination and observation:
+            # The padding of the observation following this one needs to be updated
+            time_delta = datetime.timedelta(seconds=pointing_time(dec1=self.declination, dec2=observation.declination))
+            time_delta_min = time_delta.total_seconds() / 60
 
-        # The padding of the observation following this one needs to be updated
-        observation.start_time_padding = BEST2().pointing_time(dec1=self.declination, dec2=observation.declination)
+            observation.start_time_padding = time_delta
+
+            log.debug('Adding a padding of {} minutes for observation `{}` to account for the movement of the antenna '
+                      'from {:0.2f} DEC to {:0.2f} DEC'.format(time_delta_min,
+                                                               self.name,
+                                                               self.declination,
+                                                               observation.declination))
 
         # Set the next observation
         self._next_observation = observation
@@ -131,6 +142,17 @@ class ScheduledObservation:
     @start_time_padded.setter
     def start_time_padded(self, padding):
         self._start_time_padding = padding
+
+    def update_start_time_padding(self, prev_observation):
+        time_delta = self._start_time_padding
+        time_delta += datetime.timedelta(seconds=BEST2.pointing_time(prev_observation.declination, self.declination))
+
+        self.start_time_padded = time_delta
+
+        log.debug(
+            'Adding a padding of {} for observation `{}` to account for the movement of the antenna '
+            'from {} DEC to {} DEC'.format(humanize.naturaldelta(time_delta), self.name, prev_observation.declination,
+                                           self.declination))
 
     @property
     def end_time_padded(self):
@@ -188,7 +210,7 @@ class ScheduledCalibrationObservation(ScheduledObservation):
         name = '{}_{:%Y-%m-%dT%H:%M}.calib'.format(source['name'], source['transit_time'])
         params = {
             'beamformer':
-                {'reference_declination': source['dec']},
+                {'reference_declination': get_calibration_source_declination(source['name'])},
             'start_time': source['transit_time'],
             'duration': self.CALIBRATION_TIME,
         }
