@@ -1,18 +1,18 @@
+import datetime
 import logging as log
 
 from pybirales.services.scheduler.exceptions import ObservationsConflictException, ObservationScheduledInPastException, \
     InvalidObservationException
 from pybirales.services.scheduler.observation import ScheduledCalibrationObservation, ScheduledObservation
 from pybirales.utilities.source_transit import get_best_calibration_obs
+import settings
 
 
 class Schedule:
-    def __init__(self, time_to_calibrate, recalibration_time):
+    def __init__(self):
         """
         The schedule representation of the scheduler
 
-        :param time_to_calibrate: The time needed for a calibration routine
-        :param recalibration_time: Maximum amount of time before the instrument needs to be re-calibrated (in hours)
         :return:
         """
         self._head = None
@@ -22,10 +22,13 @@ class Schedule:
         self.n_observations = 0
 
         # Maximum amount of time allowed before the instrument needs to be re-calibrated (in hours)
-        self._recalibration_time = recalibration_time
+        self._recalibration_time = datetime.timedelta(hours=settings.calibration.recalibration_time)
 
-        # The time needed for a calibration routine
-        self._time_to_calibrate = time_to_calibrate
+        # The time delta before source transits
+        self._td_after_transit = datetime.timedelta(minutes=settings.calibration.transit_time_after)
+
+        # The time delta after source transits
+        self._td_before_transit = datetime.timedelta(minutes=settings.calibration.transit_time_before)
 
     def __len__(self):
         return self.n_calibrations + self.n_observations
@@ -185,7 +188,8 @@ class Schedule:
             from_time = observation.prev_observation.end_time_padded
 
         # Get the available calibration sources on this day (with a time delta)
-        available_sources = get_best_calibration_obs(from_time, observation.start_time_padded, self._time_to_calibrate)
+        available_sources = get_best_calibration_obs(from_time, observation.start_time_padded, self._td_after_transit,
+                                                     self._td_before_transit)
 
         max_flux = -1
         calibration_obs = None
