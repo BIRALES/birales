@@ -2,12 +2,10 @@ import datetime
 import json
 import logging as log
 import sched
-import sys
 import threading
 import time
 from operator import attrgetter
 
-import dateutil.parser
 import pytz
 
 from pybirales.birales import BiralesFacade, BiralesConfig
@@ -149,8 +147,9 @@ class ObservationsScheduler:
                 log.warning('Observation `{}` was not added to the schedule'.format(obs_name))
                 continue
 
-        # It is assumed that the list is sorted by date
+        # Sort the schedule by time
         sorted_observations = sorted(observations, key=attrgetter('start_time_padded'))
+
         # Schedule the observations
         for observation in sorted_observations:
             try:

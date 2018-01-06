@@ -13,7 +13,7 @@
       "beamformer": {
         "reference_declination": 30
       },
-      "start_time": "2018-01-05T15:25:00Z",
+      "start_time": "2018-01-06T18:25:00Z",
       "duration": 400
 	}
     },
@@ -31,7 +31,7 @@
       "beamformer": {
         "reference_declination": 40
       },
-      "start_time": "2018-01-05T23:00:00Z",
+      "start_time": "2018-01-06T23:00:00Z",
       "duration": 30000
     }
   }

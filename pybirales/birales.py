@@ -18,6 +18,7 @@ from pybirales.repository.models import Observation
 from pybirales.services.calibration.calibration import CalibrationFacade
 from pybirales.services.instrument.backend import Backend
 from pybirales.services.instrument.best2 import BEST2
+from pybirales.listeners.listeners import NotificationsListener
 
 
 class BiralesConfig:
@@ -206,6 +207,9 @@ class BiralesFacade:
         # Load the system configuration upon initialisation
         self.configuration.load()
 
+        # Initialise and start the listeners / subscribers of the BIRALES application
+        self._listeners = self._init_listeners()
+
         self._pipeline_manager = None
 
         self._calibration = CalibrationFacade()
@@ -327,3 +331,15 @@ class BiralesFacade:
     @staticmethod
     def start_server():
         run()
+
+    @staticmethod
+    def _init_listeners():
+        listeners = []
+        if settings.observation.notifications:
+            listeners.append(NotificationsListener())
+
+        # Start the listener threads
+        for l in listeners:
+            l.start()
+
+        return listeners

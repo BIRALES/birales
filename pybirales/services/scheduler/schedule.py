@@ -1,12 +1,15 @@
 import datetime
 import logging as log
 
+import pytz
+
+from pybirales import settings
 from pybirales.services.scheduler.exceptions import ObservationsConflictException, ObservationScheduledInPastException, \
     InvalidObservationException
 from pybirales.services.scheduler.observation import ScheduledCalibrationObservation, ScheduledObservation
 from pybirales.utilities.source_transit import get_best_calibration_obs
-from pybirales import settings
-import pytz
+from pybirales.events.publisher import EventsPublisher
+from pybirales.events.events import ObservationScheduledEvent
 
 
 class Schedule:
@@ -31,6 +34,8 @@ class Schedule:
         # The time delta after source transits
         self._td_before_transit = datetime.timedelta(minutes=settings.calibration.transit_time_before)
 
+        self._publisher = EventsPublisher.Instance()
+
     def __len__(self):
         return self.n_calibrations + self.n_observations
 
@@ -47,10 +52,16 @@ class Schedule:
         :param obs:
         :return:
         """
+
         if isinstance(obs, ScheduledCalibrationObservation):
             self.n_calibrations += 1
         elif isinstance(obs, ScheduledObservation):
             self.n_observations += 1
+        else:
+            raise InvalidObservationException('The Observation is neither a Calibration or a Space Debris Observation')
+
+        # Fire an Observation was Scheduled Event
+        self._publisher.publish(ObservationScheduledEvent(obs))
 
     def _conflicts(self, scheduled_observation, new_obs):
         """
@@ -209,7 +220,7 @@ class Schedule:
                 log.debug("Calibration observation '{}' could not be scheduled".format(tmp_obs.name))
 
         if calibration_obs:
-            log.info('The `{}` observation was chosen for calibration.'.format(calibration_obs.name))
+            log.debug('The `{}` observation was chosen for calibration.'.format(calibration_obs.name))
         else:
             log.warning('No suitable calibration source was found between {:%Y-%m-%dT%H:%M} and {:%Y-%m-%dT%H:%M}'
                         .format(from_time, observation.start_time_padded))

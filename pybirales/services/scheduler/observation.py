@@ -83,11 +83,12 @@ class ScheduledObservation(object):
 
             observation.start_time_padding = time_delta
 
-            log.debug('Adding a padding of {} minutes for observation `{}` to account for the movement of the antenna '
-                      'from {:0.2f} DEC to {:0.2f} DEC'.format(time_delta_min,
-                                                               self.name,
-                                                               self.declination,
-                                                               observation.declination))
+            log.debug(
+                'Adding a padding of {:0.2f} minutes for observation `{}` to account for the movement of the antenna '
+                'from {:0.2f} DEC to {:0.2f} DEC'.format(time_delta_min,
+                                                         self.name,
+                                                         self.declination,
+                                                         observation.declination))
 
         # Set the next observation
         self._next_observation = observation
@@ -116,17 +117,17 @@ class ScheduledObservation(object):
 
         :return:
         """
-        start_msg = "Observation {}, using the {} is scheduled to start NOW".format(self.name, self.pipeline_name)
+        start_msg = "The `{}` observation, using the `{}`, is scheduled".format(self.name, self.pipeline_name)
 
         if self.start_time:
-            start_msg += " to run at {:%Y-%m-%d %H:%M:%S}".format(self.start_time)
+            start_msg += " to run at {:%Y-%m-%d %H:%M:%S} UTC".format(self.start_time)
         else:
-            start_msg += " to start NOW"
+            start_msg += " to start NOW."
 
         if self.end_time:
-            start_msg += ' and will run for {} seconds'.format(self.duration)
+            start_msg += ' and will run for {:0.2f} minutes.'.format(self.duration.total_seconds()/60.)
         else:
-            start_msg += ' and will run indefinitely'
+            start_msg += ' and will run indefinitely.'
 
         return start_msg
 
@@ -145,7 +146,7 @@ class ScheduledObservation(object):
 
     def update_start_time_padding(self, prev_observation):
         time_delta = self._start_time_padding
-        time_delta += datetime.timedelta(seconds=BEST2.pointing_time(prev_observation.declination, self.declination))
+        time_delta += datetime.timedelta(seconds=pointing_time(prev_observation.declination, self.declination))
 
         self.start_time_padded = time_delta
 
