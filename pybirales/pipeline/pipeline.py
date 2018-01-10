@@ -8,7 +8,7 @@ from pybirales.pipeline.modules.channeliser import PFB
 from pybirales.pipeline.modules.correlator import Correlator
 from pybirales.pipeline.modules.detection.detector import Detector
 from pybirales.pipeline.modules.persisters.corr_matrix_persister import CorrMatrixPersister
-from pybirales.pipeline.modules.persisters.persister import Persister
+from pybirales.pipeline.modules.persisters.beam_persister import BeamPersister
 from pybirales.pipeline.modules.persisters.raw_persister import RawPersister
 from pybirales.pipeline.modules.readers.raw_data_reader import RawDataReader
 from pybirales.pipeline.modules.receivers.receiver import Receiver
@@ -92,7 +92,7 @@ class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
 
         # Persisting beam and detector options
         if settings.manager.detector_enabled and settings.manager.save_beam:
-            persister = Persister(settings.persister, ppf.output_blob)
+            persister = BeamPersister(settings.persister, ppf.output_blob)
             detector = Detector(settings.detection, persister.output_blob)
             self.manager.add_module("detector", detector)
             self.manager.add_module("persister", persister)
@@ -100,7 +100,7 @@ class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
             detector = Detector(settings.detection, ppf.output_blob)
             self.manager.add_module("detector", detector)
         elif not settings.manager.detector_enabled and settings.manager.save_beam:
-            persister = Persister(settings.persister, ppf.output_blob)
+            persister = BeamPersister(settings.persister, ppf.output_blob)
             terminator = Terminator(settings.terminator, persister.output_blob)
             self.manager.add_module("persister", persister)
             self.manager.add_module("terminator", terminator)
@@ -132,7 +132,7 @@ class StandAlonePipelineMangerBuilder(PipelineManagerBuilder):
         reader = RawDataReader(settings.rawdatareader)
         beamformer = Beamformer(settings.beamformer, reader.output_blob)
         pfb = PFB(settings.channeliser, beamformer.output_blob)
-        persister = Persister(settings.persister, pfb.output_blob)
+        persister = BeamPersister(settings.persister, pfb.output_blob)
         terminator = Terminator(None, persister.output_blob)
 
         # Add modules to pipeline manager

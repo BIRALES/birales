@@ -12,7 +12,7 @@ from pybirales.cli.helpers import update_config
 @click.pass_context
 def pipelines(ctx, name, debug, duration):
     if not name:
-        name = 'Observation_' + datetime.datetime.utcnow().isoformat('T')
+        name = 'Observation_{:%Y-%m-%dT%H%M}'.format(datetime.datetime.utcnow())
 
     ctx.obj = {
         'observation': {

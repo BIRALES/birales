@@ -63,17 +63,17 @@ class CalibrationFacade:
         :return:
         """
 
-        if settings.calibration.h5_filepath:
-            return settings.calibration.h5_filepath
+        filepath = settings.calibration.h5_filepath
+        if not settings.calibration.h5_filepath:
+            directory = self._get_tmp_directory()
+            filename = settings.observation.name + settings.corrmatrixpersister.filename_suffix
+            filepath = os.path.join(directory, filename + '.h5')
 
-        # Create directory if it doesn't exist
-        directory = self._get_tmp_directory()
-        filename = settings.observation.name + settings.corrmatrixpersister.filename_suffix
-        filepath = os.path.join(directory, filename + '.h5')
         if os.path.exists(filepath):
+            log.debug('Using CorrMatrix at {}'.format(settings.calibration.h5_filepath))
             return filepath
 
-        raise BaseException("Correlation Matrix data was not found in {}".format(directory))
+        raise BaseException("Correlation Matrix data was not found in {}".format(filepath))
 
     @staticmethod
     def _get_tmp_directory():
@@ -82,7 +82,10 @@ class CalibrationFacade:
         :return:
         """
 
-        directory = os.path.join(settings.calibration.tmp_dir, settings.observation.name)
+        directory = os.path.join(settings.calibration.tmp_dir)
+
+        if not settings.calibration.generate_corrmatrix:
+            directory = settings.calibration.h5_filepath
 
         if os.path.exists(directory):
             return directory

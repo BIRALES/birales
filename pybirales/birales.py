@@ -312,15 +312,14 @@ class BiralesFacade:
         :return:
         """
 
+        self.configuration.update_config({'observation': {'type': 'calibration'}})
+
         if settings.calibration.generate_corrmatrix:
             # Run the correlator pipeline to get model visibilities
             self.start_observation(pipeline_manager=correlator_pipeline_manager)
 
-        # Generate the calibration_coefficients
-        directory = str(os.path.join(settings.calibration.real_vis_dir, settings.observation.name))
-
-        self._calibration.calibrate(directory)
         log.info('Generating calibration coefficients')
+        self._calibration.calibrate()
 
         # Load Coefficients to ROACH
         if self._backend:

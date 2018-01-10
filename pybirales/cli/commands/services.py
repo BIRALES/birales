@@ -18,13 +18,13 @@ def services(ctx):
 
 
 @services.command()
-@click.argument('configuration', type=click.Path(exists=True), required=True)
+@click.option('--config', '-c', 'config_filepath', type=click.Path(exists=True), required=True,
+              help='The BIRALES configuration file', multiple=True)
 @click.option('--name', '-n', 'name', help='The name of the observation')
 @click.pass_context
-def calibration(ctx, configuration, name):
+def calibration(ctx, config_filepath, name):
     if not name:
-        name = 'Calibration_Observation_' + datetime.datetime.utcnow().isoformat('T')
-
+        name = 'Calibration_{:%Y-%m-%dT%H%M}'.format(datetime.datetime.utcnow())
     ctx.obj = {
         'observation': {
             'name': name
@@ -34,7 +34,7 @@ def calibration(ctx, configuration, name):
     ctx.obj = update_config(ctx.obj, 'observation', 'name', name)
 
     # Load the BIRALES configuration from file
-    config = BiralesConfig(configuration, ctx.obj)
+    config = BiralesConfig(config_filepath, ctx.obj)
 
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)
@@ -47,11 +47,12 @@ def calibration(ctx, configuration, name):
 
 
 @services.command()
-@click.argument('configuration', type=click.Path(exists=True), required=True)
+@click.option('--config', '-c', 'config_filepath', type=click.Path(exists=True), required=True,
+              help='The BIRALES configuration file', multiple=True)
 @click.pass_context
-def run_server(ctx, configuration):
+def run_server(ctx, config_filepath):
     # Load the BIRALES configuration from file
-    config = BiralesConfig(configuration, ctx.obj)
+    config = BiralesConfig(config_filepath, ctx.obj)
 
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)
@@ -61,11 +62,12 @@ def run_server(ctx, configuration):
 
 
 @services.command()
-@click.argument('configuration', type=click.Path(exists=True), required=True)
+@click.option('--config', '-c', 'config_filepath', type=click.Path(exists=True), required=True,
+              help='The BIRALES configuration file', multiple=True)
 @click.pass_context
-def init_roach(ctx, configuration):
+def init_roach(ctx, config_filepath):
     # Load the BIRALES configuration from file
-    config = BiralesConfig(configuration, ctx.obj)
+    config = BiralesConfig(config_filepath, ctx.obj)
 
     # Initialise the Birales Facade (BOSS)
     BiralesFacade(configuration=config)

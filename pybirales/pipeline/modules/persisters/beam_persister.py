@@ -12,36 +12,24 @@ from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.base.processing_module import ProcessingModule
 
 
-class Persister(ProcessingModule):
+class BeamPersister(ProcessingModule):
 
     def __init__(self, config, input_blob=None):
         # Call superclass initialiser
-        super(Persister, self).__init__(config, input_blob)
+        super(BeamPersister, self).__init__(config, input_blob)
 
         # Sanity checks on configuration
         if {'filename_suffix'} - set(config.settings()) != set():
             raise PipelineError("Persister: Missing keys on configuration. (filename_suffix)")
 
-        # Create directory if it doesn't exist
-        directory = os.path.join(settings.persisters.directory, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
-                                 settings.observation.name)
-        filename = settings.observation.name + self._config.filename_suffix
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-        # Create file
-        if config.use_timestamp:
-            file_path = os.path.join(directory, "%s_%s" % (filename, str(time.time())))
-        else:
-            if 'filename_suffixfilename_suffix' not in config.settings():
-                raise PipelineError("Persister: filename_suffix required when not using timestamp")
-            file_path = os.path.join(directory, filename + '.dat')
+        # Get the destination file path of the persisted data
+        self._filepath = self._get_filepath(config) + '.dat'
 
         # Open file (if file exists, remove first)
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        if os.path.exists(self._filepath):
+            os.remove(self._filepath)
 
-        self._file = open(file_path, "wb+")
+        self._file = open(self._filepath, "wb+")
 
         # Use fadvise to optimise 
         fadvise.set_advice(self._file, fadvise.POSIX_FADV_SEQUENTIAL)
@@ -63,7 +51,7 @@ class Persister(ProcessingModule):
                 self._beam_range = self._config.beam_range
 
         # Variable to check whether meta file has been written
-        self._head_filepath = file_path + '.pkl'
+        self._head_filepath = self._filepath + '.pkl'
         self._head_written = False
 
         # Counter
@@ -71,6 +59,22 @@ class Persister(ProcessingModule):
 
         # Processing module name
         self.name = "Persister"
+
+    def _get_filepath(self, config):
+        # Create directory if it doesn't exist
+        directory = os.path.join(settings.persisters.directory, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
+                                 settings.observation.name)
+        filename = settings.observation.name + self._config.filename_suffix
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        # Create file
+        if config.use_timestamp:
+            return os.path.join(directory, "%s_%s" % (filename, str(time.time())))
+        else:
+            if 'filename_suffix' not in config.settings():
+                raise PipelineError("Persister: filename_suffix required when not using timestamp")
+            return os.path.join(directory, filename)
 
     def generate_output_blob(self):
         """
@@ -122,3 +126,21 @@ class Persister(ProcessingModule):
         self._file.flush()
 
         return obs_info
+
+    def _get_filepath(self, obs_info):
+        """
+        Return the file path of the persisted data
+
+        :param obs_info:
+        :return:
+        """
+
+        directory = os.path.abspath(os.path.join(settings.persisters.directory, settings.observation.name,
+                                                 '{:%Y-%m-%dT%H%M}'.format(obs_info['timestamp'])))
+        filename = settings.observation.name + self._config.filename_suffix
+
+        # Create directory if it doesn't exist
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        return os.path.join(directory, filename)
