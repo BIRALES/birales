@@ -10,6 +10,25 @@ from pybirales.pipeline.base.definitions import PipelineError
 from pybirales.pipeline.base.processing_module import ProcessingModule
 
 
+def create_corr_matrix_filepath(timestamp):
+    """
+    Return the file path of the persisted data
+
+    :param timestamp:
+    :return:
+    """
+    root_dir = settings.calibration.tmp_dir if settings.observation.type == 'calibration' else settings.persisters.directory
+    directory = os.path.join(root_dir, settings.observation.name)
+
+    filename = '{:%Y-%m-%dT%H%M}{}.{}'.format(timestamp, settings.corrmatrixpersister.filename_suffix, 'h5')
+
+    # Create directory if it doesn't exist
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    return os.path.join(directory, filename)
+
+
 class CorrMatrixPersister(ProcessingModule):
     def __init__(self, config, input_blob=None):
         """
@@ -41,27 +60,6 @@ class CorrMatrixPersister(ProcessingModule):
         # Processing module name
         self.name = "CorrMatrixPersister"
 
-    def _get_filepath(self, obs_info):
-        """
-        Return the file path of the persisted data
-
-        :param obs_info:
-        :return:
-        """
-
-        directory = os.path.join(settings.persisters.directory, settings.observation.name,
-                                                 '{:%Y-%m-%dT%H%M}'.format(obs_info['timestamp']))
-        if settings.observation.type == 'calibration':
-            directory = os.path.join(settings.calibration.tmp_dir)
-
-        filename = settings.observation.name + self._config.filename_suffix
-
-        # Create directory if it doesn't exist
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-        return os.path.join(directory, filename)
-
     def generate_output_blob(self):
         """
         Generate output data blob
@@ -70,6 +68,26 @@ class CorrMatrixPersister(ProcessingModule):
         """
 
         return None
+
+    @staticmethod
+    def _get_corr_matrix_filepath(timestamp):
+        """
+        Return the file path of the persisted data
+
+        :param timestamp:
+        :return:
+        """
+
+        directory = os.path.join(settings.persisters.directory, settings.observation.name,
+                                 '{:%Y-%m-%dT%H%M}'.format(timestamp))
+
+        filename = settings.observation.name + settings.corrmatrixpersister.filename_suffix + '.h5'
+
+        # Create directory if it doesn't exist
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        return os.path.join(directory, filename)
 
     @staticmethod
     def _create_pkl_file(filepath, obs_info):
@@ -134,7 +152,9 @@ class CorrMatrixPersister(ProcessingModule):
         # If first time running, create and initialise file
         if self._counter == 0:
             # Write the observation data file
-            self._filepath = self._get_filepath(obs_info) + '.h5'
+            self._filepath = settings.corrmatrixpersister.corr_matrix_filepath
+            if not self._filepath:
+                self._filepath = create_corr_matrix_filepath(obs_info['timestamp'])
             self._create_hdf5_file(self._filepath, obs_info)
 
             # Write header file

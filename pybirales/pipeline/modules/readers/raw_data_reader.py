@@ -53,6 +53,7 @@ class RawDataReader(ProcessingModule):
             log.error('Config PKL file was not found in %s. Exiting.', self._filepath + config.config_ext)
             sys.exit()
 
+
         # Processing module name
         self.name = "RawDataReader"
 

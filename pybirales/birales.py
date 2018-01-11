@@ -96,6 +96,9 @@ class BiralesConfig:
                 # Else, put the configuration in the observation settings
                 self._parser.set('observation', section, config_options[section])
 
+        # Re-load the system configuration upon initialisation
+        self.load()
+
     def _set_logging_config(self, config_filepath):
         """
 
@@ -267,9 +270,6 @@ class BiralesFacade:
 
             self.configuration.update_config({'observation': {'id': observation.id}})
 
-            # Re-load the system configuration upon initialisation
-            self.configuration.load()
-
             pipeline_manager.start_pipeline(settings.observation.duration)
 
             observation.date_time_end = datetime.datetime.utcnow()
@@ -313,13 +313,16 @@ class BiralesFacade:
         """
 
         self.configuration.update_config({'observation': {'type': 'calibration'}})
+        calib_dir, corr_matrix_filepath = self._calibration.get_calibration_filepath()
+
+        self.configuration.update_config({'corrmatrixpersister': {'corr_matrix_filepath': corr_matrix_filepath}})
 
         if settings.calibration.generate_corrmatrix:
             # Run the correlator pipeline to get model visibilities
             self.start_observation(pipeline_manager=correlator_pipeline_manager)
 
         log.info('Generating calibration coefficients')
-        self._calibration.calibrate()
+        self._calibration.calibrate(calib_dir, corr_matrix_filepath)
 
         # Load Coefficients to ROACH
         if self._backend:

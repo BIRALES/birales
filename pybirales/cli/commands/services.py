@@ -24,7 +24,7 @@ def services(ctx):
 @click.pass_context
 def calibration(ctx, config_filepath, name):
     if not name:
-        name = 'Calibration_{:%Y-%m-%dT%H%M}'.format(datetime.datetime.utcnow())
+        name = 'Calibration_Observation'
     ctx.obj = {
         'observation': {
             'name': name

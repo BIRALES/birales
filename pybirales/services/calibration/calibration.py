@@ -1,14 +1,15 @@
 import logging as log
 import os
-import time
-import shutil
 import pickle
-
+import time
+import datetime
+import numpy as np
+from pytcpo.Core.DataModels.TelescopeModel import TelescopeModel as TM
+from pytcpo.Core.PipeLine.PipelineParallelisation import PipelineParallelisation
 from pytcpo.Pipelines.ModelVisibilitiesPipeline import ModelVisPipelineBuilder
 from pytcpo.Pipelines.RealVisibilitiesPipeline import RealVisPipelineBuilder
-from pytcpo.Core.PipeLine.PipelineParallelisation import PipelineParallelisation
-from pytcpo.Core.DataModels.TelescopeModel import TelescopeModel as TM
-import numpy as np
+from pybirales.pipeline.modules.persisters.corr_matrix_persister import create_corr_matrix_filepath
+
 from pybirales import settings
 
 
@@ -43,7 +44,7 @@ class CalibrationFacade:
         }
 
     @staticmethod
-    def _load_pkl_file(filepath):
+    def load_pkl_file(filepath):
         """
         Load Pickle file
 
@@ -56,43 +57,7 @@ class CalibrationFacade:
         except IOError:
             raise BaseException("PKL file not found in {}".format(filepath))
 
-    def _get_correlation_matrix_filepath(self):
-        """
-        Return the filepath of the correlation matrix data
-
-        :return:
-        """
-
-        filepath = settings.calibration.h5_filepath
-        if not settings.calibration.h5_filepath:
-            directory = self._get_tmp_directory()
-            filename = settings.observation.name + settings.corrmatrixpersister.filename_suffix
-            filepath = os.path.join(directory, filename + '.h5')
-
-        if os.path.exists(filepath):
-            log.debug('Using CorrMatrix at {}'.format(settings.calibration.h5_filepath))
-            return filepath
-
-        raise BaseException("Correlation Matrix data was not found in {}".format(filepath))
-
-    @staticmethod
-    def _get_tmp_directory():
-        """
-
-        :return:
-        """
-
-        directory = os.path.join(settings.calibration.tmp_dir)
-
-        if not settings.calibration.generate_corrmatrix:
-            directory = settings.calibration.h5_filepath
-
-        if os.path.exists(directory):
-            return directory
-
-        raise BaseException("Temporary calibration directory not found in {}".format(directory))
-
-    def _get_real_vis_pipeline_parameters(self, config, calib_dir, tm):
+    def _get_real_vis_pipeline_parameters(self, config, corr_matrix_filepath, calib_dir, tm):
         """
 
         :param config:
@@ -125,7 +90,7 @@ class CalibrationFacade:
                 'calib_check_path': os.path.join(calib_dir, 'calib_plot.png'),
                 'frequency': tm.StartFreq,
                 'bandwith': tm.Bandwith,
-                'transit_file': self._get_correlation_matrix_filepath()}
+                'transit_file': corr_matrix_filepath}
 
     @staticmethod
     def _get_antenna_base_line(auto_corr, no_of_antennas):
@@ -168,7 +133,21 @@ class CalibrationFacade:
 
         return dict_real, dict_imag
 
-    def calibrate(self):
+    def get_calibration_filepath(self):
+        calib_dir = settings.calibration.tmp_dir
+        if settings.manager.offline:
+            if settings.calibration.h5_filepath:
+                corr_matrix_filepath = settings.calibration.h5_filepath
+                calib_dir = os.path.dirname(corr_matrix_filepath)
+            else:
+                obs_info = self.load_pkl_file(settings.rawdatareader.filepath)
+                corr_matrix_filepath = create_corr_matrix_filepath(obs_info['timestamp'])
+        else:
+            corr_matrix_filepath = create_corr_matrix_filepath(datetime.datetime.utcnow())
+
+        return calib_dir, corr_matrix_filepath
+
+    def calibrate(self, calib_dir, corr_matrix_filepath):
         """
         Run the calibration Routine
 
@@ -178,12 +157,9 @@ class CalibrationFacade:
         """
 
         # Load the observation settings only if the pipeline is running in offline mode
-        if settings.manager.offline:
-            self.obs_info = self._load_pkl_file(settings.rawdatareader.filepath)
+        self.obs_info = self.load_pkl_file(corr_matrix_filepath)
 
         log.info('Running the calibration routine.')
-
-        calib_dir = self._get_tmp_directory()
 
         model_vis_pipeline = ModelVisPipelineBuilder.ModelVisPipelineBuilder()
         model_vis_pipeline.setup(
@@ -195,7 +171,7 @@ class CalibrationFacade:
         # RealVisGenPipeline process creation
         real_vis_pipeline = RealVisPipelineBuilder.RealVisPipelineBuilder()
         real_vis_pipeline.setup(
-            params=self._get_real_vis_pipeline_parameters(settings.calibration, calib_dir, self._tm))
+            params=self._get_real_vis_pipeline_parameters(settings.calibration, corr_matrix_filepath, calib_dir, self._tm))
 
         real_vis_process = PipelineParallelisation(real_vis_pipeline.build())
 
@@ -212,5 +188,3 @@ class CalibrationFacade:
 
         coeff_file = os.path.join(calib_dir, 'coeffs_no_geom.txt')
         self.dict_real, self.dict_imag = self._get_calibration_coeffs(coeff_file)
-
-        # shutil.rmtree(main_dir, ignore_errors=True)
