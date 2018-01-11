@@ -11,10 +11,16 @@ STATUS_TYPE = [
 
 class Event:
     channels = []
-    description = None
+    description = 'Event Description'
 
     def __init__(self):
-        self.payload = {'status': None, 'body': None, 'origin': socket.gethostname()}
+        self._level = 'info'
+        self.payload = {'header': {'level': self._level,
+                                   'channels': self.channels,
+                                   'description': self.description,
+                                   'origin': socket.gethostname()
+                                   },
+                        'body': {}}
 
     def to_json(self):
         if self.payload:
@@ -43,7 +49,7 @@ class ObservationScheduledEvent(Event):
         Event.__init__(self)
 
         event = 'The `{}` observation was added to the schedule.'.format(observation.name)
-        self.payload['status'] = 'info'
+
         self.payload['body'] = event + '\n' + observation.start_message()
 
         log.info(event)

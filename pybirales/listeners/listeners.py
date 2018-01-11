@@ -101,7 +101,7 @@ class NotificationsListener(Listener):
 
     @staticmethod
     def _format_msg(msg):
-        return '*{}*: {}'.format(msg['origin'], msg['body'])
+        return '*{}*: {}'.format(msg['header']['origin'], msg['body'])
 
 
 class SpaceDebrisListener(Listener):
