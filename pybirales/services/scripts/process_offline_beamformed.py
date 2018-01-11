@@ -2,7 +2,7 @@ from matplotlib.widgets import Slider
 from matplotlib import pyplot as plt
 import numpy as np
 
-data = np.load("casa_raw_processed.npy")
+data = np.load("casa_raw_processed_offset.npy")
 
 start_ra = -0
 stop_ra = 1
@@ -25,10 +25,19 @@ print(np.where(data == np.max(data)))
 #for i in range(10):
 #    plt.plot(data[163-1*i, :].T)
 #    plt.plot(data[163+1*i, :].T)
-#with open('linear_beam_virgo.txt', 'w') as f:
-#    [f.write(str(x[0])+'\n') for x in data.T]
-plt.plot(data.T)
-#plt.axvline(x=3701)
+with open('casa_tranist_offset.txt', 'w') as f:
+     [f.write("{},{},{},{},{},{},{},{},{}\r\n".format(str(x[0]),str(x[1]),str(x[2]),str(x[3]),str(x[4]),str(x[5]),str(x[6]),str(x[7]),str(x[8]))) for x in data.T]
+
+plt.plot(10*np.log10(data.T[:,0]), label="[-1.6, 1]")
+plt.plot(10*np.log10(data.T[:,1]), label="[0, 1]")
+plt.plot(10*np.log10(data.T[:,2]), label="[1.6, 1]")
+plt.plot(10*np.log10(data.T[:,3]), label="[-1.6, 0]")
+plt.plot(10*np.log10(data.T[:,4]), label="[0, 0]")
+plt.plot(10*np.log10(data.T[:,5]), label="[1.6, 0]")
+plt.plot(10*np.log10(data.T[:,6]), label="[-1.6, -1")
+plt.plot(10*np.log10(data.T[:,7]), label="[0, -1]")
+plt.plot(10*np.log10(data.T[:,8]), label="[1.6, -1]")
+plt.legend()
 plt.show()
 exit()
 
