@@ -1,4 +1,5 @@
 import collections
+
 from astropy.time import Time
 from pybirales import settings
 
@@ -70,3 +71,12 @@ class InputDataNotValidException(PipelineError):
     Input data passed to a module is not the type that the module is expecting
     """
     pass
+
+
+class PipelineBuilderIsNotAvailableException(Exception):
+    def __init__(self, builder_id, available_builders):
+        available_pipelines = ', '.join(available_builders)
+        Exception.__init__(self, "The '{}' pipeline is not available. Please choose one from the following: {}"
+                           .format(builder_id, available_pipelines))
+
+        self.builder_id = builder_id

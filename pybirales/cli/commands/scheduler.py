@@ -95,6 +95,7 @@ def start_observation(observation_settings):
     # Start observation
     bf.start_observation(pipeline_manager=manager)
 
+
 def obs_overlaps_schedule(schedule, start_time, end_time):
     """
     Check if this observation overlaps with the ones already scheduled

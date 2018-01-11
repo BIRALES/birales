@@ -1,7 +1,9 @@
 #!/usr/bin/python
 import datetime
-import numpy as np
+
 import ephem
+import numpy as np
+import pytz
 
 # Define instrument position and list calibration sources
 latitude = 44.523733
@@ -20,53 +22,132 @@ epoch = 1950
 
 
 def get_calibration_sources():
-    """ Return a list of known calibration sources"""
+    """
+    Return a list of known calibration sources
+
+    :return:
+    """
+
     return calibration_sources.keys()
 
 
 def get_calibration_source_declination(source_name):
-    """Get calibration source declination"""
+    """
+    Get the declination of the calibration source
+
+    :param source_name:
+    :return:
+    """
 
     # Check whether calibration source is valid
     if source_name not in calibration_sources.keys():
         raise Exception("{} not a known calibration source".format(source_name))
 
-    v = calibration_sources[source_name]
-    return np.math.degrees(ephem.degrees(v['dec']))
+    c_v = calibration_sources[source_name]
+
+    return np.math.degrees(ephem.degrees(c_v['dec']))
 
 
-def get_next_tranist(source_name, date=None):
-    """ Get the next transit time for the give source"""
+def _ephem_compute(source_name, obs_date=None):
+    """
+    Compute the ephem body
+
+    :param source_name:
+    :param obs_date:
+    :return:
+    """
 
     # Check whether calibration source is valid
     if source_name not in calibration_sources.keys():
         raise Exception("{} not a known calibration source".format(source_name))
 
-    if date is None:
-        date = ephem.julian_date()
+    if obs_date is None:
+        obs_date = ephem.julian_date()
     else:
-        date = ephem.julian_date(date)
-    obs.date = ephem.date(date - 2415020)
+        obs_date = ephem.julian_date(obs_date)
+    obs.date = ephem.date(obs_date - 2415020)
 
     # Calculate next transit time
-    v = calibration_sources[source_name]
+    c_v = calibration_sources[source_name]
 
-    ephemline = '%s,f,%s,%s,%s,%d' % (v['name'], v['ra'], v['dec'], np.log10(v['flux']), epoch)
-    body = ephem.readdb(ephemline)
+    ephem_line = '%s,f,%s,%s,%s,%d' % (c_v['name'], c_v['ra'], c_v['dec'], np.log10(c_v['flux']), epoch)
+    body = ephem.readdb(ephem_line)
     body.compute(obs)
+
+    return body
+
+
+def get_next_transit(source_name, obs_date=None):
+    """
+    Get the first transit time of a source after an obs_date
+
+    :param source_name:
+    :param obs_date:
+    :return:
+    """
+    body = _ephem_compute(source_name, obs_date)
     next_transit = obs.next_transit(body)
     time_to_transit = next_transit - obs.date
 
     return next_transit, time_to_transit * 24 * 3600
 
 
+def get_previous_transit(source_name, obs_date=None):
+    """
+    Get the last transit time of a source before an obs_date
+
+    :param source_name:
+    :param obs_date:
+    :return:
+    """
+    body = _ephem_compute(source_name, obs_date)
+    previous_transit = obs.previous_transit(body)
+    time_to_transit = previous_transit - obs.date
+
+    return previous_transit.datetime().replace(tzinfo=pytz.utc), time_to_transit * 24 * 3600
+
+
+def get_best_calibration_obs(from_date, to_date, time_after_transit, time_before_transit):
+    """
+
+    Return the possible/available calibration sources for a future observation date
+
+    :param from_date:
+    :param to_date:
+    :param time_after_transit:
+    :param time_before_transit:
+    :return: A dictionary of available sources together with their parameters
+    """
+    if from_date is None:
+        from_date = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+
+    if to_date <= from_date:
+        raise ValueError("TO date cannot be before FROM date")
+
+    min_from_date = from_date + time_before_transit
+
+    # Account for time to calibrate
+    max_to_date = to_date - time_after_transit
+
+    available_calibration_sources = []
+    for source, source_parameters in calibration_sources.iteritems():
+        previous_transit_time, ttt = get_previous_transit(source, max_to_date)
+
+        if min_from_date < previous_transit_time < max_to_date:
+            source_parameters['name'] = source
+            source_parameters['transit_time'] = previous_transit_time
+
+            available_calibration_sources.append(source_parameters)
+
+    return available_calibration_sources
+
+
 if __name__ == "__main__":
     for k, v in calibration_sources.iteritems():
-        date, seconds = get_next_tranist(k, datetime.datetime.now())
+        date, seconds = get_next_transit(k, datetime.datetime.now())
         print "%+8s : RA: %11s  DEC: %11s  FLUX: %8s  TRANSIT (UTC): %-20s" % (
             k,
             v['ra'],
             v['dec'],
             v['flux'],
             date)
-

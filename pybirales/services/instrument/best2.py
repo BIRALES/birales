@@ -1,24 +1,41 @@
+import logging
+import re
 import socket
 import threading
 import time
-import logging
-import re
 
 from pybirales.pipeline.base.definitions import PipelineError
-from pybirales.utilities.singleton import Singleton
 from pybirales.services.instrument.best2_server import SdebTCPServer
+from pybirales.utilities.singleton import Singleton
+
+# Delay in seconds
+START_DELAY = 15
+
+# Degrees per minute which BEST2 can move in
+MOVEMENT_SPEED = 4
+
+
+def pointing_time(dec1, dec2):
+    """
+    Calculate the time required to move between two positions
+
+    :param dec1: original declination
+    :param dec2: target declination
+    :return:
+    """
+    return START_DELAY + abs(dec1 - dec2) * 60 / MOVEMENT_SPEED
 
 
 @Singleton
 class BEST2(object):
-    """ Class implementing BEST2 client to be able to move the telescope """
+    """
+    Class implementing BEST2 client to be able to move the telescope
+    """
 
     def __init__(self, ip="127.0.0.1", port=7200):
         """ Class constructor """
 
         self._zenith = 44.52
-        self._start_delay = 15
-        self._movement_speed = 4  # Degrees per minute which BEST2 can move in
         self._buffer_size = 1024
         self._port = port
         self._ip = ip
@@ -93,7 +110,7 @@ class BEST2(object):
         for i in range(3):
             time.sleep(1)
             self._socket.sendall("best")  # Issue command
-            time.sleep(2)      # Wait for reply
+            time.sleep(2)  # Wait for reply
             data = self._socket.recv(self._buffer_size)  # Get reply
             if re.search("[0-9]+", data) is not None:
                 break
@@ -146,10 +163,6 @@ class BEST2(object):
         else:
             return False
 
-    def pointing_time(self, dec1, dec2):
-        """ Calculate the time required to move between two positions """
-        return self._start_delay + abs(dec1 - dec2) * self._movement_speed
-
     def _move_best2(self, dec):
         """ Issue the commands to move BEST2"""
         # Issue command
@@ -160,7 +173,7 @@ class BEST2(object):
         logging.info("BEST2: Pointing - %s" % data)
 
         # Wait for start delay
-        time.sleep(self._start_delay)
+        time.sleep(self.START_DELAY)
 
         # Wait until pointing is very close to desired one
         while True:
@@ -195,6 +208,7 @@ if __name__ == "__main__":
 
     # Set logging
     from sys import stdout
+
     log = logging.getLogger('')
     log.setLevel(logging.DEBUG)
     str_format = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
@@ -211,4 +225,3 @@ if __name__ == "__main__":
     best2.move_to_declination(30)
 
     best2.stop_best2_server()
-

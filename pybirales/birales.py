@@ -18,10 +18,12 @@ from pybirales.repository.models import Observation
 from pybirales.services.calibration.calibration import CalibrationFacade
 from pybirales.services.instrument.backend import Backend
 from pybirales.services.instrument.best2 import BEST2
+from pybirales.listeners.listeners import NotificationsListener
+from pybirales.events.publisher import EventsPublisher
+from pybirales.events.events import ObservationStartedEvent
 
 
 class BiralesConfig:
-    LOCAL_CONFIG = os.path.join(os.environ['HOME'], '.birales/local.ini')
 
     def __init__(self, config_file_path, config_options=None):
         """
@@ -35,18 +37,16 @@ class BiralesConfig:
         # The configuration parser of the BIRALES system
         self._parser = configparser.RawConfigParser()
 
-        # Load the BIRALES config settings
-        self._load_from_file(config_file_path)
+        # Set the configurations from file (can be multiple files)
+        for config_file in config_file_path:
+            self._load_from_file(config_file)
 
         # Load the ROACH backend settings
-        backend_path = os.path.join(os.path.dirname(config_file_path),
+        backend_path = os.path.join(os.path.dirname(config_file_path[0]),
                                     self._parser.get('receiver', 'backend_config_filepath'))
         self._load_from_file(backend_path)
 
-        # Override the default configuration file with the ones specified in the local.ini
-        self._load_from_file(BiralesConfig.LOCAL_CONFIG)
-
-        # Update the configuration with settings passed on in the config_options dictionary
+        # Override the configuration with settings passed on in the config_options dictionary
         self.update_config(config_options)
 
         self._set_logging_config(config_file_path)
@@ -73,7 +73,7 @@ class BiralesConfig:
         try:
             with open(config_filepath) as f:
                 self._parser.read_file(f)
-                log.info('Loaded configuration file at {}.'.format(config_filepath))
+                log.info('Loaded the {} configuration file.'.format(config_filepath))
         except IOError:
             log.info('Config file at {} was not found'.format(config_filepath))
 
@@ -96,6 +96,9 @@ class BiralesConfig:
             else:
                 # Else, put the configuration in the observation settings
                 self._parser.set('observation', section, config_options[section])
+
+        # Re-load the system configuration upon initialisation
+        self.load()
 
     def _set_logging_config(self, config_filepath):
         """
@@ -208,6 +211,9 @@ class BiralesFacade:
         # Load the system configuration upon initialisation
         self.configuration.load()
 
+        # Initialise and start the listeners / subscribers of the BIRALES application
+        self._listeners = self._init_listeners()
+
         self._pipeline_manager = None
 
         self._calibration = CalibrationFacade()
@@ -216,9 +222,11 @@ class BiralesFacade:
 
         self._backend = None
 
+        self._publisher = EventsPublisher.Instance()
+
         # Set interrupt signal handler if not already set
         if signal.getsignal(signal.SIGINT) == signal.SIG_DFL:
-            log.info("Setting signal handler in BiralesFacede")
+            log.info("Setting signal handler in BiralesFacade")
             signal.signal(signal.SIGINT, self._signal_handler)
         else:
             log.info("Signal handler already set, not setting it in BiralesFacade")
@@ -263,10 +271,10 @@ class BiralesFacade:
                                       settings=self.configuration.to_dict())
             observation.save()
 
-            self.configuration.update_config({'observation': {'id': observation.id}})
+            # Fire an Observation was Scheduled Event
+            self._publisher.publish(ObservationStartedEvent(observation, pipeline_manager.name))
 
-            # Re-load the system configuration upon initialisation
-            self.configuration.load()
+            self.configuration.update_config({'observation': {'id': observation.id}})
 
             pipeline_manager.start_pipeline(settings.observation.duration)
 
@@ -310,14 +318,17 @@ class BiralesFacade:
         :return:
         """
 
-        # Run the correlator pipeline to get model visibilities
-        self.start_observation(pipeline_manager=correlator_pipeline_manager)
+        self.configuration.update_config({'observation': {'type': 'calibration'}})
+        calib_dir, corr_matrix_filepath = self._calibration.get_calibration_filepath()
 
-        # Generate the calibration_coefficients
-        directory = str(os.path.join(settings.calibration.real_vis_dir, settings.observation.name))
-        print(directory)
-        self._calibration.calibrate(directory)
+        self.configuration.update_config({'corrmatrixpersister': {'corr_matrix_filepath': corr_matrix_filepath}})
+
+        if settings.calibration.generate_corrmatrix:
+            # Run the correlator pipeline to get model visibilities
+            self.start_observation(pipeline_manager=correlator_pipeline_manager)
+
         log.info('Generating calibration coefficients')
+        self._calibration.calibrate(calib_dir, corr_matrix_filepath)
 
         # Load Coefficients to ROACH
         if self._backend:
@@ -328,3 +339,15 @@ class BiralesFacade:
     @staticmethod
     def start_server():
         run()
+
+    @staticmethod
+    def _init_listeners():
+        listeners = []
+        if settings.observation.notifications:
+            listeners.append(NotificationsListener())
+
+        # Start the listener threads
+        for l in listeners:
+            l.start()
+
+        return listeners

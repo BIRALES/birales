@@ -12,7 +12,7 @@ from pybirales.cli.helpers import update_config
 @click.pass_context
 def pipelines(ctx, name, debug, duration):
     if not name:
-        name = 'Observation_' + datetime.datetime.utcnow().isoformat('T')
+        name = 'Observation_{:%Y-%m-%dT%H%M}'.format(datetime.datetime.utcnow())
 
     ctx.obj = {
         'observation': {
@@ -29,11 +29,12 @@ def pipelines(ctx, name, debug, duration):
 
 
 @pipelines.command(short_help='Run the Detection Pipeline')
-@click.argument('configuration', type=click.Path(exists=True))
+@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+              help='The BIRALES configuration file', multiple=True)
 @click.option('--tx', 'tx', default=410.07, help='The transmission frequency in MHz')
 @click.option('--pointing', 'pointing', default=12.3, help='Reference Declination of the Beam Former')
 @click.pass_context
-def detection_pipeline(ctx, configuration, tx, pointing):
+def detection_pipeline(ctx, config_file_path, tx, pointing):
     """
 
     Run the Detection Pipeline
@@ -41,7 +42,7 @@ def detection_pipeline(ctx, configuration, tx, pointing):
     :param ctx:
     :param tx:
     :param pointing:
-    :param configuration: The default configuration file to be used.
+    :param config_file_path: The default configuration file to be used.
     :return:
     """
 
@@ -49,7 +50,7 @@ def detection_pipeline(ctx, configuration, tx, pointing):
     ctx.obj = update_config(ctx.obj, 'beamformer', 'reference_pointing', pointing)
 
     # Load the BIRALES configuration from file
-    config = BiralesConfig(configuration, ctx.obj)
+    config = BiralesConfig(config_file_path, ctx.obj)
 
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)
@@ -62,19 +63,20 @@ def detection_pipeline(ctx, configuration, tx, pointing):
 
 
 @pipelines.command(short_help='Run the Correlation Pipeline')
-@click.argument('configuration', type=click.Path(exists=True))
+@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+              help='The BIRALES configuration file', multiple=True)
 @click.pass_context
-def correlation_pipeline(ctx, configuration):
+def correlation_pipeline(ctx, config_file_path):
     """
     Run the Correlation Pipeline
 
     :param ctx:
-    :param configuration: The default configuration file to be used.
+    :param config_file_path: The default configuration file to be used.
     :return:
     """
 
     # Load the BIRALES configuration from file
-    config = BiralesConfig(configuration, ctx.obj)
+    config = BiralesConfig(config_file_path, ctx.obj)
 
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)
@@ -87,17 +89,18 @@ def correlation_pipeline(ctx, configuration):
 
 
 @pipelines.command(short_help='Run the stand alone Pipeline')
-@click.argument('configuration', type=click.Path(exists=True))
-def standalone_pipeline(configuration):
+@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+              help='The BIRALES configuration file', multiple=True)
+def standalone_pipeline(config_file_path):
     """
     Run the Stand Alone Pipeline
 
-    :param configuration: The default configuration file to be used.
+    :param config_file_path: The default configuration file to be used.
     :return:
     """
 
     # Load the BIRALES configuration from file
-    config = BiralesConfig(configuration)
+    config = BiralesConfig(config_file_path)
 
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)

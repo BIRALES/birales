@@ -1,18 +1,35 @@
-import datetime
-import fadvise
-import h5py
-import numpy as np
+import logging as log
 import os
 import pickle
-import time
+
+import h5py
+import numpy as np
 
 from pybirales import settings
 from pybirales.pipeline.base.definitions import PipelineError
 from pybirales.pipeline.base.processing_module import ProcessingModule
 
 
-class CorrMatrixPersister(ProcessingModule):
+def create_corr_matrix_filepath(timestamp):
+    """
+    Return the file path of the persisted data
 
+    :param timestamp:
+    :return:
+    """
+    root_dir = settings.calibration.tmp_dir if settings.observation.type == 'calibration' else settings.persisters.directory
+    directory = os.path.join(root_dir, settings.observation.name)
+
+    filename = '{:%Y-%m-%dT%H%M}{}.{}'.format(timestamp, settings.corrmatrixpersister.filename_suffix, 'h5')
+
+    # Create directory if it doesn't exist
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    return os.path.join(directory, filename)
+
+
+class CorrMatrixPersister(ProcessingModule):
     def __init__(self, config, input_blob=None):
         """
 
@@ -28,22 +45,12 @@ class CorrMatrixPersister(ProcessingModule):
         if {'filename_suffix', 'use_timestamp'} - set(config.settings()) != set():
             raise PipelineError("Persister: Missing keys on configuration. (filename_suffix, use_timestamp)")
 
-        # Create directory if it doesn't exist
-        directory = os.path.join(settings.calibration.real_vis_dir, settings.observation.name)
-        filename = settings.observation.name + self._config.filename_suffix
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-        # Create file
-        if config.use_timestamp:
-            self._filepath = os.path.join(directory, "%s_%s" % (filename, str(time.time())))
-        else:
-            if 'filename_suffix' not in config.settings():
-                raise PipelineError("CorrMatrixPersister: filename_suffix required when not using timestamp")
-            self._filepath = os.path.join(directory, filename + '.h5')
+        # Get the destination file path of the persisted data
+        self._filepath = None
 
         # Variable to check whether meta file has been written
-        self._head_filepath = self._filepath + '.pkl'
+        self._head_filepath = None
+
         self._head_written = False
 
         # Counter
@@ -62,16 +69,50 @@ class CorrMatrixPersister(ProcessingModule):
 
         return None
 
-    def _create_hdf5_file(self, obs_info):
+    @staticmethod
+    def _get_corr_matrix_filepath(timestamp):
         """
-        Create HDF5 file for storing correlation matrix
+        Return the file path of the persisted data
 
+        :param timestamp:
+        :return:
+        """
+
+        directory = os.path.join(settings.persisters.directory, settings.observation.name,
+                                 '{:%Y-%m-%dT%H%M}'.format(timestamp))
+
+        filename = settings.observation.name + settings.corrmatrixpersister.filename_suffix + '.h5'
+
+        # Create directory if it doesn't exist
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        return os.path.join(directory, filename)
+
+    @staticmethod
+    def _create_pkl_file(filepath, obs_info):
+        """
+
+        :param filepath:
         :param obs_info:
         :return:
         """
 
-        f = h5py.File(self._filepath, "w")
-        print(self._filepath)
+        # Write observation information
+        with open(filepath, 'wb') as f:
+            pickle.dump(obs_info.get_dict(), f)
+
+    @staticmethod
+    def _create_hdf5_file(filepath, obs_info):
+        """
+        Create HDF5 file for storing correlation matrix
+
+        :param filepath:
+        :param obs_info:
+        :return:
+        """
+
+        f = h5py.File(filepath, "w")
 
         dset = f.create_dataset("Vis", (obs_info['nsamp'], obs_info['nsubs'], obs_info['nbaselines'],
                                         obs_info['nstokes']),
@@ -110,11 +151,17 @@ class CorrMatrixPersister(ProcessingModule):
 
         # If first time running, create and initialise file
         if self._counter == 0:
-            self._create_hdf5_file(obs_info)
+            # Write the observation data file
+            self._filepath = settings.corrmatrixpersister.corr_matrix_filepath
+            if not self._filepath:
+                self._filepath = create_corr_matrix_filepath(obs_info['timestamp'])
+            self._create_hdf5_file(self._filepath, obs_info)
 
-            # Write observation information
-            with open(self._head_filepath, 'wb') as f:
-                pickle.dump(obs_info.get_dict(), f)
+            # Write header file
+            self._head_filepath = self._filepath + '.pkl'
+            self._create_pkl_file(self._head_filepath, obs_info)
+
+            log.debug('Writing observation PKL and H5 file at {}'.format(os.path.abspath(self._filepath)))
 
         # Open file
         f = h5py.File(self._filepath, "a")

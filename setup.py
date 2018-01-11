@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pybirales',
-    version='1.0',
+    version='2.0',
     packages=find_packages(),
     url='https://bitbucket.org/lessju/birales',
     license='',
@@ -17,7 +17,6 @@ setup(
              'pybirales/app/app.py'
              ],
     include_package_data=True,
-    #package_data={'pybirales/app/templates': ['*'], 'pybirales/app/static': ['*']},
     zip_safe=False,
     install_requires=['configparser',
                       'futures',
@@ -30,6 +29,7 @@ setup(
                       "pymongo==2.8.*",
                       "scipy",
                       "scikit-learn",
+                      "ephem",
                       #  "h5py",
                       "click",
                       "flask",
@@ -38,8 +38,8 @@ setup(
                       "flask_ini",
                       "fadvise",
                       'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow', 'humanize', 'mongoengine', 'pyfits',
-                      'construct==2.5.5-reupload',
-                      'corr'],
+                      'construct==2.5.5',
+                      'corr', 'dateutil', 'slackclient'],
     data_files=[(os.environ['HOME'] + '/.birales', ['pybirales/configuration/local.ini']),
                 (os.environ['HOME'] + '/.birales/tcpo', []),
                 (os.environ['HOME'] + '/.birales/fits', []),
