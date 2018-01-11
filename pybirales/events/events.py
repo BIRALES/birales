@@ -48,8 +48,31 @@ class ObservationScheduledEvent(Event):
 
         Event.__init__(self)
 
-        event = 'The `{}` observation was added to the schedule.'.format(observation.name)
+        event_msg = 'The `{}` observation was added to the schedule.'.format(observation.name)
 
-        self.payload['body'] = event + '\n' + observation.start_message()
+        self.payload['body'] = event_msg + '\n' + observation.start_message()
 
-        log.info(event)
+        log.debug(event_msg)
+
+
+class ObservationStartedEvent(Event):
+    """
+    Event is fired when an observation is started
+    """
+
+    channels = ['notifications']
+    description = 'An observation was started'
+
+    def __init__(self, observation, pipeline_name):
+        """
+
+        :param observation: An object of type ScheduledObservation
+        :type observation: ScheduledObservation
+        """
+
+        Event.__init__(self)
+
+        self.payload['body'] = 'Observation `{}` (`{}` pipeline) was started on *{}*'.format(observation.name,
+                                                                                             pipeline_name,
+                                                                                             socket.gethostname())
+        log.debug(self.payload['body'])

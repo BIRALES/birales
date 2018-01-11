@@ -75,7 +75,7 @@ class NotificationsListener(Listener):
         try:
             self.token = os.environ["SLACK_BOT_TOKEN"]
         except KeyError:
-            log.warning('Slack token not set. Please set the SLACK_BOT_TOKEN environment variable')
+            log.warning('Slack token not set. Please set the SLACK_BOT_TOKEN env variable. Notifications disabled.')
             self.stop()
         else:
             self.slack_client = SlackClient(self.token)

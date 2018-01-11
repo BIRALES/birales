@@ -19,10 +19,11 @@ from pybirales.services.calibration.calibration import CalibrationFacade
 from pybirales.services.instrument.backend import Backend
 from pybirales.services.instrument.best2 import BEST2
 from pybirales.listeners.listeners import NotificationsListener
+from pybirales.events.publisher import EventsPublisher
+from pybirales.events.events import ObservationStartedEvent
 
 
 class BiralesConfig:
-    LOCAL_CONFIG = os.path.join(os.environ['HOME'], '.birales/local.ini')
 
     def __init__(self, config_file_path, config_options=None):
         """
@@ -221,6 +222,8 @@ class BiralesFacade:
 
         self._backend = None
 
+        self._publisher = EventsPublisher.Instance()
+
         # Set interrupt signal handler if not already set
         if signal.getsignal(signal.SIGINT) == signal.SIG_DFL:
             log.info("Setting signal handler in BiralesFacade")
@@ -267,6 +270,9 @@ class BiralesFacade:
                                       date_time_start=datetime.datetime.utcnow(),
                                       settings=self.configuration.to_dict())
             observation.save()
+
+            # Fire an Observation was Scheduled Event
+            self._publisher.publish(ObservationStartedEvent(observation, pipeline_manager.name))
 
             self.configuration.update_config({'observation': {'id': observation.id}})
 
