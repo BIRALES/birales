@@ -1,0 +1,15 @@
+{
+  "casA": {
+    "pipeline": "correlation_pipeline",
+    "config_file": "pybirales/configuration/birales.ini",
+    "config_parameters": {
+      "manager": {
+        "debug": true,
+        "offline": false,
+        "detector_enabled": false
+      },
+      "start_time": "2017-12-20T15:38Z",
+      "duration": 7200
+    }
+  }
+}

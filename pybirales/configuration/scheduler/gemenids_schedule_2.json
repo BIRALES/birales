@@ -1,0 +1,40 @@
+{
+  "gemenids_1": {
+    "pipeline": "detection_pipeline",
+    "config_file": "pybirales/configuration/birales.ini",
+    "config_parameters": {
+      "observation": {
+        "transmitter_frequency": 411
+      },
+      "manager": {
+        "debug": true,
+        "offline": false,
+        "detector_enabled": true
+      },
+      "beamformer": {
+        "reference_declination": 30
+      },
+      "start_time": "2017-12-14T23:30Z",
+      "duration": 4800
+    }
+  },
+  "gemenids_2": {
+    "pipeline": "detection_pipeline",
+    "config_file": "pybirales/configuration/birales.ini",
+    "config_parameters": {
+      "observation": {
+        "transmitter_frequency": 412
+      },
+      "manager": {
+        "debug": true,
+        "offline": false,
+        "detector_enabled":true
+      },
+      "beamformer": {
+        "reference_declination": 40
+      },
+      "start_time": "2017-12-15T13:30:00Z",
+      "duration": 4800
+    }
+  }
+}
