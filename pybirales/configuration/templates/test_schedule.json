@@ -1,5 +1,5 @@
 {
-  "gemenids_1": {
+  "observation 1": {
     "pipeline": "detection_pipeline",
     "config_file": "pybirales/configuration/birales.ini",
     "config_parameters": {
@@ -8,17 +8,16 @@
       },
       "manager": {
         "debug": true,
-        "offline": false,
-        "detector_enabled": true
+        "offline": true
       },
       "beamformer": {
         "reference_declination": 30
       },
-      "start_time": "2017-12-14T23:30Z",
-      "duration": 4800
+      "start_time": "2018-01-06T18:25:00Z",
+      "duration": 400
     }
   },
-  "gemenids_2": {
+  "observation 2": {
     "pipeline": "detection_pipeline",
     "config_file": "pybirales/configuration/birales.ini",
     "config_parameters": {
@@ -27,14 +26,13 @@
       },
       "manager": {
         "debug": true,
-        "offline": false,
-        "detector_enabled":true
+        "offline": true
       },
       "beamformer": {
         "reference_declination": 40
       },
-      "start_time": "2017-12-15T13:30:00Z",
-      "duration": 4800
+      "start_time": "2018-01-06T23:00:00Z",
+      "duration": 30000
     }
   }
 }
