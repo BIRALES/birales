@@ -1,19 +1,15 @@
-import numpy as np
 import ctypes
-import datetime
 import logging
-import time
+import logging as log
 import warnings
 
-from threading import Thread, Lock, Event
-from numpy import ctypeslib
-
-from astropy.coordinates import Angle, EarthLocation, SkyCoord, AltAz
-from astropy.units import Quantity
+import numpy as np
 from astropy import constants
 from astropy import units as u
-from astropy.time import Time
+from astropy.coordinates import Angle
+from astropy.units import Quantity
 from astropy.utils.exceptions import AstropyWarning
+from numpy import ctypeslib
 
 from pybirales import settings
 from pybirales.pipeline.base.definitions import PipelineError
@@ -226,7 +222,7 @@ class Pointing(object):
         alt, az = self._ha_dec_to_alt_az(ha, dec, self._reference_location)
 
         # Point beam to required ALT AZ
-        print("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, dec, alt.deg, az.deg))
+        log.debug("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, dec, alt.deg, az.deg))
         self.point_array_static(beam, alt, az)
 
     @staticmethod

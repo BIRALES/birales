@@ -1,12 +1,10 @@
-import datetime
-import logging
+import logging as log
 import warnings
 
 import numpy as np
 from astropy import constants
 from astropy import units as u
-from astropy.coordinates import Angle, EarthLocation, SkyCoord, AltAz
-from astropy.time import Time
+from astropy.coordinates import Angle
 from astropy.units import Quantity
 from astropy.utils.exceptions import AstropyWarning
 
@@ -152,7 +150,7 @@ class Pointing(object):
         alt, az = self._ha_dec_to_alt_az(ha, dec, self._reference_location)
 
         # Point beam to required ALT AZ
-        print("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, dec, alt.deg, az.deg))
+        log.debug("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, dec, alt.deg, az.deg))
         self.point_array_static(beam, alt, az)
 
     @staticmethod
