@@ -292,11 +292,6 @@ class BiralesFacade:
 
             log.info('Observation {} (using the {}) finished'.format(observation.name, pipeline_manager.name))
 
-            # All done, stop observation
-            self.stop()
-
-            log.info('BIRALES Space Debris Detection system finished')
-
     def stop(self):
         """ Stop observation """
         # Stop pipeline

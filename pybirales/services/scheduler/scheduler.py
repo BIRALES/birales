@@ -101,6 +101,9 @@ class ObservationsScheduler:
         if self._scheduler.empty():
             log.info('Scheduler was cleared from all events. Please wait for the monitoring thread to terminate.')
 
+        # Wait for all the notifications to be sent
+        time.sleep(2)
+
     def _add_observations(self, scheduled_observations):
         """
         Schedule a list of observations
