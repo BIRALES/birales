@@ -39,7 +39,7 @@ setup(
                       "fadvise",
                       'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow', 'humanize', 'mongoengine', 'pyfits',
                       'construct==2.5.5',
-                      'corr', 'dateutil', 'slackclient'],
+                      'corr', 'python-dateutil', 'slackclient'],
     data_files=[(os.environ['HOME'] + '/.birales', ['pybirales/configuration/local.ini']),
                 (os.environ['HOME'] + '/.birales/tcpo', []),
                 (os.environ['HOME'] + '/.birales/fits', []),
