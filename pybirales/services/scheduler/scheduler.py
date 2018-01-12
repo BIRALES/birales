@@ -8,46 +8,20 @@ from operator import attrgetter
 
 import pytz
 
-from pybirales.birales import BiralesFacade, BiralesConfig
-from pybirales.pipeline.pipeline import get_builder_by_id
+from pybirales.events.events import ObservationScheduledCancelledEvent
+from pybirales.events.publisher import EventsPublisher
 from pybirales.services.scheduler.exceptions import NoObservationsQueuedException, IncorrectScheduleFormat, \
     InvalidObservationException
 from pybirales.services.scheduler.monitoring import monitor_worker
-from pybirales.services.scheduler.observation import ScheduledObservation, ScheduledCalibrationObservation
+from pybirales.services.scheduler.observation import ScheduledObservation
 from pybirales.services.scheduler.schedule import Schedule
-
-
-def run_observation(observation):
-    """
-    Run the pipeline using the provided observation settings
-
-    :param observation: A ScheduledObservation object
-    :return:
-    """
-
-    # Load the BIRALES configuration from file
-    config = BiralesConfig(observation.config_file, observation.parameters)
-
-    # Initialise the Birales Facade (BOSS)
-    bf = BiralesFacade(configuration=config)
-
-    # Build the pipeline manager
-    manager = bf.build_pipeline(pipeline_builder=get_builder_by_id(observation.pipeline_name))
-
-    # Start observation
-    if isinstance(observation, ScheduledObservation):
-        bf.start_observation(pipeline_manager=manager)
-
-    # Calibrate the Instrument
-    if isinstance(observation, ScheduledCalibrationObservation):
-        bf.calibrate(correlator_pipeline_manager=manager)
 
 
 class ObservationsScheduler:
     # By default, all observation have a delayed start by this amount
     DEFAULT_WAIT_SECONDS = 5
 
-    def __init__(self):
+    def __init__(self, observation_run_func):
         """
         Initialise the Scheduler class
 
@@ -61,6 +35,12 @@ class ObservationsScheduler:
 
         # Monitoring thread that will output the status of the scheduler at specific intervals
         self._monitor_thread = threading.Thread(target=monitor_worker, args=(self._scheduler,), name='Monitoring')
+
+        # Event published of the application
+        self._publisher = EventsPublisher.Instance()
+
+        # The observation run function that will run the observations
+        self._observation_runner = observation_run_func
 
     def load_from_file(self, schedule_file_path, file_format='json'):
         """
@@ -103,7 +83,8 @@ class ObservationsScheduler:
         for observation in self._schedule:
             wait_seconds = (observation.start_time_padded - now).total_seconds()
             if wait_seconds > 1:
-                self._scheduler.enter(delay=wait_seconds, priority=0, action=run_observation, argument=(observation,))
+                self._scheduler.enter(delay=wait_seconds, priority=0, action=self._observation_runner,
+                                      argument=(observation,))
 
         # Start the monitoring thread
         self._monitor_thread.start()
@@ -115,7 +96,7 @@ class ObservationsScheduler:
         log.info('Cancelling {} observations from schedule'.format(len(self._scheduler.queue)))
         for event in self._scheduler.queue:
             self._scheduler.cancel(event)
-            log.debug('The `{}` observation was cancelled'.format(event.argument[0].name))
+            self._publisher.publish(ObservationScheduledCancelledEvent(observation=event.argument[0]))
 
         if self._scheduler.empty():
             log.info('Scheduler was cleared from all events. Please wait for the monitoring thread to terminate.')

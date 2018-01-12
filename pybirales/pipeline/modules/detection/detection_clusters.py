@@ -47,7 +47,8 @@ class DetectionCluster:
         # Compare the detection cluster's data against a (linear) model
         t = time2.time()
         self.fit_model(model=self._model, channel_data=self.channel_data, time_data=self.time_data)
-        log.debug('Fitting on %s data points took %0.3f s', len(self.channel_data), time2.time() - t)
+        log.debug('Beam {}: Fitting on {} data points took {:0.3f} s'.format(self.beam_config['beam_id'],
+                                                                             len(self.channel_data), time2.time() - t))
 
     def fit_model(self, model, channel_data, time_data):
         """
@@ -88,9 +89,6 @@ class DetectionCluster:
             t = time2.time()
             model.fit(channels, time)
 
-            t2 = time2.time() - t
-            log.debug('Fitting 2 took %0.3f s', t2)
-
         except ValueError:
             log.debug('Linear interpolation failed. No inliers found.')
         else:
@@ -111,7 +109,7 @@ class DetectionCluster:
             self.c = model.estimator_.intercept_
 
             self.channel_data = np.array([channel[0] for channel in channels])
-            self.time_data = [np.datetime64(int(t*1e9), 'ns') for t in time]
+            self.time_data = [np.datetime64(int(t * 1e9), 'ns') for t in time]
             self.snr_data = np.array(snr)
 
     def is_linear(self, threshold):
@@ -258,7 +256,7 @@ class DetectionCluster:
         """
         max_snr_mask = np.argmax(self.snr_data)
         return {
-            #'_id': self.id,
+            # '_id': self.id,
             'observation': self.beam_config['observation_id'],
             'beam_ra': self.beam_config['beam_ra'],
             'beam_dec': self.beam_config['beam_dec'],

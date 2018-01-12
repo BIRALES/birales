@@ -1,8 +1,10 @@
 import click
 import datetime
 from pybirales.birales import BiralesFacade, BiralesConfig
-from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, CorrelatorPipelineManagerBuilder, StandAlonePipelineMangerBuilder
+from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, CorrelatorPipelineManagerBuilder, \
+    StandAlonePipelineMangerBuilder
 from pybirales.cli.helpers import update_config
+import logging as log
 
 
 @click.group()

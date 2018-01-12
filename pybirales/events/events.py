@@ -48,11 +48,33 @@ class ObservationScheduledEvent(Event):
 
         Event.__init__(self)
 
-        event_msg = 'The `{}` observation was added to the schedule.'.format(observation.name)
+        event_msg = '`{}` was _added_ to the schedule.'.format(observation.name)
 
-        self.payload['body'] = event_msg + '\n' + observation.start_message()
+        self.payload['body'] = event_msg + observation.start_message()
 
         log.debug(event_msg)
+
+
+class ObservationScheduledCancelledEvent(Event):
+    """
+    Event representing a scheduled observation
+    """
+
+    channels = ['notifications']
+    description = 'A scheduled observation was cancelled'
+
+    def __init__(self, observation):
+        """
+
+        :param observation: An object of type ScheduledObservation
+        :type observation: ScheduledObservation
+        """
+
+        Event.__init__(self)
+
+        self.payload['body'] = '`{}` was _cancelled_ from the schedule.'.format(observation.name)
+
+        log.debug(self.payload['body'])
 
 
 class ObservationStartedEvent(Event):
@@ -72,7 +94,7 @@ class ObservationStartedEvent(Event):
 
         Event.__init__(self)
 
-        self.payload['body'] = 'Observation `{}` (`{}` pipeline) was started on *{}*'.format(observation.name,
+        self.payload['body'] = '`{}` (using the `{}` pipeline) was started on *{}*'.format(observation.name,
                                                                                              pipeline_name,
                                                                                              socket.gethostname())
         log.debug(self.payload['body'])

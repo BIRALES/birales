@@ -2,29 +2,31 @@ import ast
 import datetime
 import logging as log
 import logging.config as log_config
-
-from logging.handlers import TimedRotatingFileHandler
-import time
 import os
 import re
+import signal
+import time
+from logging.handlers import TimedRotatingFileHandler
 
 import configparser
-import signal
 from mongoengine import connect
 
 from pybirales import settings
 from pybirales.app.app import run
+from pybirales.events.events import ObservationStartedEvent
+from pybirales.events.publisher import EventsPublisher
+from pybirales.listeners.listeners import NotificationsListener
+from pybirales.pipeline.pipeline import get_builder_by_id
 from pybirales.repository.models import Observation
 from pybirales.services.calibration.calibration import CalibrationFacade
 from pybirales.services.instrument.backend import Backend
 from pybirales.services.instrument.best2 import BEST2
-from pybirales.listeners.listeners import NotificationsListener
-from pybirales.events.publisher import EventsPublisher
-from pybirales.events.events import ObservationStartedEvent
+from pybirales.services.scheduler.exceptions import SchedulerException, NoObservationsQueuedException
+from pybirales.services.scheduler.observation import ScheduledObservation, ScheduledCalibrationObservation
+from pybirales.services.scheduler.scheduler import ObservationsScheduler
 
 
 class BiralesConfig:
-
     def __init__(self, config_file_path, config_options=None):
         """
         Initialise the BIRALES configuration
@@ -212,7 +214,9 @@ class BiralesFacade:
         self.configuration.load()
 
         # Initialise and start the listeners / subscribers of the BIRALES application
-        self._listeners = self._init_listeners()
+        self._listeners = self._get_listeners()
+
+        self._start_listeners()
 
         self._pipeline_manager = None
 
@@ -231,11 +235,16 @@ class BiralesFacade:
         else:
             log.info("Signal handler already set, not setting it in BiralesFacade")
 
+    def _update_config(self, configuration):
+        self.configuration = configuration
+
+        self.configuration.load()
+
     def _signal_handler(self, signum, frame):
         """ Capturing interrupt signal """
         log.info("Ctrl-C detected by process %s, stopping pipeline", os.getpid())
 
-        self.stop_observation()
+        self.stop()
 
     def validate_init(self):
         pass
@@ -281,17 +290,28 @@ class BiralesFacade:
             observation.date_time_end = datetime.datetime.utcnow()
             observation.save()
 
-        # All done, stop observation
-        self.stop_observation()
+            log.info('Observation {} (using the {}) finished'.format(observation.name, pipeline_manager.name))
 
-    def stop_observation(self):
+            # All done, stop observation
+            self.stop()
+
+            log.info('BIRALES Space Debris Detection system finished')
+
+    def stop(self):
         """ Stop observation """
         # Stop pipeline
         if self._pipeline_manager is not None:
+            log.debug('Stopping the pipeline manager')
             self._pipeline_manager.stop_pipeline()
 
         if self._instrument is not None:
+            log.debug('Stopping the instrument')
             self._instrument.stop_best2_server()
+
+        # Stop the listener threads
+        if self._listeners is not None:
+            log.debug('Stopping the listeners')
+            self._stop_listeners()
 
     def build_pipeline(self, pipeline_builder):
         """
@@ -336,18 +356,74 @@ class BiralesFacade:
                                                         phase=self._calibration.dict_imag)
             log.info('Calibration coefficients loaded to the ROACH')
 
+    def start_scheduler(self, schedule_file_path, file_format):
+        """
+        Start the scheduler
+
+        :param schedule_file_path:
+        :param file_format:
+        :return:
+        """
+
+        def run_observation(observation):
+            """
+            Run the pipeline using the provided observation settings
+
+            :param observation: A ScheduledObservation object
+            :return:
+            """
+
+            # Load the BIRALES configuration from file
+            self._update_config(configuration=BiralesConfig(observation.config_file, observation.parameters))
+
+            # Build the pipeline manager
+            manager = self.build_pipeline(pipeline_builder=get_builder_by_id(observation.pipeline_name))
+
+            # Start observation
+            if isinstance(observation, ScheduledObservation):
+                self.start_observation(pipeline_manager=manager)
+
+            # Calibrate the Instrument
+            if isinstance(observation, ScheduledCalibrationObservation):
+                self.calibrate(correlator_pipeline_manager=manager)
+
+        # The Scheduler responsible for the scheduling of observations
+        s = ObservationsScheduler(observation_run_func=run_observation)
+
+        try:
+            s.load_from_file(schedule_file_path, file_format)
+            s.start()
+        except KeyboardInterrupt:
+            log.info('Ctrl-C received. Terminating the scheduler process.ws')
+            s.stop()
+        except NoObservationsQueuedException:
+            log.info('Could not run Scheduler since no valid observations could be scheduled.')
+        except SchedulerException:
+            log.exception('A fatal Scheduler error has occurred. Terminating the scheduler process.')
+            s.stop()
+        else:
+            log.info('Scheduler finished successfully.')
+
+        self.stop()
+
     @staticmethod
     def start_server():
         run()
 
     @staticmethod
-    def _init_listeners():
+    def _get_listeners():
         listeners = []
         if settings.observation.notifications:
             listeners.append(NotificationsListener())
 
-        # Start the listener threads
-        for l in listeners:
+        return listeners
+
+    def _start_listeners(self):
+        for l in self._listeners:
             l.start()
 
-        return listeners
+    def _stop_listeners(self):
+        for l in self._listeners:
+            l.stop()
+
+        log.info('Listeners stopped')

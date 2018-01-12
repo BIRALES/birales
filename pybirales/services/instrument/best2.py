@@ -98,6 +98,8 @@ class BEST2(object):
                 self._best2_server = None
             self._connected = False
 
+            logging.info('BEST-II server stopped')
+
     def get_current_declination(self):
         """ Get current BEST2 declination
         return: Current declination """

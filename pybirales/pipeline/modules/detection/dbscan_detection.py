@@ -121,7 +121,7 @@ def _detect_clusters(beam):
         if cluster:
             append(cluster)
 
-    log.debug('Beam %s: DBSCAN detected %s (from %s) valid clusters', beam.id, len(clusters), len(unique_c_labels))
+    log.info('Beam %s: Detected %s (from %s) valid clusters', beam.id, len(clusters), len(unique_c_labels))
 
     return clusters
 

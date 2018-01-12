@@ -135,6 +135,8 @@ class PipelineManager(object):
                 tries += 1
                 # All done
 
+        log.info('Pipeline Manager stopped')
+
         if settings.manager.profile:
             profiler.stop()
             stats = profiler.get_func_stats()

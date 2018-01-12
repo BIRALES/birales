@@ -1,8 +1,5 @@
-import logging as log
-
 import click
-from pybirales.services.scheduler.scheduler import ObservationsScheduler
-from pybirales.services.scheduler.exceptions import SchedulerException, NoObservationsQueuedException
+
 from pybirales.birales import BiralesFacade, BiralesConfig
 
 
@@ -25,22 +22,8 @@ def scheduler(schedule_file_path, config_file_path, file_format):
     # Load the BIRALES configuration from file
     config = BiralesConfig(config_file_path, {})
 
-    # Initialise the Birales Facade (BOSS)
+    # Initialise the BIRALES Facade (BOSS)
     bf = BiralesFacade(configuration=config)
 
-    # The Scheduler responsible for the scheduling of observations
-    s = ObservationsScheduler()
-
-    try:
-        s.load_from_file(schedule_file_path, file_format)
-        s.start()
-    except KeyboardInterrupt:
-        log.info('Ctrl-C received. Terminating the scheduler process.ws')
-        s.stop()
-    except NoObservationsQueuedException:
-        log.info('Could not run Scheduler since no valid observations could be scheduled.')
-    except SchedulerException:
-        log.exception('A fatal Scheduler error has occurred. Terminating the scheduler process.')
-        s.stop()
-    else:
-        log.info('Scheduler finished successfully.')
+    # Start the BIRALES scheduler
+    bf.start_scheduler(schedule_file_path, file_format)

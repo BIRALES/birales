@@ -1,4 +1,5 @@
 import abc
+import json
 import logging as log
 import os
 import threading
@@ -7,8 +8,6 @@ from slackclient import SlackClient
 
 from pybirales.events.events import ObservationScheduledEvent
 from pybirales.repository.message_broker import RedisManager
-import json
-import pickle
 
 
 class Listener(threading.Thread):
