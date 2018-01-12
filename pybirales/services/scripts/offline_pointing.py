@@ -140,14 +140,6 @@ class Pointing(object):
         # Declination depends on DEC divide by DEC
         ha = ha / np.cos(dec.rad)
 
-	# Type conversions if required
-        ref_dec = Angle(ref_dec, u.deg)
-        delta_dec = Angle(delta_dec, u.deg)
-        dec = ref_dec + delta_dec
-
-        # Declination depends on DEC divide by DEC
-        ha = ha / np.cos(dec.rad)
-
         # We must have a positive hour angle and non-zero
         if ha < 0:
             ha = Angle(ha + 360, u.deg)
@@ -160,9 +152,8 @@ class Pointing(object):
         alt, az = self._ha_dec_to_alt_az(ha, dec, self._reference_location)
 
         # Point beam to required ALT AZ
-        logging.info("Beam {0}. LAT: {1:0.2f}, HA: {2:0.2f}, DEC: {3:0.2f}, ALT: {4:0.2f}, AZ: {5:0.2f}".format(
-            beam, self._reference_location[1], ha.deg, dec, alt.deg, az.deg))
-	self.point_array_static(beam, alt, az)
+        print("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, dec, alt.deg, az.deg))
+        self.point_array_static(beam, alt, az)
 
     @staticmethod
     def _ha_dec_to_alt_az(hour_angle, declination, location):

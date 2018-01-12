@@ -206,7 +206,6 @@ class Pointing(object):
         :param pointing_time: Time of observation (in format astropy time)
         :return: The phaseshift in radians for each antenna
         """
-
         # Type conversions if required
         ref_dec = Angle(ref_dec, u.deg)
         delta_dec = Angle(delta_dec, u.deg)
@@ -227,8 +226,7 @@ class Pointing(object):
         alt, az = self._ha_dec_to_alt_az(ha, dec, self._reference_location)
 
         # Point beam to required ALT AZ
-        logging.info("Beam {0}. LAT: {1:0.2f}, HA: {2:0.2f}, DEC: {3:0.2f}, ALT: {4:0.2f}, AZ: {5:0.2f}".format(
-            beam, self._reference_location[1], ha.deg, dec, alt.deg, az.deg))
+        print("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, dec, alt.deg, az.deg))
         self.point_array_static(beam, alt, az)
 
     @staticmethod
