@@ -8,7 +8,8 @@ from setuptools.command.install import install
 distutils.log.set_verbosity(distutils.log.info)
 
 HOME = os.environ['HOME']
-TEMPLATES = 'configuration/templates'
+CONFIG_PATH = 'configuration'
+TEMPLATES = os.path.join(CONFIG_PATH, 'templates')
 
 
 def dir_walk(root_path):
@@ -21,6 +22,7 @@ def dir_walk(root_path):
 
     file_paths = []
     for file_path, _, files in os.walk(root_path):
+        print(file_path, files)
         for name in files:
             file_paths.append(os.path.join(file_path, name))
 
@@ -38,6 +40,7 @@ class InstallWrapperCommand(install):
         os.path.join(HOME, '.birales'),
         os.path.join(HOME, '.birales/configuration/templates/dev'),
         os.path.join(HOME, '.birales/configuration/templates/prod'),
+        os.path.join(HOME, '.birales/schedules'),
         os.path.join(HOME, '.birales/visualisation/fits'),
     ]
 
@@ -58,6 +61,7 @@ class InstallWrapperCommand(install):
     def _check(self):
         # todo - add sanity checks here (check that all the dependencies are installed)
         pass
+
 
 setup(
     name='pybirales',
@@ -82,7 +86,7 @@ setup(
                       'humanize', 'mongoengine', 'pyfits', 'construct==2.5.5', 'corr', 'python-dateutil',
                       'slackclient'],
     data_files=[
-        (os.path.join(HOME, '.birales', TEMPLATES), dir_walk(os.path.join('pybirales', TEMPLATES))),
+        (os.path.join(HOME, '.birales', CONFIG_PATH), dir_walk(os.path.join('pybirales', CONFIG_PATH))),
         (os.path.join(HOME, '.birales', TEMPLATES, 'dev'), dir_walk(os.path.join('pybirales', TEMPLATES, 'dev'))),
         (os.path.join(HOME, '.birales', TEMPLATES, 'prod'), dir_walk(os.path.join('pybirales', TEMPLATES, 'prod'))),
         (os.path.join(HOME, '.birales/fits'), []),
