@@ -80,7 +80,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=['configparser', 'futures', 'enum34', 'astropy', 'astroplan', 'numpy', 'matplotlib', 'numba',
-                      'pymongo==2.8.*', 'scipy', 'scikit-learn', 'ephem', 'h5py', 'click', 'flask', 'flask-compress',
+                      'pymongo==2.8.*', 'scipy', 'scikit-learn', 'ephem==3.7.6^', 'h5py', 'click', 'flask', 'flask-compress',
                       'flask-socketio', 'flask_ini', 'fadvise', 'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow',
                       'humanize', 'mongoengine', 'pyfits', 'construct==2.5.5', 'corr', 'python-dateutil',
                       'slackclient'],
