@@ -17,7 +17,6 @@ from pybirales.events.events import ObservationStartedEvent
 from pybirales.events.publisher import EventsPublisher
 from pybirales.listeners.listeners import NotificationsListener
 from pybirales.pipeline.pipeline import get_builder_by_id
-from pybirales.repository.message_broker import RedisManager
 from pybirales.repository.models import Observation
 from pybirales.services.calibration.calibration import CalibrationFacade
 from pybirales.services.instrument.backend import Backend
@@ -45,8 +44,7 @@ class BiralesConfig:
             self._load_from_file(config_file)
 
         # Load the ROACH backend settings
-        backend_path = os.path.join(os.path.dirname(config_file_path[0]),
-                                    self._parser.get('receiver', 'backend_config_filepath'))
+        backend_path = os.path.join(os.path.dirname(__file__), self._parser.get('receiver', 'backend_config_filepath'))
         self._load_from_file(backend_path)
 
         # Override the configuration with settings passed on in the config_options dictionary
