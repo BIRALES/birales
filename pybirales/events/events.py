@@ -50,7 +50,7 @@ class ObservationScheduledEvent(Event):
 
         event_msg = '`{}` was _added_ to the schedule.'.format(observation.name)
 
-        self.payload['body'] = event_msg + observation.start_message()
+        self.payload['body'] = event_msg + ' ' + observation.start_message()
 
         log.debug(event_msg)
 
@@ -95,6 +95,6 @@ class ObservationStartedEvent(Event):
         Event.__init__(self)
 
         self.payload['body'] = '`{}` (using the `{}` pipeline) was started on *{}*'.format(observation.name,
-                                                                                             pipeline_name,
-                                                                                             socket.gethostname())
+                                                                                           pipeline_name,
+                                                                                           socket.gethostname())
         log.debug(self.payload['body'])
