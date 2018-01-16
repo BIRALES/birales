@@ -137,7 +137,7 @@ class Detector(ProcessingModule):
             func = partial(detect, obs_info, self._debris_queue)
             beam_candidates = self.pool.map(func, beams)
         else:
-            beam_candidates =[]
+            beam_candidates = []
             for beam in beams:
                 beam_candidates.append(detect(obs_info, self._debris_queue, beam))
 

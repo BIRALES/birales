@@ -20,7 +20,7 @@ class Backend(object):
         if not self._roach.is_connected:
             try:
                 self._roach.stop()
-            except:
+            except BaseException:
                 pass
             raise Exception("BiralesBackend: Could not connect to ROACH")
 
