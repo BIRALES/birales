@@ -36,7 +36,12 @@ class ScheduledObservation(object):
         self.config_file = config_file
         self.parameters = params
 
-        self.declination = params['beamformer']['reference_declination']
+        try:
+            self.declination = params['beamformer']['reference_declination']
+        except KeyError:
+            log.exception('Reference declination is not specified for observation `{}`'.format(name))
+            raise IncorrectObservationParameters
+
         try:
             self.start_time = params['start_time']
             if not isinstance(self.start_time, datetime.datetime):
@@ -44,6 +49,10 @@ class ScheduledObservation(object):
         except ValueError:
             log.exception('Invalid start time for observation `{}`'.format(name))
             raise IncorrectObservationParameters
+        except KeyError:
+            log.exception('Start time not specified for observation `{}`'.format(name))
+            raise IncorrectObservationParameters
+
         self.duration = datetime.timedelta(seconds=params['duration'])
         self.created_at = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
 

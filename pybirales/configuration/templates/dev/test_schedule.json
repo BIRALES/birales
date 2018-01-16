@@ -6,16 +6,6 @@
       "pybirales/configuration/templates/dev/detection.ini"
     ],
     "config_parameters": {
-      "observation": {
-        "transmitter_frequency": 411
-      },
-      "manager": {
-        "debug": true,
-        "offline": true
-      },
-      "beamformer": {
-        "reference_declination": 30
-      },
       "start_time": "2018-01-12T18:41:00Z",
       "duration": 400
     }
@@ -27,16 +17,6 @@
       "pybirales/configuration/templates/dev/detection.ini"
     ],
     "config_parameters": {
-      "observation": {
-        "transmitter_frequency": 412
-      },
-      "manager": {
-        "debug": true,
-        "offline": true
-      },
-      "beamformer": {
-        "reference_declination": 40
-      },
       "start_time": "2018-01-12T23:00:00Z",
       "duration": 30000
     }
