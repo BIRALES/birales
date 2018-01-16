@@ -6,10 +6,10 @@
       "pybirales/configuration/templates/dev/detection.ini"
     ],
     "config_parameters": {
-      "beamforemer": {
+      "beamformer": {
         "reference_declination": 30
       },
-      "start_time": "2018-01-12T18:41:00Z",
+      "start_time": "2018-01-16T18:41:00Z",
       "duration": 400
     }
   },
@@ -20,10 +20,10 @@
       "pybirales/configuration/templates/dev/detection.ini"
     ],
     "config_parameters": {
-      "beamforemer": {
+      "beamformer": {
         "reference_declination": 30
       },
-      "start_time": "2018-01-12T23:00:00Z",
+      "start_time": "2018-01-16T23:00:00Z",
       "duration": 30000
     }
   }
