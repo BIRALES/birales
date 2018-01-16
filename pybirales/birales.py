@@ -17,6 +17,7 @@ from pybirales.events.events import ObservationStartedEvent
 from pybirales.events.publisher import EventsPublisher
 from pybirales.listeners.listeners import NotificationsListener
 from pybirales.pipeline.pipeline import get_builder_by_id
+from pybirales.repository.message_broker import RedisManager
 from pybirales.repository.models import Observation
 from pybirales.services.calibration.calibration import CalibrationFacade
 from pybirales.services.instrument.backend import Backend
@@ -393,6 +394,7 @@ class BiralesFacade:
             s.stop()
         except NoObservationsQueuedException:
             log.info('Could not run Scheduler since no valid observations could be scheduled.')
+            s.stop()
         except SchedulerException:
             log.exception('A fatal Scheduler error has occurred. Terminating the scheduler process.')
             s.stop()

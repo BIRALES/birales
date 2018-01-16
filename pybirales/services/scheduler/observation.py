@@ -39,19 +39,17 @@ class ScheduledObservation(object):
         try:
             self.declination = params['beamformer']['reference_declination']
         except KeyError:
-            log.exception('Reference declination is not specified for observation `{}`'.format(name))
-            raise IncorrectObservationParameters
+            raise IncorrectObservationParameters(
+                'Reference declination is not specified for observation `{}`'.format(name))
 
         try:
             self.start_time = params['start_time']
             if not isinstance(self.start_time, datetime.datetime):
                 self.start_time = dateutil.parser.parse(params['start_time'])
         except ValueError:
-            log.exception('Invalid start time for observation `{}`'.format(name))
-            raise IncorrectObservationParameters
+            raise IncorrectObservationParameters('Invalid start time for observation `{}`'.format(name))
         except KeyError:
-            log.exception('Start time not specified for observation `{}`'.format(name))
-            raise IncorrectObservationParameters
+            raise IncorrectObservationParameters('Start time not specified for observation `{}`'.format(name))
 
         self.duration = datetime.timedelta(seconds=params['duration'])
         self.created_at = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
@@ -134,7 +132,7 @@ class ScheduledObservation(object):
             start_msg += " to start NOW."
 
         if self.end_time:
-            start_msg += ' and will run for {:0.2f} minutes.'.format(self.duration.total_seconds()/60.)
+            start_msg += ' and will run for {:0.2f} minutes.'.format(self.duration.total_seconds() / 60.)
         else:
             start_msg += ' and will run indefinitely.'
 

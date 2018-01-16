@@ -30,6 +30,10 @@ class Listener(threading.Thread):
     def stop(self):
         self._stop_event.set()
 
+        # Send a poison pill to the subscriber
+        for c in self._channels:
+            self._redis.publish(c, 'KILL')
+
     def run(self):
         log.info('Starting listener.')
         if not self._channels:
@@ -39,8 +43,7 @@ class Listener(threading.Thread):
         self._pubsub.subscribe(self._channels[0])
 
         for item in self._pubsub.listen():
-            if item['data'] == "KILL" or self._stop_event.is_set():
-                self._pubsub.unsubscribe()
+            if item['data'] == 'KILL' or self._stop_event.is_set():
                 log.info('Listener, un-subscribed from channels: {}'.format(self.name, self._channels))
                 break
             else:
@@ -61,6 +64,10 @@ class Listener(threading.Thread):
     @abc.abstractmethod
     def handle(self, data):
         pass
+
+    @property
+    def channels(self):
+        return self._channels
 
 
 class NotificationsListener(Listener):
