@@ -82,7 +82,7 @@ setup(
     install_requires=['configparser', 'futures', 'enum34', 'astropy', 'astroplan', 'numpy', 'matplotlib', 'numba',
                       'pymongo==2.8.*', 'scipy', 'scikit-learn', 'ephem>=3.7.6.0', 'h5py', 'click', 'flask', 'flask-compress',
                       'flask-socketio', 'flask_ini', 'fadvise', 'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow',
-                      'humanize', 'mongoengine', 'pyfits', 'construct==2.5.5', 'corr', 'python-dateutil',
+                      'humanize', 'mongoengine', 'pyfits', 'construct==2.5.5', 'corr>=0.7.3', 'python-dateutil',
                       'slackclient'],
     data_files=[
         (os.path.join(HOME, '.birales', CONFIG_PATH), list_dir(os.path.join('pybirales', CONFIG_PATH))),
