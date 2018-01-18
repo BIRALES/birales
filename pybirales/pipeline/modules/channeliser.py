@@ -61,8 +61,9 @@ class PFB(ProcessingModule):
         self.name = "Channeliser"
 
         # Create thread pool for parallel PFB
-        self._thread_pool = ThreadPool(self._nthreads)
-        # self._thread_pool = Pool(settings.detection.n_procs)
+        self._thread_pool = None
+        if self._use_numba:
+            self._thread_pool = ThreadPool(self._nthreads)
 
         # Variable below will be populated in generate_output_blob
         self._filter = None
@@ -177,6 +178,10 @@ class PFB(ProcessingModule):
 
         # Reverse filter to ease fast computation
         self._filter = self._filter[::-1]
+
+    def _tear_down(self):
+        if self._use_numba:
+            self._thread_pool.close()
 
     def channelise_thread(self, beam):
         """

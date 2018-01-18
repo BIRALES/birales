@@ -263,7 +263,7 @@ class SdebTCPServer(SocketServer.TCPServer):
 
     def abort(self):
         self.rec = 0
-        return "aborted!"
+        return "BEST-II server received aborted call"
 
     def execute(self, args):
         if not self.commands.has_key(args[0]):
