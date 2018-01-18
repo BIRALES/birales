@@ -29,6 +29,6 @@ def monitor_worker(scheduler):
                          h_time_remaining, h_duration)
 
         time_counter += 1
-        time.sleep(5)
+        time.sleep(1)
 
     log.info('Monitoring thread terminated')

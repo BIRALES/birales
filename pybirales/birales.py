@@ -227,12 +227,9 @@ class BiralesFacade:
 
         self._publisher = EventsPublisher.Instance()
 
-        # Set interrupt signal handler if not already set
-        # if signal.getsignal(signal.SIGINT) == signal.SIG_DFL:
-        #     log.info("Setting signal handler in BiralesFacade")
+        self._scheduler = None
+
         signal.signal(signal.SIGINT, self._signal_handler)
-        # else:
-        #     log.info("Signal handler already set, not setting it in BiralesFacade")
 
     def _update_config(self, configuration):
         self.configuration = configuration
@@ -292,15 +289,26 @@ class BiralesFacade:
             log.info('Observation {} (using the {}) finished'.format(observation.name, pipeline_manager.name))
 
     def stop(self):
-        """ Stop observation """
+        """
+        Stop all the BIRALES system sub-modules
+
+        :return:
+        """
+
         # Stop pipeline
         if self._pipeline_manager is not None:
             log.debug('Stopping the pipeline manager')
             self._pipeline_manager.stop_pipeline()
 
+        # Stop the BEST2
         if self._instrument is not None:
             log.debug('Stopping the instrument')
             self._instrument.stop_best2_server()
+
+        # Stop the Observations scheduler
+        if self._scheduler is not None:
+            log.debug('Stopping the Scheduler instance')
+            self._scheduler.stop()
 
         # Stop the listener threads
         if self._listeners is not None:
@@ -381,21 +389,20 @@ class BiralesFacade:
             if isinstance(observation, ScheduledCalibrationObservation):
                 self.calibrate(correlator_pipeline_manager=manager)
 
-        # The Scheduler responsible for the scheduling of observations
-        s = ObservationsScheduler(observation_run_func=run_observation)
-
         try:
-            s.load_from_file(schedule_file_path, file_format)
-            s.start()
+            # The Scheduler responsible for the scheduling of observations
+            self._scheduler = ObservationsScheduler(observation_run_func=run_observation)
+            self._scheduler.load_from_file(schedule_file_path, file_format)
+            self._scheduler.start()
         except KeyboardInterrupt:
             log.info('Ctrl-C received. Terminating the scheduler process.ws')
-            s.stop()
+            self._scheduler.stop()
         except NoObservationsQueuedException:
             log.info('Could not run Scheduler since no valid observations could be scheduled.')
-            s.stop()
+            self._scheduler.stop()
         except SchedulerException:
             log.exception('A fatal Scheduler error has occurred. Terminating the scheduler process.')
-            s.stop()
+            self._scheduler.stop()
         else:
             log.info('Scheduler finished successfully.')
 
