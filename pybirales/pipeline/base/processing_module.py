@@ -192,8 +192,8 @@ class ProcessingModule(Module):
             except NoDataReaderException:
                 logging.info("Data finished")
                 self.stop()
-            except KeyboardInterrupt:
-                logging.info("Ctrl-C signal arrived in thread")
+            # except KeyboardInterrupt:
+            #    logging.info("Ctrl-C signal arrived in thread")
 
             if res is not None:
                 obs_info = res
