@@ -1,17 +1,20 @@
 import logging as log
-import numpy as np
 import os
 import warnings
 
-warnings.filterwarnings("ignore", message="numpy.dtype size changed")
-warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
-
+import numpy as np
 from astropy.io import fits
-from pybirales import settings
-from pybirales.pipeline.modules.detection.detection_clusters import DetectionCluster
-from pybirales.pipeline.base.timing import timeit
 from sklearn import linear_model
 from sklearn.cluster import DBSCAN
+
+from pybirales import settings
+from pybirales.events.events import SpaceDebrisClusterDetectedEvent
+from pybirales.events.publisher import EventsPublisher
+from pybirales.pipeline.base.timing import timeit
+from pybirales.pipeline.modules.detection.detection_clusters import DetectionCluster
+
+warnings.filterwarnings("ignore", message="numpy.dtype size changed")
+warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 
 _eps = 5
 _min_samples = 5
@@ -20,6 +23,7 @@ _linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
 db_scan = DBSCAN(eps=_eps, min_samples=_min_samples, algorithm=_algorithm, n_jobs=-1)
 _ref_time = None
 _time_delta = None
+_publisher = EventsPublisher.Instance()
 
 
 def _db_scan(beam_id, data):
@@ -121,7 +125,11 @@ def _detect_clusters(beam):
         if cluster:
             append(cluster)
 
-    log.info('Beam %s: Detected %s (from %s) valid clusters', beam.id, len(clusters), len(unique_c_labels))
+    n_clusters = len(clusters)
+    log.info('Beam %s: Detected %s (from %s) valid clusters', beam.id, n_clusters, len(unique_c_labels))
+
+    if n_clusters > 0:
+        _publisher.publish(SpaceDebrisClusterDetectedEvent(n_clusters, beam.id))
 
     return clusters
 

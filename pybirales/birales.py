@@ -13,7 +13,7 @@ from mongoengine import connect
 
 from pybirales import settings
 from pybirales.app.app import run
-from pybirales.events.events import ObservationStartedEvent
+from pybirales.events.events import ObservationStartedEvent, ObservationFinishedEvent
 from pybirales.events.publisher import EventsPublisher
 from pybirales.listeners.listeners import NotificationsListener
 from pybirales.pipeline.pipeline import get_builder_by_id
@@ -276,7 +276,7 @@ class BiralesFacade:
                                       settings=self.configuration.to_dict())
             observation.save()
 
-            # Fire an Observation was Scheduled Event
+            # Fire an Observation was Started Event
             self._publisher.publish(ObservationStartedEvent(observation, pipeline_manager.name))
 
             self.configuration.update_config({'observation': {'id': observation.id}})
@@ -286,7 +286,7 @@ class BiralesFacade:
             observation.date_time_end = datetime.datetime.utcnow()
             observation.save()
 
-            log.info('Observation {} (using the {}) finished'.format(observation.name, pipeline_manager.name))
+            self._publisher.publish(ObservationFinishedEvent(observation, pipeline_manager.name))
 
     def stop(self):
         """

@@ -87,7 +87,7 @@ class ObservationStartedEvent(Event):
 
     def __init__(self, observation, pipeline_name):
         """
-
+        :param pipeline_name: The name of the pipeline
         :param observation: An object of type ScheduledObservation
         :type observation: ScheduledObservation
         """
@@ -97,4 +97,47 @@ class ObservationStartedEvent(Event):
         self.payload['body'] = '`{}` (using the `{}` pipeline) was started on *{}*'.format(observation.name,
                                                                                            pipeline_name,
                                                                                            socket.gethostname())
+        log.debug(self.payload['body'])
+
+
+class ObservationFinishedEvent(Event):
+    """
+    Event is fired when an observation has finished (successfully)
+    """
+
+    channels = ['notifications']
+    description = 'An observation has finished'
+
+    def __init__(self, observation, pipeline_name):
+        """
+        :param pipeline_name: The name of the pipeline
+        :param observation: The observation which has finished
+        """
+
+        Event.__init__(self)
+
+        log.info('Observation {} (using the {}) finished'.format(observation.name, pipeline_name))
+        self.payload['body'] = '`{}` finished successfully'.format(observation.name)
+        log.debug(self.payload['body'])
+
+
+class SpaceDebrisClusterDetectedEvent(Event):
+    """
+    Event is fired when a valid space debris cluster is detected
+    """
+
+    channels = ['notifications']
+    description = 'A space debris candidate was found'
+
+    def __init__(self, n_clusters, beam_id):
+        """
+
+        :param n_clusters: Number of valid space debris clusters
+        :param beam_id: The beam id in which the space debris cluster was detected
+        """
+
+        Event.__init__(self)
+
+        self.payload['body'] = 'A new space debris detection (`{}` data points) was made in beam {}'.format(n_clusters,
+                                                                                                            beam_id)
         log.debug(self.payload['body'])
