@@ -44,15 +44,16 @@ class RemoveBackgroundNoiseFilter(InputDataFilter):
 class PepperNoiseFilter(InputDataFilter):
     def __init__(self):
         InputDataFilter.__init__(self)
+        self._structure = np.zeros((5, 5))
+        self._structure[2, 2] = 1
+
+    def _remove_pepper_noise(self, data):
+        return binary_hit_or_miss(data, structure1=self._structure)
 
     def apply(self, data):
-        structure = np.zeros((5, 5))
-        structure[2, 2] = 1
-
         # todo - can this for loop be eliminated?
         for beam_id in range(data.shape[0]):
-            hot_pixels_mask = binary_hit_or_miss(data[beam_id, :, :], structure1=structure)
-            data[beam_id, hot_pixels_mask] = 0.
+            data[beam_id, self._remove_pepper_noise(data[beam_id])] = 0.
 
 
 class RemoveTransmitterChannelFilter(InputDataFilter):
