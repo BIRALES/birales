@@ -37,7 +37,7 @@ class Beam:
         self.noise = obs_info['noise']
         self.channels = channels
         self.time = time
-        self.snr = self._set_snr(beam_data)
+        self.snr = beam_data[beam_id, :, :]
 
     @staticmethod
     def _rms(data):

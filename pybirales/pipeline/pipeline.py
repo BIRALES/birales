@@ -7,9 +7,12 @@ from pybirales.pipeline.modules.beamformer.beamformer import Beamformer
 from pybirales.pipeline.modules.channeliser import PFB
 from pybirales.pipeline.modules.correlator import Correlator
 from pybirales.pipeline.modules.detection.detector import Detector
+from pybirales.pipeline.modules.detection.preprocessor import PreProcessor
+from pybirales.pipeline.modules.detection.filter import Filter
 from pybirales.pipeline.modules.persisters.corr_matrix_persister import CorrMatrixPersister
 from pybirales.pipeline.modules.persisters.beam_persister import BeamPersister
 from pybirales.pipeline.modules.persisters.raw_persister import RawPersister
+from pybirales.pipeline.modules.persisters.fits_persister import RawDataFitsPersister, FilteredDataFitsPersister
 from pybirales.pipeline.modules.readers.raw_data_reader import RawDataReader
 from pybirales.pipeline.modules.receivers.receiver import Receiver
 from pybirales.pipeline.modules.terminator import Terminator
@@ -72,14 +75,16 @@ class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
 
         :return:
         """
-
+        # Pipeline Reader or Receiver input
         if settings.manager.offline:
             receiver = RawDataReader(settings.rawdatareader)
             self.manager.name += ' (Offline)'
         else:
             receiver = Receiver(settings.receiver)
 
-        # Saving raw data options
+        self.manager.add_module("receiver", receiver)
+
+        # Beam former
         if settings.manager.save_raw:
             persister_raw = RawPersister(settings.rawpersister, receiver.output_blob)
             beamformer = Beamformer(settings.beamformer, persister_raw.output_blob)
@@ -87,31 +92,45 @@ class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
         else:
             beamformer = Beamformer(settings.beamformer, receiver.output_blob)
 
+        self.manager.add_module("beamformer", beamformer)
+
         # Channeliser
         ppf = PFB(settings.channeliser, beamformer.output_blob)
-
-        # Persisting beam and detector options
-        if settings.manager.detector_enabled and settings.manager.save_beam:
-            persister = BeamPersister(settings.persister, ppf.output_blob)
-            detector = Detector(settings.detection, persister.output_blob)
-            self.manager.add_module("detector", detector)
-            self.manager.add_module("persister", persister)
-        elif settings.manager.detector_enabled and not settings.manager.save_beam:
-            detector = Detector(settings.detection, ppf.output_blob)
-            self.manager.add_module("detector", detector)
-        elif not settings.manager.detector_enabled and settings.manager.save_beam:
-            persister = BeamPersister(settings.persister, ppf.output_blob)
-            terminator = Terminator(settings.terminator, persister.output_blob)
-            self.manager.add_module("persister", persister)
-            self.manager.add_module("terminator", terminator)
-        else:
-            terminator = Terminator(settings.terminator, ppf.output_blob)
-            self.manager.add_module("terminator", terminator)
-
-        # Add modules to pipeline manager
-        self.manager.add_module("receiver", receiver)
-        self.manager.add_module("beamformer", beamformer)
         self.manager.add_module("ppf", ppf)
+
+        # Beam persister
+        pp_input = ppf.output_blob
+        if settings.manager.save_beam:
+            persister_beam = BeamPersister(settings.persister, ppf.output_blob)
+            self.manager.add_module("persister_beam", persister_beam)
+
+            pp_input = persister_beam.output_blob
+
+        # Detection
+        if settings.manager.detector_enabled:
+            preprocessor = PreProcessor(settings.detection, pp_input)
+            self.manager.add_module("preprocessor", preprocessor)
+
+            if settings.fits_persister.visualise_beams:
+                raw_fits_persister = RawDataFitsPersister(settings.fits_persister, preprocessor.output_blob)
+                filtering = Filter(settings.detection, raw_fits_persister.output_blob)
+                self.manager.add_module("raw_fits_persister", raw_fits_persister)
+                self.manager.add_module("filtering", filtering)
+
+                filtered_fits_persister = FilteredDataFitsPersister(settings.fits_persister, filtering.output_blob)
+                detector = Detector(settings.detection, filtered_fits_persister.output_blob)
+
+                self.manager.add_module("filtered_fits_persister", filtered_fits_persister)
+                self.manager.add_module("detector", detector)
+            else:
+                filtering = Filter(settings.detection, preprocessor.output_blob)
+                self.manager.add_module("filtering", filtering)
+
+                detector = Detector(settings.detection, filtering.output_blob)
+                self.manager.add_module("detector", detector)
+        else:
+            terminator = Terminator(settings.terminator, pp_input)
+            self.manager.add_module("terminator", terminator)
 
 
 class StandAlonePipelineMangerBuilder(PipelineManagerBuilder):

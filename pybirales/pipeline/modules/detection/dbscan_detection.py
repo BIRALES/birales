@@ -2,6 +2,9 @@ import logging as log
 import os
 import warnings
 
+warnings.filterwarnings("ignore", message="numpy.dtype size changed")
+warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
+
 import numpy as np
 from astropy.io import fits
 from sklearn import linear_model
@@ -13,8 +16,7 @@ from pybirales.events.publisher import EventsPublisher
 from pybirales.pipeline.base.timing import timeit
 from pybirales.pipeline.modules.detection.detection_clusters import DetectionCluster
 
-warnings.filterwarnings("ignore", message="numpy.dtype size changed")
-warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
+
 
 _eps = 5
 _min_samples = 5
@@ -23,7 +25,7 @@ _linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
 db_scan = DBSCAN(eps=_eps, min_samples=_min_samples, algorithm=_algorithm, n_jobs=-1)
 _ref_time = None
 _time_delta = None
-_publisher = EventsPublisher.Instance()
+_publisher = None
 
 
 def _db_scan(beam_id, data):
@@ -56,8 +58,8 @@ def _create_detection_clusters(data, beam, cluster_labels, label):
 
     log.debug('Beam %s: cluster %s contains %s data points', beam.id, label, len(data_indices[:, 1]))
 
-    channel_indices = data_indices[:, 1]
-    time_indices = data_indices[:, 0]
+    channel_indices = data_indices[:, 0]
+    time_indices = data_indices[:, 1]
 
     # If cluster is 'small' do not consider it
     if len(channel_indices) < _min_samples:
@@ -73,7 +75,7 @@ def _create_detection_clusters(data, beam, cluster_labels, label):
                                beam_config=beam.get_config(),
                                time_data=[_ref_time + t * _time_delta for t in beam.time[time_indices]],
                                channels=beam.channels[channel_indices],
-                               snr=beam.snr[(time_indices, channel_indices)])
+                               snr=beam.snr[(channel_indices, time_indices)])
 
     # Add only those clusters that are linear
     if cluster.is_linear(threshold=0.9) and cluster.is_valid():
@@ -161,21 +163,24 @@ def detect(obs_info, queue, beam):
     :return:
     """
 
-    global _time_delta, _ref_time
+    global _time_delta, _ref_time, _publisher
     _ref_time = np.datetime64(obs_info['timestamp'])
     _time_delta = np.timedelta64(int(obs_info['sampling_time'] * 1e9), 'ns')
+
+    if not _publisher:
+        _publisher = EventsPublisher.Instance()
 
     # Associate a beam candidate repository to the queue
     # queue.set_repository(BeamCandidateRepository())
 
     # Save the raw data as a fits file
-    save_fits(beam.snr, 'raw', beam.id)
+    # save_fits(beam.snr, 'raw', beam.id)
 
     # Apply the pre-processing filters to the beam data
-    beam.apply_filters()
+    # beam.apply_filters()
 
     # Save the filtered data as a fits file
-    save_fits(beam.snr, 'filtered', beam.id)
+    # save_fits(beam.snr, 'filtered', beam.id)
 
     # Add the beam candidates to the beam queue
     enqueue = queue.enqueue

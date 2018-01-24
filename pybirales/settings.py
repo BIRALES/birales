@@ -26,4 +26,5 @@ calibration = None
 database = None
 instrument = None
 logger_root = None
+fits_persister = None
 # handler_file_handler = None

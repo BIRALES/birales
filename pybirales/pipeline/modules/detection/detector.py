@@ -1,9 +1,9 @@
-import numpy as np
-import os
 import logging as log
-
+import os
 from functools import partial
 from multiprocessing import Pool
+
+import numpy as np
 
 from pybirales import settings
 from pybirales.pipeline.base.processing_module import ProcessingModule
@@ -11,7 +11,6 @@ from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.modules.detection.beam import Beam
 from pybirales.pipeline.modules.detection.dbscan_detection import detect
 from pybirales.pipeline.modules.detection.queue import BeamCandidatesQueue
-from pybirales.repository.models import Observation
 
 
 class Detector(ProcessingModule):
@@ -33,45 +32,20 @@ class Detector(ProcessingModule):
 
         self.counter = 0
 
-        self.noise = []
-
-        self.mean_noise = 0
-
         self.channels = None
 
         self.time = None
 
         self._doppler_mask = None
 
-        self._observation = None
-
         super(Detector, self).__init__(config, input_blob)
 
         self.name = "Detector"
 
-        if settings.detection.visualise_beams:
-            log.debug('Create fits directory for observation')
-            os.makedirs(os.path.join(os.environ['HOME'],
-                                     settings.detection.visualise_fits_dir,
-                                     settings.observation.name))
+        self._candidates_detected = 0
 
     def _tear_down(self):
         self.pool.close()
-
-    def _get_noise_estimation(self, input_data):
-        if self.counter < settings.detection.n_noise_samples:
-            power = np.power(np.abs(input_data[0, :, settings.detection.noise_channels, :]), 2)
-
-            if settings.detection.noise_use_rms:
-                #  use RMS
-                noise = np.sqrt(np.mean(np.power(power, 2)))
-            else:
-                # use mean
-                noise = np.mean(power)
-
-            self.noise.append(noise)
-            self.mean_noise = np.mean(self.noise)
-        return float(self.mean_noise)
 
     def _get_doppler_mask(self, tx, channels):
         if self._doppler_mask is None:
@@ -113,18 +87,8 @@ class Detector(ProcessingModule):
         time = self._get_time(obs_info)
         doppler_mask = self._get_doppler_mask(obs_info['transmitter_frequency'], channels)
 
-        # estimate the noise from the data
-        obs_info['noise'] = self._get_noise_estimation(input_data)
-
         if settings.detection.doppler_subset:
-            input_data = input_data[:, :, doppler_mask, :]
-
-        # If the configuration was not saved AND the number of noise samples is sufficient, save the noise value.
-        if not self._config_persisted and self.counter >= settings.detection.n_noise_samples:
-            self._observation = Observation.objects.get(id=settings.observation.id)
-            self._observation.noise_estimate = self._get_noise_estimation(input_data)
-            self._observation.save()
-            self._config_persisted = True
+            input_data = input_data[:, doppler_mask, :]
 
         beams = [Beam(beam_id=n_beam,
                       obs_info=obs_info,
@@ -140,6 +104,10 @@ class Detector(ProcessingModule):
             beam_candidates = []
             for beam in beams:
                 beam_candidates.append(detect(obs_info, self._debris_queue, beam))
+
+        self._candidates_detected += np.count_nonzero(beam_candidates)
+
+        log.info('Detected {} beam candidates across {} beams'.format(self._candidates_detected, len(beams)))
 
         self._debris_queue.set_candidates(beam_candidates)
 
