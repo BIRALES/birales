@@ -1,3 +1,7 @@
+#!/usr/bin/env bash
+# Clone repository from Bitbucket
+
+
 # Check that the dependencies are met. If not install.
 
 # Deploy the BIRALES application
