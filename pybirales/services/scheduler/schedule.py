@@ -195,6 +195,10 @@ class Schedule:
         :return:
         """
 
+        # Check if automatic calibration routines are disabled
+        if not settings.scheduler.auto_calibrate:
+            return False, None
+
         from_time = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
         if observation.prev_observation:
             from_time = observation.prev_observation.end_time_padded
