@@ -75,6 +75,8 @@ class CalibrationFacade:
                 'total_time_samples': time_steps,
                 'selfcal': config.selfcal,
                 'stefcal': config.stefcal,
+                'telescope': config.telescope,
+                'fescal': config.fescal,
                 'no_of_antennas': no_of_antennas,
                 'coeffs_filepath': os.path.join(calib_dir, 'coeffs_pointing.txt'),
                 'transit_run': config.transit_run,
