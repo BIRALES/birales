@@ -78,6 +78,7 @@ class CalibrationFacade:
                 'telescope': config.telescope,
                 'phasecal': config.phasecal,
                 'gaincal': config.gaincal,
+                'auto_corr': config.auto_corr,
                 'fescal': config.fescal,
                 'no_of_antennas': no_of_antennas,
                 'coeffs_filepath': os.path.join(calib_dir, 'coeffs_pointing.txt'),
