@@ -75,6 +75,7 @@ class CalibrationFacade:
                 'total_time_samples': time_steps,
                 'selfcal': config.selfcal,
                 'stefcal': config.stefcal,
+                'model_run': config.model_generation,
                 'telescope': config.telescope,
                 'phasecal': config.phasecal,
                 'gaincal': config.gaincal,
