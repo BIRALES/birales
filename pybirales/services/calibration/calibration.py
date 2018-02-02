@@ -76,6 +76,8 @@ class CalibrationFacade:
                 'selfcal': config.selfcal,
                 'stefcal': config.stefcal,
                 'telescope': config.telescope,
+                'phasecal': config.phasecal,
+                'gaincal': config.gaincal,
                 'fescal': config.fescal,
                 'no_of_antennas': no_of_antennas,
                 'coeffs_filepath': os.path.join(calib_dir, 'coeffs_pointing.txt'),
@@ -173,7 +175,8 @@ class CalibrationFacade:
         # RealVisGenPipeline process creation
         real_vis_pipeline = RealVisPipelineBuilder.RealVisPipelineBuilder()
         real_vis_pipeline.setup(
-            params=self._get_real_vis_pipeline_parameters(settings.calibration, corr_matrix_filepath, calib_dir, self._tm))
+            params=self._get_real_vis_pipeline_parameters(settings.calibration, corr_matrix_filepath, calib_dir,
+                                                          self._tm))
 
         real_vis_process = PipelineParallelisation(real_vis_pipeline.build())
 
