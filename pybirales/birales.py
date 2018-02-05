@@ -187,8 +187,9 @@ class BiralesConfig:
 
         log.info('Configurations successfully loaded.')
 
-        # Connect to the database
-        self._db_connect()
+        if not self._loaded:
+            # Connect to the database
+            self._db_connect()
 
         self._loaded = True
         # todo - Validate the loaded configuration file
@@ -245,6 +246,15 @@ class BiralesFacade:
     def validate_init(self):
         pass
 
+    def _load_backend(self):
+        log.info('Loading Backend')
+        # Initialisation of the backend system
+        self._backend = Backend.Instance()
+        time.sleep(1)
+        self._backend.start(program_fpga=True, equalize=True, calibrate=True)
+
+        log.info('Backend loaded')
+
     def start_observation(self, pipeline_manager):
         """
         Start the observation
@@ -254,11 +264,7 @@ class BiralesFacade:
         """
 
         if not settings.manager.offline:
-            log.info('Loading Backend')
-            # Initialisation of the backend system
-            self._backend = Backend.Instance()
-            time.sleep(1)
-            self._backend.start(program_fpga=True, equalize=True, calibrate=True)
+            self._load_backend()
 
             # Point the BEST Antenna
             if settings.instrument.enable_pointing:
@@ -339,6 +345,9 @@ class BiralesFacade:
         :param correlator_pipeline_manager:
         :return:
         """
+
+        if not settings.manager.offline:
+            self._load_backend()
 
         self.configuration.update_config({'observation': {'type': 'calibration'}})
         calib_dir, corr_matrix_filepath = self._calibration.get_calibration_filepath()
