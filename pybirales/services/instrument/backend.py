@@ -195,7 +195,7 @@ class Backend(object):
             # Coefficients coming from dictionaries, need to re-order
             new_amplitude = {}
             for k, v in amplitude.iteritems():
-                new_amplitude[k] = self._coefficients_order[int(k.lstrip('a'))]
+                new_amplitude[k] = amplitude['a'+str(self._coefficients_order[int(k.lstrip('a'))])]
             amplitude = new_amplitude
 
         amplitude_coefficients = np.zeros([32, 1024 / 4], dtype=float)  # 32 antennas, 1024 chans
@@ -221,7 +221,7 @@ class Backend(object):
             # Coefficients coming from dictionaries, need to re-order
             new_phase = {}
             for k, v in phase.iteritems():
-                new_phase[k] = self._coefficients_order[int(k.lstrip('a'))]
+                new_phase[k] = phase['a'+str(self._coefficients_order[int(k.lstrip('a'))])]
             phase = new_phase
 
         phs_coeffs = np.zeros([32, 1024 / 4], dtype=complex)  # 32 ants, 1024 chans
@@ -236,7 +236,7 @@ class Backend(object):
         phs_header = np.zeros([32], dtype=float)  # 32 ants
         for a in range(len(indices)):
             phs_header[indices[a]] = values[a]
-
+            
         # Map the antenna numberings used for the coefficients to the numberings used for the f-engine
         # here we assume they are the same
         ant_remap = np.arange(32)

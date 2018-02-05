@@ -147,7 +147,7 @@ class CalibrationFacade:
         dict_imag = {}
 
         for i in range(len(settings.beamformer.antenna_locations)):
-            dict_real['a' + str(i)] = 0.
+            dict_real['a' + str(i)] = 1.
             dict_imag['a' + str(i)] = 0.
 
         return dict_real, dict_imag
