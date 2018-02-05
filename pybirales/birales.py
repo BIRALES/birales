@@ -186,7 +186,7 @@ class BiralesConfig:
 
         log.info('Configurations successfully loaded.')
 
-        if not self.is_loaded:
+        if not self.is_loaded():
             # Connect to the database
             self._db_connect()
 
