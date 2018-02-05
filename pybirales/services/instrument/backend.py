@@ -168,6 +168,9 @@ class Backend(object):
         self._roach.write_int('gbe_reset', 1)
 
         logging.info("Birales ROACH backend initialised")
+    
+    def stop(self):
+        self._roach.stop()
 
     def load_calibration_coefficients(self, amplitude_filepath=None, phase_filepath=None,
                                       amplitude=None, phase=None):

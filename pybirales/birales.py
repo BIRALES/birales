@@ -366,6 +366,9 @@ class BiralesFacade:
             self._backend.load_calibration_coefficients(amplitude=self._calibration.dict_real,
                                                         phase=self._calibration.dict_imag)
             log.info('Calibration coefficients loaded to the ROACH')
+            
+            log.info('Trying to stop Backend')
+            self._backend.stop()
         else:
             log.warning("Could not load calibration coefficients. Backend is offline.")
 
