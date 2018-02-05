@@ -254,7 +254,7 @@ class BiralesFacade:
         """
 
         if not settings.manager.offline:
-
+            log.info('Loading Backend')
             # Initialisation of the backend system
             self._backend = Backend.Instance()
             time.sleep(1)
