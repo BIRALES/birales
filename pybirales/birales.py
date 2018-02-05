@@ -354,9 +354,12 @@ class BiralesFacade:
 
         # Load Coefficients to ROACH
         if self._backend:
+            log.info('Loading calibration coefficients to the ROACH')
             self._backend.load_calibration_coefficients(amplitude=self._calibration.dict_real,
                                                         phase=self._calibration.dict_imag)
             log.info('Calibration coefficients loaded to the ROACH')
+        else:
+            log.warning("Could not load calibration coefficients. Backend is offline.")
 
     def start_scheduler(self, schedule_file_path, file_format):
         """

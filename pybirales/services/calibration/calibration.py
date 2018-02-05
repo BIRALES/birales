@@ -141,14 +141,19 @@ class CalibrationFacade:
 
     def get_calibration_filepath(self):
         calib_dir = settings.calibration.tmp_dir
+
+        if settings.calibration.h5_filepath:
+            # If the correlated h5 file is provided, use that. (online or not)
+            return os.path.dirname(settings.calibration.h5_filepath), settings.calibration.h5_filepath
+
         if settings.manager.offline:
-            if settings.calibration.h5_filepath:
-                corr_matrix_filepath = settings.calibration.h5_filepath
-                calib_dir = os.path.dirname(corr_matrix_filepath)
-            else:
-                obs_info = self.load_pkl_file(settings.rawdatareader.filepath)
-                corr_matrix_filepath = create_corr_matrix_filepath(obs_info['timestamp'])
+            # If we are running in offline mode (receiver disabled, reading from file)
+            # create a new corr file with the OBSERVATION timestamp
+            obs_info = self.load_pkl_file(settings.rawdatareader.filepath)
+            corr_matrix_filepath = create_corr_matrix_filepath(obs_info['timestamp'])
         else:
+            # If we are NOT running in offline mode (receiver enabled, live data)
+            # create a new corr file with the current timestamp
             corr_matrix_filepath = create_corr_matrix_filepath(datetime.datetime.utcnow())
 
         return calib_dir, corr_matrix_filepath
