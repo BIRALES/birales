@@ -310,6 +310,11 @@ class BiralesFacade:
             log.debug('Stopping the instrument')
             self._instrument.stop_best2_server()
 
+        # Stop the ROACH backend
+        if self._backend is not None:
+            log.debug('Stopping the Backend')
+            self._backend.stop()
+
         # Stop the Observations scheduler
         if self._scheduler is not None:
             log.debug('Stopping the Scheduler instance')
@@ -371,6 +376,7 @@ class BiralesFacade:
             self._backend.stop()
         else:
             log.warning("Could not load calibration coefficients. Backend is offline.")
+
 
     def start_scheduler(self, schedule_file_path, file_format):
         """
