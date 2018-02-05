@@ -23,6 +23,8 @@ class CalibrationFacade:
         self.dict_real = {}
         self.dict_imag = {}
 
+        self.real_reset_coeffs, self.imag_reset_coeffs = self._get_reset_coeffs()
+
     @staticmethod
     def _tcpo_config_adapter():
         antennas = {}
@@ -136,6 +138,17 @@ class CalibrationFacade:
         for i in range(len(calib_coeffs)):
             dict_real['a' + str(i)] = calib_coeffs[i].real
             dict_imag['a' + str(i)] = np.angle(calib_coeffs[i], deg=True)
+
+        return dict_real, dict_imag
+
+    @staticmethod
+    def _get_reset_coeffs():
+        dict_real = {}
+        dict_imag = {}
+
+        for i in range(len(settings.beamformer.antenna_locations)):
+            dict_real['a' + str(i)] = 0.
+            dict_imag['a' + str(i)] = 0.
 
         return dict_real, dict_imag
 
