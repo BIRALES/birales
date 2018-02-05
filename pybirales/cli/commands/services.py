@@ -45,6 +45,9 @@ def calibration(ctx, config_filepath, name):
     # Calibrate the Instrument
     bf.calibrate(correlator_pipeline_manager=manager)
 
+    # Stop the birales system
+    bf.stop()
+
 
 @services.command()
 @click.option('--config', '-c', 'config_filepath', type=click.Path(exists=True), required=True,
