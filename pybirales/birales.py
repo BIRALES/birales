@@ -45,14 +45,17 @@ class BiralesConfig:
         for config_file in config_file_path:
             self._load_from_file(config_file)
 
+        # Load the logging configuration
+        self._set_logging_config(config_file_path)
+
+        log.info('Loaded the following config files: {}'.format(config_file_path))
+
         # Load the ROACH backend settings
         backend_path = os.path.join(os.path.dirname(__file__), self._parser.get('receiver', 'backend_config_filepath'))
         self._load_from_file(backend_path)
 
         # Override the configuration with settings passed on in the config_options dictionary
         self.update_config(config_options)
-
-        self._set_logging_config(config_file_path)
 
     def is_loaded(self):
         """
