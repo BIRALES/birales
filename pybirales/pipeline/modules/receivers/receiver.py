@@ -87,13 +87,13 @@ class Receiver(Generator):
         """ Stop generator """
         logging.info('Stopping %s module', self.name)
 
-        if self._daq.stopBiralesConsumer() != Result.Failure.value and \
-            self._daq.stopReceiver() != Result.Failure.value:
-            Backend.Instance()._roach.stop()
-            Backend.Instance()._roach.disconnect()
-            self._stop.set()
-        else:
-            logging.critical("Failed to stop Receiver!")
+        if self._daq:
+            if self._daq.stopBiralesConsumer() != Result.Failure.value and self._daq.stopReceiver() != Result.Failure.value:
+                Backend.Instance()._roach.stop()
+                Backend.Instance()._roach.disconnect()
+                self._stop.set()
+            else:
+                logging.critical("Failed to stop Receiver!")
 
     def _get_callback_function(self):
         def data_callback(data, timestamp, arg1, arg2):
