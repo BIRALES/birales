@@ -35,6 +35,8 @@ class BiralesConfig:
         :param config_options: Configuration options to override the default config settings
         :return:
         """
+        # Specify whether the configuration settings were loaded in the settings.py package
+        self._loaded = False
 
         # The configuration parser of the BIRALES system
         self._parser = configparser.RawConfigParser()
@@ -51,9 +53,6 @@ class BiralesConfig:
         self.update_config(config_options)
 
         self._set_logging_config(config_file_path)
-
-        # Specify whether the configuration settings were loaded in the settings.py package
-        self._loaded = False
 
     def is_loaded(self):
         """
@@ -187,7 +186,7 @@ class BiralesConfig:
 
         log.info('Configurations successfully loaded.')
 
-        if not self._loaded:
+        if not self.is_loaded:
             # Connect to the database
             self._db_connect()
 
