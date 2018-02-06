@@ -42,7 +42,7 @@ class CalibrationFacade:
             't_average': settings.calibration.t_average,
             'tstep_length': settings.calibration.t_step_length,
             'obs_length': settings.calibration.obs_length,
-            'start_time': "21-11-2017 11:18:48.000",
+            'start_time': "04-12-2017 11:18:48.000",
         }
 
     @staticmethod
