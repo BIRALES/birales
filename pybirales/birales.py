@@ -355,15 +355,15 @@ class BiralesFacade:
 
         if not settings.manager.offline:
             self._load_backend()
-            
 
         # Reset calibration coefficients on ROACH
         if self._backend:
             log.info('Loading calibration coefficients to the ROACH')
             self._backend.load_calibration_coefficients(amplitude=self._calibration.real_reset_coeffs,
                                                         phase=self._calibration.imag_reset_coeffs)
-        
-        # self.configuration.update_config({'observation': {'type':"type": "observation", 'calibration'}})
+
+        self.configuration.update_config({'observation': {'type': 'calibration'}})
+
         calib_dir, corr_matrix_filepath = self._calibration.get_calibration_filepath()
 
         self.configuration.update_config({'corrmatrixpersister': {'corr_matrix_filepath': corr_matrix_filepath}})
@@ -409,7 +409,10 @@ class BiralesFacade:
 
             # Start observation
             if isinstance(observation, ScheduledObservation):
-                self.start_observation(pipeline_manager=manager)
+                if observation.parameters['type'] == 'calibration':
+                    self.calibrate(correlator_pipeline_manager=manager)
+                else:
+                    self.start_observation(pipeline_manager=manager)
 
             # Calibrate the Instrument
             if isinstance(observation, ScheduledCalibrationObservation):
