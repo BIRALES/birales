@@ -212,4 +212,6 @@ class CalibrationFacade:
         log.info('Calibration routine finished')
 
         coeff_file = os.path.join(calib_dir, 'coeffs_no_geom.txt')
+
+        log.info('Calibration coefficients written to file: {}'.format(coeff_file))
         self.dict_real, self.dict_imag = self._get_calibration_coeffs(coeff_file)
