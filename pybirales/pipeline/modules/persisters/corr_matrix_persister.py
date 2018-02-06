@@ -8,6 +8,7 @@ import numpy as np
 from pybirales import settings
 from pybirales.pipeline.base.definitions import PipelineError
 from pybirales.pipeline.base.processing_module import ProcessingModule
+import datetime
 
 
 def create_corr_matrix_filepath(timestamp):
@@ -18,9 +19,10 @@ def create_corr_matrix_filepath(timestamp):
     :return:
     """
     root_dir = settings.calibration.tmp_dir if settings.observation.type == 'calibration' else settings.persisters.directory
-    directory = os.path.join(root_dir, settings.observation.name)
 
-    filename = '{:%Y-%m-%dT%H%M}{}.{}'.format(timestamp, settings.corrmatrixpersister.filename_suffix, 'h5')
+    # Create directory if it doesn't exist
+    directory = os.path.join(root_dir, '{:%Y_%m_%d}'.format(datetime.datetime.now()), settings.observation.name)
+    filename = '{}_{}.h5'.format(settings.observation.name, settings.corrmatrixpersister.filename_suffix)
 
     # Create directory if it doesn't exist
     if not os.path.exists(directory):
@@ -68,26 +70,6 @@ class CorrMatrixPersister(ProcessingModule):
         """
 
         return None
-
-    @staticmethod
-    def _get_corr_matrix_filepath(timestamp):
-        """
-        Return the file path of the persisted data
-
-        :param timestamp:
-        :return:
-        """
-
-        directory = os.path.join(settings.persisters.directory, settings.observation.name,
-                                 '{:%Y-%m-%dT%H%M}'.format(timestamp))
-
-        filename = settings.observation.name + settings.corrmatrixpersister.filename_suffix + '.h5'
-
-        # Create directory if it doesn't exist
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-        return os.path.join(directory, filename)
 
     @staticmethod
     def _create_pkl_file(filepath, obs_info):
