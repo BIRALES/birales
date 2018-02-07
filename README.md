@@ -35,7 +35,7 @@ python setup.py install
 
 Once the dependencies have been installed, the beamformer module can be built.
 ```bash
-cd src/
+cd  pybirales/pipeline/modules/beamformer/src/
 mkdir build
 cd build
 cmake ..
