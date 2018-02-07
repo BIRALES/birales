@@ -39,49 +39,6 @@ class Beam:
         self.time = time
         self.snr = beam_data[beam_id, :, :]
 
-    @staticmethod
-    def _rms(data):
-        return np.sqrt(np.mean(np.power(data, 2.0)))
-
-    @staticmethod
-    def _power(data):
-        return np.power(np.abs(data), 2.0)
-
-    def _set_snr(self, data):
-        """
-        Calculate the Signal to Noise Ratio from the power data
-
-        :param data:
-        :return:
-        """
-
-        data = data[0, self.id, :, :].T
-        # version 3 - start
-        p_v = self._power(data)
-        p_n = self.noise
-        snr = p_v / p_n
-        snr[snr <= 0] = np.nan
-        log_data = 10 * np.log10(snr)
-        log_data[np.isnan(log_data)] = 0.
-        # version 3 - end
-
-        return log_data
-
-    def _apply_filter(self, beam_filter):
-        beam_filter.apply(self)
-
-    def apply_filters(self):
-        # Remove background noise
-        self._apply_filter(RemoveBackgroundNoiseFilter(std_threshold=2.))
-
-        # Remove transmitter frequency
-        self._apply_filter(RemoveTransmitterChannelFilter())
-
-        # Remove pepper noise from the data
-        self._apply_filter(PepperNoiseFilter())
-
-        return self
-
     def get_config(self):
         return {
             'beam_id': self.id,
