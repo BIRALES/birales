@@ -51,7 +51,11 @@ class ScheduledObservation(object):
         except KeyError:
             raise IncorrectObservationParameters('Start time not specified for observation `{}`'.format(name))
 
-        self.duration = datetime.timedelta(seconds=params['duration'])
+        try:
+            self.duration = datetime.timedelta(seconds=params['duration'])
+        except KeyError:
+            raise IncorrectObservationParameters('Duration was not specified for observation `{}`'.format(name))
+
         self.created_at = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
 
         self.end_time = None
