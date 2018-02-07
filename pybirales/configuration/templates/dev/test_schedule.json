@@ -1,5 +1,6 @@
 {
   "observation 1": {
+    "type": "observation",
     "pipeline": "detection_pipeline",
     "config_file": [
       "pybirales/configuration/birales.ini",
@@ -9,7 +10,22 @@
       "beamformer": {
         "reference_declination": 30
       },
-      "start_time": "2018-01-19T18:41:00Z",
+      "start_time": "2018-02-08T18:41:00Z",
+      "duration": 400
+    }
+  },
+  "calibration observation": {
+    "type": "calibration",
+    "pipeline": "correlation_pipeline",
+    "config_file": [
+      "pybirales/configuration/birales.ini",
+      "pybirales/configuration/templates/prod/calibration.ini"
+    ],
+    "config_parameters": {
+      "beamformer": {
+        "reference_declination": 30
+      },
+      "start_time": "2018-02-08T18:45:00Z",
       "duration": 400
     }
   },
@@ -23,7 +39,7 @@
       "beamformer": {
         "reference_declination": 30
       },
-      "start_time": "2018-01-19T23:00:00Z",
+      "start_time": "2018-02-08T23:00:00Z",
       "duration": 30000
     }
   }
