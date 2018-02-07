@@ -115,11 +115,9 @@ class Schedule:
 
             # Check if this observation conflicts with the scheduled observation
             self._conflicts(self._head, observation)
-        except ObservationScheduledInPastException as e:
-            log.exception(e.msg)
+        except ObservationScheduledInPastException:
             return False
-        except ObservationsConflictException as e:
-            log.exception(e.msg)
+        except ObservationsConflictException:
             return False
 
         return True
