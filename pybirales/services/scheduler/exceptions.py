@@ -8,7 +8,7 @@ class SchedulerException(Exception):
 class NoObservationsQueuedException(SchedulerException):
     def __init__(self):
         self.msg = "No observations are queued"
-        log.exception(self.msg)
+        log.warning(self.msg)
         Exception.__init__(self, self.msg)
 
 
@@ -16,7 +16,7 @@ class IncorrectScheduleFormat(SchedulerException):
     def __init__(self, schedule_file_path):
         self.msg = "Incorrect schedule format at {}. Please ensure that the schedule is a valid JSON or TDM file" \
             .format(schedule_file_path)
-        log.exception(self.msg)
+        log.warning(self.msg)
         Exception.__init__(self, self.msg)
 
 
@@ -30,7 +30,7 @@ class ObservationScheduledInPastException(InvalidObservationException):
             obs.name, obs.start_time_padded)
         self.observation = obs
 
-        log.exception(self.msg)
+        log.warning(self.msg)
         Exception.__init__(self, self.msg)
 
 
@@ -41,7 +41,7 @@ class ObservationsConflictException(InvalidObservationException):
         self.observation = obs
         self.conflict_obs = conflict_obs
 
-        log.exception(self.msg)
+        log.warning(self.msg)
         Exception.__init__(self, self.msg)
 
 
