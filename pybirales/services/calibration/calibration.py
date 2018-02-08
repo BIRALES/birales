@@ -98,7 +98,8 @@ class CalibrationFacade:
                 'calib_check_path': os.path.join(calib_dir, 'calib_plot.png'),
                 'frequency': tm.StartFreq,
                 'bandwith': tm.Bandwith,
-                'transit_file': corr_matrix_filepath}
+                'transit_file': corr_matrix_filepath,
+                'obs_file': None}
 
     @staticmethod
     def _get_antenna_base_line(auto_corr, no_of_antennas):
