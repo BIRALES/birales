@@ -99,7 +99,7 @@ class CalibrationFacade:
                 'frequency': tm.StartFreq,
                 'bandwith': tm.Bandwith,
                 'transit_file': corr_matrix_filepath,
-                'obs_file': None}
+                'obs_file': corr_matrix_filepath}
 
     @staticmethod
     def _get_antenna_base_line(auto_corr, no_of_antennas):
