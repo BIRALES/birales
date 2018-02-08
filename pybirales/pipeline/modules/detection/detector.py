@@ -107,7 +107,7 @@ class Detector(ProcessingModule):
 
         self._candidates_detected += np.count_nonzero(beam_candidates)
 
-        log.info('Detected {} beam candidates across {} beams'.format(self._candidates_detected, len(beams)))
+        log.info('Result: Detected {} beam candidates across {} beams'.format(self._candidates_detected, len(beams)))
 
         self._debris_queue.set_candidates(beam_candidates)
 
