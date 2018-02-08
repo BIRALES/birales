@@ -158,18 +158,20 @@ class Pointing(object):
         """ Calculate the phase shift between two antennas which is given by the phase constant (2 * pi / wavelength)
         multiplied by the projection of the baseline vector onto the plane wave arrival vector
         :param beam: Beam to which this applies
-        :param right_ascension: Right ascension of source (astropy angle, or string that can be converted to angle)
-        :param declination: Declination of source (astropy angle, or string that can be converted to angle)
-        :param pointing_time: Time of observation (in format astropy time)
+        :param ref_dec: Reference declination (center of FoV)
+        :param ha: Hour angel of source (astropy angle, or string that can be converted to angle)
+        :param delta_dec: Declination of source (astropy angle, or string that can be converted to angle)
         :return: The phaseshift in radians for each antenna
         """
         # Type conversions if required
         ref_dec = Angle(ref_dec, u.deg)
         delta_dec = Angle(delta_dec, u.deg)
-        dec = delta_dec + ref_dec
+
+        # Convert RA DEC to ALT AZ
+        primary_alt, primary_az = self._ha_dec_to_alt_az(Angle(0, u.deg), ref_dec, self._reference_location)
 
         # Declination depends on DEC divide by DEC
-        ha = ha / np.cos(dec.rad)
+        ha = ha / np.cos(delta_dec.rad + ref_dec.rad)
 
         # We must have a positive hour angle and non-zero
         if ha < 0:
@@ -178,9 +180,6 @@ class Pointing(object):
             ha = Angle(0.0001, u.deg)
         else:
             ha = Angle(ha, u.deg)
-
-        # Convert RA DEC to ALT AZ
-        primary_alt, primary_az = self._ha_dec_to_alt_az(ha, dec, self._reference_location)
 
         # Unit position vector RX-sat in sensor reference frame
         rhou_sat_rx_sens_rf = np.matrix([cos(-ha.rad) * cos(delta_dec.rad),
@@ -205,16 +204,15 @@ class Pointing(object):
         satellite_el = Angle(asin(rhou_sat_rx_nwz[2]), u.rad)
 
         # Point beam to required ALT AZ
-        log.debug("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, dec,
-                                                                     satellite_el.deg, satellite_az.deg))
+        log.debug("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, ref_dec +
+                                                                     delta_dec, satellite_el.deg, satellite_az.deg))
         self.point_array_static(beam, satellite_el, satellite_az)
 
     @staticmethod
     def _ha_dec_to_alt_az(hour_angle, declination, location):
         """ Calculate the altitude and azimuth coordinates of a sky object from right ascension and declination and time
-        :param right_ascension: Right ascension of source (in astropy Angle on string which can be converted to Angle)
+        :param hour_angle: Hour angle of source (in astropy Angle on string which can be converted to Angle)
         :param declination: Declination of source (in astropy Angle on string which can be converted to Angle)
-        :param time: Time of observation (as astropy Time")
         :param location: astropy EarthLocation
         :return: Array containing altitude and azimuth of source as astropy angle
         """
