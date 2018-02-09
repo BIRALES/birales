@@ -28,11 +28,11 @@ class PreProcessor(ProcessingModule):
 
     def _get_noise_estimation(self, data):
         if self.counter < settings.detection.n_noise_samples:
-            power = np.power(np.abs(data[:, settings.detection.noise_channels, :]), 2)
+            power = self._power(data[:, settings.detection.noise_channels, :])
 
             if settings.detection.noise_use_rms:
                 #  use RMS
-                noise = np.sqrt(np.mean(np.power(power, 2)))
+                noise = np.sqrt(np.mean(power))
             else:
                 # use mean
                 noise = np.mean(power)
@@ -64,15 +64,7 @@ class PreProcessor(ProcessingModule):
             self._observation.save()
             self._config_persisted = True
 
-        # version 3 - start
-        p_v = self._power(data)
-        p_n = obs_info['noise']
-        snr = p_v / p_n
-        snr[snr <= 0] = np.nan
-        log_data = 10 * np.log10(snr)
-        log_data[np.isnan(log_data)] = 0.
-
-        output_data[:] = log_data
+        output_data[:] = self._power(data)
         self.counter += 1
 
         return obs_info

@@ -30,6 +30,7 @@ class DetectionCluster:
         self.id = str(self.beam_config['beam_id']) + '_' + self._processed_time.isoformat()
         self.to_delete = False
         self.to_save = True
+        self.beam_noise = self.beam_config['beam_noise']
 
         self.time_data = time_data
         self.channel_data = channels
@@ -100,9 +101,9 @@ class DetectionCluster:
             channels = channels[inlier_mask]
             time = time[inlier_mask]
             if settings.detection.select_highest_snr:
-                snr = self.snr_data[i][inlier_mask]
+                p_v = np.array(self.snr_data[i][inlier_mask])
             else:
-                snr = self.snr_data[inlier_mask]
+                p_v = np.array(self.snr_data[inlier_mask])
 
             self.score = model.estimator_.score(channels, time)
             self.m = model.estimator_.coef_[0]
@@ -110,7 +111,21 @@ class DetectionCluster:
 
             self.channel_data = np.array([channel[0] for channel in channels])
             self.time_data = [np.datetime64(int(t * 1e9), 'ns') for t in time]
-            self.snr_data = np.array(snr)
+            self.snr_data = self._set_snr(p_v)
+
+    def _set_snr(self, power):
+        """
+        Calculate the SNR
+
+        :param power:
+        :return:
+        """
+        snr = power / self.beam_noise
+        snr[snr <= 0] = np.nan
+        log_data = 10 * np.log10(snr)
+        log_data[np.isnan(log_data)] = 0.
+
+        return log_data
 
     def is_linear(self, threshold):
         """

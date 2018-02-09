@@ -44,8 +44,8 @@ class RemoveBackgroundNoiseFilter(InputDataFilter):
 class PepperNoiseFilter(InputDataFilter):
     def __init__(self):
         InputDataFilter.__init__(self)
-        self._structure = np.zeros((5, 5))
-        self._structure[2, 2] = 1
+        self._structure = np.zeros((3, 3))
+        self._structure[1, 1] = 1
 
     def _remove_pepper_noise(self, data):
         return binary_hit_or_miss(data, structure1=self._structure)
@@ -85,7 +85,7 @@ class Filter(ProcessingModule):
 
         # The filters to be applied on the data. Filters will be applied in order.
         self._filters = [
-            RemoveBackgroundNoiseFilter(std_threshold=2.),
+            RemoveBackgroundNoiseFilter(std_threshold=4.),
             PepperNoiseFilter(),
             RemoveTransmitterChannelFilter()
         ]
