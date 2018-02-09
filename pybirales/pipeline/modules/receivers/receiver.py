@@ -130,9 +130,18 @@ class Receiver(Generator):
             # Release output blob
             self.release_output_blob(obs_info)
 
+            # Calculate RMS
+            self._calculate_rms(output_data)
+
             logging.info("Receiver: Received buffer ({})".format(obs_info['timestamp'].time()))
 
         return self._callback_type(data_callback)
+
+    @staticmethod
+    def _calculate_rms(input_data):
+        """ Calculate the RMS of the incoming antenna data
+        :param input_data: Input antenna data """
+        rms_values = np.mean(np.sum(input_data**2, axis=1), 1)[0]
 
     def _initialise_receiver(self, start_time):
         """ Initialise the receiver """
