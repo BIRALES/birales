@@ -352,6 +352,10 @@ class BiralesFacade:
         :return:
         """
 
+        # Load the backend
+        if not settings.manager.offline:
+            self._load_backend()
+
         # Reset calibration coefficients on ROACH
         if self._backend:
             log.info('Resetting the calibration coefficients')
