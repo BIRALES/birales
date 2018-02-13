@@ -170,9 +170,6 @@ class Pointing(object):
         # Convert RA DEC to ALT AZ
         primary_alt, primary_az = self._ha_dec_to_alt_az(Angle(0, u.deg), ref_dec, self._reference_location)
 
-        # Declination depends on DEC divide by DEC
-        ha = ha / np.cos(delta_dec.rad + ref_dec.rad)
-
         # We must have a positive hour angle and non-zero
         if ha < 0:
             ha = Angle(ha + 360, u.deg)
