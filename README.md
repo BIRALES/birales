@@ -129,6 +129,12 @@ The following options are available:
 
 - The `-c / --config` option specifies the BIRALES configuration file to use. If multiple configuration options are specified, they will override each other. Required.
 
+The calibration coefficients can be reset (0 for amplitude and 1 for gain) through:
+
+```bash
+birales services reset_coefficients -c [CONFIGURATION]
+```
+
 ### Running the BIRALES Web application
 
 Start the Flask server (still in development)
