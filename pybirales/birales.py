@@ -345,6 +345,19 @@ class BiralesFacade:
 
         return pipeline_builder.manager
 
+    def reset_calibration_coefficients(self):
+        """
+        Reset calibration coefficients
+
+        :return:
+        """
+
+        # Reset calibration coefficients on ROACH
+        if self._backend:
+            log.info('Resetting the calibration coefficients')
+            self._backend.load_calibration_coefficients(amplitude=self._calibration.real_reset_coeffs,
+                                                        phase=self._calibration.imag_reset_coeffs)
+
     def calibrate(self, correlator_pipeline_manager):
         """
         Calibration routine, which will use the correlator pipeline manager
@@ -356,11 +369,8 @@ class BiralesFacade:
         if not settings.manager.offline:
             self._load_backend()
 
-        # Reset calibration coefficients on ROACH
-        if self._backend:
-            log.info('Loading calibration coefficients to the ROACH')
-            self._backend.load_calibration_coefficients(amplitude=self._calibration.real_reset_coeffs,
-                                                        phase=self._calibration.imag_reset_coeffs)
+        # Reset calibration coefficients before applying new ones
+        self.reset_calibration_coefficients()
 
         self.configuration.update_config({'observation': {'type': 'calibration'}})
 

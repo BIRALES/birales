@@ -53,6 +53,24 @@ def calibration(ctx, config_filepath, name):
 @click.option('--config', '-c', 'config_filepath', type=click.Path(exists=True), required=True,
               help='The BIRALES configuration file', multiple=True)
 @click.pass_context
+def reset_coefficients(ctx, config_filepath):
+    # Load the BIRALES configuration from file
+    config = BiralesConfig(config_filepath, ctx.obj)
+
+    # Initialise the Birales Facade (BOSS)
+    bf = BiralesFacade(configuration=config)
+
+    # Reset the calibration coefficients
+    bf.reset_calibration_coefficients()
+
+    # Stop the birales system
+    bf.stop()
+
+
+@services.command()
+@click.option('--config', '-c', 'config_filepath', type=click.Path(exists=True), required=True,
+              help='The BIRALES configuration file', multiple=True)
+@click.pass_context
 def run_server(ctx, config_filepath):
     # Load the BIRALES configuration from file
     config = BiralesConfig(config_filepath, ctx.obj)
