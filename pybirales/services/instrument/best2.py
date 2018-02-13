@@ -51,6 +51,9 @@ class BEST2(object):
         # Connect to server
         self._connect()
 
+        # Get Current pointing
+        self.current_pointing = self.get_current_declination()
+
     def _connect(self):
         """ Connect to server """
         try:
@@ -175,7 +178,7 @@ class BEST2(object):
         logging.info("BEST2: Pointing - %s" % data)
 
         # Wait for start delay
-        time.sleep(self.START_DELAY)
+        time.sleep(START_DELAY)
 
         # Wait until pointing is very close to desired one
         while True:
@@ -190,7 +193,7 @@ class BEST2(object):
                     # We are ready
                     time.sleep(2)
                     break
-            except:
+            except BaseException:
                 pass
 
         # Check if pointing was successful
