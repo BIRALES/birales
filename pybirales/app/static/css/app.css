@@ -10,7 +10,7 @@
 }
 
 .chart.plotly {
-    height: 450px
+    /*height: 450px*/
 }
 
 caption {
@@ -39,4 +39,39 @@ caption {
 
 .pagination {
     margin: 0 20px 10px 20px
+}
+
+table.table.observation-table {
+    font-size: 10px;
+    margin-top: 20px;
+    max-width: 70%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+table.table.observation-table > tbody > tr > td {
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+table.table.observation-table > tbody > tr > th {
+    text-transform: uppercase;
+    font-weight: normal;
+}
+
+div.author > h5.title {
+    overflow-wrap: break-word;
+}
+
+div.author > h6.subtitle {
+    font-weight: 300;
+    font-size: 11px;
+    margin-top: 20px;
+}
+
+#no-detections-container {
+    text-align: center;
+    height: 350px;
+    line-height: 340px;
+    font-size: 18px;
 }

@@ -22,6 +22,7 @@
               href="{{ url_for('static', filename='node_modules/flatpickr/dist/flatpickr.min.css') }}">
 
         <link rel="stylesheet" href="{{ url_for('static', filename='css/side_panel.css') }}"/>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/loader.css') }}"/>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}"/>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}"/>
     {% endblock %}
@@ -103,10 +104,7 @@
                     </ul>
                 </nav>
 
-                <p class="copyright pull-right">                &copy;
-                    <script>document.write(new Date().getFullYear())</script>
-                    <a href="">BIRALES</a>
-                </p>
+                <p class="copyright pull-right"><a href="">BIRALES</a></p>
             </div>
         </footer>
     </div>

@@ -24,12 +24,13 @@ function DopplerProfilePlotter(selector) {
             b: 50,
             t: 20,
             pad: -50
-        }
+        },
+        height: 200
     };
 
     this.traces = [];
 
-    this.plot = Plotly.newPlot(this.selector, this.traces, this.layout);
+    this.plot = undefined;
 }
 
 
@@ -86,7 +87,7 @@ DopplerProfilePlotter.prototype = {
     update: function (beam_candidates) {
         this.traces = this._get_series(beam_candidates);
 
-        Plotly.newPlot(this.selector, this._get_series(beam_candidates), this.layout);
+        Plotly.newPlot(this.selector, this._get_series(beam_candidates));
 
         log.debug('Updating the', self.name, 'plotter with', beam_candidates.length, 'new candidates');
     }

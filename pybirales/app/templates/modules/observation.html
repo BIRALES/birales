@@ -1,0 +1,134 @@
+{% extends "common/layout.html" %}
+{% block title %}Observation{% endblock %}
+{% set active_page = "observations" %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card card-user">
+                    <div class="image">
+                        <img src="{{ url_for('static', filename='themes/lbd/assets/img/obs_bkg.png') }}">
+                    </div>
+                    <div class="content">
+                        <div class="author">
+                            <img class="avatar border-gray"
+                                 src="{{ url_for('static', filename='img/obs_earth.png') }}">
+                            <h5 class="title">{{ observation.name }}</h5>
+                            <h6 class="subtitle">Configuration</h6>
+
+                            <table class="table observation-table">
+                                {% for name, item in observation.description().items() %}
+                                    <tr>
+                                        <th>{{ name }}</th>
+                                        <td>{{ item }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </table>
+                        </div>
+
+
+                    </div>
+                    <hr>
+                    <div class="text-center">
+                        <button href="#" class="btn btn-simple">
+                            <i class="fa fa-check"></i>
+                        </button>
+                        <button href="#" class="btn btn-simple">
+                            <i class="fa fa-exclamation-triangle"></i>
+                        </button>
+                        <button href="#" class="btn btn-simple">
+                            <i class="fa fa-file"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                {#                <div class="card card-plain" id="observation-results-loading">#}
+                {#                    <div class="content">#}
+                {#                        <div class="loader"></div>#}
+                {#                    </div>#}
+                {#                </div>#}
+
+                <div class="card card-observation-result">
+                    <div class="header">
+                        <h4 class="title">Doppler profile</h4>
+                    </div>
+                    <div class="content">
+                        <div class="chart ppp responsive-plot" id="doppler-profile-plot"></div>
+                    </div>
+                </div>
+
+                <div class="card card-plain" style="display: none" id="no-detections-container">
+                    <div class="content">
+                        No detections were made for this observation :(
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card card-observation-result">
+                    <div class="header">
+                        <h4 class="title">SNR profile</h4>
+                    </div>
+                    <div class="content">
+                        <div class="chart plotly responsive-plot" id="snr-profile-plot"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script src="{{ url_for('static', filename='js/plotters/snr_profile.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plotters/doppler_profile.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plotters/manager.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+    <script>
+        $(document).ready(function () {
+            var socket = io('/');
+            var plotting_manager = new PlottingManager(socket);
+
+            socket.on('error', function (err) {
+                log.error('An error has occurred on server side.');
+            });
+
+            socket.on('connect_error', function (err) {
+                log.error('Could not establish a connection');
+            });
+
+            plotting_manager.addPlot('beam_candidates', new DopplerProfilePlotter('doppler-profile-plot'));
+            plotting_manager.addPlot('beam_candidates', new SNRProfilePlot('snr-profile-plot'));
+            plotting_manager.init();
+
+            var BEAM_CANDIDATES_API = "{{ url_for("observations_page.beam_data", observation_id=observation.id) }}";
+
+            var success = function (response) {
+                $('#observation-results-loading').hide();
+                var beam_candidates = JSON.parse(response);
+                if (beam_candidates.length > 0) {
+
+
+                    plotting_manager.updatePlots('beam_candidates', beam_candidates);
+                    log.info('Retrieved', beam_candidates.length, ' beam candidates for this observation');
+                }
+                else {
+                    $('.card-observation-result').hide();
+                    $('#no-detections-container').show('slow');
+
+                    log.info('No detections detected in this observation');
+                }
+            };
+
+            var failure = function (data) {
+                log.error('Could not retrieve beam candidates', data)
+            };
+
+            $.when($.ajax(BEAM_CANDIDATES_API)).done(success).fail(failure);
+        });
+    </script>
+{% endblock %}

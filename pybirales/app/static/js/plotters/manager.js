@@ -21,6 +21,7 @@ var PlottingManager = function (socket) {
             channels[channel] = [];
         }
 
+        log.debug(plot.title, ' listening on channels ', channel);
         channels[channel].push(plot);
     };
 
@@ -28,7 +29,13 @@ var PlottingManager = function (socket) {
     this.updatePlots = function (channel, data) {
         log.debug('Updating plots in ' + channel + ' channel');
         $.each(channels[channel], function (channel, plot) {
-            plot.update(JSON.parse(data));
+            try {
+                plot.update(JSON.parse(data));
+            }
+            catch (SyntaxError) {
+                // data is already in json format, no need to parse
+                plot.update(data);
+            }
         })
     };
 };

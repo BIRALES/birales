@@ -21,7 +21,7 @@ function SNRProfilePlot(selector) {
             b: 50,
             t: 20,
             pad: 4
-        },
+        }
     };
 
     this.traces = [{
@@ -34,7 +34,7 @@ function SNRProfilePlot(selector) {
         }
     }];
 
-    this.plot = Plotly.newPlot(this.selector, this.traces, this.layout);
+    this.plot = undefined;
 }
 
 SNRProfilePlot.prototype = {
