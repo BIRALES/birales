@@ -4,13 +4,13 @@
     "pipeline": "detection_pipeline",
     "config_file": [
       "pybirales/configuration/birales.ini",
-      "pybirales/configuration/templates/dev/detection.ini"
+      "pybirales/configuration/templates/dev/detecftion.ini"
     ],
     "config_parameters": {
       "beamformer": {
         "reference_declination": 30
       },
-      "start_time": "2018-02-08T18:41:00Z",
+      "start_time": "2018-02-16T18:09:30Z",
       "duration": 400
     }
   },
@@ -30,6 +30,7 @@
     }
   },
   "observation 2": {
+    "type": "observation",
     "pipeline": "detection_pipeline",
     "config_file": [
       "pybirales/configuration/birales.ini",

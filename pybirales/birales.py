@@ -42,13 +42,19 @@ class BiralesConfig:
         self._parser = configparser.RawConfigParser()
 
         # Set the configurations from file (can be multiple files)
+        log.info('Loading configuration files')
         for config_file in config_file_path:
             self._load_from_file(config_file)
 
         # Load the logging configuration
         self._set_logging_config()
 
-        log.info('Loaded the following config files: {}'.format(config_file_path))
+        # Set the configurations from file (can be multiple files)
+        log.info('Loading configuration files')
+        for config_file in config_file_path:
+            self._load_from_file(config_file)
+
+        # log.info('Loaded the following config files: {}'.format(config_file_path))
 
         # Load the ROACH backend settings
         backend_path = os.path.join(os.path.dirname(__file__), self._parser.get('receiver', 'backend_config_filepath'))
@@ -74,7 +80,8 @@ class BiralesConfig:
 
         # Load the configuration file requested by the user
         try:
-            with open(config_filepath) as f:
+            log.info('Loading the {} configuration file.'.format(config_filepath))
+            with open(os.path.expanduser(config_filepath)) as f:
                 self._parser.read_file(f)
                 log.info('Loaded the {} configuration file.'.format(config_filepath))
         except IOError:
@@ -115,7 +122,7 @@ class BiralesConfig:
         log_config.fileConfig(config_filepath, disable_existing_loggers=False)
 
         # Override the logger's debug level
-        log.getLogger().setLevel(self._parser.get('birales', 'debug_level'))
+        log.getLogger().setLevel('DEBUG')
 
         # Create directory for file log
         directory = os.path.join('/var/log/birales', '{:%Y_%m_%d}'.format(datetime.datetime.now()))
