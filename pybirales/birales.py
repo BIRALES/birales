@@ -46,7 +46,7 @@ class BiralesConfig:
             self._load_from_file(config_file)
 
         # Load the logging configuration
-        self._set_logging_config(config_file_path)
+        self._set_logging_config()
 
         log.info('Loaded the following config files: {}'.format(config_file_path))
 
@@ -103,22 +103,22 @@ class BiralesConfig:
         # Re-load the system configuration upon initialisation
         self.load()
 
-    def _set_logging_config(self, config_filepath):
+    def _set_logging_config(self):
         """
-
-        :param config_filepath:
+        Load the logging configuration
         :return:
         """
+        self._load_from_file('configuration/logging.ini')
 
         # Load the logging configuration file
+        config_filepath = os.path.join(os.path.dirname(__file__), 'configuration/logging.ini')
         log_config.fileConfig(config_filepath, disable_existing_loggers=False)
 
         # Override the logger's debug level
-        log.getLogger().setLevel(self._parser.get('logger_root', 'level'))
+        log.getLogger().setLevel(self._parser.get('birales', 'debug_level'))
 
         # Create directory for file log
-        directory = os.path.join(self._parser.get('handler_rot_handler', 'log_directory'),
-                                 '{:%Y_%m_%d}'.format(datetime.datetime.now()))
+        directory = os.path.join('/var/log/birales', '{:%Y_%m_%d}'.format(datetime.datetime.now()))
         if not os.path.exists(directory):
             os.makedirs(directory)
 
