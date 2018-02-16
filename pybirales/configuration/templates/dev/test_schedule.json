@@ -4,7 +4,7 @@
     "pipeline": "detection_pipeline",
     "config_file": [
       "pybirales/configuration/birales.ini",
-      "pybirales/configuration/templates/dev/detecftion.ini"
+      "pybirales/configuration/templates/dev/detection.ini"
     ],
     "config_parameters": {
       "beamformer": {
