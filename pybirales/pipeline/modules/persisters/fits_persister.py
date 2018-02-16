@@ -81,8 +81,8 @@ class FitsPersister(ProcessingModule):
             new_data = input_data[self._beams_to_visualise, :, :]
 
             try:
-                fits_file = fits.open(self._fits_filepath)
-                new_data = np.dstack([fits_file[0].data, new_data])
+                self._fits_file = fits.open(self._fits_filepath)
+                new_data = np.dstack([self._fits_file[0].data, new_data])
                 self._write_to_file(new_data)
             except IOError:
                 # Fits file not created, create a new one (and set header)
