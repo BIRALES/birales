@@ -108,10 +108,10 @@ class BiralesConfig:
         Load the logging configuration
         :return:
         """
-        self._load_from_file('configuration/logging.ini')
 
         # Load the logging configuration file
         config_filepath = os.path.join(os.path.dirname(__file__), 'configuration/logging.ini')
+        self._load_from_file(config_filepath)
         log_config.fileConfig(config_filepath, disable_existing_loggers=False)
 
         # Override the logger's debug level
