@@ -8,8 +8,18 @@
             <div class="col-md-12">
                 <div class="card">
                     <div class="header">
-                        <h4 class="title">Observations</h4>
-                         <p class="category">{{ pagination.info }}</p>
+                        <div class="col-sm-8">
+                            <h4 class="title">Observations</h4>
+                            <p class="category">{{ pagination.info }}</p>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="pull-right">
+                                <div class="btn-group">
+                                    <a href="{{ url_for('observations_page.create') }}"
+                                       class="btn btn-sm btn-success" role="button">Create Observation</a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="content table-responsive table-full-width">
@@ -29,13 +39,39 @@
                                     <td>{{ observation.name }}</td>
                                     <td>{{ observation.date_time_start }}</td>
                                     <td>{{ observation.date_time_end }}</td>
-                                    <td>ready</td>
-                                    <td>actions</td>
+
+                                    <td>
+                                        {% if observation.is_finished %}
+                                            <span class="label label-success">{{ observation.status }}</span>
+                                        {% elif observation.is_running %}
+                                            <span class="label label-default">{{ observation.status }}</span>
+                                        {% else %}
+                                            <span class="label label-danger">{{ observation.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if observation.is_finished or observation.is_running %}
+                                            <a href="{{ url_for('observations_page.view', observation_id=observation.id) }}"
+                                               class="btn btn-sm btn-info" role="button">
+                                                {% if observation.is_finished %}
+                                                    Results
+                                                {% elif observation.is_running %}
+                                                    Monitor
+                                                {% endif %}
+                                            </a>
+                                        {% else %}
+                                            <a href="{{ url_for('observations_page.edit', observation_id=observation.id) }}"
+                                               class="btn btn-sm btn-warning" role="button">Edit</a>
+                                        {% endif %}
+
+                                        <a href="{{ url_for('observations_page.delete', observation_id=observation.id) }}"
+                                           class="btn btn-sm btn-danger" role="button">Delete</a>
+                                    </td>
                                 </tr>
                             {% endfor %}
                             </tbody>
                         </table>
-                    {{ pagination.links }}
+                        {{ pagination.links }}
                     </div>
                 </div>
             </div>

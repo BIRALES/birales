@@ -118,6 +118,7 @@ class ObservationsScheduler:
         for obs_name, obs in scheduled_observations.iteritems():
             try:
                 so = ScheduledObservation(name=obs_name,
+                                          obs_type=obs['type'],
                                           config_file=obs['config_file'],
                                           pipeline_name=obs['pipeline'],
                                           params=obs['config_parameters'])

@@ -1,11 +1,15 @@
-from pybirales import settings
 import datetime
-import warnings
-from mongoengine import *
+
 from bson.objectid import ObjectId
+from mongoengine import *
 
 # with warnings.catch_warnings():
 #     warnings.simplefilter("ignore")
+STATUS_MAP = {
+    'pending': 'Scheduled',
+    'running': 'Running',
+    'finished': 'Finished',
+}
 
 
 class Observation(Document):
@@ -14,6 +18,33 @@ class Observation(Document):
     date_time_end = DateTimeField()
     settings = DynamicField()
     noise_estimate = FloatField(default=0)
+
+    @property
+    def is_finished(self):
+        now = datetime.datetime.utcnow()
+        return now > self.date_time_end
+
+    @property
+    def is_running(self):
+        return False
+
+    @property
+    def status(self):
+        if self.is_finished:
+            return STATUS_MAP['finished']
+
+        if self.is_running:
+            return STATUS_MAP['running']
+        return STATUS_MAP['pending']
+
+    def description(self):
+        return {
+            'tx': self.settings['observation']['transmitter_frequency'],
+            'status': self.status,
+            'duration': self.settings['observation']['duration'],
+            'start': self.date_time_start,
+            'end': self.date_time_end,
+        }
 
 
 class BeamCandidate(DynamicDocument):
@@ -30,13 +61,13 @@ class BeamCandidate(DynamicDocument):
     min_channel = FloatField(required=True)
 
     @queryset_manager
-    def get(self, query_set, observation=None, beam_id=None, max_channel=None, min_channel=None,
-                         to_time=None,
-                         from_time=None):
+    def get(self, query_set, observation_id=None, beam_id=None, max_channel=None, min_channel=None,
+            to_time=None,
+            from_time=None):
 
         query = Q()
-        if observation:
-            query &= Q(observation=observation)
+        if observation_id:
+            query &= Q(observation=observation_id)
         else:
             if beam_id:
                 query &= Q(beam_id=beam_id)
@@ -54,4 +85,3 @@ class BeamCandidate(DynamicDocument):
                 query &= Q(max_channel__lte=max_channel)
 
         return query_set.filter(query)
-

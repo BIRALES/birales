@@ -20,15 +20,20 @@ class ScheduledObservation(object):
     # Recalibrate every 24 hours
     RECALIBRATION_TIME = datetime.timedelta(hours=24)
 
-    def __init__(self, name, pipeline_name, config_file, params):
+    def __init__(self, name, pipeline_name, config_file, params, obs_type='observation'):
         """
         Initialisation function for the Scheduled Observation
 
         :param name: The name of the observation
+        :param obs_type:
+        :param pipeline_name:
+        :param config_file:
+        :param params:
         """
 
         self.name = name
         self.pipeline_name = pipeline_name
+        self._obs_type = obs_type
 
         if self.pipeline_name not in AVAILABLE_PIPELINES_BUILDERS:
             raise PipelineBuilderIsNotAvailableException(pipeline_name, AVAILABLE_PIPELINES_BUILDERS)
@@ -71,6 +76,10 @@ class ScheduledObservation(object):
 
         if self.duration:
             self.end_time = self.start_time + self.duration
+
+    @property
+    def is_calibration_obs(self):
+        return self._obs_type == 'calibration'
 
     @property
     def next_observation(self):
@@ -229,7 +238,7 @@ class ScheduledCalibrationObservation(ScheduledObservation):
 
         pipeline_name = 'correlation_pipeline'
 
-        ScheduledObservation.__init__(self, name, pipeline_name, config_file, params)
+        ScheduledObservation.__init__(self, name, pipeline_name, config_file, params, obs_type='calibration')
 
     def is_calibration_needed(self, obs):
         """
