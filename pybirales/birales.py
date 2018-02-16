@@ -409,7 +409,7 @@ class BiralesFacade:
 
             # Start observation
             if isinstance(observation, ScheduledObservation):
-                if observation.parameters['type'] == 'calibration':
+                if observation.is_calibration_obs:
                     self.calibrate(correlator_pipeline_manager=manager)
                 else:
                     self.start_observation(pipeline_manager=manager)
