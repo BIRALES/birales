@@ -39,6 +39,7 @@ class InstallWrapperCommand(install):
         os.path.join(HOME, '.birales'),
         os.path.join(HOME, '.birales/configuration/templates/dev'),
         os.path.join(HOME, '.birales/configuration/templates/prod'),
+        os.path.join(HOME, '.birales/configuration/uploads'),
         os.path.join(HOME, '.birales/schedules'),
         os.path.join(HOME, '.birales/visualisation/fits'),
     ]
@@ -89,7 +90,7 @@ setup(
         (os.path.join(HOME, '.birales', TEMPLATES, 'dev'), list_dir(os.path.join('pybirales', TEMPLATES, 'dev'))),
         (os.path.join(HOME, '.birales', TEMPLATES, 'prod'), list_dir(os.path.join('pybirales', TEMPLATES, 'prod'))),
         (os.path.join(HOME, '.birales/fits'), []),
-        ('/var/log/birales', [])
+        (os.path.join(HOME, '.birales/configuration/uploaded'), []),
     ],
     entry_points={
         'console_scripts': [
