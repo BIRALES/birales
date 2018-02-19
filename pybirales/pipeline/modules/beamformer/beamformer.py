@@ -245,7 +245,7 @@ class Pointing(object):
         beam_el = Angle(asin(rhou_sat_rx_nwz[2]), u.rad)
 
         # Save beam azimuth and elevation
-        self.beam_az_el[beam] = beam_az, beam_el
+        self.beam_az_el[beam] = beam_az.deg, beam_el.deg
 
         # Point beam to required ALT AZ
         log.debug("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, ref_dec +
