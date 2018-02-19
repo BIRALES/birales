@@ -6,13 +6,18 @@ from flask_ini import FlaskIni
 from flask_socketio import SocketIO
 from mongoengine import connect
 import logging as log
+import os
 
 from pybirales.app.modules.monitoring import monitoring_page
 from pybirales.app.modules.observations import observations_page
-from pybirales.app.modules.preferences import preferences_page
+from pybirales.app.modules.configurations import configurations_page
 from pybirales.repository.models import BeamCandidate
 
 socket_io = SocketIO()
+
+app = Flask(__name__)
+app.secret_key = 'secret!'
+app.config['DEBUG'] = True
 
 
 @socket_io.on('get_beam_candidates')
@@ -61,8 +66,6 @@ def configure_flask(config_file_path):
     # Initialise logging
     # log.config.fileConfig(config_file_path)
 
-    app = Flask(__name__)
-
     with app.app_context():
         app.iniconfig = FlaskIni()
         app.iniconfig.read(config_file_path)
@@ -72,7 +75,7 @@ def configure_flask(config_file_path):
     # Register Blueprints
     app.register_blueprint(monitoring_page)
     app.register_blueprint(observations_page)
-    app.register_blueprint(preferences_page)
+    app.register_blueprint(configurations_page)
 
     # Turn the flask app into a socket.io app
     socket_io.init_app(app)
@@ -81,16 +84,10 @@ def configure_flask(config_file_path):
 
 
 def run():
-    # Initialise Flask Application
-
-    app = Flask(__name__)
-    app.config['DEBUG'] = True
-    app.config['secret_key'] = 'secret!'
-
     # Register Blueprints
     app.register_blueprint(monitoring_page)
     app.register_blueprint(observations_page)
-    app.register_blueprint(preferences_page)
+    app.register_blueprint(configurations_page)
 
     # Turn the flask app into a socket.io app
     socket_io.init_app(app)
@@ -127,9 +124,7 @@ def main():
 if __name__ == "__main__":
     # Initialise Flask Application
 
-    app = Flask(__name__)
-    app.config['DEBUG'] = True
-    app.config['secret_key'] = 'secret!'
+
     connect(
         db='birales',
         username='birales_rw',
@@ -140,7 +135,7 @@ if __name__ == "__main__":
     # Register Blueprints
     app.register_blueprint(monitoring_page)
     app.register_blueprint(observations_page)
-    app.register_blueprint(preferences_page)
+    app.register_blueprint(configurations_page)
 
     # Turn the flask app into a socket.io app
     socket_io.init_app(app)
