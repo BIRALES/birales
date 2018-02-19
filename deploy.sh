@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
-# Clone repository from Bitbucket
+# Clone repository from BitBucket
 
 
 # Check that the dependencies are met. If not install.
+
+# Install TCPO calibration pipeline
+git fetch origin cleaning_jbxm
+git checkout cleaning_jbxm
+git pull cleaning_jbxm
+sudo ./deploy.sh
 
 # Deploy the BIRALES application
 python setup.py install
