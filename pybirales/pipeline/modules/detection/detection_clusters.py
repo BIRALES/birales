@@ -31,8 +31,12 @@ class DetectionCluster:
         self.to_delete = False
         self.to_save = True
         self.beam_noise = self.beam_config['beam_noise']
+        self.beam_id = self.beam_config['beam_id']
+        self.t0 = self.beam_config['t_0']
+        self.td = self.beam_config['t_delta']
 
         self.time_data = time_data
+        self.time_f_data = self.t0 + np.array(range(0, len(self.time_data))) * self.td
         self.channel_data = channels
         self.snr_data = snr
 
@@ -80,16 +84,14 @@ class DetectionCluster:
             i = ndx[index]
 
             # channels = np.array([[channel, ss] for channel, ss in zip(c[i], s[i])])
-            channels = np.array([[channel] for channel in c[i]])
-            time = ts[i].astype('int64') * 1e-9
+            channels = c[i].reshape(-1, 1)
+            time = ts[i]
         else:
-            channels = np.array([[channel] for channel in channel_data])
-            time = np.array(time_data).astype('int64') * 1e-9
+            channels = channel_data.reshape(-1, 1)
+            time = time_data
 
         try:
-            t = time2.time()
             model.fit(channels, time)
-
         except ValueError:
             log.debug('Linear interpolation failed. No inliers found.')
         else:
@@ -110,8 +112,13 @@ class DetectionCluster:
             self.c = model.estimator_.intercept_
 
             self.channel_data = np.array([channel[0] for channel in channels])
-            self.time_data = [np.datetime64(int(t * 1e9), 'ns') for t in time]
+            self.time_data = time
+            self.time_f_data = self.t0 + np.array(range(0, len(self.time_data))) * self.td
+            # self.time_f_data = self.time_f_data[inlier_mask]
             self.snr_data = self._set_snr(p_v)
+
+            # Adding the channel bandwidth (as requested by Pierluigi)
+            self.snr_data += 20*np.log(1./self.beam_config['sampling_time'])
 
     def _set_snr(self, power):
         """
@@ -127,7 +134,7 @@ class DetectionCluster:
 
         return log_data
 
-    def is_linear(self, threshold):
+    def is_linear(self, threshold=0.9):
         """
         Determine if cluster is a linear cluster up to a certain threshold
 
@@ -295,7 +302,7 @@ class DetectionCluster:
             'noise': self.beam_config['beam_noise'],
             'size': len(self.channel_data),
             'data': {
-                'time': [np.datetime_as_string(b) for b in self.time_data],
+                'time': [np.datetime_as_string(self.t0 + b * self.td) for b in self.time_data],
                 'channel': self.channel_data.tolist(),
                 'snr': self.snr_data.tolist(),
             },

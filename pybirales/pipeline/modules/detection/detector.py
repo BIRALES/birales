@@ -1,16 +1,18 @@
 import logging as log
-import os
 from functools import partial
 from multiprocessing import Pool
 
 import numpy as np
 
 from pybirales import settings
+from pybirales.events.events import SpaceDebrisDetectedEvent
+from pybirales.events.publisher import EventsPublisher
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.modules.detection.beam import Beam
 from pybirales.pipeline.modules.detection.dbscan_detection import detect
 from pybirales.pipeline.modules.detection.queue import BeamCandidatesQueue
+from pybirales.pipeline.modules.detection.space_debris_candidate import SpaceDebrisTrack
 
 
 class Detector(ProcessingModule):
@@ -44,6 +46,11 @@ class Detector(ProcessingModule):
 
         self._candidates_detected = 0
 
+        self._publisher = EventsPublisher.Instance()
+
+        # A list of space debris tracks
+        self._candidates = []
+
     def _tear_down(self):
         self.pool.close()
 
@@ -69,8 +76,8 @@ class Detector(ProcessingModule):
         return self.channels
 
     def _get_time(self, obs_info):
-        if self.time is None:
-            self.time = np.arange(0, obs_info['nsamp'])
+        self.time = np.arange(0, obs_info['nsamp']) + self.counter * obs_info['nsamp']
+
         return self.time
 
     def process(self, obs_info, input_data, output_data):
@@ -111,9 +118,66 @@ class Detector(ProcessingModule):
 
         self._debris_queue.set_candidates(beam_candidates)
 
+        # Create Space Debris Tracks from tracks in beams
+        for beam_candidate_list in beam_candidates:
+            for beam_candidate in beam_candidate_list:
+                for candidate in self._candidates:
+                    # If beam candidate is similar to candidate, merge it.
+                    if candidate.is_parent_of(beam_candidate) and beam_candidate.is_linear and beam_candidate.is_valid:
+                        log.debug(
+                            'Beam candidate {} added to {}, with m={}, c={}, n={} was created since no match was found.'
+                                .format(id(beam_candidate), id(candidate), beam_candidate.m, beam_candidate.c,
+                                        len(beam_candidate.time_data)))
+
+                        candidate.add(beam_candidate)
+                        break
+                else:
+                    # Beam candidate does not match any candidate. Create candidate from it.
+                    if beam_candidate.is_linear and beam_candidate.is_valid:
+                        log.debug('Beam candidate {}, with m={}, c={}, n={} was created since no match was found.'
+                                  .format(id(beam_candidate), beam_candidate.m, beam_candidate.c,
+                                          len(beam_candidate.time_data)))
+
+                        # Transform this beam candidate into a space debris track
+                        sd = SpaceDebrisTrack(obs_info=obs_info, beam_candidate=beam_candidate)
+
+                        # Publish event: A space debris detection was made
+                        self._publisher.publish(SpaceDebrisDetectedEvent(sd))
+
+                        # Add the space debris track to the candidates list
+                        self._candidates.append(sd)
+
+        temp_candidates = []
+        for c in self._candidates:
+            if c.is_finished(current_time=self.last_time_sample, min_channel=channels[0]):
+                log.debug('Track {} has transitted outside detection window. Removing it from candidates list'
+                          .format(id(c)))
+            else:
+                log.debug('Track {} is still within detection window'.format(id(c)))
+                temp_candidates.append(c)
+
+        log.info('Result: {} have space debris tracks have transitted. {} currently in in detection window.'.format(
+            len(temp_candidates) - len(self._candidates), len(self._candidates)))
+        self._candidates = temp_candidates
+
+        """
+        if self.counter == 8:
+            print 'There are {} candidates'.format(len(self._candidates)), self.counter
+            for i, c in enumerate(self._candidates):
+                print 'Candidate', id(c), 'has', c.data.shape, 'sub candidates'
+                c.data.to_csv('{}.csv'.format(i))
+
+                self._tdm_writer.write(obs_info, c)
+
+        """
+
         self.counter += 1
 
         return obs_info
+
+    @property
+    def last_time_sample(self):
+        return self.time[0]
 
     def generate_output_blob(self):
         pass

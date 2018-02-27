@@ -1,8 +1,6 @@
 import numpy as np
 import settings
 
-MIN_CHANNEL = settings.observation.start_center_frequency
-
 
 def is_linear(score, threshold):
     """
@@ -50,4 +48,4 @@ def track_cutoff(m, intercept):
     :param intercept:
     :return:
     """
-    return m * MIN_CHANNEL + intercept
+    return m * settings.observation.start_center_frequency + intercept

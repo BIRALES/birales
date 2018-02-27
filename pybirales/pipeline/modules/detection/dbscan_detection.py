@@ -73,7 +73,7 @@ def _create_detection_clusters(data, beam, cluster_labels, label):
     # Create a Detection Cluster from the cluster data
     cluster = DetectionCluster(model=_linear_model,
                                beam_config=beam.get_config(),
-                               time_data=[_ref_time + t * _time_delta for t in beam.time[time_indices]],
+                               time_data=beam.time[time_indices],
                                channels=beam.channels[channel_indices],
                                snr=beam.snr[(channel_indices, time_indices)])
 
@@ -82,6 +82,7 @@ def _create_detection_clusters(data, beam, cluster_labels, label):
         log.debug('Beam %s: Cluster with m:%3.2f, c:%3.2f, n:%s and r:%0.2f is considered to be linear.', beam.id,
                   cluster.m,
                   cluster.c, len(channel_indices), cluster.score)
+
         return cluster
 
 
@@ -181,6 +182,8 @@ def detect(obs_info, queue, beam):
 
     # Save the filtered data as a fits file
     # save_fits(beam.snr, 'filtered', beam.id)
+
+    return _detect_clusters(beam)
 
     # Add the beam candidates to the beam queue
     enqueue = queue.enqueue

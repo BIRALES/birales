@@ -80,3 +80,4 @@ class PipelineBuilderIsNotAvailableException(Exception):
                            .format(builder_id, available_pipelines))
 
         self.builder_id = builder_id
+

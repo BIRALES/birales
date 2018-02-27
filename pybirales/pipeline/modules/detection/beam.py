@@ -34,10 +34,15 @@ class Beam:
         self.observation_id = settings.observation.id
         self.name = 'Observation ' + self.observation_name
 
+        self._ref_time = np.datetime64(obs_info['timestamp'])
+        self._time_delta = np.timedelta64(int(obs_info['sampling_time'] * 1e9), 'ns')
+
         self.noise = obs_info['noise']
         self.channels = channels
         self.time = time
         self.snr = beam_data[beam_id, :, :]
+
+        self._sampling_time = obs_info['sampling_time']
 
     def get_config(self):
         return {
@@ -47,4 +52,7 @@ class Beam:
             'observation_id': self.observation_id,
             'beam_noise': self.noise,
             'tx': self.tx,
+            't_0': self._ref_time,
+            't_delta': self._time_delta,
+            'sampling_time': self._sampling_time
         }

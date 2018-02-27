@@ -42,6 +42,9 @@ class InstallWrapperCommand(install):
         os.path.join(HOME, '.birales/configuration/uploads'),
         os.path.join(HOME, '.birales/schedules'),
         os.path.join(HOME, '.birales/visualisation/fits'),
+        os.path.join(HOME, '.birales/tdm/out'),
+        os.path.join(HOME, '.birales/tdm/in'),
+        os.path.join(HOME, '.birales/debug/detection'),
     ]
 
     def run(self):
