@@ -146,6 +146,9 @@ class Pointing(object):
         self._nbeams = config.nbeams
         self._nants = nants
         self._nsubs = nsubs
+        
+        # Calibration coefficients
+        self._calib_coeffs = np.ones(self._nants, dtype=np.complex64)
 
         # Ignore AstropyWarning
         warnings.simplefilter('ignore', category=AstropyWarning)
@@ -197,6 +200,9 @@ class Pointing(object):
             # Apply to weights
             self.weights[i, beam, :].real = real
             self.weights[i, beam, :].imag = imag
+            
+            # Multiply generated weights with calibration coefficients 
+            self.weights[i, beam, :] *= self._calib_coeffs
 
     def point_array_birales(self, beam, ref_dec, ha, delta_dec):
         """ Calculate the phase shift between two antennas which is given by the phase constant (2 * pi / wavelength)
@@ -303,8 +309,12 @@ class Pointing(object):
         if abs(lat.deg - declination.deg) < 0.01:
             az = Angle(0, u.deg)
         else:
-            az = Angle(np.arccos((np.sin(declination.rad) - np.sin(alt.rad) * np.sin(lat.rad)) /
-                                 (np.cos(alt.rad) * np.cos(lat.rad))), u.rad)
+            temp = (np.sin(declination.rad) - np.sin(alt.rad) * np.sin(lat.rad)) / (np.cos(alt.rad) * np.cos(lat.rad))
+            if temp < 0 and (temp + 1) < 0.0001:
+                temp = -1
+            elif temp > 0 and (temp - 1) < 0.0001:
+                temp = 1
+            az = Angle(np.arccos(temp), u.rad)
             if np.sin(hour_angle.rad) >= 0:
                 az = Angle(360 - az.deg, u.deg)
 
