@@ -21,15 +21,40 @@ class BeamPersister(ProcessingModule):
         # Sanity checks on configuration
         if {'filename_suffix'} - set(config.settings()) != set():
             raise PipelineError("Persister: Missing keys on configuration. (filename_suffix)")
-
+        
+        """
         # Get the destination file path of the persisted data
         self._filepath = self._get_filepath(config) + '.dat'
 
         # Open file (if file exists, remove first)
         if os.path.exists(self._filepath):
             os.remove(self._filepath)
-
+            
         self._file = open(self._filepath, "wb+")
+            
+        """
+        
+        
+        # Create directory if it doesn't exist
+        directory = os.path.join(settings.persisters.directory, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
+                                 settings.observation.name)
+        filename = settings.observation.name + self._config.filename_suffix
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        # Create file
+        if config.use_timestamp:
+            file_path = os.path.join(directory, "%s_%s" % (filename, str(time.time())))
+        else:
+            if 'filename_suffix' not in config.settings():
+                raise PipelineError("Beam Persister: filename_suffix required when not using timestamp")
+            file_path = os.path.join(directory, filename + '.dat')
+
+        # Open file (if file exists, remove first)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        self._file = open(file_path, "wb+")        
 
         # Use fadvise to optimise 
         fadvise.set_advice(self._file, fadvise.POSIX_FADV_SEQUENTIAL)
@@ -51,7 +76,7 @@ class BeamPersister(ProcessingModule):
                 self._beam_range = self._config.beam_range
 
         # Variable to check whether meta file has been written
-        self._head_filepath = self._filepath + '.pkl'
+        self._head_filepath = file_path + '.pkl'
         self._head_written = False
 
         # Counter
