@@ -89,7 +89,6 @@ class RawDataReader(ProcessingModule):
             raise NoDataReaderException
 
         output_data[:] = data
-        time.sleep(0.5)
 
         # output_data = self.generate_corrdata()
         # Create observation information

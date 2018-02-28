@@ -151,7 +151,7 @@ class Pointing(object):
         alt, az = self._ha_dec_to_alt_az(ha, dec, self._reference_location)
 
         # Point beam to required ALT AZ
-        log.debug("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, dec, alt.deg, az.deg))
+        print("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, dec, alt.deg, az.deg))
         self.point_array_static(beam, alt, az)
 
     def point_array_birales(self, beam, ref_dec, ha, delta_dec):
@@ -169,6 +169,7 @@ class Pointing(object):
 
         # Convert RA DEC to ALT AZ
         primary_alt, primary_az = self._ha_dec_to_alt_az(Angle(0, u.deg), ref_dec, self._reference_location)
+        print("{}, {}".format(primary_alt.deg, primary_az.deg))
 
         # We must have a positive hour angle and non-zero
         if ha < 0:
@@ -201,7 +202,7 @@ class Pointing(object):
         satellite_el = Angle(asin(rhou_sat_rx_nwz[2]), u.rad)
 
         # Point beam to required ALT AZ
-        log.debug("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, ref_dec +
+        print("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, ref_dec +
                                                                      delta_dec, satellite_el.deg, satellite_az.deg))
         self.point_array_static(beam, satellite_el, satellite_az)
 
@@ -223,8 +224,12 @@ class Pointing(object):
         if abs(lat.deg - declination.deg) < 0.01:
             az = Angle(0, u.deg)
         else:
-            az = Angle(np.arccos((np.sin(declination.rad) - np.sin(alt.rad) * np.sin(lat.rad)) /
-                                 (np.cos(alt.rad) * np.cos(lat.rad))), u.rad)
+            temp = (np.sin(declination.rad) - np.sin(alt.rad) * np.sin(lat.rad)) / (np.cos(alt.rad) * np.cos(lat.rad))
+            if temp < 0 and (temp + 1) < 0.0001:
+                temp = -1
+            elif temp > 0 and (temp - 1) < 0.0001:
+                temp = 1
+            az = Angle(np.arccos(temp), u.rad)
             if np.sin(hour_angle.rad) >= 0:
                 az = Angle(360 - az.deg, u.deg)
 
@@ -326,9 +331,10 @@ if __name__ == "__main__":
 
     # Should be pointing to zenith (regardless of time)
     config['reference_antenna_location'] = [11.6459889, 44.52357778]
-    config['reference_declination'] = 58.918
-    config['pointings'] = [[0, 0], [-1.6, 0.5], [0, 0.5], [1.6, -1]]
+    config['reference_declination'] = 22
+    config['pointings'] = [[0, 0]]
     config['nbeams'] = len(config['pointings'])
 
     pointing = Pointing(config, 1, 32)
+    print config
     print pointing.weights
