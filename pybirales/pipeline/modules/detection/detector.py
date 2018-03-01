@@ -89,7 +89,7 @@ class Detector(ProcessingModule):
         :param output_data:
         :return:
         """
-        print obs_info['timestamp']
+
         channels = self._get_channels(obs_info)
         time = self._get_time(obs_info)
         doppler_mask = self._get_doppler_mask(obs_info['transmitter_frequency'], channels)

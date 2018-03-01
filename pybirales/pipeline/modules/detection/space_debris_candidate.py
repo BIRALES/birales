@@ -133,8 +133,6 @@ class SpaceDebrisTrack:
             self.m = self._linear_model.estimator_.coef_[0]
             self.intercept = self._linear_model.estimator_.intercept_
 
-            print self.m, self.intercept
-
             # Remove outliers from the data
             self.data = self.data[self._linear_model.inlier_mask_]
 
@@ -172,7 +170,9 @@ class SpaceDebrisTrack:
         try:
             self._linear_model.fit(channels, time)
         except ValueError:
-            log.warning("When combining the beam candidate to the space debris track, fitting failed.")
+            log.warning("Linear Fit failed when combining beam candidate {} to the space debris track {}".format(
+                id(detection_cluster), id(self)
+            ))
 
             return False
         else:
@@ -219,20 +219,22 @@ class SpaceDebrisTrack:
         """
 
         # Persist the space debris detection as a TDM file
-        self._tdm_filepath = _tmd_writer.write(self._tdm_filepath, self._obs_info, self)
+        if settings.detection.save_tdm:
+            self._tdm_filepath = _tmd_writer.write(self._tdm_filepath, self._obs_info, self)
 
         # Save the detection cluster as CSV file for analysis
         if settings.detection.debug_candidates:
             _csv_writer.write(self._debug_filepath, self)
 
         # Persist the space debris detection to the database
-        try:
-            self._save_db()
-            log.info("Space debris track saved")
-        except ValidationError:
-            log.exception("Missing or incorrect data in Space Debris Track Model")
-        except OperationError:
-            log.exception("Space debris track could not be saved to DB")
+        if settings.detection.save_candidates:
+            try:
+                self._save_db()
+                log.info("Space debris track saved")
+            except ValidationError:
+                log.exception("Missing or incorrect data in Space Debris Track Model")
+            except OperationError:
+                log.exception("Space debris track could not be saved to DB")
 
             # Upload the space debris detection to an FTP server
 
