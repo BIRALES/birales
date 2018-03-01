@@ -81,3 +81,10 @@ class PipelineBuilderIsNotAvailableException(Exception):
 
         self.builder_id = builder_id
 
+
+class InvalidCalibrationCoefficientsException(PipelineError):
+    """
+    The calibration coefficients are not valid and can't be used
+
+    """
+    pass

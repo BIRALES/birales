@@ -13,11 +13,14 @@ from astropy.utils.exceptions import AstropyWarning
 from numpy import ctypeslib
 
 from pybirales import settings
-from pybirales.pipeline.base.definitions import PipelineError
+from pybirales.pipeline.base.definitions import PipelineError, InvalidCalibrationCoefficientsException
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.beamformed_data import BeamformedBlob
 from pybirales.pipeline.blobs.dummy_data import DummyBlob
 from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
+import glob
+import os
+from datetime import datetime
 
 # Mute Astropy Warnings
 warnings.simplefilter('ignore', category=AstropyWarning)
@@ -146,9 +149,15 @@ class Pointing(object):
         self._nbeams = config.nbeams
         self._nants = nants
         self._nsubs = nsubs
-        
+
         # Calibration coefficients
         self._calib_coeffs = np.ones(self._nants, dtype=np.complex64)
+
+        try:
+            if settings.beamformer.apply_calib_coeffs:
+                self._calib_coeffs = self._get_latest_calib_coeffs()
+        except InvalidCalibrationCoefficientsException:
+            log.warning("Could not load coefficients from TCPO dir.")
 
         # Ignore AstropyWarning
         warnings.simplefilter('ignore', category=AstropyWarning)
@@ -172,7 +181,8 @@ class Pointing(object):
 
         # Generate weights
         for beam in range(self._nbeams):
-            self.point_array(beam, self._reference_declination, self._pointings[beam][0], self._pointings[beam][1])
+            self.point_array_birales(beam, self._reference_declination, self._pointings[beam][0],
+                                     self._pointings[beam][1])
 
         # Ignore AstropyWarning
         warnings.simplefilter('ignore', category=AstropyWarning)
@@ -200,7 +210,7 @@ class Pointing(object):
             # Apply to weights
             self.weights[i, beam, :].real = real
             self.weights[i, beam, :].imag = imag
-            
+
             # Multiply generated weights with calibration coefficients 
             self.weights[i, beam, :] *= self._calib_coeffs
 
@@ -230,8 +240,8 @@ class Pointing(object):
 
         # Unit position vector RX-sat in sensor reference frame
         rhou_sat_rx_sens_rf = np.matrix([cos(-ha.rad) * cos(delta_dec.rad),
-                                        sin(-ha.rad) * cos(delta_dec.rad),
-                                        sin(delta_dec.rad)])
+                                         sin(-ha.rad) * cos(delta_dec.rad),
+                                         sin(delta_dec.rad)])
 
         # Unit position vector RX-sat in NWZ reference frame
         alpha = -primary_az.rad
@@ -287,7 +297,8 @@ class Pointing(object):
         alt, az = self._ha_dec_to_alt_az(ha, dec, self._reference_location)
 
         # Point beam to required ALT AZ
-        log.debug("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, dec, alt.deg, az.deg))
+        log.debug("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, dec, alt.deg,
+                                                                     az.deg))
         self.point_array_static(beam, alt, az)
 
     @staticmethod
@@ -338,8 +349,39 @@ class Pointing(object):
         k = (2.0 * np.pi * frequency.to(u.Hz).value) / constants.c.value
         return np.cos(np.multiply(k, path_length)), np.sin(np.multiply(k, path_length))
 
+    def _get_latest_calib_coeffs(self):
+        """
+        Read the calibration coefficients from file.
+        :return:
+        """
+        root_dir = os.path.join(os.environ['HOME'], settings.calibration.calib_coeffs_dir)
+        coeff_files = os.listdir(root_dir)
+        coeff_td = []
+        for c in os.listdir(root_dir):
+            try:
+                coeff_td.append(datetime.utcnow() - datetime.strptime(c.split('_')[0], '%Y-%m-%dT%H:%M:%S'))
+            except ValueError:
+                log.warning(
+                    "Invalid Coefficient file found: {}. Expected format: [%Y-%m-%dT%H:%M:%S_DEC.npy]".format(c))
 
-# --------------------------------------------------------------------------------------------------
+        latest_file = coeff_files[np.array(coeff_td).argmin()]
+        calib_coeffs = np.loadtxt(os.path.join(root_dir, latest_file), dtype=np.complex)
+
+        if not isinstance(calib_coeffs, np.ndarray):
+            raise InvalidCalibrationCoefficientsException(
+                "Calibration coefficients at {} are not a valid numpy array".format(latest_file))
+
+        if not len(calib_coeffs) == self._nants:
+            raise InvalidCalibrationCoefficientsException(
+                "Number of calibration coefficients does not match number of antennas")
+
+        if not calib_coeffs.dtype == 'complex':
+            raise InvalidCalibrationCoefficientsException("Calibration coefficients type is not complex")
+
+        log.info('Loaded calibration coefficients from {}/{}'.format(root_dir, latest_file))
+
+        return calib_coeffs
+
 
 class AntennaArray(object):
     """ Class representing antenna array """

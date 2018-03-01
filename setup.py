@@ -45,6 +45,7 @@ class InstallWrapperCommand(install):
         os.path.join(HOME, '.birales/tdm/out'),
         os.path.join(HOME, '.birales/tdm/in'),
         os.path.join(HOME, '.birales/debug/detection'),
+        os.path.join(HOME, '.birales/tcpo/calibration_coeff'),
     ]
 
     def run(self):
