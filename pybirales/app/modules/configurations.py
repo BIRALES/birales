@@ -100,15 +100,20 @@ def _get_config_files(root_path):
     return _configs
 
 
-@configurations_page.route('/configurations')
-def index():
-    # Load the configuration files
+def get_available_configs():
     configurations = []
     configurations.extend(_get_config_files(CONFIG_MAP['uploads']))
     configurations.extend(_get_config_files(CONFIG_MAP['dev']))
     configurations.extend(_get_config_files(CONFIG_MAP['prod']))
 
-    print configurations
+    return configurations
+
+
+@configurations_page.route('/configurations')
+def index():
+    # Load the configuration files
+    configurations = get_available_configs()
+
     page = request.args.get(get_page_parameter(), type=int, default=0)
 
     pagination = Pagination(page=page, total=len(configurations), bs_version=3, per_page=10,
