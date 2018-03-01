@@ -3,31 +3,31 @@ COMMENT {{ filename }}
 CREATION_DATE = {{ creation_date }}
 ORIGINATOR = INAF
 {% for beam_id in beams %}
-    META_START
-    COMMENT Data from Beam {{ beam_id }}
-    TIME_SYSTEM = UTC
-    START_TIME = {{ detection[detection['beam_id'] == beam_id]['time'].min().isoformat('T') }}
-    STOP_TIME  = {{ detection[detection['beam_id'] == beam_id]['time'].max().isoformat('T') }}
-    PARTICIPANT_1 = BIRALES_RX
-    PARTICIPANT_2 = {{ target_name }}
-    PARTICIPANT_3 = BIRALES_TX
-    PATH = 3,2,1
-    ANGLE_TYPE = AZEL
-    TRANSMIT_BAND = UHF
-    RECEIVE_BAND = UHF
-    TIMETAG_REF = RECEIVE
-    INTEGRATION_INTERVAL = {{ integration_interval }}
-    RANGE_UNITS = km
-    DATA_QUALITY = RAW
-    META_STOP
+META_START
+COMMENT Data from Beam {{ beam_id }}
+TIME_SYSTEM = UTC
+START_TIME = {{ detection[detection['beam_id'] == beam_id]['time'].min().isoformat('T') }}
+STOP_TIME  = {{ detection[detection['beam_id'] == beam_id]['time'].max().isoformat('T') }}
+PARTICIPANT_1 = BIRALES_RX
+PARTICIPANT_2 = {{ target_name }}
+PARTICIPANT_3 = BIRALES_TX
+PATH = 3,2,1
+ANGLE_TYPE = AZEL
+TRANSMIT_BAND = UHF
+RECEIVE_BAND = UHF
+TIMETAG_REF = RECEIVE
+INTEGRATION_INTERVAL = {{ integration_interval }}
+RANGE_UNITS = km
+DATA_QUALITY = RAW
+META_STOP
 
-    DATA_START
-    {% for _, beam_detection in detection[detection['beam_id'] == beam_id].iterrows() %}
-        ANGLE_1 = {{ beam_detection['time'].isoformat('T') }} {{ obs_info['beam_az_el'][beam_id][0] }}
-        ANGLE_2 = {{ beam_detection['time'].isoformat('T') }} {{ obs_info['beam_az_el'][beam_id][1] }}
-        PC_N0   = {{ beam_detection['time'].isoformat('T') }} {{ beam_detection['snr'] }}
-        TRANSMIT_FREQ_3 = {{ beam_detection['time'].isoformat('T') }} {{ (obs_info['transmitter_frequency'] * 1000000)|float }}
-        RECEIVE_FREQ_1 = {{ beam_detection['time'].isoformat('T') }} {{ beam_detection['channel']  * 1000000 }}
-    {% endfor %}
-    DATA_STOP
+DATA_START
+{% for _, beam_detection in detection[detection['beam_id'] == beam_id].iterrows() %}
+ANGLE_1 = {{ beam_detection['time'].isoformat('T') }} {{ obs_info['beam_az_el'][beam_id][0] }}
+ANGLE_2 = {{ beam_detection['time'].isoformat('T') }} {{ obs_info['beam_az_el'][beam_id][1] }}
+PC_N0   = {{ beam_detection['time'].isoformat('T') }} {{ beam_detection['snr'] }}
+TRANSMIT_FREQ_3 = {{ beam_detection['time'].isoformat('T') }} {{ (obs_info['transmitter_frequency'] * 1000000)|float }}
+RECEIVE_FREQ_1 = {{ beam_detection['time'].isoformat('T') }} {{ beam_detection['channel']  * 1000000 }}
+{% endfor %}
+DATA_STOP
 {% endfor %}
