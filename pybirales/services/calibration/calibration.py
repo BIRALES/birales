@@ -18,13 +18,9 @@ class CalibrationFacade:
         # Create TM instance and load configuration json
         self._tm = TM.Instance()
         self._obs_time = None
-        self._tm.from_dict(self._tcpo_config_adapter())
-
         self.obs_info = None
         self.dict_real = {}
         self.dict_imag = {}
-
-        self.real_reset_coeffs, self.imag_reset_coeffs = self._get_reset_coeffs()
 
     def _tcpo_config_adapter(self):
         antennas = {}
@@ -183,6 +179,14 @@ class CalibrationFacade:
                 self._obs_time = datetime.datetime.utcnow()
         return self._obs_time
 
+    @property
+    def real_reset_coeffs(self):
+        return self._get_reset_coeffs()[0]
+
+    @property
+    def imag_reset_coeffs(self):
+        return self._get_reset_coeffs()[1]
+
     def calibrate(self, calib_dir, corr_matrix_filepath):
         """
         Run the calibration Routine
@@ -191,6 +195,9 @@ class CalibrationFacade:
 
         :return:
         """
+
+        # Configure the TM
+        self._tm.from_dict(self._tcpo_config_adapter())
 
         # Load the observation settings only if the pipeline is running in offline mode
         self.obs_info = self.load_pkl_file(corr_matrix_filepath)
