@@ -1,10 +1,11 @@
 import datetime
 import logging as log
 import time
-
+from pybirales.repository.message_broker import RedisManager
 import dateutil.parser
 import humanize
 import pytz
+from pybirales.services.scheduler.observation import ScheduledCalibrationObservation, ScheduledObservation
 
 
 def monitor_worker(scheduler):
@@ -32,3 +33,39 @@ def monitor_worker(scheduler):
         time.sleep(1)
 
     log.info('Monitoring thread terminated')
+
+
+def obs_listener_worker(obs_queue):
+    """
+     Listen for new scheduled observations
+
+    :param obs_queue: The sched instance
+    :return:
+    """
+
+    obs_chl = 'birales_scheduled_obs'
+
+    # The redis instance
+    _redis = RedisManager.Instance().redis
+
+    # The PubSub interface of the redis instance
+    _pubsub = _redis.pubsub()
+
+    # Subscribe to the observations channel
+    _pubsub.subscribe(obs_chl)
+
+    for message in _pubsub.listen():
+        if message['data'] == 'KILL':
+            log.info('Scheduled observations listener un-subscribed from {}'.format(obs_chl))
+            break
+        else:
+            if message['type'] == 'message':
+                obs = message['data']
+                so = ScheduledObservation(name=obs['name'],
+                                          obs_type=obs['type'],
+                                          config_file=obs['config_file'],
+                                          pipeline_name=obs['pipeline'],
+                                          params=obs['config_parameters'])
+                obs_queue.add_observation(so)
+
+    log.info('Observation listener terminated')
