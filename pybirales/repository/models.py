@@ -85,3 +85,28 @@ class BeamCandidate(DynamicDocument):
                 query &= Q(max_channel__lte=max_channel)
 
         return query_set.filter(query)
+
+
+class SpaceDebrisTrack(DynamicDocument):
+    _id = ObjectIdField(required=True, default=ObjectId, unique=True, primary_key=True)
+    observation = ReferenceField(Observation, required=True)
+    created_at = DateTimeField(default=datetime.datetime.utcnow)
+
+    m = FloatField(required=True)
+    intercept = FloatField(required=True)
+    score = FloatField(required=True)
+    rcs = None
+    target = None
+
+    tdm_filepath = StringField(required=True)
+
+    # data = DynamicDocument(required=True)
+
+    @queryset_manager
+    def get(self, query_set, observation_id=None):
+
+        query = Q()
+        if observation_id:
+            query &= Q(observation=observation_id)
+
+        return query_set.filter(query)

@@ -1,0 +1,57 @@
+{% extends "common/layout.html" %}
+{% block title %}Configurations{% endblock %}
+{% set active_page = "configurations" %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="header">
+                        <div class="col-sm-8">
+                            <h4 class="title">Configurations</h4>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="pull-right">
+                                <div class="btn-group">
+                                    <a href="{{ url_for('configurations_page.upload_file') }}"
+                                       class="btn btn-sm btn-success" role="button">Upload</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content table-responsive table-full-width">
+                        <table class="table table-hover table-striped">
+                            <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Environment</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for configuration in configurations %}
+                                <tr>
+                                    <td>{{ configuration.name }}</td>
+                                    <td>{{ configuration.env }}</td>
+                                    <td>{{ configuration.desc }}</td>
+                                    <td>
+                                        <a href="{{ url_for('configurations_page.view', environment=configuration.env,
+                                        configuration_name=configuration.name) }}"
+                                           class="btn btn-sm btn-info" role="button">
+                                            View
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                        {{ pagination.links }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -77,6 +77,14 @@ class ScheduledObservation(object):
         if self.duration:
             self.end_time = self.start_time + self.duration
 
+        # Sched event instance associated with this observation
+        self.event = None
+
+    @property
+    def wait_time(self):
+        now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+        return (self.start_time_padded - now).total_seconds()
+
     @property
     def is_calibration_obs(self):
         return self._obs_type == 'calibration'
@@ -222,6 +230,8 @@ class ScheduledObservation(object):
 
         # Get next observation is schedule
         return self.is_calibration_needed(obs.next_observation)
+
+
 
 
 class ScheduledCalibrationObservation(ScheduledObservation):

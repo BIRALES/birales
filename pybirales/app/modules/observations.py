@@ -5,6 +5,7 @@ from webargs import fields
 
 from pybirales.repository.models import BeamCandidate
 from pybirales.repository.models import Observation
+from pybirales.app.modules.configurations import get_available_configs
 
 observations_page = Blueprint('observations_page', __name__, template_folder='templates')
 
@@ -29,7 +30,7 @@ def index():
 
     page = request.args.get(get_page_parameter(), type=int, default=0)
     per_page = 10
-    observations = Observation.objects.skip(page * per_page).limit(per_page)
+    observations = Observation.objects.order_by('-date_time_start').skip(page * per_page).limit(per_page)
     pagination = Pagination(page=page, total=observations.count(),
                             inner_window=5,
                             bs_version=3,
@@ -43,7 +44,8 @@ def index():
 
 @observations_page.route('/observations/create')
 def create():
-    return render_template('modules/observation_create.html')
+    configurations = get_available_configs()
+    return render_template('modules/observation_create.html', configurations=configurations)
 
 
 @observations_page.route('/observations/<observation_id>')

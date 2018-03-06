@@ -1,0 +1,57 @@
+{% extends "common/layout.html" %}
+{% block title %}Configurations{% endblock %}
+{% set active_page = "configurations" %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="header">
+                        <div class="col-sm-8">
+                            <h4 class="title">Configuration - {{ name|capitalize }}</h4>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="pull-right">
+                                  <div class="btn-group">
+                                    <a href="{{ url_for('configurations_page.index') }}"
+                                       class="btn btn-sm btn-info" role="button">Back</a>
+                                </div>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('configurations_page.create') }}"
+                                       class="btn btn-sm btn-success" role="button">Upload</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content table-responsive table-full-width">
+                        <table class="table table-hover table-striped">
+                            <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Section</th>
+                                <th>Option</th>
+                                <th>Value</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for section in configuration %}
+                                {% set n = loop.index %}
+                                {% for option in configuration[section] %}
+                                    <tr>
+                                        <td>{{ n }}.{{ loop.index }}</td>
+                                        <td>{{ section }}</td>
+                                        <td>{{ option }}</td>
+                                        <td>{{ configuration[section][option] }}</td>
+                                    </tr>
+                                {% endfor %}
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

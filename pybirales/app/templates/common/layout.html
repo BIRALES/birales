@@ -20,9 +20,15 @@
 
         <link rel="stylesheet"
               href="{{ url_for('static', filename='node_modules/flatpickr/dist/flatpickr.min.css') }}">
-
+        <link rel="stylesheet"
+              href="{{ url_for('static', filename='node_modules/selectric/public/selectric.css') }}">
+        <link rel="stylesheet"
+              href="{{ url_for('static', filename='node_modules/dropzone/dist/min/dropzone.min.css') }}">
+        <link rel="stylesheet"
+              href="{{ url_for('static', filename='node_modules/toastr/build/toastr.min.css') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/side_panel.css') }}"/>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/loader.css') }}"/>
+
         <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}"/>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}"/>
     {% endblock %}
@@ -52,11 +58,11 @@
                         <p>Observations</p>
                     </a>
                 </li>
-                <li {% if active_page == 'preferences' %} class="active" {% endif %}>
-                    <a href="{{ url_for('preferences_page.index') }}">
+                <li {% if active_page == 'configurations' %} class="active" {% endif %}>
+                    <a href="{{ url_for('configurations_page.index') }}">
                         <i class="pe-7s-config"></i>
 
-                        <p>Preferences</p>
+                        <p>Configurations</p>
                     </a>
                 </li>
             </ul>
@@ -117,15 +123,30 @@
     <script src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
     <script src="{{ url_for('static', filename='node_modules/bootstrap/dist/js/bootstrap.min.js') }}"></script>
     <script src="{{ url_for('static', filename='themes/lbd/assets/js/light-bootstrap-dashboard.js') }}"></script>
+    <script src="{{ url_for('static', filename='node_modules/toastr/toastr.js') }}"></script>
     <script src="{{ url_for('static', filename='node_modules/socket.io-client/dist/socket.io.js') }}"></script>
     <script src="{{ url_for('static', filename='node_modules/plotly.js/dist/plotly.min.js') }}"></script>
 
     <script src="{{ url_for('static', filename='node_modules/flatpickr/dist/flatpickr.min.js') }}"></script>
-
+    <script src="{{ url_for('static', filename='node_modules/selectric/public/jquery.selectric.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='node_modules/dropzone/dist/dropzone.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 
 
     <script>
-        log.setLevel('debug');
+        $(document).ready(function () {
+            var notifications = new NotificationsManager();
+            notifications.init();
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for level, message in messages %}
+                        notifications.publish("{{ message }}", "{{ level }}");
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        });
     </script>
 {% endblock %}
 

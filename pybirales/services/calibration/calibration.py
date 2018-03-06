@@ -17,16 +17,12 @@ class CalibrationFacade:
     def __init__(self):
         # Create TM instance and load configuration json
         self._tm = TM.Instance()
-        self._tm.from_dict(self._tcpo_config_adapter())
-
+        self._obs_time = None
         self.obs_info = None
         self.dict_real = {}
         self.dict_imag = {}
 
-        self.real_reset_coeffs, self.imag_reset_coeffs = self._get_reset_coeffs()
-
-    @staticmethod
-    def _tcpo_config_adapter():
+    def _tcpo_config_adapter(self):
         antennas = {}
         ant_locations = np.array(settings.beamformer.antenna_locations)
         for i in range(ant_locations.shape[0]):
@@ -42,7 +38,7 @@ class CalibrationFacade:
             't_average': settings.calibration.t_average,
             'tstep_length': settings.calibration.t_step_length,
             'obs_length': settings.calibration.obs_length,
-            'start_time': "04-12-2017 11:18:48.000",
+            'start_time': self._get_obs_time().isoformat(),
         }
 
     @staticmethod
@@ -98,6 +94,8 @@ class CalibrationFacade:
                 'calib_check_path': os.path.join(calib_dir, 'calib_plot.png'),
                 'frequency': tm.StartFreq,
                 'bandwith': tm.Bandwith,
+                'calib_coeffs_dir': config.calib_coeffs_dir,
+                'obs_time': self._get_obs_time().isoformat(),
                 'transit_file': corr_matrix_filepath,
                 'obs_file': corr_matrix_filepath}
 
@@ -160,17 +158,34 @@ class CalibrationFacade:
             # If the correlated h5 file is provided, use that. (online or not)
             return os.path.dirname(settings.calibration.h5_filepath), settings.calibration.h5_filepath
 
-        if settings.manager.offline:
-            # If we are running in offline mode (receiver disabled, reading from file)
-            # create a new corr file with the OBSERVATION timestamp
-            obs_info = self.load_pkl_file(settings.rawdatareader.filepath)
-            corr_matrix_filepath = create_corr_matrix_filepath(obs_info['timestamp'])
-        else:
-            # If we are NOT running in offline mode (receiver enabled, live data)
-            # create a new corr file with the current timestamp
-            corr_matrix_filepath = create_corr_matrix_filepath(datetime.datetime.utcnow())
+        return calib_dir, create_corr_matrix_filepath(self._get_obs_time())
 
-        return calib_dir, corr_matrix_filepath
+    def _get_obs_time(self):
+        """
+        Get the observation time for this calibration run
+
+        :return:
+        """
+
+        if not self._obs_time:
+            if settings.manager.offline:
+                # If we are running in offline mode (receiver disabled, reading from file)
+                # create a new corr file with the OBSERVATION timestamp
+                obs_info = self.load_pkl_file(settings.rawdatareader.filepath)
+                self._obs_time = obs_info['timestamp']
+            else:
+                # If we are NOT running in offline mode (receiver enabled, live data)
+                # create a new corr file with the current timestamp
+                self._obs_time = datetime.datetime.utcnow()
+        return self._obs_time
+
+    @property
+    def real_reset_coeffs(self):
+        return self._get_reset_coeffs()[0]
+
+    @property
+    def imag_reset_coeffs(self):
+        return self._get_reset_coeffs()[1]
 
     def calibrate(self, calib_dir, corr_matrix_filepath):
         """
@@ -180,6 +195,9 @@ class CalibrationFacade:
 
         :return:
         """
+
+        # Configure the TM
+        self._tm.from_dict(self._tcpo_config_adapter())
 
         # Load the observation settings only if the pipeline is running in offline mode
         self.obs_info = self.load_pkl_file(corr_matrix_filepath)

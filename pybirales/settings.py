@@ -28,4 +28,5 @@ instrument = None
 logger_root = None
 fits_persister = None
 scheduler = None
+target = None
 # handler_file_handler = None

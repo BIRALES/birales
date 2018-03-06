@@ -26,7 +26,7 @@ print(np.where(data == np.max(data)))
 #    plt.plot(data[163-1*i, :].T)
 #    plt.plot(data[163+1*i, :].T)
 
-plt.plot(10*np.log10(data.T))
+plt.plot(10*np.log(data.T))
 plt.legend()
 plt.show()
 exit()

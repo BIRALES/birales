@@ -127,7 +127,7 @@ class SpaceDebrisClusterDetectedEvent(Event):
     """
 
     channels = ['notifications']
-    description = 'A space debris candidate was found'
+    description = 'A new beam candidate was found'
 
     def __init__(self, n_clusters, beam_id):
         """
@@ -138,6 +138,28 @@ class SpaceDebrisClusterDetectedEvent(Event):
 
         Event.__init__(self)
 
-        self.payload['body'] = 'A new space debris detection (`{}` data points) was made in beam {}'.format(n_clusters,
-                                                                                                            beam_id)
+        self.payload['body'] = 'A new detection cluster (`{}` data points) was made in beam {}'.format(n_clusters,
+                                                                                                       beam_id)
+        log.debug(self.payload['body'])
+
+
+class SpaceDebrisDetectedEvent(Event):
+    """
+    Event is fired when a valid space debris cluster is detected
+    """
+
+    channels = ['notifications']
+    description = 'A new space debris candidate was found'
+
+    def __init__(self, sd_track):
+        """
+
+        :param sd_track: Space Debris Track detected across N beams
+        :type  sd_track: SpaceDebrisTrack
+        """
+
+        Event.__init__(self)
+
+        self.payload['body'] = 'A new space debris detection ({}) (score: `{}`) was made.'.format(id(sd_track),
+                                                                                                  sd_track.score)
         log.debug(self.payload['body'])

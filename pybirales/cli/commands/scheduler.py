@@ -1,10 +1,10 @@
 import click
 
-from pybirales.birales import BiralesFacade, BiralesConfig
-
+from pybirales.birales import BiralesFacade
+from pybirales.birales_config import BiralesConfig
 
 @click.command()
-@click.option('--schedule', '-s', 'schedule_file_path', type=click.Path(exists=True), required=True,
+@click.option('--schedule', '-s', 'schedule_file_path', type=click.Path(exists=True), required=False,
               help='The scheduler json file')
 @click.option('--format', '-f', 'file_format', default='json', help='The format of the schedule file [tdm/json]')
 @click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
