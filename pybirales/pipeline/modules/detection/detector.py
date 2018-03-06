@@ -124,22 +124,19 @@ class Detector(ProcessingModule):
                 for candidate in self._candidates:
                     # If beam candidate is similar to candidate, merge it.
                     if candidate.is_parent_of(beam_candidate) and beam_candidate.is_linear and beam_candidate.is_valid:
-                        log.debug(
-                            'Beam candidate {} added to {}, with m={}, c={}, n={} was created since no match was found.'
-                                .format(id(beam_candidate), id(candidate), beam_candidate.m, beam_candidate.c,
-                                        len(beam_candidate.time_data)))
+                        log.debug('Beam candidate {} (m={}, c={}, s={}, n={}) added to track {}'.format(id(beam_candidate),
+                            beam_candidate.m, beam_candidate.c, beam_candidate.score, len(beam_candidate.time_data), id(candidate)))
 
                         candidate.add(beam_candidate)
                         break
                 else:
                     # Beam candidate does not match any candidate. Create candidate from it.
                     if beam_candidate.is_linear and beam_candidate.is_valid:
-                        log.debug('Beam candidate {}, with m={}, c={}, n={} was created since no match was found.'
-                                  .format(id(beam_candidate), beam_candidate.m, beam_candidate.c,
-                                          len(beam_candidate.time_data)))
-
                         # Transform this beam candidate into a space debris track
                         sd = SpaceDebrisTrack(obs_info=obs_info, beam_candidate=beam_candidate)
+
+                        log.debug('Created new track {} from Beam candidate {} (m={}, c={}, s={}, n={})'.format(id(sd),
+                        id(beam_candidate), beam_candidate.m, beam_candidate.c, beam_candidate.score, len(beam_candidate.time_data)))
 
                         # Publish event: A space debris detection was made
                         self._publisher.publish(SpaceDebrisDetectedEvent(sd))
@@ -156,20 +153,9 @@ class Detector(ProcessingModule):
                 log.debug('Track {} is still within detection window'.format(id(c)))
                 temp_candidates.append(c)
 
-        log.info('Result: {} have space debris tracks have transitted. {} currently in in detection window.'.format(
+        log.info('Result: {} have space debris tracks have transitted. {} currently in detection window.'.format(
             len(temp_candidates) - len(self._candidates), len(self._candidates)))
         self._candidates = temp_candidates
-
-        """
-        if self.counter == 8:
-            print 'There are {} candidates'.format(len(self._candidates)), self.counter
-            for i, c in enumerate(self._candidates):
-                print 'Candidate', id(c), 'has', c.data.shape, 'sub candidates'
-                c.data.to_csv('{}.csv'.format(i))
-
-                self._tdm_writer.write(obs_info, c)
-
-        """
 
         self.counter += 1
 

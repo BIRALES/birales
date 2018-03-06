@@ -160,5 +160,6 @@ class SpaceDebrisDetectedEvent(Event):
 
         Event.__init__(self)
 
-        self.payload['body'] = 'A new space debris detection (score: `{}`) was made.'.format(sd_track.score)
+        self.payload['body'] = 'A new space debris detection ({}) (score: `{}`) was made.'.format(id(sd_track),
+                                                                                                  sd_track.score)
         log.debug(self.payload['body'])
