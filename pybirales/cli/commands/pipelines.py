@@ -1,6 +1,7 @@
 import click
 import datetime
-from pybirales.birales import BiralesFacade, BiralesConfig
+from pybirales.birales import BiralesFacade
+from pybirales.birales_config import BiralesConfig
 from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, CorrelatorPipelineManagerBuilder, \
     StandAlonePipelineMangerBuilder
 from pybirales.cli.helpers import update_config
