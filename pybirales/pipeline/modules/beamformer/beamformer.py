@@ -152,38 +152,6 @@ class Pointing(object):
 
         # Calibration coefficients
         self._calib_coeffs = np.ones(self._nants, dtype=np.complex64)
-        self._calib_coeffs = np.array([1.000000+0.000000j,
-1.303055-0.862737j,
-1.461133-0.355642j,
-1.607289-0.674936j,
-1.187557-1.215521j,
--0.729486-2.091656j,
-1.864924+0.494605j,
--0.072313-1.880838j,
-1.402667+0.457303j,
-1.576394-0.666233j,
-0.842352+1.488773j,
--0.059432-1.557383j,
-1.320823-0.849953j,
-1.551129-0.124948j,
-0.799850-1.555624j,
-1.137149-0.134736j,
-0.740189+1.719167j,
-1.700585+0.811918j,
-0.854026+1.685043j,
-1.584557-0.065660j,
-1.076294+1.119282j,
--0.106250+1.707542j,
-1.414779+1.068190j,
-1.276994+1.480837j,
-1.496196+0.892831j,
-0.529083+1.733625j,
-1.732710-0.295993j,
-1.871060-0.781332j,
-0.556460-1.636828j,
-1.357586-1.297501j,
-1.340052+1.150033j,
--0.094246+1.586642j], dtype=np.complex64)
 
         try:
             if settings.beamformer.apply_calib_coeffs:
@@ -213,12 +181,8 @@ class Pointing(object):
 
         # Generate weights
         for beam in range(self._nbeams):
-<<<<<<< HEAD
-            self.point_array_birales(beam, self._reference_declination, self._pointings[beam][0], self._pointings[beam][1])
-=======
             self.point_array_birales(beam, self._reference_declination, self._pointings[beam][0],
                                      self._pointings[beam][1])
->>>>>>> 174c790c4a5a5f5a8d0ce4b304d8f6e45431e070
 
         # Ignore AstropyWarning
         warnings.simplefilter('ignore', category=AstropyWarning)
