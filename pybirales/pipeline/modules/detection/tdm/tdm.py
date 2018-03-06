@@ -7,7 +7,7 @@ from pybirales import settings
 
 class TDMWriter:
     def __init__(self):
-        self._template_dir = os.path.join(os.path.dirname(__file__))
+        self._template_dir = os.path.dirname(__file__)
         self._template_filepath = 'input_template.tdm'
         self._tdm_mask = 'BIRALES_OUT_{:%Y%m%d}_{:0>3}.tdm'
 
@@ -68,7 +68,7 @@ class TDMReader:
 
 class CSVWriter:
     def __init__(self):
-        self._template_dir = os.path.join(os.path.dirname(__file__))
+        self._template_dir = os.path.dirname(__file__)
         self._tdm_mask = 'BIRALES_OUT_{}_{:0>3}.csv'
 
         self._created_date = '{:%Y%m%d}'.format(datetime.utcnow())
