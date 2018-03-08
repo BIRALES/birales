@@ -18,6 +18,7 @@ from pybirales.services.scheduler.exceptions import SchedulerException, NoObserv
 from pybirales.services.scheduler.observation import ScheduledObservation, ScheduledCalibrationObservation
 from pybirales.services.scheduler.scheduler import ObservationsScheduler
 from pybirales.birales_config import BiralesConfig
+from pybirales.pipeline.base.definitions import BEST2PointingException
 
 
 class BiralesFacade:
@@ -84,7 +85,14 @@ class BiralesFacade:
             # Point the BEST Antenna
             if settings.instrument.enable_pointing:
                 self._instrument = BEST2.Instance()
-                self._instrument.move_to_declination(settings.beamformer.reference_declination)
+
+                try:
+                    self._instrument.move_to_declination(settings.beamformer.reference_declination)
+                except BEST2PointingException:
+                    log.warning('Could not point the BEST2 Antenna to DEC: {:0.2f}'.format(
+                        settings.beamformer.reference_declination))
+            else:
+                log.info('BEST-II pointing is disabled as specified in configuration')
 
         # Ensure that the status of the Backend/BEST/Pipeline is correct.
         # Perform any necessary checks before starting the pipeline

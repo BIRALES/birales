@@ -4,7 +4,7 @@ import socket
 import threading
 import time
 
-from pybirales.pipeline.base.definitions import PipelineError
+from pybirales.pipeline.base.definitions import BEST2PointingException
 from pybirales.services.instrument.best2_server import SdebTCPServer
 from pybirales.utilities.singleton import Singleton
 
@@ -55,7 +55,12 @@ class BEST2(object):
         self.current_pointing = self.get_current_declination()
 
     def _connect(self):
-        """ Connect to server """
+        """
+        Connect to the BEST-II server
+
+        :return:
+        """
+
         try:
             # Check if server is already running
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -65,7 +70,7 @@ class BEST2(object):
         except socket.error:
             # If not launch server in a separate thread
             logging.info("Launching new backend server")
-            self._thread = threading.Thread(target=self.start_best2_server)
+            self._thread = threading.Thread(target=self._start_best2_server_worker)
             self._thread.start()
 
             time.sleep(1)
@@ -77,8 +82,13 @@ class BEST2(object):
         # Keep track of current pointing
         self.get_current_declination()
 
-    def start_best2_server(self):
-        """ Start BEST-2 server"""
+    def _start_best2_server_worker(self):
+        """
+        Start the BEST-II server (to be run within a separate thread)
+
+        :return:
+        """
+
         self._best2_server = SdebTCPServer(("", self._port))
         while not self._stop_server:
             self._best2_server.handle_request()
@@ -86,7 +96,12 @@ class BEST2(object):
         logging.info("BEST-II server stopped")
 
     def stop_best2_server(self):
-        """ Stop BEST-2 server """
+        """
+        Stop the BEST-II server
+
+        :return:
+        """
+
         if self._connected:
             logging.info("Stopping BEST-II server")
             self._socket.close()
@@ -104,8 +119,11 @@ class BEST2(object):
             logging.info('BEST-II server stopped')
 
     def get_current_declination(self):
-        """ Get current BEST2 declination
-        return: Current declination """
+        """
+        Get current BEST2 declination
+
+        :return:
+        """
 
         if not self._connected:
             logging.warn("BEST2 not connected, connecting")
@@ -120,25 +138,31 @@ class BEST2(object):
             if re.search("[0-9]+", data) is not None:
                 break
 
+        # Ensure that the returned declination is a float
         if re.search("[0-9]+", data) is None:
             logging.warn("BEST: Could not get current declination (got %s)" % data)
-            raise PipelineError("BEST: Could not get current declination (got %s)" % data)
-        else:
-            self.current_pointing = float(data)
-            return float(data)
+            raise BEST2PointingException("BEST: Could not get current declination (got %s)" % data)
+
+        self.current_pointing = float(data)
+        return self.current_pointing
 
     def move_to_zenith(self):
-        """ Move BEST2 to zenith, which is 44.52 """
-        if self.move_to_declination(self._zenith):
-            logging.info("BEST2: Pointed to declination (%.2f)" % self.current_pointing)
-            return True
-        else:
-            return False
+        """
+        Move BEST2 to zenith, which is 44.52
+
+        :return:
+        """
+
+        return self.move_to_declination(self._zenith)
 
     def move_to_declination(self, dec):
-        """ Move BEST2 to a particular declination
+        """
+        Move BEST2 to a particular declination
+
         :param dec: Declination to move to
-        return: Success or Failure """
+        :raises BEST2PointingException:
+        :return:
+        """
 
         if not self._connected:
             logging.warn("BEST2 not connected, connecting")
@@ -146,7 +170,7 @@ class BEST2(object):
 
         # Check if declination is valid
         if not -3.0 <= dec <= 90:
-            raise PipelineError("BEST2: Declination %.2f is out of range. Range is -3 to 90" % dec)
+            raise BEST2PointingException("BEST2: Declination %.2f is out of range. Range is -3 to 90" % dec)
 
         # Check if we need to move at all
         if abs(self.current_pointing - dec) < 1.0:
@@ -165,11 +189,16 @@ class BEST2(object):
         if self._move_best2(dec):
             logging.info("BEST2: Pointed to declination (%.2f)" % self.current_pointing)
             return True
-        else:
-            return False
+
+        raise BEST2PointingException("BEST2: Could not be pointed")
 
     def _move_best2(self, dec):
-        """ Issue the commands to move BEST2"""
+        """
+        Issue the commands to move BEST2
+
+        :param dec:
+        :return:
+        """
         # Issue command
         self._socket.sendall("best %.2f" % dec)
         time.sleep(2)
@@ -181,31 +210,40 @@ class BEST2(object):
         time.sleep(START_DELAY)
 
         # Wait until pointing is very close to desired one
-        while True:
+        while not self._stop_server:
             self._socket.sendall("progress")
             try:
                 data = self._socket.recv(self._buffer_size)
                 value = float(data.split("   ")[2])
                 self.current_pointing = value
-                logging.info("Current pointing: {}".format(self.current_pointing))
+                logging.info("Current pointing: {:0.2f}".format(self.current_pointing))
 
                 if abs(value - dec) < 1.5:
+                    log.info("Antenna in position. DEC: {:0.2f}".format(value))
                     # We are ready
                     time.sleep(2)
                     break
             except BaseException:
-                pass
+                log.exception("An error has occurred whilst moving the antenna to DEC: {:0.2f} (current DEC: {:0.2f})"
+                              .format(dec, self.current_pointing))
+                return False
+            else:
+                log.warning("Antenna did not reach desired position of DEC: {}".format(dec))
+
+                return False
 
         # Check if pointing was successful
         curr_declination = self.get_current_declination()
         if type(curr_declination) is not float:
-            logging.warning("BEST2: Could not validate BEST2 movement")
-            return
+            log.warning("BEST2: Could not validate BEST2 movement")
+            return False
 
         if abs(curr_declination - dec) < 0.5:
-            return True
-        else:
-            raise PipelineError("BEST2: Failed to move to desired declination. Requested %.2f" % dec)
+            log.warning("BEST2: Failed to reach requested declination of DEC: {:0.2f}".format(dec))
+
+            return False
+
+        return True
 
 
 if __name__ == "__main__":

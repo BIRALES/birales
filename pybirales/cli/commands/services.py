@@ -9,6 +9,7 @@ from pybirales.cli.helpers import update_config
 from pybirales.pipeline.pipeline import CorrelatorPipelineManagerBuilder
 from pybirales.services.instrument.backend import Backend
 from pybirales.services.instrument.best2 import BEST2
+from pybirales.pipeline.base.definitions import BEST2PointingException
 
 
 @click.group()
@@ -112,17 +113,15 @@ def best_pointing(ctx, config_filepath, pointing):
     # Initialise the Birales Facade (BOSS)
     _ = BiralesFacade(configuration=config)
 
-    time.sleep(1)
-
     # Get BEST-II instance
     best2 = BEST2.Instance()
 
-    time.sleep(1)
+    logging.info("BEST-II current declination is: {:0.2f}".format(best2.current_pointing))
 
-    logging.info("BEST-II pointing to {}".format(best2.current_pointing))
-
-    if pointing:
-        best2.move_to_declination(pointing)
-
-    # Clean up server
-    best2.stop_best2_server()
+    try:
+        if pointing:
+            best2.move_to_declination(pointing)
+    except BEST2PointingException:
+        logging.exception("Could not point the BEST-II")
+    finally:
+        best2.stop_best2_server()
