@@ -110,7 +110,7 @@ def best_pointing(ctx, config_filepath, pointing):
     config = BiralesConfig(config_filepath, ctx.obj)
 
     # Initialise the Birales Facade (BOSS)
-    _ = BiralesFacade(configuration=config)
+    bf = BiralesFacade(configuration=config)
 
     # Get BEST-II instance
     best2 = BEST2.Instance()
@@ -125,6 +125,5 @@ def best_pointing(ctx, config_filepath, pointing):
     finally:
         best2.stop_best2_server()
 
-    import threading
-    for thread in threading.enumerate():
-        print(thread.name)
+    # Stop the birales system
+    bf.stop()
