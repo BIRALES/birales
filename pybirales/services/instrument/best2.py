@@ -213,22 +213,21 @@ class BEST2(object):
         while not self._stop_server:
             self._socket.sendall("progress")
             data = self._socket.recv(self._buffer_size)
+            parsed_msg = data.split("   ")
             try:
-                print "Received,", data
-                value = float(data.split("   ")[2])
+                current_dec = float(parsed_msg[2])
             except IndexError:
-                logging.exception("BEST2: Could not parse the received data: {}")
-                print(data)
+                logging.warning('BEST2: Server returned: {}'.format(data))
 
                 # Wait for a while before re-trying the command
                 time.sleep(1)
             else:
-                self.current_pointing = value
+                self.current_pointing = current_dec
                 logging.info("Current pointing: {:0.2f}".format(self.current_pointing))
 
-                if abs(value - dec) < 1.5:
-                    logging.info("Antenna in position. DEC: {:0.2f}".format(value))
-                    # We are ready
+                if abs(current_dec - dec) < 1.5:
+                    logging.info("Antenna in position. DEC: {:0.2f}".format(current_dec))
+
                     time.sleep(2)
                     break
 

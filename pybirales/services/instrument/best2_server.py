@@ -237,7 +237,7 @@ class SdebTCPServer(SocketServer.TCPServer):
                     ans = "MOVING!"
 
             except Exception as e:
-                return "ERROR - Pointing Computer might be SWITCHED OFF!! (" + repr(e) + ")"
+                return "ERROR - Pointing Computer might be SWITCHED OFF!!"
         except:
             return "ERROR - Can\'t be estabilished a connection with the ETH-RS232 adapter!"
         P.close()
