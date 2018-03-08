@@ -214,6 +214,7 @@ class BEST2(object):
             self._socket.sendall("progress")
             data = self._socket.recv(self._buffer_size)
             try:
+                print "Received,", data
                 value = float(data.split("   ")[2])
             except IndexError:
                 logging.exception("BEST2: Could not parse the received data: {}")
