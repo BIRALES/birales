@@ -124,3 +124,7 @@ def best_pointing(ctx, config_filepath, pointing):
         logging.exception("Could not point the BEST-II")
     finally:
         best2.stop_best2_server()
+
+    import threading
+    for thread in threading.enumerate():
+        print(thread.name)
