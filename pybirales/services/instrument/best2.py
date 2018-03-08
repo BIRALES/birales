@@ -227,6 +227,10 @@ class BEST2(object):
                 logging.exception("An error has occurred whilst moving the antenna to DEC: {:0.2f} (current DEC: {:0.2f})"
                               .format(dec, self.current_pointing))
                 return False
+            except IndexError:
+                logging.exception("BEST2: Could not parse received data: {}", data)
+
+                return False
             else:
                 logging.warning("Antenna did not reach desired position of DEC: {}".format(dec))
 
