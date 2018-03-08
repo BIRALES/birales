@@ -219,16 +219,17 @@ class BEST2(object):
                 logging.exception("BEST2: Could not parse the received data: {}")
                 print(data)
 
-                return False
+                # Wait for a while before re-trying the command
+                time.sleep(1)
+            else:
+                self.current_pointing = value
+                logging.info("Current pointing: {:0.2f}".format(self.current_pointing))
 
-            self.current_pointing = value
-            logging.info("Current pointing: {:0.2f}".format(self.current_pointing))
-
-            if abs(value - dec) < 1.5:
-                logging.info("Antenna in position. DEC: {:0.2f}".format(value))
-                # We are ready
-                time.sleep(2)
-                break
+                if abs(value - dec) < 1.5:
+                    logging.info("Antenna in position. DEC: {:0.2f}".format(value))
+                    # We are ready
+                    time.sleep(2)
+                    break
 
         # Check if pointing was successful
         curr_declination = self.get_current_declination()
