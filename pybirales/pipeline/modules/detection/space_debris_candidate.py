@@ -112,10 +112,13 @@ class SpaceDebrisTrack:
             'beam_id': [beam_candidate.beam_id for _ in range(0, len(beam_candidate.time_data))],
         })
 
-        # Combine the beam candidate track to this track
-        self.data = pd.concat([self.data, temp_df])
+        if not self.data.empty:
+            # Combine the beam candidate track to this track
+            self.data = pd.concat([self.data, temp_df])
+        else:
+            self.data = temp_df
 
-        # Record the noise of the beam
+            # Record the noise of the beam
         self._beam_noise[beam_candidate.beam_id] = beam_candidate.beam_config['beam_noise']
 
         # Update linear model of the track
@@ -189,7 +192,6 @@ class SpaceDebrisTrack:
         time_max = ( channel_min - intercept ) / gradient
         :return:
         """
-        print min_channel , self.intercept , self.m
         self._exit_time = (min_channel - self.intercept) / self.m
 
         return current_time > self._exit_time
