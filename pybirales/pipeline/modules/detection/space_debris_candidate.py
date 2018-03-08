@@ -165,8 +165,11 @@ class SpaceDebrisTrack:
             'snr': detection_cluster.snr_data,
             'beam_id': [detection_cluster.beam_id for _ in range(0, len(detection_cluster.time_data))],
         })
-        # Combine the beam candidate track to this track
-        temp_df2 = pd.concat([self.data, temp_df])
+
+        temp_df2 = temp_df
+        if not self.data.empty:
+            # Combine the beam candidate track to this track
+            temp_df2 = pd.concat([self.data, temp_df])
 
         channels, time = temp_df2['channel'].values.reshape(-1, 1), temp_df2['time_sample']
 
