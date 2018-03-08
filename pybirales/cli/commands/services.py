@@ -55,7 +55,6 @@ def calibration(ctx, config_filepath, name):
               help='The BIRALES configuration file', multiple=True)
 @click.pass_context
 def reset_coefficients(ctx, config_filepath):
-
     # Load the BIRALES configuration from file
     config = BiralesConfig(config_filepath, ctx.obj)
 
@@ -104,7 +103,7 @@ def init_roach(ctx, config_filepath):
 @services.command()
 @click.option('--config', '-c', 'config_filepath', type=click.Path(exists=True), required=True,
               help='The BIRALES configuration file', multiple=True)
-@click.option('--pointing', default=None, help='Where to point BEST-II')
+@click.option('--pointing', default=None, type=float, help='Where to point BEST-II')
 @click.pass_context
 def best_pointing(ctx, config_filepath, pointing):
     # Load the BIRALES configuration from file
