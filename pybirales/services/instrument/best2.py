@@ -216,7 +216,8 @@ class BEST2(object):
             try:
                 value = float(data.split("   ")[2])
             except IndexError:
-                logging.exception("BEST2: Could not parse the received data: {}", data)
+                logging.exception("BEST2: Could not parse the received data: {}")
+                print(data)
 
                 return False
 
