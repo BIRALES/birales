@@ -32,6 +32,9 @@ class BEST2(object):
     Class implementing BEST2 client to be able to move the telescope
     """
 
+    # The acceptable error between desired and current pointing
+    DEC_ERROR_THOLD = 0.75
+
     def __init__(self, ip="127.0.0.1", port=7200):
         """ Class constructor """
 
@@ -173,7 +176,7 @@ class BEST2(object):
             raise BEST2PointingException("BEST2: Declination %.2f is out of range. Range is -3 to 90" % dec)
 
         # Check if we need to move at all
-        if abs(self.current_pointing - dec) < 1.0:
+        if abs(self.current_pointing - dec) < self.DEC_ERROR_THOLD:
             logging.info("BEST2: Already in range, no need to move")
             return True
 
@@ -225,7 +228,7 @@ class BEST2(object):
                 self.current_pointing = current_dec
                 logging.info("Current pointing: {:0.2f}".format(self.current_pointing))
 
-                if abs(current_dec - dec) < 1.5:
+                if abs(current_dec - dec) < self.DEC_ERROR_THOLD:
                     logging.info("Antenna in position. DEC: {:0.2f}".format(current_dec))
 
                     time.sleep(2)
@@ -237,7 +240,7 @@ class BEST2(object):
             logging.warning("BEST2: Could not validate BEST2 movement")
             return False
 
-        if abs(curr_declination - dec) < 0.5:
+        if abs(curr_declination - dec) < self.DEC_ERROR_THOLD:
             logging.warning("BEST2: Failed to reach requested declination of DEC: {:0.2f}".format(dec))
 
             return False
