@@ -219,27 +219,27 @@ class BEST2(object):
                 logging.info("Current pointing: {:0.2f}".format(self.current_pointing))
 
                 if abs(value - dec) < 1.5:
-                    log.info("Antenna in position. DEC: {:0.2f}".format(value))
+                    logging.info("Antenna in position. DEC: {:0.2f}".format(value))
                     # We are ready
                     time.sleep(2)
                     break
             except BaseException:
-                log.exception("An error has occurred whilst moving the antenna to DEC: {:0.2f} (current DEC: {:0.2f})"
+                logging.exception("An error has occurred whilst moving the antenna to DEC: {:0.2f} (current DEC: {:0.2f})"
                               .format(dec, self.current_pointing))
                 return False
             else:
-                log.warning("Antenna did not reach desired position of DEC: {}".format(dec))
+                logging.warning("Antenna did not reach desired position of DEC: {}".format(dec))
 
                 return False
 
         # Check if pointing was successful
         curr_declination = self.get_current_declination()
         if type(curr_declination) is not float:
-            log.warning("BEST2: Could not validate BEST2 movement")
+            logging.warning("BEST2: Could not validate BEST2 movement")
             return False
 
         if abs(curr_declination - dec) < 0.5:
-            log.warning("BEST2: Failed to reach requested declination of DEC: {:0.2f}".format(dec))
+            logging.warning("BEST2: Failed to reach requested declination of DEC: {:0.2f}".format(dec))
 
             return False
 
