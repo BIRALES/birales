@@ -212,29 +212,22 @@ class BEST2(object):
         # Wait until pointing is very close to desired one
         while not self._stop_server:
             self._socket.sendall("progress")
+            data = self._socket.recv(self._buffer_size)
             try:
-                data = self._socket.recv(self._buffer_size)
                 value = float(data.split("   ")[2])
-                self.current_pointing = value
-                logging.info("Current pointing: {:0.2f}".format(self.current_pointing))
-
-                if abs(value - dec) < 1.5:
-                    logging.info("Antenna in position. DEC: {:0.2f}".format(value))
-                    # We are ready
-                    time.sleep(2)
-                    break
-            except BaseException:
-                logging.exception("An error has occurred whilst moving the antenna to DEC: {:0.2f} (current DEC: {:0.2f})"
-                              .format(dec, self.current_pointing))
-                return False
             except IndexError:
-                logging.exception("BEST2: Could not parse received data: {}", data)
+                logging.exception("BEST2: Could not parse the received data: {}", data)
 
                 return False
-            else:
-                logging.warning("Antenna did not reach desired position of DEC: {}".format(dec))
 
-                return False
+            self.current_pointing = value
+            logging.info("Current pointing: {:0.2f}".format(self.current_pointing))
+
+            if abs(value - dec) < 1.5:
+                logging.info("Antenna in position. DEC: {:0.2f}".format(value))
+                # We are ready
+                time.sleep(2)
+                break
 
         # Check if pointing was successful
         curr_declination = self.get_current_declination()
