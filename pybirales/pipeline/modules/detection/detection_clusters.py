@@ -118,7 +118,7 @@ class DetectionCluster:
             self.snr_data = self._set_snr(p_v)
 
             # Adding the channel bandwidth (as requested by Pierluigi)
-            self.snr_data += 20*np.log10(1./self.beam_config['sampling_time'])
+            self.snr_data += 10*np.log10(1./self.beam_config['sampling_time'])
 
     def _set_snr(self, power):
         """
