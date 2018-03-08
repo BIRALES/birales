@@ -240,7 +240,7 @@ class BEST2(object):
             logging.warning("BEST2: Could not validate BEST2 movement")
             return False
 
-        if abs(curr_declination - dec) < self.DEC_ERROR_THOLD:
+        if abs(curr_declination - dec) > self.DEC_ERROR_THOLD:
             logging.warning("BEST2: Failed to reach requested declination of DEC: {:0.2f}".format(dec))
 
             return False
