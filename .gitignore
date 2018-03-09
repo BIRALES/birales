@@ -11,7 +11,9 @@ pybirales.egg-info
 *.swp
 *.h5
 *.pkl
+*.ipynb_checkpoints
 env
 pybirales/pipeline/plots/*
 pybirales/services/calibrator
 pybirales/app/static/node_modules
+
