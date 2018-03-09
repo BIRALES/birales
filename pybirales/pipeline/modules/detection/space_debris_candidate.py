@@ -196,6 +196,7 @@ class SpaceDebrisTrack:
         time_max = ( channel_min - intercept ) / gradient
         :return:
         """
+        print id(self)
         self._exit_time = (min_channel - self.intercept) / self.m
 
         return current_time > self._exit_time
