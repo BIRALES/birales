@@ -147,7 +147,7 @@ class DetectionCluster:
         return self.score > threshold
 
     def is_valid(self):
-        if len(self.time_data) > 2:
+        if len(self.time_data) > 3:
             if settings.detection.m_limit[0] <= self.m <= settings.detection.m_limit[1]:
                 return True
 
