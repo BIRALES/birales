@@ -100,7 +100,8 @@ class SpaceDebrisTrack:
         :type beam_candidate: DetectionCluster
         :return:
         """
-        if not self.is_linear(beam_candidate):
+
+        if not self.data.empty and not self.is_linear(beam_candidate):
             log.warning("Won't add this beam candidate")
             return
 
@@ -117,6 +118,14 @@ class SpaceDebrisTrack:
             self.data = pd.concat([self.data, temp_df])
         else:
             self.data = temp_df
+            self.score = beam_candidate.score
+            self.m = beam_candidate.m
+            self.intercept = beam_candidate.c
+
+            self._save()
+
+            # do not run RANSAC again
+            return
 
             # Record the noise of the beam
         self._beam_noise[beam_candidate.beam_id] = beam_candidate.beam_config['beam_noise']
@@ -244,7 +253,7 @@ class SpaceDebrisTrack:
             except OperationError:
                 log.exception("Space debris track could not be saved to DB")
 
-            # Upload the space debris detection to an FTP server
+                # Upload the space debris detection to an FTP server
 
     def _save_db(self):
         """
