@@ -157,7 +157,7 @@ class Pointing(object):
             if settings.beamformer.apply_calib_coeffs:
                 self._calib_coeffs = self._get_latest_calib_coeffs()
         except InvalidCalibrationCoefficientsException:
-            log.warning("Could not load coefficients from TCPO dir.")
+            log.warning("Could not load coefficients from TCPO directory.")
 
         # Ignore AstropyWarning
         warnings.simplefilter('ignore', category=AstropyWarning)
@@ -363,6 +363,9 @@ class Pointing(object):
             except ValueError:
                 log.warning(
                     "Invalid Coefficient file found: {}. Expected format: [%Y-%m-%dT%H:%M:%S_DEC.npy]".format(c))
+
+        if not coeff_files:
+            raise InvalidCalibrationCoefficientsException("No suitable calibration coefficients files were found")
 
         latest_file = coeff_files[np.array(coeff_td).argmin()]
         calib_coeffs = np.loadtxt(os.path.join(root_dir, latest_file), dtype=np.complex)
