@@ -177,7 +177,6 @@ class SpaceDebrisTrack:
 
         temp_df2 = temp_df
         if not self.data.empty:
-            log.debug('Space debris candidate is empty.')
             # Combine the beam candidate track to this track
             temp_df2 = pd.concat([self.data, temp_df])
 
