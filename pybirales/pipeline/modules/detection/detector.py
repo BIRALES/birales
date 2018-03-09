@@ -150,7 +150,7 @@ class Detector(ProcessingModule):
                 log.debug('Track {} has transitted outside detection window. Removing it from candidates list'
                           .format(id(c)))
             else:
-                log.debug('Track {} is still within detection window'.format(id(c)))
+                log.debug('Track {} (n: {}) is still within detection window'.format(id(c), len(c.data.time)))
                 temp_candidates.append(c)
 
         log.info('Result: {} have space debris tracks have transitted. {} currently in detection window.'.format(
