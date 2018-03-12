@@ -155,9 +155,9 @@ class Pointing(object):
 
         try:
             if settings.beamformer.apply_calib_coeffs:
-                self._calib_coeffs = self._get_latest_calib_coeffs()
-        except InvalidCalibrationCoefficientsException:
-            log.warning("Could not load coefficients from TCPO directory.")
+                self._calib_coeffs = self._get_latest_calib_coeffs()                
+        except InvalidCalibrationCoefficientsException as e:
+            log.warning("Could not load coefficients from TCPO directory. Reason: {}".format(e))
 
         # Ignore AstropyWarning
         warnings.simplefilter('ignore', category=AstropyWarning)
@@ -368,8 +368,14 @@ class Pointing(object):
             raise InvalidCalibrationCoefficientsException("No suitable calibration coefficients files were found")
 
         latest_file = coeff_files[np.array(coeff_td).argmin()]
-        calib_coeffs = np.loadtxt(os.path.join(root_dir, latest_file), dtype=np.complex)
-
+        
+        try:
+            calib_coeffs = np.load(os.path.join(root_dir, latest_file))
+        except ValueError as e:
+            log.warning('An error has occured whilst loading calibration coefficients from: {}'.format(os.path.join(root_dir, latest_file)))
+            print(e)
+            raise InvalidCalibrationCoefficientsException()
+            
         if not isinstance(calib_coeffs, np.ndarray):
             raise InvalidCalibrationCoefficientsException(
                 "Calibration coefficients at {} are not a valid numpy array".format(latest_file))
@@ -378,7 +384,7 @@ class Pointing(object):
             raise InvalidCalibrationCoefficientsException(
                 "Number of calibration coefficients does not match number of antennas")
 
-        if not calib_coeffs.dtype == 'complex':
+        if not calib_coeffs.dtype == 'complex64':
             raise InvalidCalibrationCoefficientsException("Calibration coefficients type is not complex")
 
         log.info('Loaded calibration coefficients from {}/{}'.format(root_dir, latest_file))
