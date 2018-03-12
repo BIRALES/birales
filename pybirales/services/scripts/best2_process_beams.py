@@ -137,7 +137,7 @@ def plot(opts):
     data = np.fromfile(f, dtype=np.dtype('f'))
 
     nsamp = len(data) / (nbeams * nchans)
-    data = np.reshape(data, (nsamp, nchans, nbeams))
+    data = np.reshape(data[:nsamp*nbeams*nchans], (nsamp, nchans, nbeams))
 
     time = np.arange(0, opts.tsamp * data.shape[0], opts.tsamp)
     frequency = (np.arange(opts.fch1 * 1e6, opts.fch1 * 1e6 + opts.foff * (data.shape[1]), opts.foff)) * 1e-6

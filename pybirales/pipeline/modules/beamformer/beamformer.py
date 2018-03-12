@@ -155,7 +155,23 @@ class Pointing(object):
 
         try:
             if settings.beamformer.apply_calib_coeffs:
-                self._calib_coeffs = self._get_latest_calib_coeffs()
+                # self._calib_coeffs = self._get_latest_calib_coeffs()
+                self._calib_coeffs = np.array([ 1.00000000+0.j        ,  0.73237979-0.58805901j,
+        0.66812515-0.26948056j,  0.81691831-0.56726998j,
+        0.68480837-0.69914275j, -0.65973115-1.17859983j,
+        1.14378285+0.10427612j, -0.28552070-1.06882513j,
+        0.78467917+0.21916661j,  0.80317980-0.45533052j,
+        0.62626517+0.78747624j, -0.25264704-0.96380132j,
+        0.82390249-0.53906149j,  0.91468114-0.15237753j,
+        0.31454173-0.95265555j,  0.55585855-0.23750961j,
+        0.49566430+0.93146211j,  1.04361904+0.35552129j,
+        0.69618577+0.83488506j,  0.97550899-0.30347982j,
+        0.63838589+0.56306666j,  0.08632972+1.00460768j,
+        0.99196178+0.47593331j,  0.87704682+0.64783418j,
+        0.85585123+0.51721013j,  0.51052207+1.02522075j,
+        0.95272845-0.3698447j ,  0.96699178-0.66775119j,
+        0.23557062-1.084553j  ,  0.77967000-0.93490666j,
+        0.94785941+0.55012083j,  0.15722033+0.95648581j], dtype=np.complex64)
         except InvalidCalibrationCoefficientsException:
             log.warning("Could not load coefficients from TCPO directory.")
 
@@ -367,9 +383,15 @@ class Pointing(object):
         if not coeff_files:
             raise InvalidCalibrationCoefficientsException("No suitable calibration coefficients files were found")
 
-        latest_file = coeff_files[np.array(coeff_td).argmin()]
-        calib_coeffs = np.loadtxt(os.path.join(root_dir, latest_file), dtype=np.complex)
-
+        # latest_file = coeff_files[np.array(coeff_td).argmin()]
+        latest_file='x.npy'
+        try:
+            calib_coeffs = np.load(os.path.join(root_dir, 'x.npy'))
+        except ValueError as e:
+            log.warning('An error has occured whilst loading calibration coefficients from: {}'.format(os.path.join(root_dir, latest_file)))
+            print(e)
+            raise InvalidCalibrationCoefficientsException()
+            
         if not isinstance(calib_coeffs, np.ndarray):
             raise InvalidCalibrationCoefficientsException(
                 "Calibration coefficients at {} are not a valid numpy array".format(latest_file))
