@@ -240,7 +240,7 @@ class SpaceDebrisTrack:
 
         # Save the detection cluster as CSV file for analysis
         if settings.detection.debug_candidates:
-            _csv_writer.write(self._debug_filepath, self)
+            self._debug_filepath = _csv_writer.write(self._debug_filepath, self)
 
         # Persist the space debris detection to the database
         if settings.detection.save_candidates:

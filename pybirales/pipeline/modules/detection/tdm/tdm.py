@@ -26,7 +26,8 @@ class TDMWriter:
         return tdm_directory
 
     def _get_filename(self):
-        return len([name for name in os.listdir(self._out_dir) if os.path.isfile(os.path.join(self._out_dir, name))]) + 1
+        return len(
+            [name for name in os.listdir(self._out_dir) if os.path.isfile(os.path.join(self._out_dir, name))]) + 1
 
     def write(self, filepath, obs_info, sd_track):
         data = dict(
@@ -84,7 +85,8 @@ class CSVWriter:
         return tdm_directory
 
     def _get_filename(self):
-        return len([name for name in os.listdir(self._out_dir) if os.path.isfile(name)]) + 1
+        return len(
+            [name for name in os.listdir(self._out_dir) if os.path.isfile(os.path.join(self._out_dir, name))]) + 1
 
     def write(self, filepath, sd_track):
         # Default filepath for this space debris detection
