@@ -121,6 +121,10 @@ class DetectionCluster:
             # Adding the channel bandwidth (as requested by Pierluigi)
             self.snr_data += 10 * np.log10(1. / self.beam_config['sampling_time'])
 
+    @property
+    def debug_msg(self):
+        return '{} (m={}, c={}, s={}, n={})'.format(id(self), self.m, self.c, self.score, len(self.time_data))
+
     def _set_snr(self, power):
         """
         Calculate the SNR
@@ -135,6 +139,7 @@ class DetectionCluster:
 
         return log_data
 
+    @property
     def is_linear(self):
         """
         Determine if cluster is a linear cluster up to a certain threshold
@@ -144,6 +149,7 @@ class DetectionCluster:
 
         return self.score > 0.90
 
+    @property
     def is_valid(self):
         if len(self.time_data) > 3:
             if settings.detection.m_limit[0] <= self.m <= settings.detection.m_limit[1]:

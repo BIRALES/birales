@@ -9,13 +9,10 @@ from sklearn import linear_model
 
 from pybirales import settings
 from pybirales.pipeline.modules.detection.detection_clusters import DetectionCluster
-from pybirales.pipeline.modules.detection.tdm.tdm import TDMWriter, CSVWriter
 from pybirales.repository.models import SpaceDebrisTrack
 
 _linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
 _db_model = SpaceDebrisTrack
-_tmd_writer = TDMWriter()
-_csv_writer = CSVWriter()
 
 
 class Target:
@@ -40,13 +37,14 @@ class Target:
 
 
 class SpaceDebrisTrack:
-    def __init__(self, obs_info, beam_candidate=None):
+    def __init__(self, det_no, obs_info, beam_candidate=None):
         """
 
         :param obs_info:
         :param beam_candidate:
         """
         self._id = None
+        self.detection_num = det_no
         self.name = None
         self._created_at = datetime.datetime.utcnow()
         self._obs_info = obs_info
@@ -86,10 +84,7 @@ class SpaceDebrisTrack:
         # The last iteration counter
         self._last_iter_count = 0
 
-        self._max_candidate_iter = 5
-
-        # Do not write to disk every N iterations
-        self._write_freq = 5
+        self._max_candidate_iter = 10
 
         # The iteration number
         self._iter = 0
@@ -259,16 +254,6 @@ class SpaceDebrisTrack:
 
         :return:
         """
-        self._iter += 1
-
-        if self._iter % self._write_freq != 0:
-            # Persist the space debris detection as a TDM file
-            if settings.detection.save_tdm:
-                self._tdm_filepath = _tmd_writer.write(self._tdm_filepath, self._obs_info, self)
-
-            # Save the detection cluster as CSV file for analysis
-            if settings.detection.debug_candidates:
-                self._debug_filepath = _csv_writer.write(self._debug_filepath, self)
 
         # Persist the space debris detection to the database
         if settings.detection.save_candidates:
@@ -280,7 +265,7 @@ class SpaceDebrisTrack:
             except OperationError:
                 log.exception("Space debris track could not be saved to DB")
 
-        # Upload the space debris detection to an FTP server
+                # Upload the space debris detection to an FTP server
 
     def _save_db(self):
         """
