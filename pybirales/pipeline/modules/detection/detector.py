@@ -89,7 +89,7 @@ class Detector(ProcessingModule):
         :param output_data:
         :return:
         """
-
+        obs_info['iter_count'] = self.counter
         channels = self._get_channels(obs_info)
         time = self._get_time(obs_info)
         doppler_mask = self._get_doppler_mask(obs_info['transmitter_frequency'], channels)
@@ -124,8 +124,14 @@ class Detector(ProcessingModule):
                 for candidate in self._candidates:
                     # If beam candidate is similar to candidate, merge it.
                     if candidate.is_parent_of(beam_candidate) and beam_candidate.is_linear and beam_candidate.is_valid:
-                        log.debug('Beam candidate {} (m={}, c={}, s={}, n={}) added to track {}'.format(id(beam_candidate),
-                            beam_candidate.m, beam_candidate.c, beam_candidate.score, len(beam_candidate.time_data), id(candidate)))
+                        log.debug(
+                            'Beam candidate {} (m={}, c={}, s={}, n={}) added to track {}'.format(id(beam_candidate),
+                                                                                                  beam_candidate.m,
+                                                                                                  beam_candidate.c,
+                                                                                                  beam_candidate.score,
+                                                                                                  len(
+                                                                                                      beam_candidate.time_data),
+                                                                                                  id(candidate)))
 
                         candidate.add(beam_candidate)
                         break
@@ -136,7 +142,13 @@ class Detector(ProcessingModule):
                         sd = SpaceDebrisTrack(obs_info=obs_info, beam_candidate=beam_candidate)
 
                         log.debug('Created new track {} from Beam candidate {} (m={}, c={}, s={}, n={})'.format(id(sd),
-                        id(beam_candidate), beam_candidate.m, beam_candidate.c, beam_candidate.score, len(beam_candidate.time_data)))
+                                                                                                                id(
+                                                                                                                    beam_candidate),
+                                                                                                                beam_candidate.m,
+                                                                                                                beam_candidate.c,
+                                                                                                                beam_candidate.score,
+                                                                                                                len(
+                                                                                                                    beam_candidate.time_data)))
 
                         # Publish event: A space debris detection was made
                         self._publisher.publish(SpaceDebrisDetectedEvent(sd))
@@ -146,15 +158,15 @@ class Detector(ProcessingModule):
 
         temp_candidates = []
         for c in self._candidates:
-            if c.is_finished(current_time=self.last_time_sample, min_channel=channels[0]):
-                log.debug('Track {} has transitted outside detection window. Removing it from candidates list'
-                          .format(id(c)))
+            if c.is_finished(current_time=self.last_time_sample, min_channel=channels[0], iter_count=self.counter):
+                log.debug('Track {} (n: {}) has transitted outside detection window. Removing it from candidates list'
+                          .format(id(c), c.size))
             else:
-                log.debug('Track {} (n: {}) is still within detection window'.format(id(c), len(c.data.time)))
+                log.debug('Track {} (n: {}) is still within detection window'.format(id(c), c.size))
                 temp_candidates.append(c)
 
         log.info('Result: {} have space debris tracks have transitted. {} currently in detection window.'.format(
-            len(temp_candidates) - len(self._candidates), len(self._candidates)))
+            len(self._candidates) - len(temp_candidates), len(self._candidates)))
         self._candidates = temp_candidates
 
         self.counter += 1

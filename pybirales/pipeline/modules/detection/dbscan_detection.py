@@ -78,7 +78,7 @@ def _create_detection_clusters(data, beam, cluster_labels, label):
                                snr=beam.snr[(channel_indices, time_indices)])
 
     # Add only those clusters that are linear
-    if cluster.is_linear(threshold=0.9) and cluster.is_valid():
+    if cluster.is_linear and cluster.is_valid():
         log.debug('Beam %s: Cluster with m:%3.2f, c:%3.2f, n:%s and r:%0.2f is considered to be linear.', beam.id,
                   cluster.m,
                   cluster.c, len(channel_indices), cluster.score)
@@ -161,7 +161,7 @@ def detect(obs_info, queue, beam):
     :param obs_info:
     :param queue:
     :param beam:
-    :return:
+    :return: DetectionClusters
     """
 
     global _time_delta, _ref_time, _publisher

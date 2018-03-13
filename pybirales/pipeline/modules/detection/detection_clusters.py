@@ -48,6 +48,7 @@ class DetectionCluster:
         self.m = np.nan
         self.c = np.nan
         self.score = np.nan
+        self.iter_count = beam_config['iter_count']
 
         # Compare the detection cluster's data against a (linear) model
         t = time2.time()
@@ -118,7 +119,7 @@ class DetectionCluster:
             self.snr_data = self._set_snr(p_v)
 
             # Adding the channel bandwidth (as requested by Pierluigi)
-            self.snr_data += 10*np.log10(1./self.beam_config['sampling_time'])
+            self.snr_data += 10 * np.log10(1. / self.beam_config['sampling_time'])
 
     def _set_snr(self, power):
         """
@@ -134,17 +135,14 @@ class DetectionCluster:
 
         return log_data
 
-    def is_linear(self, threshold=0.9):
+    def is_linear(self):
         """
         Determine if cluster is a linear cluster up to a certain threshold
-
-        :param threshold:
-        :type threshold: float
 
         :return:
         """
 
-        return self.score > threshold
+        return self.score > 0.90
 
     def is_valid(self):
         if len(self.time_data) > 3:

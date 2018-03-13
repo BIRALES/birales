@@ -83,6 +83,17 @@ class SpaceDebrisTrack:
         # The time at which the track is expected to exit the detection window
         self._exit_time = None
 
+        # The last iteration counter
+        self._last_iter_count = 0
+
+        self._max_candidate_iter = 5
+
+        # Do not write to disk every N iterations
+        self._write_freq = 5
+
+        # The iteration number
+        self._iter = 0
+
         # If a beam candidate is given, add it on initialisation
         if isinstance(beam_candidate, DetectionCluster):
             self.add(beam_candidate)
@@ -90,6 +101,10 @@ class SpaceDebrisTrack:
     @property
     def duration(self):
         return self.data['time'].max() - self.data['time'].min()
+
+    @property
+    def size(self):
+        return self.data['channel'].size
 
     def add(self, beam_candidate):
         """
@@ -102,8 +117,8 @@ class SpaceDebrisTrack:
         """
 
         if not self.data.empty and not self.is_linear(beam_candidate):
-            log.warning("Won't add this beam candidate")
-            return
+            log.warning("Beam candidate is not linear. Won't add this beam candidate")
+            return False
 
         temp_df = pd.DataFrame({
             'time_sample': beam_candidate.time_data,
@@ -124,10 +139,12 @@ class SpaceDebrisTrack:
 
             self._save()
 
+            self._last_iter_count = beam_candidate.iter_count
+
             # do not run RANSAC again
             return
 
-            # Record the noise of the beam
+        # Record the noise of the beam
         self._beam_noise[beam_candidate.beam_id] = beam_candidate.beam_config['beam_noise']
 
         # Update linear model of the track
@@ -156,6 +173,8 @@ class SpaceDebrisTrack:
 
             # Persist the candidate to DB/TDM
             self._save()
+
+            self._last_iter_count = beam_candidate.iter_count
 
     def is_linear(self, detection_cluster):
         """
@@ -195,10 +214,13 @@ class SpaceDebrisTrack:
 
             score = self._linear_model.estimator_.score(channels, time)
 
-            return score > 0.9 and settings.detection.m_limit[0] <= self._linear_model.estimator_.coef_[0] <= \
-                                   settings.detection.m_limit[1]
+            is_linear = score > settings.detection.linearity_thold
+            doppler_check = settings.detection.m_limit[0] <= self._linear_model.estimator_.coef_[0] <= \
+                            settings.detection.m_limit[1]
 
-    def is_finished(self, current_time, min_channel):
+            return is_linear and doppler_check
+
+    def is_finished(self, current_time, min_channel, iter_count):
         """
         Determine whether this track is finished based on the current time
         time_max = ( channel_min - intercept ) / gradient
@@ -207,20 +229,24 @@ class SpaceDebrisTrack:
 
         self._exit_time = (min_channel - self.intercept) / self.m
 
-        return current_time > self._exit_time
+        # return current_time > self._exit_time or (iter_count - self._last_iter_count) > 5
 
-    def is_parent_of(self, detection_cluster, similarity_thold=0.1):
+        # The track is deemed to be finished if it has not been updated since N itera
+        return (iter_count - self._last_iter_count) > self._max_candidate_iter
+
+    def is_parent_of(self, detection_cluster):
         """
         Determine whether a detection cluster should be associated with this space debris track by giving
         a similarity score. Similarity between beam candidate and space debris track is determined by
         cosine distance.
 
         :param detection_cluster: The detection cluster with which the track is being compared
-        :param similarity_thold: The similarity threshold which determines if track is similar or not
         :type detection_cluster: DetectionCluster
-        :type similarity_thold: float
         :return:
         """
+
+        # The similarity threshold which determines if track is similar or not
+        similarity_thold = settings.detection.similarity_thold
 
         if self.m and self.intercept:
             return dist.cosine([self.m, self.intercept], [detection_cluster.m, detection_cluster.c]) < similarity_thold
@@ -233,14 +259,16 @@ class SpaceDebrisTrack:
 
         :return:
         """
+        self._iter += 1
 
-        # Persist the space debris detection as a TDM file
-        if settings.detection.save_tdm:
-            self._tdm_filepath = _tmd_writer.write(self._tdm_filepath, self._obs_info, self)
+        if self._iter % self._write_freq != 0:
+            # Persist the space debris detection as a TDM file
+            if settings.detection.save_tdm:
+                self._tdm_filepath = _tmd_writer.write(self._tdm_filepath, self._obs_info, self)
 
-        # Save the detection cluster as CSV file for analysis
-        if settings.detection.debug_candidates:
-            self._debug_filepath = _csv_writer.write(self._debug_filepath, self)
+            # Save the detection cluster as CSV file for analysis
+            if settings.detection.debug_candidates:
+                self._debug_filepath = _csv_writer.write(self._debug_filepath, self)
 
         # Persist the space debris detection to the database
         if settings.detection.save_candidates:
@@ -252,7 +280,7 @@ class SpaceDebrisTrack:
             except OperationError:
                 log.exception("Space debris track could not be saved to DB")
 
-                # Upload the space debris detection to an FTP server
+        # Upload the space debris detection to an FTP server
 
     def _save_db(self):
         """
@@ -289,7 +317,7 @@ class SpaceDebrisTrack:
                 'tx': self._obs_info['transmitter_frequency'],
                 'created_at': datetime.datetime.utcnow(),
                 'beam_noise': self._beam_noise.tolist(),
-                'size': self.data.shape[1],
+                'size': self.data['channel'].size,
                 'tdm_filepath': self._tdm_filepath,
                 'data': _data(self.data),
                 'duration': self.duration.total_seconds()

@@ -44,6 +44,8 @@ class Beam:
 
         self._sampling_time = obs_info['sampling_time']
 
+        self._iter_count = obs_info['iter_count']
+
     def get_config(self):
         return {
             'beam_id': self.id,
@@ -54,5 +56,6 @@ class Beam:
             'tx': self.tx,
             't_0': self._ref_time,
             't_delta': self._time_delta,
+            'iter_count': self._iter_count,
             'sampling_time': self._sampling_time
         }
