@@ -66,7 +66,7 @@ def _create_detection_clusters(data, beam, cluster_labels, label):
         log.debug('Beam %s: Ignoring small cluster with %s data points', beam.id, len(channel_indices))
         return None
 
-    # If cluster is not withing physical doppler range limits
+    # If cluster is not within the physical doppler range limits
     if not check_doppler_range(beam.channels[channel_indices], beam.tx):
         return None
 
