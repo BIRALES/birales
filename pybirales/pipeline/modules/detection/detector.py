@@ -1,4 +1,5 @@
 import logging as log
+import Queue
 from functools import partial
 from multiprocessing import Pool
 
@@ -13,6 +14,7 @@ from pybirales.pipeline.modules.detection.beam import Beam
 from pybirales.pipeline.modules.detection.dbscan_detection import detect
 from pybirales.pipeline.modules.detection.queue import BeamCandidatesQueue
 from pybirales.pipeline.modules.detection.space_debris_candidate import SpaceDebrisTrack
+from pybirales.pipeline.modules.detection.tdm.tdm import TDMWriter
 
 
 class Detector(ProcessingModule):
@@ -51,7 +53,17 @@ class Detector(ProcessingModule):
         # A list of space debris tracks
         self._candidates = []
 
+        self._tdm_writer = TDMWriter(queue=Queue.Queue())
+
+        self._tdm_writer.start()
+
+        self._detection_counter = 0
+
+        # Write to disk every N iterations
+        self._write_freq = 10
+
     def _tear_down(self):
+        self._tdm_writer.stop()
         self.pool.close()
 
     def _get_doppler_mask(self, tx, channels):
@@ -139,17 +151,12 @@ class Detector(ProcessingModule):
                     # Beam candidate does not match any candidate. Create candidate from it.
                     if beam_candidate.is_linear and beam_candidate.is_valid:
                         # Transform this beam candidate into a space debris track
-                        sd = SpaceDebrisTrack(obs_info=obs_info, beam_candidate=beam_candidate)
+                        self._detection_counter += 1
+                        sd = SpaceDebrisTrack(det_no=self._detection_counter, obs_info=obs_info,
+                                              beam_candidate=beam_candidate)
 
-                        log.debug('Created new track {} from Beam candidate {} (m={}, c={}, s={}, n={})'.format(id(sd),
-                                                                                                                id(
-                                                                                                                    beam_candidate),
-                                                                                                                beam_candidate.m,
-                                                                                                                beam_candidate.c,
-                                                                                                                beam_candidate.score,
-                                                                                                                len(
-                                                                                                                    beam_candidate.time_data)))
-
+                        log.debug('Created new track {} from Beam candidate {}'.format(id(sd), id(beam_candidate),
+                                                                                       beam_candidate.debug_msg))
                         # Publish event: A space debris detection was made
                         self._publisher.publish(SpaceDebrisDetectedEvent(sd))
 
@@ -170,6 +177,10 @@ class Detector(ProcessingModule):
         self._candidates = temp_candidates
 
         self.counter += 1
+
+        if self.counter % self._write_freq == -1:
+            for c in self._candidates:
+                self._tdm_writer.queue.put((c, obs_info))
 
         return obs_info
 
