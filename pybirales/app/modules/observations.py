@@ -1,11 +1,17 @@
+import json
+
+import dateutil.parser
 import mongoengine
-from flask import Blueprint, render_template, request, abort, redirect, url_for
+from flask import jsonify
+from bson import json_util
+from flask import Blueprint
+from flask import render_template, request, abort, redirect, url_for
 from flask_paginate import Pagination, get_page_parameter
 from webargs import fields
 
-from pybirales.repository.models import BeamCandidate
-from pybirales.repository.models import Observation
 from pybirales.app.modules.configurations import get_available_configs
+from pybirales.repository.models import BeamCandidate, SpaceDebrisTrack
+from pybirales.repository.models import Observation
 
 observations_page = Blueprint('observations_page', __name__, template_folder='templates')
 
@@ -18,6 +24,19 @@ observations_args = {
 @observations_page.route('/api/observation/<observation_id>/data')
 def beam_data(observation_id):
     return BeamCandidate.get(observation_id=observation_id).to_json()
+
+
+@observations_page.route('/api/live/data', methods=['POST'])
+def observation_track_data(observation_id=None, from_date=None, to_date=None):
+    if request.values.get('from_date'):
+        from_date = dateutil.parser.parse(request.values.get('from_date'))
+
+    if request.values.get('to_date'):
+        to_date = dateutil.parser.parse(request.values.get('to_date'))
+
+    detected_candidates = SpaceDebrisTrack.get(observation_id=observation_id, to_time=to_date, from_time=from_date)
+
+    return jsonify(detected_candidates[:1].to_json())
 
 
 @observations_page.route('/observations')

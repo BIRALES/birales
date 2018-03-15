@@ -4,19 +4,10 @@
 
 {% block content %}
     <div class="container-fluid">
+
         <div class="row">
             <div class="col-md-12">
                 <div class="card">
-                    <div class="header">
-                        <h4 class="title">Beam Candidates</h4>
-
-                        <p class="category">Live</p>
-
-                        <div class="top-corner">
-                            <a id="orbit-determination-table" class="btn btn-default">Orbit Determination</a>
-                        </div>
-                    </div>
-
                     <div class="content">
                         <form>
                             <div class="row">
@@ -48,16 +39,20 @@
                                 </div>
                             </div>
                         </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="header">
+                        <h4 class="title">Beam Candidates</h4>
+                        <p class="category">Live</p>
+                    </div>
 
-                        <div class="chart plotly responsive-plot" id="doppler-profile-plot">
-
-                        </div>
-                        <div class="footer">
-                            <hr/>
-                            <div class="stats">
-                                <i class="fa fa-history"></i> <span id="beam-candidates-last-updated"></span>
-                            </div>
-                        </div>
+                    <div class="content">
+                        <canvas id="doppler-profile-plot"></canvas>
                     </div>
                 </div>
             </div>
@@ -73,15 +68,7 @@
                     </div>
 
                     <div class="content">
-                        <div class="chart plotly responsive-plot" id="snr-profile-plot">
-
-                        </div>
-                        <div class="footer">
-                            <hr/>
-                            <div class="stats">
-                                <i class="fa fa-history"></i> <span id="beam-candidates-last-updated"></span>
-                            </div>
-                        </div>
+                        <canvas id="snr-profile-plot"></canvas>
                     </div>
                 </div>
             </div>
@@ -93,13 +80,15 @@
     {{ super() }}
     <script src="{{ url_for('static', filename='js/plotters/snr_profile.js') }}"></script>
     <script src="{{ url_for('static', filename='js/plotters/doppler_profile.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plotters/track_doppler_profile.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plotters/track_snr_profile.js') }}"></script>
     <script src="{{ url_for('static', filename='js/plotters/manager.js') }}"></script>
 
     <script>
         $(document).ready(function () {
-            var ORBIT_DETERMINATION_URL = "/monitoring/beam_candidates/table?";
+            {#            var ORBIT_DETERMINATION_URL = "/monitoring/beam_candidates/table?";#}
 
-            var socket = io('/');
+            {#            var socket = io('/');#}
 
             var date_from = $('#monitoring-date-from');
             var date_to = $('#monitoring-date-to');
@@ -112,6 +101,7 @@
                 min_channel: {{ min_channel }},
                 max_channel: {{ max_channel }}
             };
+
 
             function get_default_value(key) {
                 var stored_value = localStorage.getItem(key);
@@ -139,14 +129,6 @@
                 localStorage.setItem('max_channel', this.value);
             });
 
-            function update_beam_data() {
-                log.info('Fetching new data');
-                socket.emit('get_beam_candidates', null,
-                        new Date(date_from.val() + 'Z'),
-                        new Date(date_to.val() + 'Z'),
-                        $(min_channel.val()),
-                        $(max_channel.val()))
-            }
 
             date_from.flatpickr({
                 defaultDate: get_default_value('date_from'),
@@ -170,40 +152,18 @@
                 }
             });
 
-            $("#orbit-determination-table").click(function () {
-                var get_parameters = {
-                    'from_time': new Date(date_from.val() + 'Z').toISOString(),
-                    'to_time': new Date(date_to.val() + 'Z').toISOString(),
-                    'min_channel': min_channel.val(),
-                    'max_channel': max_channel.val()
-                };
 
-                window.open(ORBIT_DETERMINATION_URL + $.param(get_parameters).replace(/%3A/g, ":"));
-            });
+            var plot = new TrackDopplerProfilePlotter('doppler-profile-plot');
+            plot.update(new Date(date_from.val() + 'Z').toISOString(), new Date(date_to.val() + 'Z').toISOString());
 
+            var plot2 = new TrackSNRProfilePlotter('snr-profile-plot');
+            plot2.update(new Date(date_from.val() + 'Z').toISOString(), new Date(date_to.val() + 'Z').toISOString());
 
-            var plotting_manager = new PlottingManager(socket);
-
-            plotting_manager.addPlot('beam_candidates', new DopplerProfilePlotter('doppler-profile-plot'));
-            plotting_manager.addPlot('beam_candidates', new SNRProfilePlot('snr-profile-plot'));
-            plotting_manager.init();
-
-            socket.on('connect', function () {
-                log.info('Connected!');
-                update_beam_data();
-            });
-
-            socket.on('disconnect', function () {
-                log.info('Disconnected!');
-            });
-
-            socket.on('error', function (err) {
-                log.error('An error has occurred on server side.', err);
-            });
-
-            socket.on('connect_error', function (err) {
-                log.error('Could not establish a connection', err);
-            });
+            function update_beam_data() {
+                log.info('Fetching new data');
+                plot.update(new Date(date_from.val() + 'Z').toISOString(), new Date(date_to.val() + 'Z').toISOString());
+                plot2.update(new Date(date_from.val() + 'Z').toISOString(), new Date(date_to.val() + 'Z').toISOString());
+            }
 
             window.onbeforeunload = function () {
                 localStorage.setItem('date_from', date_from.val());

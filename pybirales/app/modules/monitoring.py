@@ -13,7 +13,6 @@ from pybirales.repository.models import BeamCandidate
 from webargs import fields
 from webargs.flaskparser import use_args
 from pandas.io.json import json_normalize
-from mongoengine.queryset.visitor import Q
 
 from itertools import chain
 
@@ -58,7 +57,6 @@ def index(args):
 @use_args(beam_candidates_args)
 def get_beam_candidates(args):
     detected_beam_candidates = beam_candidates(request=args)
-
     return Response(json.dumps(detected_beam_candidates[:100]),
                     mimetype='application/json; charset=utf-8')
 
@@ -131,8 +129,6 @@ def beam_candidates(request):
     :param request:
     :return:
     """
-    return BeamCandidate.get(beam_id=request['beam_id'],
-                                 to_time=request['to_time'],
-                                 from_time=request['from_time'],
-                                 max_channel=request['max_channel'],
-                                 min_channel=request['min_channel'])
+    return BeamCandidate.get(beam_id=request['beam_id'], to_time=request['to_time'], from_time=request['from_time'],
+                             max_channel=request['max_channel'],
+                             min_channel=request['min_channel'])
