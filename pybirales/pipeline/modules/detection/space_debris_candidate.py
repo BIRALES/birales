@@ -296,7 +296,9 @@ class SpaceDebrisTrack:
             # Already saved to the database, hence we just update
             _db_model.objects.get(pk=self._id).update(data=_data(self.data),
                                                       beam_noise=self._beam_noise.tolist(),
-                                                      duration=self.duration.total_seconds())
+                                                      duration=self.duration.total_seconds(),
+                                                      m=self.m, score=self.score, intercept=self.intercept,
+                                                      size=self.size)
         else:
             sd = _db_model(**{
                 'name': self.name,
@@ -311,7 +313,7 @@ class SpaceDebrisTrack:
                 'tx': self._obs_info['transmitter_frequency'],
                 'created_at': datetime.datetime.utcnow(),
                 'beam_noise': self._beam_noise.tolist(),
-                'size': self.data['channel'].size,
+                'size': self.size,
                 'tdm_filepath': self._tdm_filepath,
                 'data': _data(self.data),
                 'duration': self.duration.total_seconds()
