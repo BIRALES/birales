@@ -98,15 +98,19 @@ class SpaceDebrisTrack(DynamicDocument):
     rcs = None
     target = None
 
-    tdm_filepath = StringField(required=True)
-
-    # data = DynamicDocument(required=True)
+    tdm_filepath = StringField(required=False)
 
     @queryset_manager
-    def get(self, query_set, observation_id=None):
-
+    def get(self, query_set, observation_id=None, from_time=None, to_time=None):
         query = Q()
+
         if observation_id:
             query &= Q(observation=observation_id)
+
+        if from_time:
+            query &= Q(created_at__gte=from_time)
+
+        if to_time:
+            query &= Q(created_at__lte=to_time)
 
         return query_set.filter(query)
