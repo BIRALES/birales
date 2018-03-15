@@ -220,5 +220,7 @@ class PFB(ProcessingModule):
                                      self._filtered[p, b, c, :], self._ntaps, self._nchans)
 
                     # Fourier transform and save output
-                    # self._current_output[p, b, c * self._nchans: (c + 1) * self._nchans] = np.flipud(np.fft.fft(self._filtered[p, b, c, :], axis=0))
-                    self._current_output[p, b, c * self._nchans: (c + 1) * self._nchans] = np.flipud(np.fft.fftshift(np.fft.fft(self._filtered[p, b, c, :], axis=0), axes=0))
+                    self._current_output[p, b, c * self._nchans: (c + 1) * self._nchans] = np.flipud(
+                        np.fft.fft(self._filtered[p, b, c, :], axis=0))
+                    # self._current_output[p, b, c * self._nchans: (c + 1) * self._nchans] = np.flipud(
+                    # np.fft.fftshift(np.fft.fft(self._filtered[p, b, c, :], axis=0), axes=0))
