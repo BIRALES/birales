@@ -72,21 +72,6 @@ def reset_coefficients(ctx, config_filepath):
 @click.option('--config', '-c', 'config_filepath', type=click.Path(exists=True), required=True,
               help='The BIRALES configuration file', multiple=True)
 @click.pass_context
-def run_server(ctx, config_filepath):
-    # Load the BIRALES configuration from file
-    config = BiralesConfig(config_filepath, ctx.obj)
-
-    # Initialise the Birales Facade (BOSS)
-    bf = BiralesFacade(configuration=config)
-
-    # Start the Flask server
-    bf.start_server()
-
-
-@services.command()
-@click.option('--config', '-c', 'config_filepath', type=click.Path(exists=True), required=True,
-              help='The BIRALES configuration file', multiple=True)
-@click.pass_context
 def init_roach(ctx, config_filepath):
     # Load the BIRALES configuration from file
     config = BiralesConfig(config_filepath, ctx.obj)
