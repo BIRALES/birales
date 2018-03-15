@@ -5,10 +5,11 @@ import signal
 import time
 
 from pybirales import settings
-from pybirales.app.app import run
+from pybirales.birales_config import BiralesConfig
 from pybirales.events.events import ObservationStartedEvent, ObservationFinishedEvent
 from pybirales.events.publisher import EventsPublisher
 from pybirales.listeners.listeners import NotificationsListener
+from pybirales.pipeline.base.definitions import BEST2PointingException
 from pybirales.pipeline.pipeline import get_builder_by_id
 from pybirales.repository.models import Observation
 from pybirales.services.calibration.calibration import CalibrationFacade
@@ -17,8 +18,6 @@ from pybirales.services.instrument.best2 import BEST2
 from pybirales.services.scheduler.exceptions import SchedulerException, NoObservationsQueuedException
 from pybirales.services.scheduler.observation import ScheduledObservation, ScheduledCalibrationObservation
 from pybirales.services.scheduler.scheduler import ObservationsScheduler
-from pybirales.birales_config import BiralesConfig
-from pybirales.pipeline.base.definitions import BEST2PointingException
 
 
 class BiralesFacade:
@@ -273,10 +272,6 @@ class BiralesFacade:
             log.info('Scheduler finished successfully.')
 
         self.stop()
-
-    @staticmethod
-    def start_server():
-        run()
 
     @staticmethod
     def _get_listeners():
