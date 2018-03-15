@@ -2,7 +2,16 @@ import datetime
 import logging as log
 
 import numpy as np
+
+import warnings
+
+warnings.simplefilter('ignore', category=FutureWarning)
+
 import pandas as pd
+import warnings
+
+warnings.simplefilter('ignore', category=FutureWarning)
+
 import scipy.spatial.distance as dist
 from mongoengine import *
 from sklearn import linear_model
