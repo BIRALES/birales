@@ -178,7 +178,7 @@ class Detector(ProcessingModule):
 
         self.counter += 1
 
-        if self.counter % self._write_freq == -1:
+        if self.counter % self._write_freq == 0:
             for c in self._candidates:
                 self._tdm_writer.queue.put((c, obs_info))
 
