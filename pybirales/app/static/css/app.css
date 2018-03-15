@@ -80,3 +80,11 @@ div.author > h6.subtitle {
     line-height: 340px;
     font-size: 18px;
 }
+
+
+.chart-legend li span{
+    display: inline-block;
+    width: 10px;
+    height: 12px;
+    margin-right: 10px;
+}
