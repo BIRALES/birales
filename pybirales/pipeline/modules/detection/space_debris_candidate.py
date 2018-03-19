@@ -78,7 +78,7 @@ class SpaceDebrisTrack:
         self._detected_target = None
 
         # DataFrame encapsulating the track data (snr, time, channel, beam id)
-        self.data = pd.DataFrame(columns=['time_sample', 'time', 'channel', 'snr', 'beam_id'])
+        self.data = pd.DataFrame(columns=['time_sample', 'channel_sample',  'time', 'channel', 'snr', 'beam_id'])
         # self.data.set_index('time_sample')
 
         # The filepath where to save the space debris candidate
@@ -126,6 +126,7 @@ class SpaceDebrisTrack:
 
         temp_df = pd.DataFrame({
             'time_sample': beam_candidate.time_data,
+            'channel_sample': beam_candidate.channels_i,
             'time': beam_candidate.time_f_data,
             'channel': beam_candidate.channel_data,
             'snr': beam_candidate.snr_data,
@@ -193,8 +194,10 @@ class SpaceDebrisTrack:
 
         temp_df = pd.DataFrame({
             'time_sample': detection_cluster.time_data,
+            'channel_sample': detection_cluster.channels_i,
             'channel': detection_cluster.channel_data,
             'snr': detection_cluster.snr_data,
+
             'beam_id': [detection_cluster.beam_id for _ in range(0, len(detection_cluster.time_data))],
         })
 
@@ -288,6 +291,7 @@ class SpaceDebrisTrack:
                 'time': df['time'].tolist(),
                 'time_sample': df['time_sample'].tolist(),
                 'channel': df['channel'].tolist(),
+                'channel_sample': df['channel_sample'].tolist(),
                 'snr': df['snr'].tolist(),
                 'beam_id': df['beam_id'].tolist(),
             }
@@ -298,7 +302,7 @@ class SpaceDebrisTrack:
                                                       beam_noise=self._beam_noise.tolist(),
                                                       duration=self.duration.total_seconds(),
                                                       m=self.m, score=self.score, intercept=self.intercept,
-                                                      size=self.size)
+                                                      track_size=self.size)
         else:
             sd = _db_model(**{
                 'name': self.name,
@@ -313,7 +317,7 @@ class SpaceDebrisTrack:
                 'tx': self._obs_info['transmitter_frequency'],
                 'created_at': datetime.datetime.utcnow(),
                 'beam_noise': self._beam_noise.tolist(),
-                'size': self.size,
+                'track_size': self.size,
                 'tdm_filepath': self._tdm_filepath,
                 'data': _data(self.data),
                 'duration': self.duration.total_seconds()

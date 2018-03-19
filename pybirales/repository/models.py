@@ -22,6 +22,10 @@ class Observation(Document):
     @property
     def is_finished(self):
         now = datetime.datetime.utcnow()
+
+        if not self.date_time_end:
+            return False
+
         return now > self.date_time_end
 
     @property

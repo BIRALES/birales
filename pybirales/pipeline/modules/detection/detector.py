@@ -40,6 +40,8 @@ class Detector(ProcessingModule):
 
         self.time = None
 
+        self.channels_i = None
+
         self._doppler_mask = None
 
         super(Detector, self).__init__(config, input_blob)
@@ -81,11 +83,13 @@ class Detector(ProcessingModule):
                                       obs_info['start_center_frequency'] + obs_info['channel_bandwidth'] * obs_info[
                                           'nchans'],
                                       obs_info['channel_bandwidth'])
-
+            self.channels_i = np.arange(0, obs_info['nchans'])
             if settings.detection.doppler_subset:
-                self.channels = self.channels[self._get_doppler_mask(obs_info['transmitter_frequency'], self.channels)]
+                doppler_mask = self._get_doppler_mask(obs_info['transmitter_frequency'], self.channels)
+                self.channels = self.channels[doppler_mask]
+                self.channels_i = self.channels_i[doppler_mask]
 
-        return self.channels
+        return self.channels, self.channels_i
 
     def _get_time(self, obs_info):
         self.time = np.arange(0, obs_info['nsamp']) + self.counter * obs_info['nsamp']
@@ -102,7 +106,7 @@ class Detector(ProcessingModule):
         :return:
         """
         obs_info['iter_count'] = self.counter
-        channels = self._get_channels(obs_info)
+        channels, channels_i = self._get_channels(obs_info)
         time = self._get_time(obs_info)
         doppler_mask = self._get_doppler_mask(obs_info['transmitter_frequency'], channels)
 
@@ -112,6 +116,7 @@ class Detector(ProcessingModule):
         beams = [Beam(beam_id=n_beam,
                       obs_info=obs_info,
                       channels=channels,
+                      channels_i=channels_i,
                       time=time,
                       beam_data=input_data)
                  for n_beam in range(settings.detection.beam_range[0], settings.detection.beam_range[1])]

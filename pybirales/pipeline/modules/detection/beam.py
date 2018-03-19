@@ -6,7 +6,7 @@ import warnings
 from pybirales import settings
 
 # todo - is this needed?
-warnings.filterwarnings('error')
+#warnings.filterwarnings('error')
 
 
 class Beam:
@@ -14,7 +14,7 @@ class Beam:
     The Beam class from which beam object can be created.
     """
 
-    def __init__(self, beam_id, obs_info, channels, time, beam_data):
+    def __init__(self, beam_id, obs_info, channels, channels_i, time, beam_data):
         """
         Initialise the Beam class object
 
@@ -39,6 +39,7 @@ class Beam:
 
         self.noise = obs_info['noise']
         self.channels = channels
+        self.channels_i = channels_i
         self.time = time
         self.snr = beam_data[beam_id, :, :]
 

@@ -24,13 +24,13 @@ function TrackDopplerProfilePlotter(selector) {
                 }
             }],
             yAxes: [{
-                // type: 'time',
-                // time: {
-                //     unit: 'second',
-                //     displayFormats: {
-                //         second: 'H:mm:ssZ'
-                //     }
-                // },
+                type: 'time',
+                time: {
+                    unit: 'second',
+                    displayFormats: {
+                        second: 'H:mm:ssZ'
+                    }
+                },
                 scaleLabel: {
                     display: true,
                     labelString: this.y_label
@@ -81,7 +81,7 @@ TrackDopplerProfilePlotter.prototype = {
 
                     data.datasets[beam_id].data.push({
                         x: track['data']['channel'][i],
-                        y: moment.utc(track['data']['time_sample'][i])
+                        y: moment.utc(track['data']['time'][i]['$date'])
                     })
                 });
             });

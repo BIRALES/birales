@@ -75,6 +75,7 @@ def _create_detection_clusters(data, beam, cluster_labels, label):
                                beam_config=beam.get_config(),
                                time_data=beam.time[time_indices],
                                channels=beam.channels[channel_indices],
+                               channels_i=beam.channels_i[channel_indices],
                                snr=beam.snr[(channel_indices, time_indices)])
 
     # Add only those clusters that are linear

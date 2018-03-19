@@ -9,7 +9,7 @@ np.set_printoptions(precision=20)
 
 
 class DetectionCluster:
-    def __init__(self, model, beam_config, time_data, channels, snr):
+    def __init__(self, model, beam_config, time_data, channels, channels_i, snr):
         """
         Initialisation of the Detection cluster Object
 
@@ -20,6 +20,7 @@ class DetectionCluster:
 
         :type time_data: numpy.array of Time
         :type channels: numpy.array of floats
+        :type channels_i:
         :type snr: numpy.array of floats
         """
 
@@ -36,8 +37,10 @@ class DetectionCluster:
         self.td = self.beam_config['t_delta']
 
         self.time_data = time_data
-        self.time_f_data = self.t0 + np.array(range(0, len(self.time_data))) * self.td
+        # self.time_f_data = self.t0 + np.array(range(0, len(self.time_data))) * self.td
+        self.time_f_data = self.t0 + (self.time_data - 32 * beam_config['iter_count']) * self.td
         self.channel_data = channels
+        self.channels_i = channels_i
         self.snr_data = snr
 
         self.min_time = np.min(self.time_data).astype('M8[ms]').astype('O')
@@ -87,9 +90,11 @@ class DetectionCluster:
             # channels = np.array([[channel, ss] for channel, ss in zip(c[i], s[i])])
             channels = c[i].reshape(-1, 1)
             time = ts[i]
+            channels_i = self.channels_i[i]
         else:
             channels = channel_data.reshape(-1, 1)
             time = time_data
+            channels_i = self.channels_i
 
         try:
             model.fit(channels, time)
@@ -113,8 +118,12 @@ class DetectionCluster:
             self.c = model.estimator_.intercept_
 
             self.channel_data = np.array([channel[0] for channel in channels])
+
+            self.channels_i = channels_i[inlier_mask]
             self.time_data = time
-            self.time_f_data = self.t0 + np.array(range(0, len(self.time_data))) * self.td
+            self.time_f_data = self.t0 + (self.time_data - 32 * self.iter_count) * self.td
+
+            # self.time_f_data = self.t0 + np.array(range(0, len(self.time_data))) * self.td
             # self.time_f_data = self.time_f_data[inlier_mask]
             self.snr_data = self._set_snr(p_v)
 
@@ -172,6 +181,7 @@ class DetectionCluster:
                                 beam_config=cluster.beam_config,
                                 time_data=np.concatenate([self.time_data, cluster.time_data]),
                                 channels=np.concatenate([self.channel_data, cluster.channel_data]),
+                                channels_i=np.concatenate([self.channels_i, cluster.channels_i]),
                                 snr=np.concatenate([self.snr_data, cluster.snr_data]))
 
         merge = self._pd(cluster.m, self.m) <= threshold and self._pd(cluster.c, self.c) <= threshold
@@ -216,6 +226,7 @@ class DetectionCluster:
                                 beam_config=cluster.beam_config,
                                 time_data=np.concatenate([self.time_data, cluster.time_data]),
                                 channels=np.concatenate([self.channel_data, cluster.channel_data]),
+                                channels_i=np.concatenate([self.channels_i, cluster.channels_i]),
                                 snr=np.concatenate([self.snr_data, cluster.snr_data]))
 
     def delete(self):
