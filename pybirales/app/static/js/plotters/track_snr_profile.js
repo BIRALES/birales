@@ -2,7 +2,7 @@ function TrackSNRProfilePlotter(selector) {
     this.selector = selector;
     this.title = 'Track';
     this.name = 'SNR Profile';
-    this.x_label = 'Time sample';
+    this.x_label = 'Timestamp (Local)';
     this.y_label = 'SNR (dBHz)';
     this.api_entry = '/api/live/data';
     this.color_map = colorbrewer['Set3'][12];
@@ -18,13 +18,13 @@ function TrackSNRProfilePlotter(selector) {
         },
         scales: {
             xAxes: [{
-                // type: 'time',
-                // time: {
-                //     unit: 'second',
-                //     displayFormats: {
-                //         second: 'H:mm:ssZ'
-                //     }
-                // },
+                type: 'time',
+                time: {
+                    unit: 'second',
+                    displayFormats: {
+                        second: 'H:mm:ssZ'
+                    }
+                },
                 scaleLabel: {
                     display: true,
                     labelString: this.x_label
@@ -60,17 +60,17 @@ TrackSNRProfilePlotter.prototype = {
         }).done(function (response) {
             var tracks = JSON.parse(response);
             var data = {
-                datasets: new Array(32)
+                datasets: []
             };
 
             log.debug('Updating the', self.name, 'plotter with', tracks.length, 'new tracks');
-
+            var beam_tracks = []
             $.each(tracks, function (track_id, track) {
                 $.each(track['data']['channel'], function (i) {
                     var beam_id = track['data']['beam_id'][i];
 
-                    if (data.datasets[beam_id] == undefined) {
-                        data.datasets[beam_id] = {
+                    if (beam_tracks[beam_id] == undefined) {
+                        beam_tracks[beam_id] = {
                             label: beam_id,
                             data: [],
                             fill: false,
@@ -81,12 +81,22 @@ TrackSNRProfilePlotter.prototype = {
                         }
                     }
 
-                    data.datasets[beam_id].data.push({
-                        x: track['data']['time_sample'][i],
+                    beam_tracks[beam_id].data.push({
+                        x: track['data']['time'][i].$date,
                         y: track['data']['snr'][i]
                     })
                 });
             });
+
+            $.each(beam_tracks, function (beam_id) {
+                if (beam_tracks[beam_id] != undefined) {
+                    data.datasets.push(beam_tracks[beam_id])
+                }
+            });
+
+            if (self.plot != undefined) {
+                self.options.animation = false;
+            }
 
             // Update the plot with the new data
             self.plot = new Chart(document.getElementById(self.selector).getContext("2d"), {

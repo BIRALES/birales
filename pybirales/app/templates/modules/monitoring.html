@@ -11,30 +11,25 @@
                     <div class="content">
                         <form>
                             <div class="row">
-                                <div class="col-sm-3">
+                                <div class="col-sm-5">
                                     <div class="form-group">
-                                        <label>Date From</label>
+                                        <label for="monitoring-date-from">Date From</label>
                                         <input type="date" class="form-control" id="monitoring-date-from"/>
                                     </div>
                                 </div>
-                                <div class="col-sm-3">
+                                <div class="col-sm-5">
                                     <div class="form-group">
-                                        <label>Date To</label>
+                                        <label for="monitoring-date-to">Date To</label>
                                         <input type="date" class="form-control" id="monitoring-date-to"/>
                                     </div>
                                 </div>
-                                <div class="col-sm-3">
+                                <div class="col-sm-2">
                                     <div class="form-group">
-                                        <label>Min Channel</label>
-                                        <input type="number" class="form-control" id="monitoring-min-channel"
-                                               step="0.0001"/>
-                                    </div>
-                                </div>
-                                <div class="col-sm-3">
-                                    <div class="form-group">
-                                        <label>Max Channel</label>
-                                        <input type="number" class="form-control" id="monitoring-max-channel"
-                                               step="0.0001"/>
+                                        <label for="monitoring-date-to">Live Updates</label>
+                                        <div class="toggle-form-fix">
+                                            <input type="checkbox" checked data-toggle="toggle"
+                                                   id="monitoring-enable-polling">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -47,7 +42,7 @@
             <div class="col-md-12">
                 <div class="card">
                     <div class="header">
-                        <h4 class="title">Beam Candidates</h4>
+                        <h5 class="title">Doppler profile</h5>
                     </div>
 
                     <div class="content">
@@ -61,7 +56,7 @@
             <div class="col-md-12">
                 <div class="card">
                     <div class="header">
-                        <h4 class="title">SNR Profile</h4>
+                        <h5 class="title">SNR Profile</h5>
                     </div>
 
                     <div class="content">
@@ -83,15 +78,11 @@
 
     <script>
         $(document).ready(function () {
-            {#            var ORBIT_DETERMINATION_URL = "/monitoring/beam_candidates/table?";#}
-
-            {#            var socket = io('/');#}
-
             var date_from = $('#monitoring-date-from');
             var date_to = $('#monitoring-date-to');
             var min_channel = $('#monitoring-min-channel');
             var max_channel = $('#monitoring-max-channel');
-
+            var polling = true;
             var default_data = {
                 date_from: '{{ from_time }}',
                 date_to: '{{ to_time }}',
@@ -127,39 +118,59 @@
             });
 
 
-            date_from.flatpickr({
+            var f_date_from = date_from.flatpickr({
                 defaultDate: get_default_value('date_from'),
                 enableTime: true,
                 time_24hr: true,
                 allowInput: true,
+                enableSeconds: true,
                 onValueUpdate: function () {
-                    update_beam_data();
+                    update_beam_data(null, null);
                     localStorage.setItem('date_from', this.input.value);
                 }
             });
 
-            date_to.flatpickr({
+            var f_date_to = date_to.flatpickr({
                 defaultDate: get_default_value('date_to'),
                 enableTime: true,
                 time_24hr: true,
+                enableSeconds: true,
                 allowInput: true,
                 onValueUpdate: function () {
-                    update_beam_data();
+                    update_beam_data(null, null);
                     localStorage.setItem('date_to', this.input.value);
                 }
             });
 
 
             var plot = new TrackDopplerProfilePlotter('doppler-profile-plot');
-            plot.update(new Date(date_from.val() + 'Z').toISOString(), new Date(date_to.val() + 'Z').toISOString());
-
             var plot2 = new TrackSNRProfilePlotter('snr-profile-plot');
-            plot2.update(new Date(date_from.val() + 'Z').toISOString(), new Date(date_to.val() + 'Z').toISOString());
 
-            function update_beam_data() {
+            function update_beam_data(from, to) {
+                if (from == undefined) {
+                    from = new Date(date_from.val() + 'Z').toISOString();
+                }
+
+                if (to == undefined) {
+                    to = new Date(date_to.val() + 'Z').toISOString()
+                }
+
                 log.info('Fetching new data');
-                plot.update(new Date(date_from.val() + 'Z').toISOString(), new Date(date_to.val() + 'Z').toISOString());
-                plot2.update(new Date(date_from.val() + 'Z').toISOString(), new Date(date_to.val() + 'Z').toISOString());
+                plot.update(from, to);
+                plot2.update(from, to);
+            }
+
+            function poll_for_updates() {
+                from = null;
+                now = new Date();
+
+                f_date_to.setDate(now);
+                update_beam_data(null, now.toUTCString());
+                if (polling) {
+                    setTimeout(poll_for_updates, 5000);
+                } else {
+                    log.debug('Polling stopped');
+                }
             }
 
             window.onbeforeunload = function () {
@@ -169,6 +180,21 @@
                 localStorage.setItem('max_channel', max_channel.val());
             };
 
+            $('#monitoring-enable-polling').bootstrapToggle({
+                on: 'Enabled',
+                off: 'Disabled'
+            }).change(function () {
+                if ($(this).prop('checked')) {
+                    log.debug('Enable polling');
+                    polling = true;
+                    poll_for_updates();
+                } else {
+                    log.debug('Disable polling');
+                    polling = false;
+                }
+            });
+
+            poll_for_updates();
         });
     </script>
 {% endblock %}

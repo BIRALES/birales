@@ -10,7 +10,7 @@ var NotificationsManager = function () {
         toastr.options.hideMethod = 'slideUp';
         toastr.options.closeMethod = 'slideUp';
         toastr.options.preventDuplicates = true;
-        toastr.options.positionClass =  "toast-bottom-right";
+        toastr.options.positionClass = "toast-bottom-right";
     };
 
     this.publish = function (message, level) {
@@ -20,7 +20,7 @@ var NotificationsManager = function () {
         }
         else if (level == 'success') {
             toastr.success(message, 'Success');
-            log.success(message);
+            log.info(message);
         }
         else {
             toastr.info(message, 'Info');
@@ -28,3 +28,7 @@ var NotificationsManager = function () {
         }
     };
 };
+
+
+var notifications = new NotificationsManager();
+notifications.init();

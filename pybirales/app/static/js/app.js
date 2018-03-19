@@ -15,4 +15,6 @@ $(document).ready(function () {
     Chart.defaults.global.legend.labels.boxWidth = 10;
     Chart.defaults.global.legend.labels.labelsfontSize = 10;
     Chart.defaults.global.legend.labels.labelspadding = 5;
+
+
 });

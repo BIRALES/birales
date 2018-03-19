@@ -36,7 +36,7 @@ def observation_track_data(observation_id=None, from_date=None, to_date=None):
 
     detected_candidates = SpaceDebrisTrack.get(observation_id=observation_id, to_time=to_date, from_time=from_date)
 
-    return jsonify(detected_candidates[:1].to_json())
+    return detected_candidates.to_json()
 
 
 @observations_page.route('/observations')

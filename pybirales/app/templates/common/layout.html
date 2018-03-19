@@ -21,11 +21,10 @@
         <link rel="stylesheet"
               href="{{ url_for('static', filename='node_modules/flatpickr/dist/flatpickr.min.css') }}">
         <link rel="stylesheet"
-              href="{{ url_for('static', filename='node_modules/selectric/public/selectric.css') }}">
-        <link rel="stylesheet"
               href="{{ url_for('static', filename='node_modules/dropzone/dist/min/dropzone.min.css') }}">
         <link rel="stylesheet"
               href="{{ url_for('static', filename='node_modules/toastr/build/toastr.min.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='node_modules/bootstrap-toggle/css/bootstrap-toggle.min.css') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/side_panel.css') }}"/>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/loader.css') }}"/>
 
@@ -130,6 +129,7 @@
     <script src="{{ url_for('static', filename='node_modules/chart.js/dist/Chart.min.js') }}"></script>
 
     <script src="{{ url_for('static', filename='node_modules/flatpickr/dist/flatpickr.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='node_modules/bootstrap-toggle/js/bootstrap-toggle.min.js') }}"></script>
     <script src="{{ url_for('static', filename='node_modules/selectric/public/jquery.selectric.min.js') }}"></script>
     <script src="{{ url_for('static', filename='node_modules/dropzone/dist/dropzone.js') }}"></script>
     <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
@@ -138,8 +138,6 @@
 
     <script>
         $(document).ready(function () {
-            var notifications = new NotificationsManager();
-            notifications.init();
 
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
@@ -152,6 +150,5 @@
     </script>
 {% endblock %}
 
-<script src="{{ url_for('static', filename='js/helpers/plotly_responsive.js') }}"></script>
 </body>
 </html>
