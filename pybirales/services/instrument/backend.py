@@ -33,6 +33,10 @@ class Backend(object):
         self._coefficients_order = [0, 8, 16, 24, 4, 12, 20, 28, 1, 9, 17, 25, 5, 13, 21, 29,
                                     2, 10, 18, 26, 6, 14, 22, 30, 3, 11, 19, 27, 7, 15, 23, 31]
 
+    @property
+    def roach(self):
+        return self._roach
+
     def start(self, program_fpga=False, equalize=False, calibrate=False):
         """ Start the ROACH-II backend """
         # Check if roach is connected
@@ -172,7 +176,8 @@ class Backend(object):
         logging.info("Birales ROACH backend initialised")
     
     def stop(self):
-        self._roach.stop()
+        if self._roach.is_connected():
+            self._roach.stop()
 
     def load_calibration_coefficients(self, amplitude_filepath=None, phase_filepath=None,
                                       amplitude=None, phase=None):

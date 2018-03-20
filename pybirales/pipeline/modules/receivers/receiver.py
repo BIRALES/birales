@@ -89,10 +89,11 @@ class Receiver(Generator):
 
         if self._daq:
             if self._daq.stopBiralesConsumer() != Result.Failure.value and self._daq.stopReceiver() != Result.Failure.value:
-                try:
-                    Backend.Instance()._roach.stop()
-                except RuntimeError:
-                    logging.warning('Attempt to stop the FPGA client that wasn\'t running.')
+                roach = Backend.Instance().roach
+
+                if roach.is_connected():
+                    roach.stop()
+
                 # Backend.Instance()._roach.disconnect()
                 self._stop.set()
             else:
@@ -144,7 +145,7 @@ class Receiver(Generator):
     def _calculate_rms(input_data):
         """ Calculate the RMS of the incoming antenna data
         :param input_data: Input antenna data """
-        rms_values = np.mean(np.sum(input_data**2, axis=1), 1)[0]
+        rms_values = np.mean(np.sum(input_data ** 2, axis=1), 1)[0]
 
     def _initialise_receiver(self, start_time):
         """ Initialise the receiver """
