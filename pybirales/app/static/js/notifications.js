@@ -19,11 +19,11 @@ var NotificationsManager = function () {
             log.error(message);
         }
         else if (level == 'success') {
-            toastr.success(message, 'Success');
+            toastr.success(message);
             log.info(message);
         }
         else {
-            toastr.info(message, 'Info');
+            toastr.info(message);
             log.info(message);
         }
     };
