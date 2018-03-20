@@ -324,3 +324,8 @@ class SpaceDebrisTrack:
             }).save()
 
             self._id = sd.id
+
+    def delete(self):
+        if self._id:
+            # Already saved to the database, hence we just update
+            _db_model.objects.get(pk=self._id).delete()
