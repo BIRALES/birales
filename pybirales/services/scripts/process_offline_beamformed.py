@@ -26,6 +26,10 @@ print(np.where(data == np.max(data)))
 #    plt.plot(data[163-1*i, :].T)
 #    plt.plot(data[163+1*i, :].T)
 
+with open("tau_beam.txt", 'w') as f:
+    f.write('\n'.join([str(x) for x in data.T]))
+
+
 plt.plot(10*np.log(data.T))
 plt.legend()
 plt.show()

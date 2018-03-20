@@ -11,14 +11,14 @@ def beamformer(i, nbeams, data, weights, coeffs, output):
 
 
 # filepath = "/mnt/2018_02_22/FesCas4/FesCas4_raw.dat"
-filepath = "/mnt/2018_02_28/FesVirgo1/FesVirgo1_raw.dat"
+filepath = "/mnt/2018_03_08/FesCalibTau1/FesCalibTau1_raw.dat"
 
-obs = 'Vir2802'
-cal = 'Vir2802'
+obs = 'Tau1403'
+cal = 'Tau1403'
 
 nsamp = 32768
 nants = 32
-skip = 64
+skip = 4
 
 # Update pointing config
 config['reference_antenna_location'] = [11.6459889, 44.52357778]
@@ -43,37 +43,37 @@ totalsamp = filesize / (8 * nants)
 output = np.zeros((config['nbeams'], int(totalsamp / nsamp) / skip), dtype=np.float)
 
 calib_coeffs = np.array([1.000000+0.000000j,
-1.077067-1.272407j,
-1.209792-0.707701j,
-1.094349-1.111881j,
-1.253441-0.829843j,
--0.658861-1.877637j,
-1.986287+0.451275j,
--0.222136-1.844457j,
-1.030176+1.133961j,
-1.594387+0.327530j,
-0.272793+1.490776j,
-0.391006-1.486456j,
-1.451742+0.425590j,
-1.238944+0.948830j,
-1.449291-0.754724j,
-0.918053+0.396458j,
--1.094343+1.415086j,
-0.044612+1.782410j,
--0.798266+1.688173j,
-1.069074+1.054116j,
--0.975894+1.170727j,
--1.635989+0.192003j,
--0.695983+1.450412j,
--1.022384+1.645008j,
--1.446848+1.290698j,
--1.721431+0.087368j,
-0.058489+1.707038j,
-0.490243+1.811800j,
-1.105667+1.335101j,
-0.293915+1.774871j,
--1.628916+0.521056j,
--1.424269-0.574465j], dtype=np.complex64)
+0.732380-0.588059j,
+0.668125-0.269481j,
+0.816918-0.567270j,
+0.684808-0.699143j,
+-0.659731-1.178600j,
+1.143783+0.104276j,
+-0.285521-1.068825j,
+0.784679+0.219167j,
+0.803180-0.455330j,
+0.626265+0.787476j,
+-0.252647-0.963801j,
+0.823902-0.539061j,
+0.914681-0.152378j,
+0.314542-0.952656j,
+0.555859-0.237510j,
+0.495664+0.931462j,
+1.043619+0.355521j,
+0.696186+0.834885j,
+0.975509-0.303480j,
+0.638386+0.563067j,
+0.086330+1.004608j,
+0.991962+0.475933j,
+0.877047+0.647834j,
+0.855851+0.517210j,
+0.510522+1.025221j,
+0.952729-0.369845j,
+0.966992-0.667751j,
+0.235571-1.084553j,
+0.779670-0.934907j,
+0.947859+0.550121j,
+0.157220+0.956486j], dtype=np.complex64)
 
 #weights = np.ones((1, 1, 32), dtype=np.complex64)
 #weights_real = np.ones(len(calib_coeffs))
@@ -101,11 +101,11 @@ with open(filepath, 'rb') as f:
         sys.stdout.flush()
 
 # Save file
-np.save("casa_raw_processed", output)
+np.save("virgo_raw_processed", output)
 
-text_file_name = '/home/lessju/Code/obs' + str(obs) + '_cal' + str(cal) + '.txt' 
-
-text_file = open(text_file_name, 'w')
-for i in range(output.shape[1]):
-	text_file.write(str(output[0, i]) + '\n')
-text_file.close()
+#text_file_name = '/home/lessju/Code/obs' + str(obs) + '_cal' + str(cal) + '.txt' 
+#
+#text_file = open(text_file_name, 'w')
+#for i in range(output.shape[1]):
+#	text_file.write(str(output[0, i]) + '\n')
+#text_file.close()

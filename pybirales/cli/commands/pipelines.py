@@ -6,7 +6,7 @@ from pybirales.birales import BiralesFacade
 from pybirales.birales_config import BiralesConfig
 from pybirales.cli.helpers import update_config
 from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, CorrelatorPipelineManagerBuilder, \
-    StandAlonePipelineMangerBuilder
+    StandAlonePipelineMangerBuilder, TestReceiverPipelineMangerBuilder
 
 
 @click.group()
@@ -111,6 +111,31 @@ def standalone_pipeline(config_file_path):
 
     # Build the Pipeline Manager using the Stand Alone Pipeline Manager Builder
     manager = bf.build_pipeline(StandAlonePipelineMangerBuilder())
+
+    # Finally, start the observation
+    bf.start_observation(pipeline_manager=manager)
+    
+
+
+@pipelines.command(short_help='Run the stand alone Pipeline')
+@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+              help='The BIRALES configuration file', multiple=True)
+def test_receiver_pipeline(config_file_path):
+    """
+    Run the Stand Alone Pipeline
+
+    :param config_file_path: The default configuration file to be used.
+    :return:
+    """
+
+    # Load the BIRALES configuration from file
+    config = BiralesConfig(config_file_path)
+
+    # Initialise the Birales Facade (BOSS)
+    bf = BiralesFacade(configuration=config)
+
+    # Build the Pipeline Manager using the Stand Alone Pipeline Manager Builder
+    manager = bf.build_pipeline(TestReceiverPipelineMangerBuilder())
 
     # Finally, start the observation
     bf.start_observation(pipeline_manager=manager)

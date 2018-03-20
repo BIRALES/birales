@@ -8,6 +8,8 @@ import numpy as np
 from pybirales.utilities.singleton import Singleton
 from pybirales import settings
 
+logger = logging.getLogger('katcp')
+logger.setLevel(logging.INFO) 
 
 @Singleton
 class Backend(object):
