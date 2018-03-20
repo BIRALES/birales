@@ -79,11 +79,9 @@ class Receiver(Generator):
 
     def start_generator(self):
         """ Start receiving data """
-        # backend = Backend.Instance()
+        backend = Backend.Instance()
         self._initialise_library()
-        #self._initialise_receiver(backend.read_startup_time())
-        self._initialise_receiver(1)
-        logging.info("initialised receiver")
+        self._initialise_receiver(backend.read_startup_time())
 
     def stop(self):
         """ Stop generator """
