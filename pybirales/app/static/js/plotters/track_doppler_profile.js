@@ -2,8 +2,8 @@ function TrackDopplerProfilePlotter(selector) {
     this.selector = selector;
     this.title = 'Track';
     this.name = 'Doppler Profile';
-    this.x_label = 'Channel (MHz)';
-    this.y_label = 'Timestamp (Local)';
+    this.y_label = 'Doppler Shift (Hz)';
+    this.x_label = 'Timestamp (Local)';
     this.api_entry = '/api/live/data';
     this.color_map = colorbrewer['Set3'][12];
 
@@ -18,14 +18,24 @@ function TrackDopplerProfilePlotter(selector) {
             display: false,
             text: this.title
         },
+        tooltips: {
+            callbacks: {
+                label: function (tooltip) {
+                    var d = new Date(tooltip.xLabel);
+                    var date_string = d.getUTCHours() + ':' + d.getUTCMinutes() + ':' + d.getUTCSeconds();
+
+                    return Math.round(tooltip.yLabel) + ' Hz ,' + date_string;
+                }
+            }
+        },
         scales: {
-            xAxes: [{
+            yAxes: [{
                 scaleLabel: {
                     display: true,
-                    labelString: this.x_label
+                    labelString: this.y_label
                 }
             }],
-            yAxes: [{
+            xAxes: [{
                 type: 'time',
                 time: {
                     unit: 'second',
@@ -35,7 +45,7 @@ function TrackDopplerProfilePlotter(selector) {
                 },
                 scaleLabel: {
                     display: true,
-                    labelString: this.y_label
+                    labelString: this.x_label
                 }
             }]
         }
@@ -68,6 +78,7 @@ TrackDopplerProfilePlotter.prototype = {
             var beam_tracks = [];
             var n_pixels = 0;
             $.each(tracks, function (track_id, track) {
+                var tx = track['tx'];
                 $.each(track['data']['channel'], function (i) {
                     var beam_id = track['data']['beam_id'][i];
 
@@ -83,8 +94,8 @@ TrackDopplerProfilePlotter.prototype = {
                     }
 
                     beam_tracks[beam_id].data.push({
-                        x: track['data']['channel'][i],
-                        y: track['data']['time'][i].$date
+                        x: track['data']['time'][i]['$date'],
+                        y: (track['data']['channel'][i] - tx) * 1e6
                     });
 
 
@@ -107,11 +118,11 @@ TrackDopplerProfilePlotter.prototype = {
                     notifications.publish("No detections were made", 'warning');
                 }
             }
-            else{
-                if (self.pixels == n_pixels){
+            else {
+                if (self.pixels == n_pixels) {
                     self.options.animation = false;
                 }
-                else{
+                else {
                     notifications.publish(n_pixels - self.pixels + " new detections were made", 'success');
                 }
             }

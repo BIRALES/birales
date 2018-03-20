@@ -1,16 +1,22 @@
-.footer nav > ul.nav-footer-logos a.nav-footer-logo {
-    margin: 0;
-    padding: 0;
+.footer p.copyright {
+    height: 50px;
+    line-height: 30px;
 }
 
-.footer nav > ul.nav-footer-logos a.nav-footer-logo img {
-    height: 40px;
-    padding: 0 5px;
-    margin: 10px 0;
+.footer-img {
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: center;
+    height: 50px;
+    margin: 10px auto;
 }
 
-.chart.plotly {
-    /*height: 450px*/
+#uom_logo {
+    background-image: url(../img/uom_logo_black.png);
+}
+
+#inaf_logo {
+    background-image: url(../img/inaf_logo.svg);
 }
 
 caption {
@@ -41,10 +47,9 @@ caption {
     margin: 0 20px 10px 20px
 }
 
-.table  > tbody > tr > td {
+.table > tbody > tr > td {
     padding: 5px 5px;
 }
-
 
 table.table.observation-table {
     font-size: 10px;
@@ -81,8 +86,7 @@ div.author > h6.subtitle {
     font-size: 18px;
 }
 
-
-.chart-legend li span{
+.chart-legend li span {
     display: inline-block;
     width: 10px;
     height: 12px;

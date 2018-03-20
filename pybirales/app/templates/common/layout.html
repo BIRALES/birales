@@ -24,7 +24,8 @@
               href="{{ url_for('static', filename='node_modules/dropzone/dist/min/dropzone.min.css') }}">
         <link rel="stylesheet"
               href="{{ url_for('static', filename='node_modules/toastr/build/toastr.min.css') }}">
-        <link rel="stylesheet" href="{{ url_for('static', filename='node_modules/bootstrap-toggle/css/bootstrap-toggle.min.css') }}">
+        <link rel="stylesheet"
+              href="{{ url_for('static', filename='node_modules/bootstrap-toggle/css/bootstrap-toggle.min.css') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/side_panel.css') }}"/>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/loader.css') }}"/>
 
@@ -94,22 +95,34 @@
 
         <footer class="footer">
             <div class="container-fluid">
-                <nav class="pull-left">
-                    <ul class="nav-footer-logos">
-                        <li>
-                            <a class="nav-footer-logo" href="#">
-                                <img src="{{ url_for('static', filename='img/inaf_logo.svg') }}"/>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="nav-footer-logo" href="#">
-                                <img src="{{ url_for('static', filename='img/uom_logo.svg') }}"/>
-                            </a>
-                        </li>
-                    </ul>
-                </nav>
-
-                <p class="copyright pull-right"><a href="">BIRALES</a></p>
+                <div class="row">
+                    <div class="col-xs-4">
+                        <div class="col-xs-6">
+                            <div id="inaf_logo" class="footer-img"></div>
+                        </div>
+                        <div class="col-xs-6">
+                            <div id="uom_logo" class="footer-img"></div>
+                        </div>
+                    </div>
+                    <div class="col-xs-8">
+                        <p class="copyright pull-right"><a href="">BIRALES</a></p>
+                    </div>
+                </div>
+                {#                <nav class="pull-left">#}
+                {#                    <ul class="nav-footer-logos">#}
+                {#                        <li>#}
+                {#                            <a class="nav-footer-logo" href="#">#}
+                {#                                <img src="{{ url_for('static', filename='img/inaf_logo.svg') }}"/>#}
+                {#                            </a>#}
+                {#                        </li>#}
+                {#                        <li>#}
+                {#                            <a class="nav-footer-logo" href="#">#}
+                {#                                <img src="{{ url_for('static', filename='img/uom_logo.svg') }}"/>#}
+                {#                            </a>#}
+                {#                        </li>#}
+                {#                    </ul>#}
+                {#                </nav>#}
+                {#                <p class="copyright pull-right"><a href="">BIRALES</a></p>#}
             </div>
         </footer>
     </div>

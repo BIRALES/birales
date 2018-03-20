@@ -27,8 +27,7 @@
                                     <div class="form-group">
                                         <label for="monitoring-date-to">Live Updates</label>
                                         <div class="toggle-form-fix">
-                                            <input type="checkbox" checked data-toggle="toggle"
-                                                   id="monitoring-enable-polling">
+                                            <input type="checkbox" data-toggle="toggle" id="monitoring-enable-polling">
                                         </div>
                                     </div>
                                 </div>
@@ -80,14 +79,10 @@
         $(document).ready(function () {
             var date_from = $('#monitoring-date-from');
             var date_to = $('#monitoring-date-to');
-            var min_channel = $('#monitoring-min-channel');
-            var max_channel = $('#monitoring-max-channel');
-            var polling = true;
+            var polling = false;
             var default_data = {
                 date_from: '{{ from_time }}',
-                date_to: '{{ to_time }}',
-                min_channel: {{ min_channel }},
-                max_channel: {{ max_channel }}
+                date_to: '{{ to_time }}'
             };
 
 
@@ -106,17 +101,6 @@
 
                 return null;
             }
-
-            min_channel.val(get_default_value('min_channel')).change(function () {
-                update_beam_data();
-                localStorage.setItem('min_channel', this.value);
-            });
-
-            max_channel.val(get_default_value('max_channel')).change(function () {
-                update_beam_data();
-                localStorage.setItem('max_channel', this.value);
-            });
-
 
             var f_date_from = date_from.flatpickr({
                 defaultDate: get_default_value('date_from'),
