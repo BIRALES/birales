@@ -63,6 +63,8 @@ class Detector(ProcessingModule):
 
         self._min_candidate_size = 5
 
+        self._min_activated_beams = 2
+
         # Write to disk every N iterations
         self._write_freq = 10
 
@@ -177,7 +179,7 @@ class Detector(ProcessingModule):
                           .format(id(c), c.size))
 
                 # If the candidate is finished but it very small (delete it)
-                if c.size < self._min_candidate_size:
+                if c.size < self._min_candidate_size or c.activated_beams < self._min_activated_beams:
                     c.delete()
                     log.info('Track {} deleted'.format(id(c)))
             else:

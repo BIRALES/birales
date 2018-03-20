@@ -110,6 +110,10 @@ class SpaceDebrisTrack:
     def size(self):
         return self.data['channel'].size
 
+    @property
+    def activated_beams(self):
+        return self.data['beam_id'].unique().size
+
     def add(self, beam_candidate):
         """
         Associate a beam candidate with this space debris track.
