@@ -133,6 +133,9 @@ class SpaceDebrisTrack:
             'beam_id': [beam_candidate.beam_id for _ in range(0, len(beam_candidate.time_data))],
         })
 
+        # Record the noise of the beam
+        self._beam_noise[beam_candidate.beam_id] = beam_candidate.beam_config['beam_noise']
+
         if not self.data.empty:
             # Combine the beam candidate track to this track
             self.data = pd.concat([self.data, temp_df])
@@ -148,9 +151,6 @@ class SpaceDebrisTrack:
 
             # do not run RANSAC again
             return
-
-        # Record the noise of the beam
-        self._beam_noise[beam_candidate.beam_id] = beam_candidate.beam_config['beam_noise']
 
         # Update linear model of the track
         channels, time = self.data['channel'].values.reshape(-1, 1), self.data['time_sample']
@@ -324,3 +324,8 @@ class SpaceDebrisTrack:
             }).save()
 
             self._id = sd.id
+
+    def delete(self):
+        if self._id:
+            # Already saved to the database, hence we just update
+            _db_model.objects.get(pk=self._id).delete()

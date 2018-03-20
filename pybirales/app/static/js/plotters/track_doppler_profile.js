@@ -40,7 +40,7 @@ function TrackDopplerProfilePlotter(selector) {
                 time: {
                     unit: 'second',
                     displayFormats: {
-                        second: 'H:mm:ssZ'
+                        second: 'H:mm:ss'
                     }
                 },
                 scaleLabel: {

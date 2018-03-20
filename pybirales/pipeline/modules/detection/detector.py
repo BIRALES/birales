@@ -61,6 +61,8 @@ class Detector(ProcessingModule):
 
         self._detection_counter = 0
 
+        self._min_candidate_size = 5
+
         # Write to disk every N iterations
         self._write_freq = 10
 
@@ -173,6 +175,11 @@ class Detector(ProcessingModule):
             if c.is_finished(current_time=self.last_time_sample, min_channel=channels[0], iter_count=self.counter):
                 log.debug('Track {} (n: {}) has transitted outside detection window. Removing it from candidates list'
                           .format(id(c), c.size))
+
+                # If the candidate is finished but it very small (delete it)
+                if c.size < self._min_candidate_size:
+                    c.delete()
+                    log.info('Track {} deleted'.format(id(c)))
             else:
                 log.debug('Track {} (n: {}) is still within detection window'.format(id(c), c.size))
                 temp_candidates.append(c)
