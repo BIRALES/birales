@@ -109,6 +109,12 @@ class Detector(ProcessingModule):
         :param output_data:
         :return:
         """
+
+        # Skip the first two blobs
+        if self.counter < 2:
+            self.counter += 1
+            return
+
         obs_info['iter_count'] = self.counter
         channels, channels_i = self._get_channels(obs_info)
         time = self._get_time(obs_info)
