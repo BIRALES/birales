@@ -192,8 +192,8 @@ class Detector(ProcessingModule):
                 log.debug('Track {} (n: {}) is still within detection window'.format(id(c), c.size))
                 temp_candidates.append(c)
 
-        log.info('Result: {} have space debris tracks have transitted. {} currently in detection window.'.format(
-            len(self._candidates) - len(temp_candidates), len(self._candidates)))
+        log.info('Result: {} tracks have transitted. {} currently in detection window.'.format(
+            len(self._candidates) - len(temp_candidates), len(temp_candidates)))
         self._candidates = temp_candidates
 
         self.counter += 1
