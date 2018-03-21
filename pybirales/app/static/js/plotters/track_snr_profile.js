@@ -19,7 +19,7 @@ function TrackSNRProfilePlotter(selector) {
         tooltips: {
             callbacks: {
                 label: function (tooltip) {
-                    var d = new Date(tooltip.xLabel);
+                    var d = moment(tooltip.xLabel).toDate();
                     var date_string = d.getUTCHours() + ':' + d.getUTCMinutes() + ':' + d.getUTCSeconds();
 
                     return Math.round(tooltip.yLabel) + ' dBHz ,' + date_string;
