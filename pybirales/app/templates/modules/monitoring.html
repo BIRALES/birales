@@ -143,11 +143,13 @@
             }
 
             function poll_for_updates() {
-                from = null;
                 now = new Date();
+                from = moment(now).subtract(1, 'minutes').toDate();
 
                 f_date_to.setDate(now);
-                update_beam_data(null, now.toUTCString());
+                f_date_from.setDate(from);
+
+                update_beam_data(from.toUTCString(), now.toUTCString());
                 if (polling) {
                     setTimeout(poll_for_updates, 5000);
                 } else {
