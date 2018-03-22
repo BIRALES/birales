@@ -107,8 +107,8 @@
                 allowInput: true,
                 enableSeconds: true,
                 onValueUpdate: function () {
-                    update_beam_data(null, null);
                     localStorage.setItem('date_from', this.input.value);
+                    update_beam_data(null, null);
                 }
             });
 
@@ -119,8 +119,8 @@
                 enableSeconds: true,
                 allowInput: true,
                 onValueUpdate: function () {
-                    update_beam_data(null, null);
                     localStorage.setItem('date_to', this.input.value);
+                    update_beam_data(null, null);
                 }
             });
 
@@ -149,7 +149,10 @@
                 f_date_to.setDate(now);
                 f_date_from.setDate(from);
 
-                update_beam_data(from.toUTCString(), now.toUTCString());
+                localStorage.setItem('date_from', from);
+                localStorage.setItem('date_to', now);
+
+                update_beam_data(from.toISOString(), now.toISOString());
                 if (polling) {
                     setTimeout(poll_for_updates, 5000);
                 } else {
@@ -158,10 +161,8 @@
             }
 
             window.onbeforeunload = function () {
-                localStorage.setItem('date_from', date_from.val());
-                localStorage.setItem('date_to', date_to.val());
-                localStorage.setItem('min_channel', min_channel.val());
-                localStorage.setItem('max_channel', max_channel.val());
+                localStorage.setItem('date_from', new Date(date_from.val()).toISOString());
+                localStorage.setItem('date_to', new Date(date_to.val()).toISOString());
             };
 
             $('#monitoring-enable-polling').bootstrapToggle({
@@ -178,7 +179,7 @@
                 }
             });
 
-            poll_for_updates();
+            update_beam_data(new Date(date_from.val()).toISOString(), new Date(date_to.val()).toISOString());
         });
     </script>
 {% endblock %}
