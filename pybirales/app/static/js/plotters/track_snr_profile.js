@@ -110,7 +110,7 @@ TrackSNRProfilePlotter.prototype = {
 
             // Update the plot with the new data
             self.plot = new Chart(document.getElementById(self.selector).getContext("2d"), {
-                type: 'scatter',
+                type: 'line',
                 data: data,
                 options: self.options
             });

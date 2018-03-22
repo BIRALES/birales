@@ -123,7 +123,15 @@ TrackDopplerProfilePlotter.prototype = {
                     self.options.animation = false;
                 }
                 else {
-                    notifications.publish(n_pixels - self.pixels + " new detections were made", 'success');
+                    var delta = n_pixels - self.pixels;
+
+                    if (delta > 0){
+                        notifications.publish(delta + " new detections were made", 'success');
+                    }
+                    else{
+                        notifications.publish(Math.abs(delta) + " detections removed from view", 'info');
+                    }
+
                 }
             }
 

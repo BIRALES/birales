@@ -130,11 +130,11 @@
 
             function update_beam_data(from, to) {
                 if (from == undefined) {
-                    from = new Date(date_from.val() + 'Z').toISOString();
+                    from = new Date(date_from.val()).toUTCString();
                 }
 
                 if (to == undefined) {
-                    to = new Date(date_to.val() + 'Z').toISOString()
+                    to = new Date(date_to.val()).toUTCString()
                 }
 
                 log.info('Fetching new data');
@@ -144,7 +144,7 @@
 
             function poll_for_updates() {
                 now = new Date();
-                from = moment(now).subtract(1, 'minutes').toDate();
+                from = moment(now).subtract(2, 'minutes').toDate();
 
                 f_date_to.setDate(now);
                 f_date_from.setDate(from);
