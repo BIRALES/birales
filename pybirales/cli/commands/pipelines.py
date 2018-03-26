@@ -35,8 +35,8 @@ def pipelines(ctx, name, debug, duration):
 @pipelines.command(short_help='Run the Detection Pipeline')
 @click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
               help='The BIRALES configuration file', multiple=True)
-@click.option('--tx', 'tx', default=410.07, help='The transmission frequency in MHz')
-@click.option('--pointing', 'pointing', default=12.3, help='Reference Declination of the Beam Former')
+@click.option('--tx', 'tx', help='The transmission frequency in MHz')
+@click.option('--pointing', 'pointing', default=12.4, help='Reference Declination of the Beam Former')
 @click.pass_context
 def detection_pipeline(ctx, config_file_path, tx, pointing):
     """
@@ -50,7 +50,10 @@ def detection_pipeline(ctx, config_file_path, tx, pointing):
     :return:
     """
 
+    # if tx:
     ctx.obj = update_config(ctx.obj, 'observation', 'transmitter_frequency', tx)
+
+    # if pointing:
     ctx.obj = update_config(ctx.obj, 'beamformer', 'reference_pointing', pointing)
 
     # Load the BIRALES configuration from file
@@ -114,7 +117,6 @@ def standalone_pipeline(config_file_path):
 
     # Finally, start the observation
     bf.start_observation(pipeline_manager=manager)
-    
 
 
 @pipelines.command(short_help='Run the stand alone Pipeline')
