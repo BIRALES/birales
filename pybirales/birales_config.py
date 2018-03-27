@@ -108,7 +108,7 @@ class BiralesConfig:
         log_config.fileConfig(config_filepath, disable_existing_loggers=False)
 
         # Override the logger's debug level
-        log.getLogger().setLevel('DEBUG')
+        log.getLogger().setLevel('INFO')
 
         # Create directory for file log
         directory = os.path.join('/var/log/birales', '{:%Y_%m_%d}'.format(datetime.datetime.now()))

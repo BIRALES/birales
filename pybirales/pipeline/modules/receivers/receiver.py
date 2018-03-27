@@ -121,6 +121,7 @@ class Receiver(Generator):
                 obs_info['timestamp'] = datetime.datetime.utcfromtimestamp(timestamp)
             except ValueError:
                 logging.warning('A Timestamp error occurred in the receiver')
+                obs_info['timestamp'] = datetime.datetime.utcnow()
                 print timestamp
                 pass
             obs_info['nsubs'] = self._nsubs
