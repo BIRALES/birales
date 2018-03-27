@@ -11,10 +11,10 @@ def beamformer(i, nbeams, data, weights, coeffs, output):
 
 
 # filepath = "/mnt/2018_02_22/FesCas4/FesCas4_raw.dat"
-filepath = "/mnt/2018_03_08/FesCalibTau1/FesCalibTau1_raw.dat"
+filepath = "/mnt/2018/2018_02_20/FesTau2/FesTau2_raw.dat"
 
-obs = 'Tau1403'
-cal = 'Tau1403'
+obs = 'Tau2002'
+cal = 'Tau2002'
 
 nsamp = 32768
 nants = 32
@@ -22,10 +22,14 @@ skip = 4
 
 # Update pointing config
 config['reference_antenna_location'] = [11.6459889, 44.52357778]
-config['reference_declination'] = 12
+config['reference_declination'] = 22
 
 # Generate pointings
-config['pointings'] = [[0, 0]]
+config['pointings'] = [                                     [-3.2,-0.5],             [-3.2,0.5],
+            [-1.6,-2],  [-1.6,-1.5],  [-1.6,-1],  [-1.6,-0.5],  [-1.6,0],  [-1.6,0.5],  [-1.6,1],  [-1.6,1.5],  [-1.6,2],
+            [0,-2],     [0,-1.5],     [0,-1],    [0,-0.5],     [0,0],     [0,0.5],     [0,1],     [0,1.5],     [0,2],
+            [1.6,-2],   [1.6,-1.5],   [1.6,-1],   [1.6,-0.5],   [1.6,0],   [1.6,0.5],   [1.6,1],   [1.6,1.5],   [1.6,2],
+            [3.2,-0.5],   [3.2,0],   [3.2,0.5]]
 config['nbeams'] = len(config['pointings'])
 
 # Create pointing object
@@ -101,7 +105,7 @@ with open(filepath, 'rb') as f:
         sys.stdout.flush()
 
 # Save file
-np.save("virgo_raw_processed", output)
+np.save("tau_raw_processed", output)
 
 #text_file_name = '/home/lessju/Code/obs' + str(obs) + '_cal' + str(cal) + '.txt' 
 #

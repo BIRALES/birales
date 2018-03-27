@@ -50,11 +50,11 @@ def detection_pipeline(ctx, config_file_path, tx, pointing):
     :return:
     """
 
-    # if tx:
-    ctx.obj = update_config(ctx.obj, 'observation', 'transmitter_frequency', tx)
+    if tx:
+        ctx.obj = update_config(ctx.obj, 'observation', 'transmitter_frequency', tx)
 
-    # if pointing:
-    ctx.obj = update_config(ctx.obj, 'beamformer', 'reference_pointing', pointing)
+    if pointing:
+        ctx.obj = update_config(ctx.obj, 'beamformer', 'reference_pointing', pointing)
 
     # Load the BIRALES configuration from file
     config = BiralesConfig(config_file_path, ctx.obj)
