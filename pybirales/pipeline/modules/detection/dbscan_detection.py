@@ -132,8 +132,8 @@ def _detect_clusters(beam):
     n_clusters = len(clusters)
     log.info('Beam %s: Detected %s (from %s) valid clusters', beam.id, n_clusters, len(unique_c_labels))
 
-    if n_clusters > 0:
-        _publisher.publish(SpaceDebrisClusterDetectedEvent(n_clusters, beam.id))
+    # if n_clusters > 0:
+    #     _publisher.publish(SpaceDebrisClusterDetectedEvent(n_clusters, beam.id))
 
     return clusters
 
