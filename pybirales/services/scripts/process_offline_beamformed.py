@@ -2,7 +2,7 @@ from matplotlib.widgets import Slider
 from matplotlib import pyplot as plt
 import numpy as np
 
-data = np.load("casa_raw_processed.npy")
+data = np.load("tau_raw_processed.npy")
 
 start_ra = -0
 stop_ra = 1
@@ -27,7 +27,7 @@ print(np.where(data == np.max(data)))
 #    plt.plot(data[163+1*i, :].T)
 
 with open("tau_beam.txt", 'w') as f:
-    f.write('\n'.join([str(x) for x in data.T]))
+    f.write('\r\n'.join([str(x) for x in data.T]))
 
 
 plt.plot(10*np.log(data.T))
