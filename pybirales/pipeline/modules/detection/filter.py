@@ -6,6 +6,7 @@ from scipy.ndimage import binary_hit_or_miss
 from scipy import signal
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
+from pybirales import settings
 
 
 class InputDataFilter:
@@ -74,9 +75,10 @@ class RemoveTransmitterChannelFilter(InputDataFilter):
         data[peaks_snr_i] = data[peaks_snr_i] - np.mean(data[peaks_snr_i], axis=1, keepdims=True)
         data[data < 0.0] = 0.
 
-        summed = np.sum(data, axis=2)
-        peaks_snr_i = np.unique(np.where(summed > np.mean(summed) + np.std(summed) * 2.0)[1])
-        data[:, peaks_snr_i, :] = 0.0
+        if settings.detection.filter_transmitter:
+            summed = np.sum(data, axis=2)
+            peaks_snr_i = np.unique(np.where(summed > np.mean(summed) + np.std(summed) * 2.0)[1])
+            data[:, peaks_snr_i, :] = 0.0
 
         # print(peaks_snr_i)
         # print(data.shape)
