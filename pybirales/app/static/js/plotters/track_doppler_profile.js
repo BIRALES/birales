@@ -11,6 +11,9 @@ function TrackDopplerProfilePlotter(selector) {
 
     this.options = {
         responsive: true,
+        pointDot: false,
+         pointLabelFontSize: 50,
+
         legend: {
             position: 'bottom'
         },
@@ -87,9 +90,10 @@ TrackDopplerProfilePlotter.prototype = {
                             label: beam_id,
                             data: [],
                             pointBackgroundColor: "#ffffff",
+                            pointRadius: 5,
                             borderColor: self.get_color(beam_id),
                             pointBorderColor: self.get_color(beam_id),
-                            borderWidth: 1
+                            borderWidth: 2
                         }
                     }
 
