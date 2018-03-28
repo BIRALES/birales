@@ -82,6 +82,7 @@ class PipelineManager(object):
 
             # Start all modules
             for module in self._modules:
+                log.debug('Starting module {}'.format(module.name))
                 module.start()
 
             # If we have any plotter, go to plotter loop, otherwise wait

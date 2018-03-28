@@ -158,7 +158,7 @@ def plot(opts):
         im = ax.imshow(data, aspect='auto', interpolation='none',
                        origin='lower', extent=[frequency[0], frequency[-1], 0, time[-1]])
         ax.xaxis.set_major_formatter(formatter)
-        ax.set_xlabel("Channel (kHz)")
+        ax.set_xlabel("Channel (MHz)")
         ax.set_ylabel("Time (s)")
 
         #  cax = fig.add_axes([0.9, 0.1, 0.01, 0.8])
