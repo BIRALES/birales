@@ -81,16 +81,28 @@ class DetectionCluster:
 
             s = np.array(self.snr_data)
 
+            """
             ndx = np.lexsort(keys=(s, ts))
+            print 'ndx', ndx
             index = np.empty(len(ts), 'bool')
             index[-1] = True
             index[:-1] = ts[1:] != ts[:-1]
             i = ndx[index]
+            """
+            sort = np.lexsort(keys=(-s, -ts))
+            unq, unq_index = np.unique(ts[sort], return_index=True)
 
-            # channels = np.array([[channel, ss] for channel, ss in zip(c[i], s[i])])
-            channels = c[i].reshape(-1, 1)
-            time = ts[i]
-            channels_i = self.channels_i[i]
+            mask = sort[unq_index]
+            #
+            # print 'snr', self.snr_data
+            # print 'ts', ts
+            # print 'mask', mask
+            # print 'filtered', ts[mask]
+            # print 'filtered_snr', self.snr_data[mask]
+
+            time = ts[mask]
+            channels = c[mask].reshape(-1, 1)
+            channels_i = self.channels_i[mask]
         else:
             channels = channel_data.reshape(-1, 1)
             time = time_data
@@ -109,7 +121,7 @@ class DetectionCluster:
             channels = channels[inlier_mask]
             time = time[inlier_mask]
             if settings.detection.select_highest_snr:
-                p_v = np.array(self.snr_data[i][inlier_mask])
+                p_v = np.array(self.snr_data[mask][inlier_mask])
             else:
                 p_v = np.array(self.snr_data[inlier_mask])
 
