@@ -275,7 +275,7 @@ class SpaceDebrisTrack:
         if settings.detection.save_candidates:
             try:
                 self._save_db()
-                log.info("Space debris track {} saved".format(id(self)))
+                log.info("Space debris track {} saved with {} data points".format(id(self), self.size))
             except ValidationError:
                 log.exception("Missing or incorrect data in Space Debris Track Model")
             except OperationError:
