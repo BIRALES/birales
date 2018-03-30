@@ -36,7 +36,7 @@ def pipelines(ctx, name, debug, duration):
 @click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
               help='The BIRALES configuration file', multiple=True)
 @click.option('--tx', 'tx', help='The transmission frequency in MHz')
-@click.option('--pointing', 'pointing', default=12.4, help='Reference Declination of the Beam Former')
+@click.option('--pointing', 'pointing', help='Reference Declination of the Beam Former')
 @click.pass_context
 def detection_pipeline(ctx, config_file_path, tx, pointing):
     """
@@ -54,7 +54,7 @@ def detection_pipeline(ctx, config_file_path, tx, pointing):
         ctx.obj = update_config(ctx.obj, 'observation', 'transmitter_frequency', tx)
 
     if pointing:
-        ctx.obj = update_config(ctx.obj, 'beamformer', 'reference_pointing', pointing)
+        ctx.obj = update_config(ctx.obj, 'beamformer', 'reference_declination', pointing)
 
     # Load the BIRALES configuration from file
     config = BiralesConfig(config_file_path, ctx.obj)
