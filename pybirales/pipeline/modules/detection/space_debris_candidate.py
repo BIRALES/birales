@@ -125,7 +125,7 @@ class SpaceDebrisTrack:
         """
 
         if not self.data.empty and not self.is_linear(beam_candidate):
-            log.warning("Beam candidate is not linear. Won't add this beam candidate")
+            log.warning("Beam candidate is not linear. Won't add beam candidate {}".format(id(beam_candidate)))
             return False
 
         temp_df = pd.DataFrame({
@@ -275,7 +275,7 @@ class SpaceDebrisTrack:
         if settings.detection.save_candidates:
             try:
                 self._save_db()
-                log.info("Space debris track saved")
+                log.info("Space debris track {} saved".format(id(self)))
             except ValidationError:
                 log.exception("Missing or incorrect data in Space Debris Track Model")
             except OperationError:

@@ -177,6 +177,8 @@ class Detector(ProcessingModule):
 
                         # Add the space debris track to the candidates list
                         self._candidates.append(sd)
+                    else:
+                        log.debug('Beam candidate {} is not linear or not valid'.format(id(beam_candidate)))
 
         temp_candidates = []
         for c in self._candidates:
