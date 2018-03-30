@@ -12,7 +12,7 @@ function TrackDopplerProfilePlotter(selector) {
     this.options = {
         responsive: true,
         pointDot: false,
-         pointLabelFontSize: 50,
+        pointLabelFontSize: 50,
 
         legend: {
             position: 'bottom'
@@ -129,14 +129,18 @@ TrackDopplerProfilePlotter.prototype = {
                 else {
                     var delta = n_pixels - self.pixels;
 
-                    if (delta > 0){
+                    if (delta > 0) {
                         notifications.publish(delta + " new detections were made", 'success');
                     }
-                    else{
+                    else {
                         notifications.publish(Math.abs(delta) + " detections removed from view", 'info');
                     }
 
                 }
+            }
+
+            if (self.plot) {
+                self.plot.destroy();
             }
 
             // Update the plot with the new data

@@ -106,6 +106,8 @@ TrackSNRProfilePlotter.prototype = {
 
             if (self.plot != undefined) {
                 self.options.animation = false;
+
+                self.plot.destroy();
             }
 
             // Update the plot with the new data
