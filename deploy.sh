@@ -5,16 +5,16 @@
 # Check that the dependencies are met. If not install.
 
 # Install TCPO calibration pipeline
-git fetch origin cleaning_jbxm
-git checkout cleaning_jbxm
-git pull cleaning_jbxm
-sudo ./deploy.sh
+# git fetch origin cleaning_jbxm
+# git checkout cleaning_jbxm
+# git pull cleaning_jbxm
+# sudo ./deploy.sh
 
 # Deploy the BIRALES application
 python setup.py install
 
 # Compile the beamformer library
-cd pybirales/pipeline/beamformer/src
+cd pybirales/pipeline/modules/beamformer/src
 mkdir build
 cd build
 cmake ..
