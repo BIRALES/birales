@@ -15,7 +15,7 @@ DEPENDENCIES = ['configparser', 'futures', 'enum34', 'numpy', 'scipy', 'astropy'
                 'flask-socketio', 'flask_ini', 'fadvise', 'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow',
                 'humanize', 'mongoengine', 'pyfits',
                 'construct==2.5.5-reupload',
-                'corr>=0.7.3',
+                'corr>=0.7.3', 'redis', 'flask_paginate',
                 'python-dateutil',
                 'slackclient']
 

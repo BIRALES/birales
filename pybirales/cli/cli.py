@@ -10,10 +10,10 @@ from pybirales.cli.commands.scheduler import scheduler
 def cli(ctx):
     return ctx
 
+
 cli.add_command(scheduler)
 cli.add_command(pipelines)
 cli.add_command(services)
-
 
 if __name__ == '__main__':
     cli(obj={})

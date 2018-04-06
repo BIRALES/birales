@@ -4,6 +4,14 @@
 
 # Check that the dependencies are met. If not install.
 
+# Install PyDAQ
+git clone git@bitbucket.org:aavslmc/aavs-daq.git
+cd aavs-daq/src
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=/usr/local/lib ..
+sudo make install
+
 # Install TCPO calibration pipeline
 # git fetch origin cleaning_jbxm
 # git checkout cleaning_jbxm
