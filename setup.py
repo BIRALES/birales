@@ -10,6 +10,14 @@ distutils.log.set_verbosity(distutils.log.info)
 HOME = os.environ['HOME']
 CONFIG_PATH = 'configuration'
 TEMPLATES = os.path.join(CONFIG_PATH, 'templates')
+DEPENDENCIES = ['configparser', 'futures', 'enum34', 'numpy', 'scipy', 'astropy', 'astroplan', 'matplotlib', 'numba',
+                'pymongo==2.8.*', 'scikit-learn', 'ephem>=3.7.6.0', 'h5py', 'click', 'flask', 'flask-compress',
+                'flask-socketio', 'flask_ini', 'fadvise', 'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow',
+                'humanize', 'mongoengine', 'pyfits',
+                'construct==2.5.5-reupload',
+                'corr>=0.7.3',
+                'python-dateutil',
+                'slackclient']
 
 
 def list_dir(root_path):
@@ -84,11 +92,8 @@ setup(
              ],
     include_package_data=True,
     zip_safe=False,
-    install_requires=['configparser', 'futures', 'enum34', 'astropy', 'astroplan', 'numpy', 'matplotlib', 'numba',
-                      'pymongo==2.8.*', 'scipy', 'scikit-learn', 'ephem>=3.7.6.0', 'h5py', 'click', 'flask', 'flask-compress',
-                      'flask-socketio', 'flask_ini', 'fadvise', 'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow',
-                      'humanize', 'mongoengine', 'pyfits', 'construct==2.5.5', 'corr>=0.7.3', 'python-dateutil',
-                      'slackclient'],
+    install_requires=DEPENDENCIES,
+    setup_requires=DEPENDENCIES,
     data_files=[
         (os.path.join(HOME, '.birales', CONFIG_PATH), list_dir(os.path.join('pybirales', CONFIG_PATH))),
         (os.path.join(HOME, '.birales', TEMPLATES, 'dev'), list_dir(os.path.join('pybirales', TEMPLATES, 'dev'))),
