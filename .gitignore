@@ -6,7 +6,7 @@ build
 dist
 pybirales.egg-info
 
-
+.eggs
 *.log
 *.swp
 *.h5
