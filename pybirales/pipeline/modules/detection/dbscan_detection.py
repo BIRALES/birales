@@ -137,21 +137,6 @@ def _detect_clusters(beam):
 
     return clusters
 
-
-@timeit
-def save_fits(data, data_type, beam_id):
-    if beam_id in settings.detection.visualise_beams:
-        fits_filename = os.path.join(os.environ['HOME'], settings.detection.visualise_fits_dir,
-                                     settings.observation.name,
-                                     '{}_{}.fits'.format(data_type, beam_id))
-        try:
-            fits_file = fits.open(fits_filename)
-            new_data = np.vstack([fits_file[0].data, data])
-            fits.writeto(fits_filename, new_data, overwrite=True)
-        except IOError:
-            fits.writeto(fits_filename, data, overwrite=True)
-
-
 @timeit
 def detect(obs_info, queue, beam):
     """

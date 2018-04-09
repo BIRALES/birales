@@ -15,12 +15,6 @@ class FitsPersister(ProcessingModule):
         # Call superclass initialiser
         super(FitsPersister, self).__init__(config, input_blob)
 
-        # Sanity checks on configuration
-        if {'visualise_beams', 'visualise_fits_dir'} - set(config.settings()) != set():
-            raise PipelineError("Persister: Missing keys on configuration. (filename_suffix)")
-
-        self._beams_to_visualise = settings.fits_persister.visualise_beams
-
         # Counter
         self._counter = 0
 
@@ -134,6 +128,12 @@ class RawDataFitsPersister(FitsPersister):
         # Call superclass initialiser
         super(RawDataFitsPersister, self).__init__(config, input_blob)
 
+        # Sanity checks on configuration
+        if {'visualise_raw_beams', 'visualise_fits_dir'} - set(config.settings()) != set():
+            raise PipelineError("Persister: Missing keys on configuration. (filename_suffix)")
+
+        self._beams_to_visualise = settings.fits_persister.visualise_raw_beams
+
         self._filename_suffix = 'raw'
 
         # Processing module name
@@ -147,6 +147,11 @@ class FilteredDataFitsPersister(FitsPersister):
     def __init__(self, config, input_blob=None):
         # Call superclass initialiser
         super(FilteredDataFitsPersister, self).__init__(config, input_blob)
+        # Sanity checks on configuration
+        if {'visualise_filtered_beams', 'visualise_fits_dir'} - set(config.settings()) != set():
+            raise PipelineError("Persister: Missing keys on configuration. (filename_suffix)")
+
+        self._beams_to_visualise = settings.fits_persister.visualise_filtered_beams
 
         self._filename_suffix = 'filtered'
 

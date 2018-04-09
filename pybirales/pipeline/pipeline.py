@@ -110,22 +110,24 @@ class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
         if settings.manager.detector_enabled:
             preprocessor = PreProcessor(settings.detection, pp_input)
             self.manager.add_module("preprocessor", preprocessor)
+            filtering = Filter(settings.detection, preprocessor.output_blob)
 
-            if settings.fits_persister.visualise_beams:
-                raw_fits_persister = RawDataFitsPersister(settings.fits_persister, preprocessor.output_blob)
-                filtering = Filter(settings.detection, raw_fits_persister.output_blob)
-                self.manager.add_module("raw_fits_persister", raw_fits_persister)
+            if settings.fits_persister.visualise_raw_beams or settings.fits_persister.visualise_filtered_beams:
+
+                if settings.fits_persister.visualise_raw_beams:
+                    raw_fits_persister = RawDataFitsPersister(settings.fits_persister, preprocessor.output_blob)
+                    filtering = Filter(settings.detection, raw_fits_persister.output_blob)
+                    self.manager.add_module("raw_fits_persister", raw_fits_persister)
+
                 self.manager.add_module("filtering", filtering)
 
-                filtered_fits_persister = FilteredDataFitsPersister(settings.fits_persister, filtering.output_blob)
-                detector = Detector(settings.detection, filtered_fits_persister.output_blob)
-
-                self.manager.add_module("filtered_fits_persister", filtered_fits_persister)
-                self.manager.add_module("detector", detector)
+                if settings.fits_persister.visualise_filtered_beams:
+                    filtered_fits_persister = FilteredDataFitsPersister(settings.fits_persister, filtering.output_blob)
+                    detector = Detector(settings.detection, filtered_fits_persister.output_blob)
+                    self.manager.add_module("filtered_fits_persister", filtered_fits_persister)
+                    self.manager.add_module("detector", detector)
             else:
-                filtering = Filter(settings.detection, preprocessor.output_blob)
                 self.manager.add_module("filtering", filtering)
-
                 detector = Detector(settings.detection, filtering.output_blob)
                 self.manager.add_module("detector", detector)
         else:
