@@ -1,180 +1,206 @@
 import logging as log
-import os
-import warnings
-
-warnings.filterwarnings("ignore", message="numpy.dtype size changed")
-warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 
 import numpy as np
-from astropy.io import fits
+import pandas as pd
+from scipy import stats
 from sklearn import linear_model
 from sklearn.cluster import DBSCAN
 
 from pybirales import settings
-from pybirales.events.events import SpaceDebrisClusterDetectedEvent
-from pybirales.events.publisher import EventsPublisher
+from pybirales.pipeline.modules.detection.exceptions import NoDetectionClustersFound
 from pybirales.pipeline.base.timing import timeit
-from pybirales.pipeline.modules.detection.detection_clusters import DetectionCluster
-
-
 
 _eps = 5
 _min_samples = 5
 _algorithm = 'kd_tree'
 _linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
 db_scan = DBSCAN(eps=_eps, min_samples=_min_samples, algorithm=_algorithm, n_jobs=-1)
-_ref_time = None
-_time_delta = None
-_publisher = None
+N_SAMPLES = 32
 
 
-def _db_scan(beam_id, data):
+def _validate(channel, time_sample, td):
     """
-    Perform the db_scan algorithm on the beam data to identify clusters
+    Validate the detection cluster
 
+    :param channel_ndx:
+    :param time_ndx:
+    :return:
+
+    """
+
+    # Check if cluster is not small
+    if channel.shape[0] < 3:
+        # log.debug('Rejecting cluster with n: %s', channel_ndx.shape[0])
+        return False
+
+    m, _, r_value, _, _ = stats.linregress(time_sample, channel)
+
+    # Correct the gradient's units to be in Hz/s
+    m = m * 1e6 / (td / np.timedelta64(1, 's'))
+
+    # Check if cluster is linear
+    if np.abs(r_value) < settings.detection.linearity_thold:
+        # log.debug('Rejecting cluster with r: %s', r_value)
+        return False
+
+    # Check if cluster gradient is within doppler gradient window
+    if settings.detection.enable_gradient_thold:
+        if not (settings.detection.gradient_thold[0] >= m >= settings.detection.gradient_thold[1]):
+            # log.debug('Rejecting cluster with m: %s', m)
+            return False
+
+    return True
+
+
+def _create(snr_data, cluster_data, channels, t0, td, beam_id, iter_count):
+    """
+
+    :param cluster_data: The labelled cluster data
+    :param channels:
+    :param t0:
+    :param td:
     :param beam_id:
-    :param data:
+    :param iter_count:
     :return:
     """
 
-    try:
-        # Perform clustering on the data and returns cluster labels the points are associated with
-        return db_scan.fit_predict(data)
-    except ValueError:
-        return []
+    channel_ndx = cluster_data[:, 0]
+    time_ndx = cluster_data[:, 1]
+
+    time_sample = time_ndx + iter_count * N_SAMPLES
+
+    # Calculate the channel (frequency) of the sample from the channel index
+    channel = channels[channel_ndx]
+
+    # Check if the cluster is a valid cluster
+    if not _validate(channel, time_sample, td):
+        return False, None
+
+    # Calculate the time of the sample form the time index
+    time = t0 + time_ndx + iter_count * td * N_SAMPLES
+
+    return True, pd.DataFrame({
+        'time_sample': time_sample,
+        'channel_sample': channel_ndx,
+        'time': time,
+        'channel': channel,
+        'snr': snr_data,
+        'beam_id': np.full(time_ndx.shape[0], beam_id),
+        'iter': np.full(time_ndx.shape[0], iter_count),
+    })
 
 
-def check_doppler_range(channels, tx):
-    # If Doppler filtering is disabled, all candidates are valid
-    if not settings.detection.doppler_subset:
-        return True
-
-    dp = (channels - tx) * 1e6
-    return (dp > settings.detection.doppler_range[0]).all() and (dp < settings.detection.doppler_range[1]).all()
-
-
-def _create_detection_clusters(data, beam, cluster_labels, label):
-    data_indices = data[np.where(cluster_labels == label)]
-
-    log.debug('Beam %s: cluster %s contains %s data points', beam.id, label, len(data_indices[:, 1]))
-
-    channel_indices = data_indices[:, 0]
-    time_indices = data_indices[:, 1]
-
-    # If cluster is 'small' do not consider it
-    if len(channel_indices) < _min_samples:
-        log.debug('Beam %s: Ignoring small cluster with %s data points', beam.id, len(channel_indices))
-        return None
-
-    # If cluster is not within the physical doppler range limits
-    if not check_doppler_range(beam.channels[channel_indices], beam.tx):
-        return None
-
-    # Create a Detection Cluster from the cluster data
-    cluster = DetectionCluster(model=_linear_model,
-                               beam_config=beam.get_config(),
-                               time_data=beam.time[time_indices],
-                               channels=beam.channels[channel_indices],
-                               channels_i=beam.channels_i[channel_indices],
-                               snr=beam.snr[(channel_indices, time_indices)])
-
-    # Add only those clusters that are linear
-    if cluster.is_linear and cluster.is_valid:
-        log.debug('Beam %s: Cluster with m:%3.2f, c:%3.2f, n:%s and r:%0.2f is considered to be linear.', beam.id,
-                  cluster.m,
-                  cluster.c, len(channel_indices), cluster.score)
-
-        return cluster
-
-
-@timeit
-def _detect_clusters(beam):
+def partition_input_data(input_data, channel_noise, beam_id):
     """
-    Use the DBScan algorithm to create a set of clusters from the given beam data
 
-    :param beam: The beam object from which the clusters will be generated
+    :param input_data:
+    :param channel_noise:
+    :param beam_id:
     :return:
     """
+
+    # Process part of the input_data
+    beam_data = input_data[beam_id, :, :]
+
+    # Get the channel noise for this beam
+    beam_noise = channel_noise[beam_id]
+
+    # Calculate the SNR
+    snr = beam_data / beam_noise[:, np.newaxis]
+    snr[snr <= 0] = np.nan
+    snr = 10 * np.log10(snr)
+    snr[np.isnan(snr)] = 0.
 
     # Select the data points that are non-zero
-    ndx = np.where(beam.snr > 0)
+    ndx = np.where(snr > 0)
 
-    # Transform them in a time (x), channel (y) nd-array
-    data = np.column_stack(ndx)
+    # Transform them in a time (x), channel (y) nd-array and snr
+    return np.column_stack(ndx), snr[ndx]
 
-    # Perform DBScan on the cluster data
-    c_labels = _db_scan(beam.id, data)
 
-    log.debug('Beam %s: DBSCAN identified %s cluster labels', beam.id, len(c_labels))
+def dbscan_clustering(beam_ndx, snr_data):
+    """
+
+    :param beam_ndx:
+    :param snr_data:
+    :return:
+    """
+    try:
+        # Perform (2D) clustering on the data and returns cluster labels the points are associated with
+        c_labels = db_scan.fit_predict(beam_ndx)
+    except ValueError:
+        raise NoDetectionClustersFound
 
     if len(c_labels) < 1:
-        return []
+        raise NoDetectionClustersFound
 
-    # Select only those labels which were not classified as noise (-1)
-    filtered_c_labels = c_labels[c_labels > -1]
+    # Add cluster labels to the data
+    labelled_data = np.append(beam_ndx, np.expand_dims(c_labels, axis=1), axis=1)
 
-    log.debug('Beam %s: %s / %s data points was considered to be noise',
-              beam.id,
-              len(c_labels) - len(filtered_c_labels),
-              len(c_labels))
+    # Cluster mask to remove noise clusters
+    denoise_mask = labelled_data[:, 2] > -1
 
-    log.debug('Beam %s: %s unique clusters were detected', beam.id, len(np.unique(filtered_c_labels)))
+    # Select only those labels which were not classified as noise was(-1)
+    return labelled_data[denoise_mask], snr_data[denoise_mask]
 
-    # Group the data points in clusters
+
+def create_clusters(snr_data, labelled_data, channels, t0, td, beam_id, iter_count):
+    """
+    Group the data points in clusters
+    :param snr_data:
+    :param labelled_data:
+    :param channels:
+    :param t0:
+    :param td:
+    :param beam_id:
+    :param iter_count:
+    :return:
+    """
+
     clusters = []
-    append = clusters.append
-    unique_c_labels = np.unique(filtered_c_labels).tolist()
-    for label in unique_c_labels:
-        cluster = _create_detection_clusters(data, beam, c_labels, label)
-        if cluster:
-            append(cluster)
 
-    n_clusters = len(clusters)
-    log.info('Beam %s: Detected %s (from %s) valid clusters', beam.id, n_clusters, len(unique_c_labels))
+    unique_cluster_labels = np.unique(labelled_data[:, 2]).tolist()
 
-    # if n_clusters > 0:
-    #     _publisher.publish(SpaceDebrisClusterDetectedEvent(n_clusters, beam.id))
+    for label in unique_cluster_labels:
+        label_mask = labelled_data[:, 2] == label
+        valid, cluster = _create(snr_data[label_mask], labelled_data[label_mask], channels, t0, td, beam_id,
+                                 iter_count)
+
+        if valid:
+            clusters.append(cluster)
+            log.debug('Created beam candidate {}'.format(id(cluster)))
 
     return clusters
 
-@timeit
-def detect(obs_info, queue, beam):
+
+def detect(input_data, channels, t0, td, iter_count, channel_noise, beam_id):
     """
-    The core detection algorithm to be applied to the incoming data
+    Use the DBScan algorithm to create a set of clusters from the given beam data
 
     To be run in parallel using the multi-processing queue
 
-    :param obs_info:
-    :param queue:
-    :param beam:
-    :return: DetectionClusters
+    :param input_data:
+    :param beam_id:
+    :param channels:
+    :param t0:
+    :param td:
+    :param iter_count:
+    :param channel_noise:
+    :return:
     """
 
-    global _time_delta, _ref_time, _publisher
-    _ref_time = np.datetime64(obs_info['timestamp'])
-    _time_delta = np.timedelta64(int(obs_info['sampling_time'] * 1e9), 'ns')
+    # Process a slice of the input data
+    beam_ndx, snr_data = partition_input_data(input_data, channel_noise, beam_id)
 
-    if not _publisher:
-        _publisher = EventsPublisher.Instance()
+    try:
+        # Run the clustering algorithm on the beam data (channel,time,snr,label)
+        labelled_data, snr_data = dbscan_clustering(beam_ndx, snr_data)
+    except NoDetectionClustersFound:
+        log.debug('No detection clusters were found in iteration {}'.format(iter_count))
+        return []
 
-    # Associate a beam candidate repository to the queue
-    # queue.set_repository(BeamCandidateRepository())
+    # Validate and create linear detection clusters
+    clusters = create_clusters(snr_data, labelled_data, channels, t0, td, beam_id, iter_count)
+    log.debug('Beam %s: %s: %s valid clusters remain after validation', beam_id, iter_count, len(clusters))
 
-    # Save the raw data as a fits file
-    # save_fits(beam.snr, 'raw', beam.id)
-
-    # Apply the pre-processing filters to the beam data
-    # beam.apply_filters()
-
-    # Save the filtered data as a fits file
-    # save_fits(beam.snr, 'filtered', beam.id)
-
-    return _detect_clusters(beam)
-
-    # Add the beam candidates to the beam queue
-    enqueue = queue.enqueue
-    for candidate in _detect_clusters(beam):
-        enqueue(candidate)
-
-    # Get the detection candidates
-    return queue.get_candidates(beam.id)
+    return clusters

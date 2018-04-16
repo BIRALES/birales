@@ -79,12 +79,7 @@ class RemoveTransmitterChannelFilter(InputDataFilter):
             summed = np.sum(data, axis=2)
             peaks_snr_i = np.unique(np.where(summed > np.mean(summed) + np.std(summed) * 2.0)[1])
             data[:, peaks_snr_i, :] = 0.0
-
-        # print(peaks_snr_i)
-        # print(data.shape)
-        # print(np.sqrt(np.mean(data ** 2)))
-
-        log.debug('Transmitter frequency removed')
+            log.debug('Transmitter frequency filter applied')
 
 
 class Filter(ProcessingModule):

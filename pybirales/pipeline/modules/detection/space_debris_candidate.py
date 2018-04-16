@@ -2,22 +2,14 @@ import datetime
 import logging as log
 
 import numpy as np
-
-import warnings
-
-warnings.simplefilter('ignore', category=FutureWarning)
-
 import pandas as pd
-import warnings
-
-warnings.simplefilter('ignore', category=FutureWarning)
-
 import scipy.spatial.distance as dist
 from mongoengine import *
+from scipy import stats
 from sklearn import linear_model
 
 from pybirales import settings
-from pybirales.pipeline.modules.detection.detection_clusters import DetectionCluster
+from pybirales.pipeline.modules.detection.exceptions import DetectionClusterIsNotValid
 from pybirales.repository.models import SpaceDebrisTrack
 
 _linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
@@ -46,14 +38,13 @@ class Target:
 
 
 class SpaceDebrisTrack:
-    def __init__(self, det_no, obs_info, beam_candidate=None):
+    def __init__(self, obs_info, cluster=None):
         """
 
         :param obs_info:
-        :param beam_candidate:
+        :param cluster:
         """
         self._id = None
-        self.detection_num = det_no
         self.name = None
         self._created_at = datetime.datetime.utcnow()
         self._obs_info = obs_info
@@ -78,7 +69,7 @@ class SpaceDebrisTrack:
         self._detected_target = None
 
         # DataFrame encapsulating the track data (snr, time, channel, beam id)
-        self.data = pd.DataFrame(columns=['time_sample', 'channel_sample',  'time', 'channel', 'snr', 'beam_id'])
+        self.data = pd.DataFrame(columns=['time_sample', 'channel_sample', 'time', 'channel', 'snr', 'beam_id'])
         # self.data.set_index('time_sample')
 
         # The filepath where to save the space debris candidate
@@ -99,8 +90,9 @@ class SpaceDebrisTrack:
         self._iter = 0
 
         # If a beam candidate is given, add it on initialisation
-        if isinstance(beam_candidate, DetectionCluster):
-            self.add(beam_candidate)
+        # if isinstance(beam_candidate, DetectionCluster):
+        #     self.add(beam_candidate)
+        self.add(cluster)
 
     @property
     def duration(self):
@@ -114,122 +106,66 @@ class SpaceDebrisTrack:
     def activated_beams(self):
         return self.data['beam_id'].unique().size
 
-    def add(self, beam_candidate):
+    def _update(self, new_df):
+        self.data = new_df
+        self.m, self.intercept, self.r_value, self.p_value, self.std_err = stats.linregress(
+            self.data['channel_sample'], self.data['time_sample'])
+
+        self._last_iter_count = self.data['iter'].max()
+
+        self.data = self.data.sort_values(by='time')
+
+        # Save the candidate
+        self._save()
+
+    def _fit(self, x, y):
+        """
+        Use a RANSAC linear fitting model to remove outliers
+        todo - only apply RANSAC for clusters greater than a minimum number of data-points
+
+        :param x:
+        :param y:
+        :return:
+        """
+
+        try:
+            self._linear_model.fit(x.values.reshape(-1, 1), y)
+        except ValueError:
+            return False, self._linear_model
+        else:
+            return True, self._linear_model
+
+    def add(self, cluster_df):
         """
         Associate a beam candidate with this space debris track.
         Update the space debris track's attributes based on new data
 
-        :param beam_candidate:
-        :type beam_candidate: DetectionCluster
+        :param cluster_df:
+        :type cluster_df: ndarray
         :return:
         """
 
-        if not self.data.empty and not self.is_linear(beam_candidate):
-            log.warning("Beam candidate is not linear. Won't add beam candidate {}".format(id(beam_candidate)))
-            return False
+        def _merge_tmp_df(df, delta_df):
+            """
+            Create a temporary data frame (merge track df with cluster df)
+            :param df: The data frame of the track
+            :param delta_df: The cluster df that is to be merged
+            :return:
+            """
 
-        temp_df = pd.DataFrame({
-            'time_sample': beam_candidate.time_data,
-            'channel_sample': beam_candidate.channels_i,
-            'time': beam_candidate.time_f_data,
-            'channel': beam_candidate.channel_data,
-            'snr': beam_candidate.snr_data,
-            'beam_id': [beam_candidate.beam_id for _ in range(0, len(beam_candidate.time_data))],
-        })
+            if df.empty:
+                return delta_df
+            return pd.concat([self.data, cluster_df])
 
-        # Record the noise of the beam
-        self._beam_noise[beam_candidate.beam_id] = beam_candidate.beam_config['beam_noise']
+        tmp_merged_df = _merge_tmp_df(self.data, cluster_df)
+        is_valid, l_model = self._fit(tmp_merged_df['channel_sample'], tmp_merged_df['time_sample'])
 
-        if not self.data.empty:
-            # Combine the beam candidate track to this track
-            self.data = pd.concat([self.data, temp_df])
+        if is_valid:
+            # Remove outliers from the merged df and update the track
+            self._update(tmp_merged_df[l_model.inlier_mask_])
         else:
-            self.data = temp_df
-            self.score = beam_candidate.score
-            self.m = beam_candidate.m
-            self.intercept = beam_candidate.c
-
-            self._save()
-
-            self._last_iter_count = beam_candidate.iter_count
-
-            # do not run RANSAC again
-            return
-
-        # Update linear model of the track
-        channels, time = self.data['channel'].values.reshape(-1, 1), self.data['time_sample']
-
-        try:
-            self._linear_model.fit(channels, time)
-        except ValueError:
-            log.debug('Space debris linear fitting failed. Beam candidate not added to track {}'.format(id(self)))
-        else:
-            channels, time = channels[self._linear_model.inlier_mask_], time[self._linear_model.inlier_mask_]
-
-            # todo - replace the functionality below with an _update function
-            self.score = self._linear_model.estimator_.score(channels, time)
-            self.m = self._linear_model.estimator_.coef_[0]
-            self.intercept = self._linear_model.estimator_.intercept_
-
-            # Remove outliers from the data
-            self.data = self.data[self._linear_model.inlier_mask_]
-
-            # Sort data by time
-            self.data = self.data.sort_values(by='time')
-
-            # Update rcs
-            # Update detected target
-
-            # Persist the candidate to DB/TDM
-            self._save()
-
-            self._last_iter_count = beam_candidate.iter_count
-
-    def is_linear(self, detection_cluster):
-        """
-        Check that if the data from the detection cluster is added to the space debris track,
-        the linear fit works
-
-        todo - on success, you should avoid doing this twice (when adding)
-
-        :param detection_cluster:
-        :return:
-        """
-
-        temp_df = pd.DataFrame({
-            'time_sample': detection_cluster.time_data,
-            'channel_sample': detection_cluster.channels_i,
-            'channel': detection_cluster.channel_data,
-            'snr': detection_cluster.snr_data,
-
-            'beam_id': [detection_cluster.beam_id for _ in range(0, len(detection_cluster.time_data))],
-        })
-
-        temp_df2 = temp_df
-        if not self.data.empty:
-            # Combine the beam candidate track to this track
-            temp_df2 = pd.concat([self.data, temp_df])
-
-        channels, time = temp_df2['channel'].values.reshape(-1, 1), temp_df2['time_sample']
-
-        try:
-            self._linear_model.fit(channels, time)
-        except ValueError:
-            log.warning("Linear Fit failed when combining beam candidate {} to the space debris track {}".format(
-                id(detection_cluster), id(self)
-            ))
-
-            return False
-        else:
-            channels, time = channels[self._linear_model.inlier_mask_], time[self._linear_model.inlier_mask_]
-
-            score = self._linear_model.estimator_.score(channels, time)
-
-            is_linear = score > settings.detection.linearity_thold
-            doppler_check = settings.detection.m_limit[0] <= self._linear_model.estimator_.coef_[0] <= \
-                            settings.detection.m_limit[1]
-
-            return is_linear and doppler_check
+            # If fitting failed, track data remains unchanged, and raise an exception
+            raise DetectionClusterIsNotValid(cluster_df)
 
     def is_finished(self, current_time, min_channel, iter_count):
         """
@@ -242,7 +178,7 @@ class SpaceDebrisTrack:
 
         # return current_time > self._exit_time or (iter_count - self._last_iter_count) > 5
 
-        # The track is deemed to be finished if it has not been updated since N itera
+        # The track is deemed to be finished if it has not been updated since N iterations
         return (iter_count - self._last_iter_count) > self._max_candidate_iter
 
     def is_parent_of(self, detection_cluster):
@@ -252,17 +188,13 @@ class SpaceDebrisTrack:
         cosine distance.
 
         :param detection_cluster: The detection cluster with which the track is being compared
-        :type detection_cluster: DetectionCluster
         :return:
         """
 
-        # The similarity threshold which determines if track is similar or not
-        similarity_thold = settings.detection.similarity_thold
+        cluster_m, cluster_c, _, _, _ = stats.linregress(detection_cluster['channel_sample'],
+                                                         detection_cluster['time_sample'])
 
-        if self.m and self.intercept:
-            return dist.cosine([self.m, self.intercept], [detection_cluster.m, detection_cluster.c]) < similarity_thold
-
-        return True
+        return dist.cosine([self.m, self.intercept], [cluster_m, cluster_c]) < settings.detection.similarity_thold
 
     def _save(self):
         """

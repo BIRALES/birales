@@ -1,20 +1,17 @@
 import logging as log
-import Queue
 from functools import partial
 from multiprocessing import Pool
 
 import numpy as np
+from scipy import stats
 
 from pybirales import settings
-from pybirales.events.events import SpaceDebrisDetectedEvent
-from pybirales.events.publisher import EventsPublisher
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
-from pybirales.pipeline.modules.detection.beam import Beam
 from pybirales.pipeline.modules.detection.dbscan_detection import detect
-from pybirales.pipeline.modules.detection.queue import BeamCandidatesQueue
+from pybirales.pipeline.modules.detection.exceptions import DetectionClusterIsNotValid
 from pybirales.pipeline.modules.detection.space_debris_candidate import SpaceDebrisTrack
-from pybirales.pipeline.modules.detection.tdm.tdm import TDMWriter
+from numba import jit
 
 
 class Detector(ProcessingModule):
@@ -24,23 +21,13 @@ class Detector(ProcessingModule):
         # Ensure that the input blob is of the expected format
         self._validate_data_blob(input_blob, valid_blobs=[ChannelisedBlob])
 
-        # Data structure that hold the detected debris (for merging)
-        self._debris_queue = BeamCandidatesQueue(settings.beamformer.nbeams)
-
-        # Flag that indicates whether the configuration was persisted
-        self._config_persisted = False
-
         self.pool = None
         if settings.detection.multi_proc:
-            self.pool = Pool(settings.detection.n_procs)
+            self.pool = Pool(4)
 
         self.counter = 0
 
         self.channels = None
-
-        self.time = None
-
-        self.channels_i = None
 
         self._doppler_mask = None
 
@@ -48,16 +35,8 @@ class Detector(ProcessingModule):
 
         self.name = "Detector"
 
-        self._candidates_detected = 0
-
-        self._publisher = EventsPublisher.Instance()
-
         # A list of space debris tracks
         self._candidates = []
-
-        self._tdm_writer = TDMWriter(queue=Queue.Queue())
-
-        self._tdm_writer.start()
 
         self._detection_counter = 0
 
@@ -69,120 +48,93 @@ class Detector(ProcessingModule):
         self._write_freq = 10
 
     def _tear_down(self):
-        self._tdm_writer.stop()
-        self.pool.close()
-
-    def _get_doppler_mask(self, tx, channels):
-        if self._doppler_mask is None:
-            a = tx + settings.detection.doppler_range[0] * 1e-6
-            b = tx + settings.detection.doppler_range[1] * 1e-6
-
-            self._doppler_mask = np.bitwise_and(channels < b, channels > a)
-
-        return self._doppler_mask
-
-    def _get_channels(self, obs_info):
-        if self.channels is None:
-            self.channels = np.arange(obs_info['start_center_frequency'],
-                                      obs_info['start_center_frequency'] + obs_info['channel_bandwidth'] * obs_info[
-                                          'nchans'],
-                                      obs_info['channel_bandwidth'])
-            self.channels_i = np.arange(0, obs_info['nchans'])
-            if settings.detection.doppler_subset:
-                doppler_mask = self._get_doppler_mask(obs_info['transmitter_frequency'], self.channels)
-                self.channels = self.channels[doppler_mask]
-                self.channels_i = self.channels_i[doppler_mask]
-
-        return self.channels, self.channels_i
-
-    def _get_time(self, obs_info):
-        self.time = np.arange(0, obs_info['nsamp']) + self.counter * obs_info['nsamp']
-
-        return self.time
-
-    def process(self, obs_info, input_data, output_data):
         """
-        Run the Space Debris Detector pipeline
+
+        :return:
+        """
+        if settings.detection.multi_proc:
+            self.pool.close()
+
+    def _apply_doppler_mask(self, obs_info):
+        """
 
         :param obs_info:
-        :param input_data:
-        :param output_data:
+        :return:
+        """
+        if self._doppler_mask is None:
+            self.channels = np.arange(obs_info['start_center_frequency'],
+                                      obs_info['start_center_frequency'] + obs_info['channel_bandwidth'] * obs_info[
+                                          'nchans'], obs_info['channel_bandwidth'])
+            a = obs_info['transmitter_frequency'] + settings.detection.doppler_range[0] * 1e-6
+            b = obs_info['transmitter_frequency'] + settings.detection.doppler_range[1] * 1e-6
+
+            self._doppler_mask = np.bitwise_and(self.channels < b, self.channels > a)
+
+            if settings.detection.enable_doppler_window:
+                self.channels = self.channels[self._doppler_mask]
+            else:
+                # Select all channels
+                self._doppler_mask = False
+
+        return self.channels, self._doppler_mask
+
+    def _debug_msg(self, cluster):
+        """
+
+        :param cluster:
+        :return:
+        """
+        m, c, r_value, _, _ = stats.linregress(cluster['channel_sample'], cluster['time_sample'])
+        return '{} (m={:0.2f}, c={:0.2f}, s={:0.2f}, n={}, i={})'.format(id(cluster), m, c, r_value, cluster.shape[0],
+                                                                         self.counter)
+
+    def _aggregate_clusters(self, candidates, clusters, obs_info):
+        """
+        Create Space Debris Tracks from the detection clusters identified in each beam
+
+        :param clusters:
+        :return:
+        """
+        for cluster_list in clusters:
+            for cluster in cluster_list:
+                for candidate in candidates:
+                    # If beam candidate is similar to candidate, merge it.
+                    if candidate.is_parent_of(cluster):
+                        try:
+                            candidate.add(cluster)
+                        except DetectionClusterIsNotValid:
+                            log.debug('Beam candidate {} could not be added to track {}'.format(
+                                self._debug_msg(cluster), id(candidate)))
+                        else:
+                            log.debug('Beam candidate {} added to track {}'.format(self._debug_msg(cluster),
+                                                                                   id(candidate)))
+                            break
+                else:
+                    # Beam candidate does not match any candidate. Create candidate from it.
+                    # Transform this beam candidate into a space debris track
+                    try:
+                        sd = SpaceDebrisTrack(obs_info=obs_info, cluster=cluster)
+                    except DetectionClusterIsNotValid:
+                        continue
+
+                    log.debug('Created new track {} from Beam candidate {}'.format(id(sd), self._debug_msg(cluster)))
+
+                    # Add the space debris track to the candidates list
+                    candidates.append(sd)
+
+        return candidates
+
+    def _active_tracks(self, candidates, iter_count):
+        """
+
+        :param candidates:
+        :param iter_count:
         :return:
         """
 
-        # Skip the first two blobs
-        if self.counter < 2:
-            self.counter += 1
-            return
-
-        obs_info['iter_count'] = self.counter
-        channels, channels_i = self._get_channels(obs_info)
-        time = self._get_time(obs_info)
-        doppler_mask = self._get_doppler_mask(obs_info['transmitter_frequency'], channels)
-
-        if settings.detection.doppler_subset:
-            input_data = input_data[:, doppler_mask, :]
-
-        beams = [Beam(beam_id=n_beam,
-                      obs_info=obs_info,
-                      channels=channels,
-                      channels_i=channels_i,
-                      time=time,
-                      beam_data=input_data)
-                 for n_beam in range(settings.detection.beam_range[0], settings.detection.beam_range[1])]
-
-        if settings.detection.multi_proc:
-            func = partial(detect, obs_info, self._debris_queue)
-            beam_candidates = self.pool.map(func, beams)
-        else:
-            beam_candidates = []
-            for beam in beams:
-                beam_candidates.append(detect(obs_info, self._debris_queue, beam))
-
-        self._candidates_detected += np.count_nonzero(beam_candidates)
-
-        log.info('Result: Detected {} beam candidates across {} beams'.format(self._candidates_detected, len(beams)))
-
-        self._debris_queue.set_candidates(beam_candidates)
-
-        # Create Space Debris Tracks from tracks in beams
-        for beam_candidate_list in beam_candidates:
-            for beam_candidate in beam_candidate_list:
-                for candidate in self._candidates:
-                    # If beam candidate is similar to candidate, merge it.
-                    if candidate.is_parent_of(beam_candidate) and beam_candidate.is_linear and beam_candidate.is_valid:
-                        log.debug(
-                            'Beam candidate {} (m={}, c={}, s={}, n={}) added to track {}'.format(id(beam_candidate),
-                                                                                                  beam_candidate.m,
-                                                                                                  beam_candidate.c,
-                                                                                                  beam_candidate.score,
-                                                                                                  len(
-                                                                                                      beam_candidate.time_data),
-                                                                                                  id(candidate)))
-
-                        candidate.add(beam_candidate)
-                        break
-                else:
-                    # Beam candidate does not match any candidate. Create candidate from it.
-                    if beam_candidate.is_linear and beam_candidate.is_valid:
-                        # Transform this beam candidate into a space debris track
-                        self._detection_counter += 1
-                        sd = SpaceDebrisTrack(det_no=self._detection_counter, obs_info=obs_info,
-                                              beam_candidate=beam_candidate)
-
-                        log.debug('Created new track {} from Beam candidate {}'.format(id(sd), id(beam_candidate),
-                                                                                       beam_candidate.debug_msg))
-                        # Publish event: A space debris detection was made
-                        self._publisher.publish(SpaceDebrisDetectedEvent(sd))
-
-                        # Add the space debris track to the candidates list
-                        self._candidates.append(sd)
-                    else:
-                        log.debug('Beam candidate {} is not linear or not valid'.format(id(beam_candidate)))
-
         temp_candidates = []
-        for c in self._candidates:
-            if c.is_finished(current_time=self.last_time_sample, min_channel=channels[0], iter_count=self.counter):
+        for c in candidates:
+            if c.is_finished(current_time=10, min_channel=20, iter_count=iter_count):
                 log.debug('Track {} (n: {}) has transitted outside detection window. Removing it from candidates list'
                           .format(id(c), c.size))
 
@@ -196,19 +148,88 @@ class Detector(ProcessingModule):
 
         log.info('Result: {} tracks have transitted. {} currently in detection window.'.format(
             len(self._candidates) - len(temp_candidates), len(temp_candidates)))
-        self._candidates = temp_candidates
+
+        return temp_candidates
+
+    def _pre_process(self, input_data, obs_info):
+        """
+
+        :param input_data:
+        :param obs_info:
+        :return:
+        """
+        channels, doppler_mask = self._apply_doppler_mask(obs_info)
+        channel_noise = obs_info['channel_noise']
+
+        if settings.detection.enable_doppler_window:
+            input_data = input_data[:, doppler_mask, :]
+            channel_noise = channel_noise[:, doppler_mask]
+
+        log.info('Using {} out of {} channels ({:0.3f} MHz to {:0.3f} MHz).'.format(channel_noise.shape[1],
+                                                                                    obs_info['nchans'], channels[0],
+                                                                                    channels[-1]))
+
+        return input_data, channels, channel_noise
+
+    def _get_clusters(self, input_data, channels, channel_noise, obs_info, iter_counter):
+        """
+
+        :param input_data:
+        :param channels:
+        :param channel_noise:
+        :param obs_info:
+        :param iter_counter:
+        :return:
+        """
+
+        t0 = np.datetime64(obs_info['timestamp'])
+        td = np.timedelta64(int(obs_info['sampling_time'] * 1e9), 'ns')
+
+        clusters = []
+        for beam_id in range(0, 32):
+            clusters.append(detect(input_data, channels, t0, td, iter_counter, channel_noise, beam_id))
+
+        # todo - multi-processing is slower than single threaded equivalent
+        # if settings.detection.multi_proc:
+        #     func = partial(detect, input_data, channels, t0, td, iter_counter, channel_noise)
+        #     clusters = self.pool.map(func, range(0, 32))
+        #     return clusters
+
+
+        return clusters
+
+    def process(self, obs_info, input_data, output_data):
+        """
+        Sieve through the pre-processed channelised data for space debris candidates
+
+        :param obs_info:
+        :param input_data:
+        :param output_data:
+        :return:
+        """
+
+        # Skip the first two blobs
+        if self.counter < 2:
+            self.counter += 1
+            return
+
+        obs_info['iter_count'] = self.counter
+
+        # Pre-process the input data
+        input_data, channels, channel_noise = self._pre_process(input_data, obs_info)
+
+        # Process the input data and identify the detection clusters
+        clusters = self._get_clusters(input_data, channels, channel_noise, obs_info, self.counter)
+
+        # Create new tracks from clusters or merge clusters into existing tracks
+        candidates = self._aggregate_clusters(self._candidates, clusters, obs_info)
+
+        # Check each track and determine if the detection object has transitted outside FoV
+        self._candidates = self._active_tracks(candidates, self.counter)
 
         self.counter += 1
 
-        if self.counter % self._write_freq == 0:
-            for c in self._candidates:
-                self._tdm_writer.queue.put((c, obs_info))
-
         return obs_info
-
-    @property
-    def last_time_sample(self):
-        return self.time[0]
 
     def generate_output_blob(self):
         pass

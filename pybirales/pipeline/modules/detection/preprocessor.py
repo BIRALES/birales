@@ -1,3 +1,5 @@
+import logging as log
+
 import numpy as np
 
 from pybirales import settings
@@ -15,7 +17,7 @@ class PreProcessor(ProcessingModule):
 
         self.counter = 0
 
-        self.noise = []
+        self.channel_noise = np.empty(shape=(32, 8192, settings.detection.n_noise_samples)) * np.nan
 
         self._observation = None
 
@@ -26,20 +28,17 @@ class PreProcessor(ProcessingModule):
 
         self.name = "PreProcessor"
 
-    def _get_noise_estimation(self, data):
+    def _get_noise_estimation(self, power_data, iter_count):
         if self.counter < settings.detection.n_noise_samples:
-            power = self._power(data[:, settings.detection.noise_channels, :])
-
             if settings.detection.noise_use_rms:
                 #  use RMS
-                noise = np.sqrt(np.mean(power))
+                beam_channel_noise = np.sqrt(np.mean(power_data, axis=2))
             else:
                 # use mean
-                noise = np.mean(power)
+                beam_channel_noise = np.mean(power_data, axis=2)
 
-            self.noise.append(noise)
-            self.mean_noise = np.mean(self.noise)
-        return float(self.mean_noise)
+            self.channel_noise[:, :, iter_count] = beam_channel_noise
+        return np.nanmean(self.channel_noise, axis=2)
 
     def process(self, obs_info, input_data, output_data):
         """
@@ -51,20 +50,25 @@ class PreProcessor(ProcessingModule):
         :return:
         """
 
-        # Reduce the blob to a single polarization
+        # Process only 1 polarisation
         data = input_data[0, :, :, :]
 
+        power_data = self._power(data)
+
         # Estimate the noise from the data
-        obs_info['noise'] = self._get_noise_estimation(data)
+        obs_info['channel_noise'] = self._get_noise_estimation(power_data, self.counter)
+        obs_info['mean_noise'] = np.mean(obs_info['channel_noise'])
 
         # If the configuration was not saved AND the number of noise samples is sufficient, save the noise value.
         if not self._config_persisted and self.counter >= settings.detection.n_noise_samples:
             self._observation = Observation.objects.get(id=settings.observation.id)
-            self._observation.noise_estimate = obs_info['noise']
+            self._observation.mean_noise = obs_info['mean_noise']
+            self._observation.mean_channel_noise = obs_info['channel_noise']
             self._observation.save()
             self._config_persisted = True
 
-        output_data[:] = self._power(data)
+            log.info('Mean noise {:0.3f}'.format(obs_info['mean_noise']))
+        output_data[:] = power_data
         self.counter += 1
 
         return obs_info
