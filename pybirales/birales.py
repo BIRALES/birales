@@ -15,6 +15,7 @@ from pybirales.repository.models import Observation
 from pybirales.services.calibration.calibration import CalibrationFacade
 from pybirales.services.instrument.backend import Backend
 from pybirales.services.instrument.best2 import BEST2
+from pybirales.services.post_processing.processor import PostProcessor
 from pybirales.services.scheduler.exceptions import SchedulerException, NoObservationsQueuedException
 from pybirales.services.scheduler.observation import ScheduledObservation, ScheduledCalibrationObservation
 from pybirales.services.scheduler.scheduler import ObservationsScheduler
@@ -115,6 +116,11 @@ class BiralesFacade:
             observation.save()
 
             self._publisher.publish(ObservationFinishedEvent(observation, pipeline_manager.name))
+
+            if settings.detection.save_tdm or settings.detection.debug_candidates:
+                log.info('Post-processing observation. Generating output files.')
+                _post_processor = PostProcessor()
+                _post_processor.process(observation)
 
     def stop(self):
         """

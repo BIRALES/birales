@@ -70,13 +70,6 @@ class SpaceDebrisTrack:
 
         # DataFrame encapsulating the track data (snr, time, channel, beam id)
         self.data = pd.DataFrame(columns=['time_sample', 'channel_sample', 'time', 'channel', 'snr', 'beam_id'])
-        # self.data.set_index('time_sample')
-
-        # The filepath where to save the space debris candidate
-        self._tdm_filepath = None
-
-        # The filepath where to save the space debris candidate (for debug purposes)
-        self._debug_filepath = None
 
         # The time at which the track is expected to exit the detection window
         self._exit_time = None
@@ -89,9 +82,7 @@ class SpaceDebrisTrack:
         # The iteration number
         self._iter = 0
 
-        # If a beam candidate is given, add it on initialisation
-        # if isinstance(beam_candidate, DetectionCluster):
-        #     self.add(beam_candidate)
+        # If a beam cluster is given, add it on initialisation
         self.add(cluster)
 
     @property
@@ -249,13 +240,13 @@ class SpaceDebrisTrack:
                 },
                 'm': self.m,
                 'intercept': self.intercept,
-                'score': self.score,
+                'r_value': self.r_value,
                 'tx': self._obs_info['transmitter_frequency'],
                 'created_at': datetime.datetime.utcnow(),
                 'beam_noise': self._beam_noise.tolist(),
                 'track_size': self.size,
-                'tdm_filepath': self._tdm_filepath,
                 'data': _data(self.data),
+                'sampling_time': self._obs_info['sampling_time'],
                 'duration': self.duration.total_seconds()
             }).save()
 

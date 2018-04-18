@@ -23,10 +23,10 @@ META_STOP
 
 DATA_START
 {% for _, beam_detection in detection[detection['beam_id'] == beam_id].iterrows() %}
-ANGLE_1 = {{ beam_detection['time'].isoformat('T') }} {{ obs_info['beam_az_el'][beam_id][0] }}
-ANGLE_2 = {{ beam_detection['time'].isoformat('T') }} {{ obs_info['beam_az_el'][beam_id][1] }}
+ANGLE_1 = {{ beam_detection['time'].isoformat('T') }} {{ pointings['az_el'][beam_id][0] }}
+ANGLE_2 = {{ beam_detection['time'].isoformat('T') }} {{ pointings['az_el'][beam_id][1] }}
 PC_N0   = {{ beam_detection['time'].isoformat('T') }} {{ beam_detection['snr'] }}
-TRANSMIT_FREQ_3 = {{ beam_detection['time'].isoformat('T') }} {{ (obs_info['transmitter_frequency'] * 1000000)|float }}
+TRANSMIT_FREQ_3 = {{ beam_detection['time'].isoformat('T') }} {{ (tx * 1000000)|float }}
 RECEIVE_FREQ_1 = {{ beam_detection['time'].isoformat('T') }} {{ beam_detection['channel']  * 1000000 }}
 {% endfor %}
 DATA_STOP

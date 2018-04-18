@@ -18,6 +18,8 @@ class Observation(Document):
     date_time_end = DateTimeField()
     settings = DynamicField()
     noise_estimate = FloatField(default=0)
+    tx = FloatField()
+    sampling_time = FloatField()
 
     @property
     def is_finished(self):
@@ -98,7 +100,7 @@ class SpaceDebrisTrack(DynamicDocument):
 
     m = FloatField(required=True)
     intercept = FloatField(required=True)
-    score = FloatField(required=True)
+    r_value = FloatField(required=True)
     rcs = None
     target = None
 
