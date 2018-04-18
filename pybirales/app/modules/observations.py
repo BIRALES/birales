@@ -1,9 +1,7 @@
-import json
+import logging as log
 
 import dateutil.parser
 import mongoengine
-from flask import jsonify
-from bson import json_util
 from flask import Blueprint
 from flask import render_template, request, abort, redirect, url_for
 from flask_paginate import Pagination, get_page_parameter
@@ -71,10 +69,12 @@ def create():
 def view(observation_id):
     try:
         observation = Observation.objects.get(id=observation_id)
-        return render_template('modules/observation.html', observation=observation)
-    except mongoengine.DoesNotExist:
-        abort(404)
 
+        tracks = SpaceDebrisTrack.get(observation_id=observation_id)
+        return render_template('modules/observation.html', observation=observation, tracks=tracks)
+    except mongoengine.DoesNotExist:
+        log.exception('Database error')
+        abort(503)
 
 @observations_page.route('/observations/edit/<observation_id>')
 def edit(observation_id):

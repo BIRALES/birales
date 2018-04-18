@@ -24,10 +24,20 @@
                                         <td>{{ item }}</td>
                                     </tr>
                                 {% endfor %}
+
+                                <tr>
+                                    <th>Detections</th>
+                                    <td>
+                                        {% for track in tracks %}
+                                            <a id='{{ track.id }}' href="#"
+                                               class="btn btn-xs observation-detection-link">
+                                                {{ loop.index }}
+                                            </a>
+                                        {% endfor %}
+                                    </td>
+                                </tr>
                             </table>
                         </div>
-
-
                     </div>
                     <hr>
                     <div class="text-center">
@@ -44,90 +54,96 @@
                 </div>
             </div>
             <div class="col-md-8">
-                {#                <div class="card card-plain" id="observation-results-loading">#}
-                {#                    <div class="content">#}
-                {#                        <div class="loader"></div>#}
-                {#                    </div>#}
-                {#                </div>#}
-
-                <div class="card card-observation-result">
-                    <div class="header">
-                        <h4 class="title">Doppler profile</h4>
-                    </div>
-                    <div class="content">
-                        <div class="chart ppp responsive-plot" id="doppler-profile-plot"></div>
-                    </div>
-                </div>
-
                 <div class="card card-plain" style="display: none" id="no-detections-container">
                     <div class="content">
                         No detections were made for this observation :(
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-12">
-                <div class="card card-observation-result">
+
+                <div class="card card-plain">
                     <div class="header">
-                        <h4 class="title">SNR profile</h4>
+                        <h4 class="title" id="detection-title"></h4>
                     </div>
-                    <div class="content">
-                        <div class="chart plotly responsive-plot" id="snr-profile-plot"></div>
+                    <div class="content all-icons">
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12">
+                                <div class="card">
+                                    <div class="header">
+                                        <h5 class="title">Doppler profile</h5>
+                                    </div>
+
+                                    <div class="content">
+                                        <canvas id="doppler-profile-plot"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12">
+                                <div class="card">
+                                    <div class="header">
+                                        <h5 class="title">SNR Profile</h5>
+                                    </div>
+
+                                    <div class="content">
+                                        <canvas id="snr-profile-plot"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    </div>
 {% endblock %}
 
 {% block scripts %}
     {{ super() }}
-    <script src="{{ url_for('static', filename='js/plotters/snr_profile.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/plotters/doppler_profile.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plotters/track_doppler_profile.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plotters/track_snr_profile.js') }}"></script>
     <script src="{{ url_for('static', filename='js/plotters/manager.js') }}"></script>
 
     <script>
         $(document).ready(function () {
-            var socket = io('/');
-            var plotting_manager = new PlottingManager(socket);
+            const doppler_plotter = new TrackDopplerProfilePlotter('doppler-profile-plot');
+            const snr_plotter = new TrackSNRProfilePlotter('snr-profile-plot');
+            const detection_links = $('.observation-detection-link');
 
-            socket.on('error', function (err) {
-                log.error('An error has occurred on server side.');
+
+            function update(track_id, detection_number) {
+                $.ajax({
+                    url: '/tracks/' + track_id,
+                    method: "GET",
+                }).done(function (response) {
+                    let tracks = [JSON.parse(response)];
+
+                    // Update the plots
+                    doppler_plotter.plot_tracks(tracks);
+
+                    // Update the plots
+                    snr_plotter.plot_tracks(tracks);
+
+                    $('#detection-title').html('Detection ' + detection_number);
+                });
+
+
+            }
+
+            if ({{ tracks | length}}) {
+                update('{{ tracks[0].id }}', 1);
+                $('.observation-detection-link').first().toggleClass('btn-primary');
+            }
+
+            detection_links.click(function () {
+                let track_id = $(this).attr('id');
+
+                update(track_id, $(this).val());
+
+                detection_links.not(this).removeClass('btn-primary');
+                $(this).toggleClass('btn-primary');
             });
-
-            socket.on('connect_error', function (err) {
-                log.error('Could not establish a connection');
-            });
-
-            plotting_manager.addPlot('beam_candidates', new DopplerProfilePlotter('doppler-profile-plot'));
-            plotting_manager.addPlot('beam_candidates', new SNRProfilePlot('snr-profile-plot'));
-            plotting_manager.init();
-
-            var BEAM_CANDIDATES_API = "{{ url_for("observations_page.beam_data", observation_id=observation.id) }}";
-
-            var success = function (response) {
-                $('#observation-results-loading').hide();
-                var beam_candidates = JSON.parse(response);
-                if (beam_candidates.length > 0) {
-
-
-                    plotting_manager.updatePlots('beam_candidates', beam_candidates);
-                    log.info('Retrieved', beam_candidates.length, ' beam candidates for this observation');
-                }
-                else {
-                    $('.card-observation-result').hide();
-                    $('#no-detections-container').show('slow');
-
-                    log.info('No detections detected in this observation');
-                }
-            };
-
-            var failure = function (data) {
-                log.error('Could not retrieve beam candidates', data)
-            };
-
-            $.when($.ajax(BEAM_CANDIDATES_API)).done(success).fail(failure);
         });
     </script>
 {% endblock %}

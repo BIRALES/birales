@@ -8,6 +8,7 @@ from mongoengine import connect
 from pybirales.app.modules.configurations import configurations_page
 from pybirales.app.modules.monitoring import monitoring_page
 from pybirales.app.modules.observations import observations_page
+from pybirales.app.modules.api import api_page
 from pybirales.repository.models import BeamCandidate, SpaceDebrisTrack
 
 socket_io = SocketIO()
@@ -78,6 +79,7 @@ if __name__ == "__main__":
     app.register_blueprint(monitoring_page)
     app.register_blueprint(observations_page)
     app.register_blueprint(configurations_page)
+    app.register_blueprint(api_page)
 
     # Turn the flask app into a socket.io app
     socket_io.init_app(app)
