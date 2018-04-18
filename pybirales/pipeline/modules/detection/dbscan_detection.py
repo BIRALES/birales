@@ -66,7 +66,6 @@ def _create(snr_data, cluster_data, channels, t0, td, beam_id, iter_count):
 
     channel_ndx = cluster_data[:, 0]
     time_ndx = cluster_data[:, 1]
-
     time_sample = time_ndx + iter_count * N_SAMPLES
 
     # Calculate the channel (frequency) of the sample from the channel index
@@ -76,8 +75,8 @@ def _create(snr_data, cluster_data, channels, t0, td, beam_id, iter_count):
     if not _validate(channel, time_sample, td):
         return False, None
 
-    # Calculate the time of the sample form the time index
-    time = t0 + time_ndx + iter_count * td * N_SAMPLES
+    # Calculate the time of the sample from the time index
+    time = t0 + (time_sample - 32 * iter_count) * td
 
     return True, pd.DataFrame({
         'time_sample': time_sample,

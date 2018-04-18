@@ -139,7 +139,7 @@
             detection_links.click(function () {
                 let track_id = $(this).attr('id');
 
-                update(track_id, $(this).val());
+                update(track_id, $(this).text());
 
                 detection_links.not(this).removeClass('btn-primary');
                 $(this).toggleClass('btn-primary');
