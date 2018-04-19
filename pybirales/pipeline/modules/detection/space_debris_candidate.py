@@ -54,10 +54,7 @@ class SpaceDebrisTrack:
         # The attributes of the linear model
         self.m = None
         self.intercept = None
-        self.score = None
-
-        # The noise value per beam
-        self._beam_noise = np.zeros(settings.beamformer.nbeams)
+        self.r_value = None
 
         # The radar cross section of the track
         self._rcs = None
@@ -226,9 +223,8 @@ class SpaceDebrisTrack:
         if self._id:
             # Already saved to the database, hence we just update
             _db_model.objects.get(pk=self._id).update(data=_data(self.data),
-                                                      beam_noise=self._beam_noise.tolist(),
                                                       duration=self.duration.total_seconds(),
-                                                      m=self.m, score=self.score, intercept=self.intercept,
+                                                      m=self.m, r_value=self.r_value, intercept=self.intercept,
                                                       track_size=self.size)
         else:
             sd = _db_model(**{
@@ -243,7 +239,6 @@ class SpaceDebrisTrack:
                 'r_value': self.r_value,
                 'tx': self._obs_info['transmitter_frequency'],
                 'created_at': datetime.datetime.utcnow(),
-                'beam_noise': self._beam_noise.tolist(),
                 'track_size': self.size,
                 'data': _data(self.data),
                 'sampling_time': self._obs_info['sampling_time'],

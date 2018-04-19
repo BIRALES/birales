@@ -64,6 +64,8 @@ class PreProcessor(ProcessingModule):
             self._observation = Observation.objects.get(id=settings.observation.id)
             self._observation.mean_noise = obs_info['mean_noise']
             self._observation.mean_channel_noise = obs_info['channel_noise']
+            self._observation.beam_noise = np.mean(obs_info['channel_noise'], axis=1)
+
             self._observation.save()
             self._config_persisted = True
 
