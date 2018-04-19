@@ -155,19 +155,28 @@ class SpaceDebrisTrack:
             # If fitting failed, track data remains unchanged, and raise an exception
             raise DetectionClusterIsNotValid(cluster_df)
 
-    def is_finished(self, current_time, min_channel, iter_count):
+    def has_transitted(self, iter_count):
         """
-        Determine whether this track is finished based on the current time
-        time_max = ( channel_min - intercept ) / gradient
+        Determine whether this track is finished based on the current iteration
         :return:
         """
 
-        self._exit_time = (min_channel - self.intercept) / self.m
-
-        # return current_time > self._exit_time or (iter_count - self._last_iter_count) > 5
-
         # The track is deemed to be finished if it has not been updated since N iterations
-        return (iter_count - self._last_iter_count) > self._max_candidate_iter
+        if (iter_count - self._last_iter_count) > self._max_candidate_iter:
+            log.debug('Track {} (n: {}) has transitted outside detection window.'.format(id(self), self.size))
+            return True
+
+        log.debug('Track {} will be dropped in {} iterations'.format(id(self), self._max_candidate_iter - (
+                iter_count - self._last_iter_count)))
+
+        return False
+
+
+    def is_valid(self):
+        if self.size < 5 or self.activated_beams < 2:
+            return False
+
+        return True
 
     def is_parent_of(self, detection_cluster):
         """
@@ -251,3 +260,5 @@ class SpaceDebrisTrack:
         if self._id:
             # Already saved to the database, hence we just update
             _db_model.objects.get(pk=self._id).delete()
+
+            log.info('Track {} deleted'.format(id(self)))

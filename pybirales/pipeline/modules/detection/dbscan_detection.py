@@ -17,7 +17,7 @@ _linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
 db_scan = DBSCAN(eps=_eps, min_samples=_min_samples, algorithm=_algorithm, n_jobs=-1)
 N_SAMPLES = 32
 
-
+@timeit
 def _validate(channel, time_sample, td):
     """
     Validate the detection cluster
@@ -51,7 +51,7 @@ def _validate(channel, time_sample, td):
 
     return True
 
-
+@timeit
 def _create(snr_data, cluster_data, channels, t0, td, beam_id, iter_count):
     """
 
@@ -88,7 +88,7 @@ def _create(snr_data, cluster_data, channels, t0, td, beam_id, iter_count):
         'iter': np.full(time_ndx.shape[0], iter_count),
     })
 
-
+@timeit
 def partition_input_data(input_data, channel_noise, beam_id):
     """
 
@@ -116,7 +116,7 @@ def partition_input_data(input_data, channel_noise, beam_id):
     # Transform them in a time (x), channel (y) nd-array and snr
     return np.column_stack(ndx), snr[ndx]
 
-
+@timeit
 def dbscan_clustering(beam_ndx, snr_data):
     """
 
@@ -142,7 +142,7 @@ def dbscan_clustering(beam_ndx, snr_data):
     # Select only those labels which were not classified as noise was(-1)
     return labelled_data[denoise_mask], snr_data[denoise_mask]
 
-
+@timeit
 def create_clusters(snr_data, labelled_data, channels, t0, td, beam_id, iter_count):
     """
     Group the data points in clusters
@@ -171,7 +171,7 @@ def create_clusters(snr_data, labelled_data, channels, t0, td, beam_id, iter_cou
 
     return clusters
 
-
+@timeit
 def detect(input_data, channels, t0, td, iter_count, channel_noise, beam_id):
     """
     Use the DBScan algorithm to create a set of clusters from the given beam data

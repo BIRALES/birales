@@ -40,10 +40,6 @@ class Detector(ProcessingModule):
 
         self._detection_counter = 0
 
-        self._min_candidate_size = 5
-
-        self._min_activated_beams = 2
-
         # Write to disk every N iterations
         self._write_freq = 10
 
@@ -134,19 +130,14 @@ class Detector(ProcessingModule):
 
         temp_candidates = []
         for c in candidates:
-            if c.is_finished(current_time=10, min_channel=20, iter_count=iter_count):
-                log.debug('Track {} (n: {}) has transitted outside detection window. Removing it from candidates list'
-                          .format(id(c), c.size))
-
-                # If the candidate is finished but it very small (delete it)
-                if c.size < self._min_candidate_size or c.activated_beams < self._min_activated_beams:
+            if c.has_transitted(iter_count=iter_count):
+                # If the candidate is not valid delete it
+                if c.is_valid:
                     c.delete()
-                    log.info('Track {} deleted'.format(id(c)))
             else:
-                log.debug('Track {} (n: {}) is still within detection window'.format(id(c), c.size))
                 temp_candidates.append(c)
 
-        log.info('Result: {} tracks have transitted. {} currently in detection window.'.format(
+        log.info('Result: {} tracks have transitted. {} tracks are currently in detection window.'.format(
             len(self._candidates) - len(temp_candidates), len(temp_candidates)))
 
         return temp_candidates
