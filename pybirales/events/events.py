@@ -120,7 +120,6 @@ class ObservationFinishedEvent(Event):
         self.payload['body'] = '`{}` finished successfully'.format(observation.name)
         log.debug(self.payload['body'])
 
-
 class SpaceDebrisClusterDetectedEvent(Event):
     """
     Event is fired when a valid space debris cluster is detected
@@ -143,13 +142,13 @@ class SpaceDebrisClusterDetectedEvent(Event):
         log.debug(self.payload['body'])
 
 
-class SpaceDebrisDetectedEvent(Event):
+class TrackCreatedEvent(Event):
     """
     Event is fired when a valid space debris cluster is detected
     """
 
     channels = ['notifications']
-    description = 'A new space debris candidate was found'
+    description = 'A new track candidate was found'
 
     def __init__(self, sd_track):
         """
@@ -160,7 +159,32 @@ class SpaceDebrisDetectedEvent(Event):
 
         Event.__init__(self)
 
-        self.payload['body'] = 'A new space debris detection ({}) (score: `{}`, n:`{}`) was made.'.format(id(sd_track),
-                                                                                                          sd_track.score,
-                                                                                                          sd_track.size)
+        self.payload['body'] = 'Track {} was `created` (score: {:0.3f}, size:{}).'.format(
+            id(sd_track),
+            sd_track.r_value,
+            sd_track.size)
+        log.debug(self.payload['body'])
+
+
+class TrackModifiedEvent(Event):
+    """
+    Event is fired when a valid space debris cluster is detected
+    """
+
+    channels = ['notifications']
+    description = 'An existing track was updated'
+
+    def __init__(self, sd_track):
+        """
+
+        :param sd_track: Space Debris Track detected across N beams
+        :type  sd_track: SpaceDebrisTrack
+        """
+
+        Event.__init__(self)
+
+        self.payload['body'] = 'Track {} was `modified` (score: {:0.3f}, size:{}).'.format(
+            id(sd_track),
+            sd_track.r_value,
+            sd_track.size)
         log.debug(self.payload['body'])

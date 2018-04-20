@@ -1,7 +1,6 @@
 import datetime
 import logging as log
 
-import numpy as np
 import pandas as pd
 import scipy.spatial.distance as dist
 from mongoengine import *
@@ -9,8 +8,11 @@ from scipy import stats
 from sklearn import linear_model
 
 from pybirales import settings
+from pybirales.pipeline.base.timing import timeit
 from pybirales.pipeline.modules.detection.exceptions import DetectionClusterIsNotValid
 from pybirales.repository.models import SpaceDebrisTrack
+from pybirales.events.events import TrackCreatedEvent, TrackModifiedEvent
+from pybirales.events.publisher import EventsPublisher
 
 _linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
 _db_model = SpaceDebrisTrack
@@ -51,10 +53,13 @@ class SpaceDebrisTrack:
         self._obs_id = settings.observation.id
 
         self._linear_model = _linear_model
+        self._publisher = EventsPublisher.Instance()
+
         # The attributes of the linear model
         self.m = None
         self.intercept = None
         self.r_value = None
+        self._prev_size = 0
 
         # The radar cross section of the track
         self._rcs = None
@@ -79,8 +84,34 @@ class SpaceDebrisTrack:
         # The iteration number
         self._iter = 0
 
+        # Is the track saved to the database?
+        self._to_save = True
+
+        # Flag, to mark if a notification was sent
+        self._notification_sent = False
+
         # If a beam cluster is given, add it on initialisation
         self.add(cluster)
+
+    def send_notification(self):
+        """
+        Publish a new notification for this track
+        :return:
+        """
+
+        if self._prev_size == 0:
+            # Send a space debris track was created event
+            self._publisher.publish(TrackCreatedEvent(self))
+
+        elif self.size != self._prev_size:
+            # Only send a notification if there were any changes to the track
+            self._publisher.publish(TrackModifiedEvent(self))
+
+        self._prev_size = self.size
+
+    @property
+    def saved(self):
+        return not self._to_save
 
     @property
     def duration(self):
@@ -103,8 +134,7 @@ class SpaceDebrisTrack:
 
         self.data = self.data.sort_values(by='time')
 
-        # Save the candidate
-        self._save()
+        self._to_save = True
 
     def _fit(self, x, y):
         """
@@ -171,8 +201,11 @@ class SpaceDebrisTrack:
 
         return False
 
-
     def is_valid(self):
+        """
+        The candidate is not valid if size is too small or the number of activate beams is less than 2
+        :return:
+        """
         if self.size < 5 or self.activated_beams < 2:
             return False
 
@@ -193,72 +226,60 @@ class SpaceDebrisTrack:
 
         return dist.cosine([self.m, self.intercept], [cluster_m, cluster_c]) < settings.detection.similarity_thold
 
-    def _save(self):
+    def _to_dict(self):
+        return {
+            'name': self.name,
+            'observation': self._obs_id,
+            'pointings': {
+                'ra_dec': self._obs_info['pointings'],
+                'az_el': self._obs_info['beam_az_el'].tolist()
+            },
+            'm': self.m,
+            'intercept': self.intercept,
+            'r_value': self.r_value,
+            'tx': self._obs_info['transmitter_frequency'],
+            'created_at': datetime.datetime.utcnow(),
+            'track_size': self.size,
+            'data': {
+                'time': self.data['time'].tolist(),
+                'time_sample': self.data['time_sample'].tolist(),
+                'channel': self.data['channel'].tolist(),
+                'channel_sample': self.data['channel_sample'].tolist(),
+                'snr': self.data['snr'].tolist(),
+                'beam_id': self.data['beam_id'].tolist(),
+            },
+            'sampling_time': self._obs_info['sampling_time'],
+            'duration': self.duration.total_seconds()
+        }
+
+    def save(self):
         """
         Save the space debris candidate to disk and database
 
         :return:
         """
 
-        # Persist the space debris detection to the database
-        if settings.detection.save_candidates:
-            try:
-                self._save_db()
-                log.info("Space debris track {} saved with {} data points".format(id(self), self.size))
-            except ValidationError:
-                log.exception("Missing or incorrect data in Space Debris Track Model")
-            except OperationError:
-                log.exception("Space debris track could not be saved to DB")
-
-                # Upload the space debris detection to an FTP server
-
-    def _save_db(self):
-        """
-        Return a dict representation of the SpaceDebrisTrack
-
-        :return:
-        """
-
-        def _data(df):
-            return {
-                'time': df['time'].tolist(),
-                'time_sample': df['time_sample'].tolist(),
-                'channel': df['channel'].tolist(),
-                'channel_sample': df['channel_sample'].tolist(),
-                'snr': df['snr'].tolist(),
-                'beam_id': df['beam_id'].tolist(),
-            }
-
-        if self._id:
-            # Already saved to the database, hence we just update
-            _db_model.objects.get(pk=self._id).update(data=_data(self.data),
-                                                      duration=self.duration.total_seconds(),
-                                                      m=self.m, r_value=self.r_value, intercept=self.intercept,
-                                                      track_size=self.size)
+        try:
+            if self._id:
+                # Already saved to the database, hence we just update
+                _db_model.objects.get(pk=self._id).update(**self._to_dict())
+                log.info("Track {} (n: {}, r: {:0.3f}) updated".format(id(self), self.size, self.r_value))
+            else:
+                sd = _db_model(**self._to_dict()).save()
+                self._id = sd.id
+                log.info("Track {} (n: {}, r: {:0.3f}) saved".format(id(self), self.size, self.r_value))
+        except ValidationError:
+            log.exception("Missing or incorrect data in Space Debris Track Model")
+        except OperationError:
+            log.exception("Space debris track could not be saved to DB")
         else:
-            sd = _db_model(**{
-                'name': self.name,
-                'observation': self._obs_id,
-                'pointings': {
-                    'ra_dec': self._obs_info['pointings'],
-                    'az_el': self._obs_info['beam_az_el'].tolist()
-                },
-                'm': self.m,
-                'intercept': self.intercept,
-                'r_value': self.r_value,
-                'tx': self._obs_info['transmitter_frequency'],
-                'created_at': datetime.datetime.utcnow(),
-                'track_size': self.size,
-                'data': _data(self.data),
-                'sampling_time': self._obs_info['sampling_time'],
-                'duration': self.duration.total_seconds()
-            }).save()
-
-            self._id = sd.id
+            self._to_save = False
 
     def delete(self):
         if self._id:
-            # Already saved to the database, hence we just update
-            _db_model.objects.get(pk=self._id).delete()
-
-            log.info('Track {} deleted'.format(id(self)))
+            try:
+                _db_model.objects.get(pk=self._id).delete()
+            except OperationError:
+                log.exception("Track could not be deleted from DB")
+            else:
+                log.info('Track {} deleted'.format(id(self)))

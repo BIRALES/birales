@@ -59,13 +59,12 @@ class PostProcessor:
         candidates = self._get_candidates(observation)
 
         if not candidates:
-            log.warning(
-                'No candidates were found in observation {} (id:{})'.format(observation.name, observation.id))
+            log.warning('No candidates were found in observation {} (id:{})'.format(observation.name, observation.id))
+        else:
+            if settings.detection.save_tdm:
+                for i, candidate in enumerate(candidates):
+                    self._tdm_writer.write(observation, candidate, i + 1)
 
-        if settings.detection.save_tdm:
-            for i, candidate in enumerate(candidates):
-                self._tdm_writer.write(observation, candidate, i + 1)
-
-        if settings.detection.debug_candidates:
-            for i, candidate in enumerate(candidates):
-                self._debug_writer.write(observation, candidate, i + 1)
+            if settings.detection.debug_candidates:
+                for i, candidate in enumerate(candidates):
+                    self._debug_writer.write(observation, candidate, i + 1)

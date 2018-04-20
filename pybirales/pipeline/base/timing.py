@@ -1,8 +1,8 @@
 import logging as log
 import time
+from functools import wraps
 
 from pybirales import settings
-from functools import wraps
 
 
 def timeit(method):
