@@ -4,6 +4,7 @@ import configparser
 import logging as log
 from flask import Blueprint, render_template, Response, json, request, flash, redirect, url_for
 from werkzeug.utils import secure_filename
+from pybirales.birales_config import BiralesConfig
 
 import re
 import ast
@@ -15,7 +16,7 @@ SETTINGS_FILEPATH = os.path.join(os.environ['HOME'], '.birales', 'configuration'
 AVAILABLE_CONFIGS = {
     'dev': {
         'detection': {'filepath': 'templates/dev/detection.ini',
-                      'description': 'Detection observation configuration template [DEV]'},
+                      'description': 'Detection observations configuration template [DEV]'},
         'correlation': {'filepath': 'templates/dev/correlation.ini',
                         'description': 'Correlation configuration template [DEV]'},
     },
@@ -36,9 +37,60 @@ CONFIG_MAP = {
 }
 
 
+@configurations_page.route('/mode/<mode_id>')
+def observation_mode(mode_id):
+    """
+
+    :return:
+    """
+
+    modes = {
+        'detection': _read_config_files('templates/prod/detection.ini'),
+        'calibration': _read_config_files('templates/prod/calibration.ini')
+    }
+
+    options = {
+        'data': [],
+        "draw": 1,
+        "recordsTotal": 0,
+        "recordsFiltered": 0,
+    }
+
+    for section in modes[mode_id].keys():
+        for option in modes[mode_id][section]:
+            options['data'].append([
+                option, modes[mode_id][section][option], section
+            ])
+            options['recordsTotal'] += 1
+            options['recordsFiltered'] += 1
+
+
+    if mode_id in modes.keys():
+        return Response(json.dumps(options), mimetype='application/json; charset=utf-8')
+
+
 def _allowed_file(filename):
+    """
+
+    :param filename:
+    :return:
+    """
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def _read_config_files(configuration):
+    """
+
+    :param configuration:
+    :return:
+    """
+    config_parser = configparser.RawConfigParser()
+
+    config_parser = _read_config_file(config_parser, 'birales.ini')
+    config_parser = _read_config_file(config_parser, configuration)
+
+    return {section: config_parser._sections[section] for section in config_parser._sections}
 
 
 def _read_config_file(config_parser, configuration):

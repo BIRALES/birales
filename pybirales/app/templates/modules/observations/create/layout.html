@@ -1,0 +1,52 @@
+{% extends "common/layout.html" %}
+{% block title %}Observation{% endblock %}
+{% set active_page = "observations" %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="header">
+                        <h4 class="title">Create Observation</h4>
+                    </div>
+                    <div class="content">
+                        {% block observation_mode %}
+                        {% endblock %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+
+    <script>
+        $(document).ready(function () {
+            let obs_modes_endpoint = "{{ obs_modes_endpoint }}";
+
+            let today = new Date();
+            let obs_start_time = $('#date_start').flatpickr({
+                enableTime: true,
+                time_24hr: true,
+                utc: true,
+                allowInput: true,
+                dateFormat: "Y-m-d H:i:S",
+                minDate: today,
+                defaultDate: today
+            });
+
+            let obs_end_time = $('#date_end').flatpickr({
+                enableTime: true,
+                time_24hr: true,
+                allowInput: true,
+                utc: true,
+                dateFormat: "Y-m-d H:i:S",
+                minDate: today,
+                defaultDate: new Date(today.getTime() + 5 * 60000)
+            });
+        });
+    </script>
+{% endblock %}

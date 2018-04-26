@@ -5,7 +5,7 @@ from flask import Flask
 from flask_socketio import SocketIO
 from mongoengine import connect
 
-from pybirales.app.modules.configurations import configurations_page
+from pybirales.app.modules.modes import configurations_page
 from pybirales.app.modules.monitoring import monitoring_page
 from pybirales.app.modules.observations import observations_page
 from pybirales.app.modules.api import api_page
@@ -53,7 +53,7 @@ def get_space_debris_candidates(beam_id, from_time, to_time):
 @socket_io.on('get_obs_beam_candidates')
 def get_obs_beam_candidates(observation_id):
     """
-    Get this observation's beam candidates
+    Get this observations's beam candidates
 
     :param observation_id:
     :return:

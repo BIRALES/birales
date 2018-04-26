@@ -109,7 +109,7 @@
         $(document).ready(function () {
             const doppler_plotter = new TrackDopplerProfilePlotter('doppler-profile-plot');
             const snr_plotter = new TrackSNRProfilePlotter('snr-profile-plot');
-            const detection_links = $('.observation-detection-link');
+            const detection_links = $('.observations-detection-link');
 
 
             function update(track_id, detection_number) {
@@ -133,7 +133,7 @@
 
             if ({{ tracks | length}}) {
                 update('{{ tracks[0].id }}', 1);
-                $('.observation-detection-link').first().toggleClass('btn-primary');
+                $('.observations-detection-link').first().toggleClass('btn-primary');
             }
 
             detection_links.click(function () {

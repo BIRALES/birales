@@ -1,41 +1,15 @@
 import logging as log
 
-import dateutil.parser
 import mongoengine
 from flask import Blueprint
 from flask import render_template, request, abort, redirect, url_for
 from flask_paginate import Pagination, get_page_parameter
-from webargs import fields
 
-from pybirales.app.modules.configurations import get_available_configs
-from pybirales.repository.models import BeamCandidate, SpaceDebrisTrack
+from pybirales.app.modules.forms import DetectionModeForm
 from pybirales.repository.models import Observation
+from pybirales.repository.models import SpaceDebrisTrack
 
 observations_page = Blueprint('observations_page', __name__, template_folder='templates')
-
-observations_args = {
-    'from_time': fields.DateTime(missing=None, required=False),
-    'to_time': fields.DateTime(missing=None, required=False),
-}
-
-
-@observations_page.route('/api/observation/<observation_id>/data')
-def beam_data(observation_id):
-    return BeamCandidate.get(observation_id=observation_id).to_json()
-
-
-@observations_page.route('/api/live/data', methods=['POST'])
-def observation_track_data(observation_id=None, from_date=None, to_date=None):
-    if request.values.get('from_date'):
-        from_date = dateutil.parser.parse(request.values.get('from_date'))
-
-    if request.values.get('to_date'):
-        to_date = dateutil.parser.parse(request.values.get('to_date'))
-
-    detected_candidates = SpaceDebrisTrack.get(observation_id=observation_id, to_time=to_date, from_time=from_date)
-
-    return detected_candidates.to_json()
-
 
 @observations_page.route('/observations')
 def index():
@@ -54,15 +28,26 @@ def index():
                             per_page=per_page,
                             record_name='observations')
 
-    return render_template('modules/observations.html',
+    return render_template('modules/observations/index.html',
                            observations=observations,
                            pagination=pagination)
 
 
-@observations_page.route('/observations/create')
-def create():
-    configurations = get_available_configs()
-    return render_template('modules/observation_create.html', configurations=configurations)
+@observations_page.route('/observations/<mode>/create', methods=['POST', 'GET'])
+def create(mode):
+    if mode == 'detection':
+        form = DetectionModeForm(request.form)
+
+        if request.method == 'POST' and form.validate():
+            # Observation is valid and can be submitted to service
+            print form.data
+            pass
+        return render_template('modules/observations/create/detection.html', form=form)
+    else:
+        log.error('Observation mode is not valid')
+        abort(422)
+
+
 
 
 @observations_page.route('/observations/<observation_id>')
@@ -71,7 +56,7 @@ def view(observation_id):
         observation = Observation.objects.get(id=observation_id)
 
         tracks = SpaceDebrisTrack.get(observation_id=observation_id)
-        return render_template('modules/observation.html', observation=observation, tracks=tracks)
+        return render_template('modules/observations/view.html', observation=observation, tracks=tracks)
     except mongoengine.DoesNotExist:
         log.exception('Database error')
         abort(503)
