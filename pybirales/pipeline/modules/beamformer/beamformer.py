@@ -150,6 +150,8 @@ class Pointing(object):
         self._nants = nants
         self._nsubs = nsubs
 
+        log.info('Reference declination: {}'.format(self._reference_declination))
+
         # Calibration coefficients
         self._calib_coeffs = np.ones(self._nants, dtype=np.complex64)
 

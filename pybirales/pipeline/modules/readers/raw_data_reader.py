@@ -42,6 +42,7 @@ class RawDataReader(ProcessingModule):
         # Load the data file
         try:
             self._f = open(self._filepath, 'rb')
+            log.info('Using raw data in: {}'.format(self._filepath))
         except IOError:
             log.error('Data not found in %s. Exiting.', self._filepath)
             sys.exit()

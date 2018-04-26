@@ -13,10 +13,11 @@ from pybirales import settings
 
 
 class BiralesConfig:
-    def __init__(self, config_file_path, config_options=None):
+    def __init__(self, config_file_path=None, config_options=None):
         """
         Initialise the BIRALES configuration
 
+        :param observation_name: The name of the observations
         :param config_file_path: The path to the BIRALES configuration file
         :param config_options: Configuration options to override the default config settings
         :return:
@@ -27,27 +28,25 @@ class BiralesConfig:
         # The configuration parser of the BIRALES system
         self._parser = configparser.RawConfigParser()
 
-        # Set the configurations from file (can be multiple files)
-        log.info('Loading configuration files')
-        for config_file in config_file_path:
-            self._load_from_file(config_file)
-
         # Load the logging configuration
-        self._set_logging_config()
+        self._set_logging_config(config_options['observation']['name'])
 
-        # Set the configurations from file (can be multiple files)
-        log.info('Loading configuration files')
-        for config_file in config_file_path:
-            self._load_from_file(config_file)
-
-        # log.info('Loaded the following config files: {}'.format(config_file_path))
+        if config_file_path:
+            # Set the configurations from file (can be multiple files)
+            log.info('Loading configuration files')
+            for config_file in config_file_path:
+                self._load_from_file(config_file)
+        else:
+            # throw an error - no configuration could be loaded
+            pass
 
         # Load the ROACH backend settings
         backend_path = os.path.join(os.path.dirname(__file__), self._parser.get('receiver', 'backend_config_filepath'))
         self._load_from_file(backend_path)
 
-        # Override the configuration with settings passed on in the config_options dictionary
-        self.update_config(config_options)
+        if config_options:
+            # Override the configuration with settings passed on in the config_options dictionary
+            self.update_config(config_options)
 
     def is_loaded(self):
         """
@@ -90,13 +89,13 @@ class BiralesConfig:
                 for (key, value) in config_options[section].items():
                     self._parser.set(section, key, value)
             else:
-                # Else, put the configuration in the observation settings
-                self._parser.set('observation', section, config_options[section])
+                # Else, put the configuration in the observations settings
+                self._parser.set('observations', section, config_options[section])
 
         # Re-load the system configuration upon initialisation
         self.load()
 
-    def _set_logging_config(self):
+    def _set_logging_config(self, observation_name):
         """
         Load the logging configuration
         :return:
@@ -115,7 +114,7 @@ class BiralesConfig:
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-        log_path = os.path.join(directory, self._parser.get('observation', 'name') + '.log')
+        log_path = os.path.join(directory, observation_name + '.log')
 
         handler = TimedRotatingFileHandler(log_path, when="h", interval=1, backupCount=5, utc=True)
         formatter = log.Formatter(self._parser.get('formatter_formatter', 'format'))
