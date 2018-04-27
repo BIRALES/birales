@@ -21,7 +21,7 @@ monitoring_page = Blueprint('monitoring_page', __name__, template_folder='templa
 MIN_CHANNEL = 409
 MAX_CHANNEL = 411
 
-beam_candidates_args = {
+track_args = {
     'beam_id': fields.Int(missing=None, required=False),
     'max_channel': fields.Float(missing=MAX_CHANNEL, required=False),
     'min_channel': fields.Float(missing=MIN_CHANNEL, required=False),
@@ -31,7 +31,7 @@ beam_candidates_args = {
 
 
 @monitoring_page.route('/')
-@use_args(beam_candidates_args)
+@use_args(track_args)
 def index(args):
     """
     Serve the client-side application
@@ -53,18 +53,10 @@ def index(args):
                            min_channel=args['min_channel'])
 
 
-@monitoring_page.route('/monitoring/beam_candidates', methods=['GET', 'POST'])
-@use_args(beam_candidates_args)
-def get_beam_candidates(args):
-    detected_beam_candidates = beam_candidates(request=args)
-    return Response(json.dumps(detected_beam_candidates[:100]),
-                    mimetype='application/json; charset=utf-8')
-
-
 @monitoring_page.route('/monitoring/illumination_sequence', methods=['GET', 'POST'])
-@use_args(beam_candidates_args)
+@use_args(track_args)
 def get_illumination_sequence(args):
-    detected_beam_candidates = beam_candidates(request=args)
+    detected_beam_candidates = []
 
     # flatten results
     raw = json_normalize(detected_beam_candidates)[
@@ -102,33 +94,3 @@ def get_illumination_sequence(args):
     print(response.head())
 
     return Response(response.reset_index().to_json(), mimetype='application/json; charset=utf-8')
-
-
-@monitoring_page.route('/monitoring/beam_candidates/table', methods=['GET', 'POST'])
-@use_args(beam_candidates_args)
-def get_orbit_determination_table(args):
-    detected_beam_candidates = beam_candidates(request=args)
-
-    for beam_candidate in detected_beam_candidates:
-        beam_candidate['data']['time'] = [Time(t) for t in beam_candidate['data']['time']]
-        beam_candidate['data']['doppler_shift'] = [(channel - beam_candidate['tx']) * 1e6 for channel in
-                                                   beam_candidate['data']['channel']]
-
-    return render_template('od_input.html',
-                           candidates=detected_beam_candidates,
-                           beam_id=args['beam_id'],
-                           to_time=args['to_time'],
-                           from_time=args['from_time'],
-                           max_channel=args['max_channel'],
-                           min_channel=args['min_channel'])
-
-
-def beam_candidates(request):
-    """
-
-    :param request:
-    :return:
-    """
-    return BeamCandidate.get(beam_id=request['beam_id'], to_time=request['to_time'], from_time=request['from_time'],
-                             max_channel=request['max_channel'],
-                             min_channel=request['min_channel'])
