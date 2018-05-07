@@ -199,8 +199,10 @@ class BiralesFacade:
         if not settings.manager.offline:
             self._load_backend()
 
+        """
         # Reset calibration coefficients before applying new ones
         self.reset_calibration_coefficients()
+        """
 
         self.configuration.update_config({'observation': {'type': 'calibration'}})
 
@@ -215,7 +217,10 @@ class BiralesFacade:
         log.info('Generating calibration coefficients')
         self._calibration.calibrate(calib_dir, corr_matrix_filepath)
 
-        # Load Coefficients to ROACH
+        # write coefficients to '.birales/tcpo/calibration_coeffs'
+
+        """
+        # Load Coefficients to ROACH        
         if self._backend:
             log.info('Loading calibration coefficients to the ROACH')
             self._backend.load_calibration_coefficients(amplitude=self._calibration.dict_real,
@@ -223,6 +228,7 @@ class BiralesFacade:
             log.info('Calibration coefficients loaded to the ROACH')
         else:
             log.warning("Could not load calibration coefficients. Backend is offline.")
+        """
 
     def start_scheduler(self, schedule_file_path, file_format):
         """
