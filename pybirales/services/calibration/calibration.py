@@ -207,7 +207,7 @@ class CalibrationFacade:
         model_vis_pipeline = ModelVisPipelineBuilder.ModelVisPipelineBuilder()
         model_vis_pipeline.setup(
             params={'TM_instance': self._tm, 'source': str(calib_dir),
-                    'model_file': str(calib_dir + '/model_vis.txt')})
+                    'model_file': str(calib_dir + '/model_vis.txt'), 'local_sky_model': None})
 
         model_vis_process = PipelineParallelisation(model_vis_pipeline.build())
 
