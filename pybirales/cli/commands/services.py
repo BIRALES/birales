@@ -22,8 +22,9 @@ def services(ctx):
 @click.option('--config', '-c', 'config_filepath', type=click.Path(exists=True), required=True,
               help='The BIRALES configuration file', multiple=True)
 @click.option('--name', '-n', 'name', help='The name of the observation')
+@click.option('--offline/--online', default=True)
 @click.pass_context
-def calibration(ctx, config_filepath, name):
+def calibration(ctx, config_filepath, name, offline):
     if not name:
         name = 'Calibration_Observation'
     ctx.obj = {
@@ -40,8 +41,10 @@ def calibration(ctx, config_filepath, name):
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)
 
-    # Build the Pipeline Manager using the Correlator Pipeline Manager Builder
-    manager = bf.build_pipeline(CorrelatorPipelineManagerBuilder())
+    manager = None
+    if not offline:
+        # Build the Pipeline Manager using the Correlator Pipeline Manager Builder
+        manager = bf.build_pipeline(CorrelatorPipelineManagerBuilder())
 
     # Calibrate the Instrument
     bf.calibrate(correlator_pipeline_manager=manager)
