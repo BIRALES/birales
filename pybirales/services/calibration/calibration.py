@@ -94,7 +94,7 @@ class CalibrationFacade:
                 'calib_check_path': os.path.join(calib_dir, 'calib_plot.png'),
                 'frequency': tm.StartFreq,
                 'bandwith': tm.Bandwith,
-                'calib_coeffs_dir': config.calib_coeffs_dir,
+                'calib_coeffs_dir':  os.path.join(os.environ['HOME'], config.calib_coeffs_dir),
                 'obs_time': self._get_obs_time().isoformat(),
                 'transit_file': corr_matrix_filepath,
                 'obs_file': corr_matrix_filepath}
@@ -230,7 +230,20 @@ class CalibrationFacade:
 
         log.info('Calibration routine finished')
 
-        coeff_file = os.path.join(calib_dir, 'coeffs_no_geom.txt')
+        # coeff_file = os.path.join(calib_dir, 'coeffs_no_geom.txt')
 
-        log.info('Calibration coefficients written to file: {}'.format(coeff_file))
-        self.dict_real, self.dict_imag = self._get_calibration_coeffs(coeff_file)
+        # self.dict_real, self.dict_imag = self._get_calibration_coeffs(coeff_file)
+
+        # self._save_calibration_coeffs(coeff_file)
+
+    def _save_calibration_coeffs(self, coeff_file):
+        tcpo_coefficients = np.loadtxt(coeff_file, dtype=np.complex)
+
+        tcpo_filename = '{:%Y-%m-%dT%H:%M:%S}_{}.npy'.format(datetime.datetime.utcnow(),
+                                                             settings.beamformer.reference_declination)
+
+        tcpo_filepath = os.path.join(os.environ['HOME'], settings.calibration.calib_coeffs_dir, tcpo_filename)
+
+        np.save(tcpo_filepath, tcpo_coefficients)
+
+        log.info('TCPO Calibration coefficients save to %s', tcpo_filepath)

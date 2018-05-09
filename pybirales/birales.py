@@ -188,7 +188,7 @@ class BiralesFacade:
             self._backend.load_calibration_coefficients(amplitude=self._calibration.real_reset_coeffs,
                                                         phase=self._calibration.imag_reset_coeffs)
 
-    def calibrate(self, correlator_pipeline_manager):
+    def calibrate(self, correlator_pipeline_manager=None):
         """
         Calibration routine, which will use the correlator pipeline manager
 
@@ -210,7 +210,7 @@ class BiralesFacade:
 
         self.configuration.update_config({'corrmatrixpersister': {'corr_matrix_filepath': corr_matrix_filepath}})
 
-        if settings.calibration.generate_corrmatrix:
+        if correlator_pipeline_manager:
             # Run the correlator pipeline to get model visibilities
             self.start_observation(pipeline_manager=correlator_pipeline_manager)
 
