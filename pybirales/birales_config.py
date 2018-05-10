@@ -93,7 +93,7 @@ class BiralesConfig:
                     self._parser.set(section, key, value)
             else:
                 # Else, put the configuration in the observations settings
-                self._parser.set('observations', section, config_options[section])
+                self._parser.set('observation', section, config_options[section])
 
         # Re-load the system configuration upon initialisation
         self.load()
