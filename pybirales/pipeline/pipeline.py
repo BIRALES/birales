@@ -150,14 +150,19 @@ class StandAlonePipelineMangerBuilder(PipelineManagerBuilder):
 
         """
 
-        reader = RawDataReader(settings.rawdatareader)
-        beamformer = Beamformer(settings.beamformer, reader.output_blob)
+        if settings.manager.offline:
+            receiver = RawDataReader(settings.rawdatareader)
+            self.manager.name += ' (Offline)'
+        else:
+            receiver = Receiver(settings.receiver)
+
+        beamformer = Beamformer(settings.beamformer, receiver.output_blob)
         pfb = PFB(settings.channeliser, beamformer.output_blob)
         persister = BeamPersister(settings.persister, pfb.output_blob)
         terminator = Terminator(None, persister.output_blob)
 
         # Add modules to pipeline manager
-        self.manager.add_module("reader", reader)
+        self.manager.add_module("receiver", receiver)
         self.manager.add_module("beamformer", beamformer)
         self.manager.add_module("pfb", pfb)
         self.manager.add_module("persister", persister)
