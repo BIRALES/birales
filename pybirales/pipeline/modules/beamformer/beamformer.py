@@ -157,7 +157,7 @@ class Pointing(object):
 
         try:
             if settings.beamformer.apply_calib_coeffs:
-                self._calib_coeffs = self._get_latest_calib_coeffs()                
+                self._calib_coeffs = self._get_latest_calib_coeffs()
         except InvalidCalibrationCoefficientsException as e:
             log.warning("Could not load coefficients from TCPO directory. Reason: {}".format(e))
 
@@ -370,26 +370,27 @@ class Pointing(object):
             raise InvalidCalibrationCoefficientsException("No suitable calibration coefficients files were found")
 
         latest_file = coeff_files[np.array(coeff_td).argmin()]
-        
+        coeffs_filepath = os.path.join(root_dir, latest_file)
         try:
-            calib_coeffs = np.load(os.path.join(root_dir, latest_file))
+            calib_coeffs = np.load(coeffs_filepath)
         except ValueError as e:
-            log.warning('An error has occured whilst loading calibration coefficients from: {}'.format(os.path.join(root_dir, latest_file)))
+            log.warning('An error has occured whilst loading calibration coefficients [from: %s]', coeffs_filepath)
             print(e)
             raise InvalidCalibrationCoefficientsException()
-            
+
         if not isinstance(calib_coeffs, np.ndarray):
             raise InvalidCalibrationCoefficientsException(
-                "Calibration coefficients at {} are not a valid numpy array".format(latest_file))
+                "Calibration coefficients at %s are not a valid numpy array [from: %s]", latest_file, coeffs_filepath)
 
         if not len(calib_coeffs) == self._nants:
             raise InvalidCalibrationCoefficientsException(
-                "Number of calibration coefficients does not match number of antennas")
+                "Number of calibration coefficients does not match number of antennas [from: %s]", coeffs_filepath)
 
-        if not calib_coeffs.dtype == 'complex64':
-            raise InvalidCalibrationCoefficientsException("Calibration coefficients type is not complex")
+        if not np.iscomplexobj(calib_coeffs):
+            raise InvalidCalibrationCoefficientsException("Calibration coefficients type is not complex [from :%s]",
+                                                          coeffs_filepath)
 
-        log.info('Loaded calibration coefficients from {}/{}'.format(root_dir, latest_file))
+        log.info('Loaded calibration coefficients from %s', coeffs_filepath)
 
         return calib_coeffs
 
