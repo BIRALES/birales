@@ -2,4 +2,4 @@ recursive-include pybirales/app/templates *
 recursive-include pybirales/app/static *
 
 recursive-include pybirales/configuration *
-include pybirales/pipeline/modules/detection/tdm/input_template.tdm
+include pybirales/services/post_processing/input_template.tdm
