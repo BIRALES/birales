@@ -51,6 +51,10 @@ class ScheduledObservation(object):
             self.start_time = params['start_time']
             if not isinstance(self.start_time, datetime.datetime):
                 self.start_time = dateutil.parser.parse(params['start_time'])
+
+                if not self.start_time.tzinfo:
+                    raise IncorrectObservationParameters(
+                        'Invalid timezone for start date ({}) of observation'.format(self.start_time))
         except ValueError:
             raise IncorrectObservationParameters('Invalid start time for observation `{}`'.format(name))
         except KeyError:
@@ -230,8 +234,6 @@ class ScheduledObservation(object):
 
         # Get next observation is schedule
         return self.is_calibration_needed(obs.next_observation)
-
-
 
 
 class ScheduledCalibrationObservation(ScheduledObservation):

@@ -107,7 +107,7 @@ class ObservationsScheduler:
             else:
                 if message['type'] == 'message':
                     log.info("New observation received by scheduler: {}".format(message['data']))
-                    self._add_observations(message['data'])
+                    self._add_observations(json.loads(message['data']))
 
     def stop(self):
         """
