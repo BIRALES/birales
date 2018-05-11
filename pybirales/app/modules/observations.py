@@ -1,3 +1,5 @@
+import datetime
+import json
 import logging as log
 
 import mongoengine
@@ -6,10 +8,15 @@ from flask import render_template, request, abort, redirect, url_for
 from flask_paginate import Pagination, get_page_parameter
 
 from pybirales.app.modules.forms import DetectionModeForm
+from pybirales.repository.message_broker import RedisManager
 from pybirales.repository.models import Observation
 from pybirales.repository.models import SpaceDebrisTrack
 
 observations_page = Blueprint('observations_page', __name__, template_folder='templates')
+OBSERVATIONS_CHL = 'birales_scheduled_obs'
+
+_redis = RedisManager.Instance().redis
+
 
 @observations_page.route('/observations')
 def index():
@@ -33,6 +40,44 @@ def index():
                            pagination=pagination)
 
 
+def _observation_from_form(form_data, mode):
+    def json_convertor(o):
+        if isinstance(o, datetime.datetime):
+            return o.__str__()
+
+    duration = (form_data['date_end'] - form_data['date_start']).total_seconds()
+
+    obs_name = form_data['obs_name']
+    obs_config = "pybirales/configuration/templates/dev/detection.ini"
+    obs_pipeline = "detection_pipeline"
+    if mode == 'calibration':
+        obs_config = "pybirales/configuration/templates/dev/calibration.ini"
+        obs_pipeline = "correlation_pipeline"
+
+    return json.dumps({obs_name: {
+        "type": "observation",
+        "pipeline": obs_pipeline,
+        "config_file": [
+            "pybirales/configuration/birales.ini",
+            obs_config
+        ],
+        "config_parameters": {
+            "beamformer": {
+                "reference_declination": float(form_data['declination'])
+            },
+            "start_time": form_data['date_start'],
+            "observation": {
+                "name": obs_name,
+                "transmitter_frequency": float(form_data['transmitter_frequency']),
+            },
+            "target": {
+                "name": form_data['target_name'],
+            },
+            "duration": duration
+        }
+    }}, default=json_convertor)
+
+
 @observations_page.route('/observations/<mode>/create', methods=['POST', 'GET'])
 def create(mode):
     if mode == 'detection':
@@ -40,14 +85,14 @@ def create(mode):
 
         if request.method == 'POST' and form.validate():
             # Observation is valid and can be submitted to service
-            print form.data
-            pass
+            obs_data = _observation_from_form(form.data, mode)
+
+            # Publish the observation to the BIRALES scheduler
+            _redis.publish(OBSERVATIONS_CHL, obs_data)
         return render_template('modules/observations/create/detection.html', form=form)
     else:
         log.error('Observation mode is not valid')
         abort(422)
-
-
 
 
 @observations_page.route('/observations/<observation_id>')
@@ -60,6 +105,7 @@ def view(observation_id):
     except mongoengine.DoesNotExist:
         log.exception('Database error')
         abort(503)
+
 
 @observations_page.route('/observations/edit/<observation_id>')
 def edit(observation_id):
