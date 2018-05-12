@@ -74,6 +74,8 @@ class BiralesConfig:
                 log.info('Loaded the {} configuration file.'.format(config_filepath))
         except IOError:
             log.info('Config file at {} was not found'.format(config_filepath))
+        except configparser.Error:
+            log.exception('An error has occurred whilst parsing configuration file at: %s', config_filepath)
 
     def update_config(self, config_options):
         """
