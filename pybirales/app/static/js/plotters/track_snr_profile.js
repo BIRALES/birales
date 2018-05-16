@@ -120,7 +120,7 @@ TrackSNRProfilePlotter.prototype = {
             data: {from_date: from_date, to_date: to_date}
         }).done(function (response) {
             var tracks = JSON.parse(response);
-            self.plot(tracks)
+            self.plot_tracks(tracks)
         });
     }
 };

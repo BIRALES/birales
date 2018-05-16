@@ -67,8 +67,6 @@
 
 {% block scripts %}
     {{ super() }}
-    <script src="{{ url_for('static', filename='js/plotters/snr_profile.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/plotters/doppler_profile.js') }}"></script>
     <script src="{{ url_for('static', filename='js/plotters/track_doppler_profile.js') }}"></script>
     <script src="{{ url_for('static', filename='js/plotters/track_snr_profile.js') }}"></script>
     <script src="{{ url_for('static', filename='js/plotters/manager.js') }}"></script>
