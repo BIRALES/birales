@@ -33,6 +33,8 @@ class BiralesConfig:
             self._set_logging_config(config_options['observation']['name'])
         except KeyError:
             self._set_logging_config('BIRALES_observation_' + datetime.datetime.utcnow().isoformat('T'))
+        except TypeError:
+            self._set_logging_config('BIRALES_observation_' + datetime.datetime.utcnow().isoformat('T'))
 
         if config_file_path:
             # Set the configurations from file (can be multiple files)
