@@ -102,7 +102,8 @@ class BiralesFacade:
         if pipeline_manager:
             observation = Observation(name=settings.observation.name,
                                       date_time_start=datetime.datetime.utcnow(),
-                                      settings=self.configuration.to_dict())
+                                      settings=self.configuration.to_dict(),
+                                      log_filepath=self.configuration.log_filepath)
             observation.save()
 
             # Fire an Observation was Started Event
@@ -263,6 +264,8 @@ class BiralesFacade:
             # Calibrate the Instrument
             if isinstance(observation, ScheduledCalibrationObservation):
                 self.calibrate(correlator_pipeline_manager=manager)
+
+            log.info('Observation finished. Scheduler ready for new observations.')
 
         try:
             # The Scheduler responsible for the scheduling of observations

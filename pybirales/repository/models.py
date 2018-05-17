@@ -20,6 +20,7 @@ class Observation(Document):
     noise_estimate = FloatField(default=0)
     tx = FloatField()
     sampling_time = FloatField()
+    log_filepath = StringField()
 
     @property
     def is_finished(self):

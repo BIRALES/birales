@@ -30,11 +30,11 @@ class BiralesConfig:
 
         # Load the logging configuration
         try:
-            self._set_logging_config(config_options['observation']['name'])
+            self.log_filepath = self._set_logging_config(config_options['observation']['name'])
         except KeyError:
-            self._set_logging_config('BIRALES_observation_' + datetime.datetime.utcnow().isoformat('T'))
+            self.log_filepath = self._set_logging_config('BIRALES_observation_' + datetime.datetime.utcnow().isoformat('T'))
         except TypeError:
-            self._set_logging_config('BIRALES_observation_' + datetime.datetime.utcnow().isoformat('T'))
+            self.log_filepath = self._set_logging_config('BIRALES_observation_' + datetime.datetime.utcnow().isoformat('T'))
 
         if config_file_path:
             # Set the configurations from file (can be multiple files)
@@ -127,6 +127,8 @@ class BiralesConfig:
         formatter = log.Formatter(self._parser.get('formatter_formatter', 'format'))
         handler.setFormatter(formatter)
         log.getLogger().addHandler(handler)
+
+        return log_path
 
     @staticmethod
     def _db_connect():
