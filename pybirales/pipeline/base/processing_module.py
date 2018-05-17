@@ -6,6 +6,7 @@ from pybirales.pipeline.base.definitions import NoDataReaderException, InputData
 from pybirales import settings
 import time
 import logging as log
+import threading
 
 
 class Module(Thread):
@@ -211,4 +212,18 @@ class ProcessingModule(Module):
 
         # Clean
         self._tear_down()
-        log.info('%s killed', self.name)
+        log.info('%s killed [Active threads: %s]', self.name, self._get_active_threads())
+
+    def _get_active_threads(self):
+        """
+        Return the threads that are still active
+
+        :return:
+        """
+        main_thread = threading.current_thread()
+        active_threads = []
+        for t in threading.enumerate():
+            if t is main_thread:
+                continue
+            active_threads.append(t.getName())
+        return ",".join(map(str, active_threads))
