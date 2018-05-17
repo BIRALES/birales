@@ -91,6 +91,18 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12">
+                                <div class="card">
+                                    <div class="header">
+                                        <h5 class="title">Tail log file</h5>
+                                    </div>
+                                    <div class="content">
+                                        <p id="log-area"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -110,7 +122,19 @@
             const doppler_plotter = new TrackDopplerProfilePlotter('doppler-profile-plot');
             const snr_plotter = new TrackSNRProfilePlotter('snr-profile-plot');
             const detection_links = $('.observations-detection-link');
+            const log_area = $('#log-area');
+            let observation_id = "{{ observation.id }}";
 
+            function poll_log_changes() {
+                if (observation_id !== undefined) {
+                    $.get(observation_id + '/logs/tail', function (data) {
+                        log_area.html(data);
+                        setTimeout(poll_log_changes, 10000);
+                    });
+                }
+            }
+
+            poll_log_changes();
 
             function update(track_id, detection_number) {
                 $.ajax({
@@ -127,13 +151,11 @@
 
                     $('#detection-title').html('Detection ' + detection_number);
                 });
-
-
             }
 
             if ({{ tracks | length}}) {
                 update('{{ tracks[0].id }}', 1);
-                $('.observations-detection-link').first().toggleClass('btn-primary');
+                detection_links.first().toggleClass('btn-primary');
             }
 
             detection_links.click(function () {

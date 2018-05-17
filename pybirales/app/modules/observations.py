@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging as log
+import os
 
 import mongoengine
 from flask import Blueprint
@@ -105,6 +106,34 @@ def view(observation_id):
     except mongoengine.DoesNotExist:
         log.exception('Database error')
         abort(503)
+
+
+@observations_page.route('/observations/<observation_id>/logs')
+def observation_logs(observation_id):
+    try:
+        observation = Observation.objects.get(id=observation_id)
+        return json.dumps({'log_files': observation.log_files})
+    except mongoengine.DoesNotExist:
+        log.exception('Database error')
+        abort(503)
+
+
+@observations_page.route('/observations/<observation_id>/logs/tail')
+def observation_logs_tail(observation_id):
+    try:
+        observation = Observation.objects.get(id=observation_id)
+    except mongoengine.DoesNotExist:
+        log.exception('Database error')
+        abort(503)
+        return
+
+    try:
+        with open(observation.log_filepath) as f:
+            data = f.readlines()
+        tail = data[-10:]
+        return render_template('modules/observations/tail.html', tail=tail)
+    except IOError:
+        log.error('Log file for observation %s does not exist', observation_id)
 
 
 @observations_page.route('/observations/edit/<observation_id>')

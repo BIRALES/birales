@@ -2,6 +2,8 @@ import datetime
 
 from bson.objectid import ObjectId
 from mongoengine import *
+import os
+import logging as log
 
 # with warnings.catch_warnings():
 #     warnings.simplefilter("ignore")
@@ -52,6 +54,22 @@ class Observation(Document):
             'start': self.date_time_start,
             'end': self.date_time_end,
         }
+
+    @property
+    def log_files(self):
+        try:
+            log_name = os.path.dirname(self.log_filepath)
+        except AttributeError:
+            log.warning('Observation does not have a log file associated with it')
+
+            return []
+
+        logs = [os.path.join(log_name, f) for f in os.listdir(log_name) if
+                 os.path.isfile(os.path.join(log_name, f)) and f.startswith(os.path.basename(self.log_filepath))]
+
+        logs.sort(key=lambda x: os.path.getmtime(x))
+
+        return logs
 
 
 class BeamCandidate(DynamicDocument):
