@@ -210,7 +210,7 @@ class Schedule:
 
         for source in available_sources:
             # Create a calibration object for the closest_observation observation
-            tmp_obs = ScheduledCalibrationObservation(source, observation.config_file)
+            tmp_obs = ScheduledAutoCalibrationObservation(source, observation.config_file)
 
             try:
                 # Check if this observation conflicts with the scheduled observation

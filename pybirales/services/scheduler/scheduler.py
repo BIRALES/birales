@@ -11,7 +11,7 @@ from pybirales.repository.message_broker import RedisManager
 from pybirales.services.scheduler.exceptions import IncorrectScheduleFormat, \
     InvalidObservationException
 from pybirales.services.scheduler.monitoring import monitor_worker, obs_listener_worker
-from pybirales.services.scheduler.observation import ScheduledObservation
+from pybirales.services.scheduler.observation import ScheduledObservation, ScheduledCalibrationObservation
 from pybirales.services.scheduler.schedule import Schedule
 
 
@@ -165,11 +165,18 @@ class ObservationsScheduler:
         observations = []
         for obs_name, obs in scheduled_observations.iteritems():
             try:
-                so = ScheduledObservation(name=obs_name,
-                                          obs_type=obs['type'],
-                                          config_file=obs['config_file'],
-                                          pipeline_name=obs['pipeline'],
-                                          params=obs['config_parameters'])
+                if obs['type'] == 'observation':
+                    so = ScheduledObservation(name=obs_name,
+                                              pipeline_name=obs['pipeline'],
+                                              config_file=obs['config_file'],
+                                              params=obs['config_parameters'])
+                elif obs['type'] == 'calibration':
+                    so = ScheduledCalibrationObservation(name=obs_name,
+                                              config_file=obs['config_file'],
+                                              params=obs['config_parameters'])
+                else:
+                    raise InvalidObservationException
+
                 observations.append(so)
             except KeyError:
                 log.exception('An incorrect parameter was specified in observation `{}`'.format(obs_name))

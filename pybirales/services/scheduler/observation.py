@@ -9,10 +9,14 @@ from pybirales.pipeline.base.definitions import PipelineBuilderIsNotAvailableExc
 from pybirales.pipeline.pipeline import AVAILABLE_PIPELINES_BUILDERS
 from pybirales.services.instrument.best2 import pointing_time
 from pybirales.services.scheduler.exceptions import ObservationScheduledInPastException, IncorrectObservationParameters
-from pybirales.utilities.source_transit import get_calibration_source_declination
+from pybirales.utilities.source_transit import get_calibration_source_declination, get_calibration_sources
 
 
 class ScheduledObservation(object):
+    """
+    Represents any observation created and scheduled by the user
+    """
+
     DEFAULT_WAIT_SECONDS = 5
     OBS_END_PADDING = datetime.timedelta(seconds=60)
     OBS_START_PADDING = datetime.timedelta(seconds=60)
@@ -20,7 +24,7 @@ class ScheduledObservation(object):
     # Recalibrate every 24 hours
     RECALIBRATION_TIME = datetime.timedelta(hours=24)
 
-    def __init__(self, name, pipeline_name, config_file, params, obs_type='observation'):
+    def __init__(self, name, pipeline_name, config_file, params):
         """
         Initialisation function for the Scheduled Observation
 
@@ -33,7 +37,6 @@ class ScheduledObservation(object):
 
         self.name = name
         self.pipeline_name = pipeline_name
-        self._obs_type = obs_type
 
         if self.pipeline_name not in AVAILABLE_PIPELINES_BUILDERS:
             raise PipelineBuilderIsNotAvailableException(pipeline_name, AVAILABLE_PIPELINES_BUILDERS)
@@ -91,7 +94,7 @@ class ScheduledObservation(object):
 
     @property
     def is_calibration_obs(self):
-        return self._obs_type == 'calibration'
+        return isinstance(self, ScheduledCalibrationObservation)
 
     @property
     def next_observation(self):
@@ -237,20 +240,16 @@ class ScheduledObservation(object):
 
 
 class ScheduledCalibrationObservation(ScheduledObservation):
+    """
+    Represents the calibration observations that are scheduled by the user.
+    """
     CALIBRATION_TIME = 3600
+    CALIBRATION_SOURCES = get_calibration_sources()
 
-    def __init__(self, source, config_file):
-        name = '{}_{:%Y-%m-%dT%H:%M}.calib'.format(source['name'], source['transit_time'])
-        params = {
-            'beamformer':
-                {'reference_declination': get_calibration_source_declination(source['name'])},
-            'start_time': source['transit_time'],
-            'duration': self.CALIBRATION_TIME,
-        }
-
+    def __init__(self, name, config_file, params):
         pipeline_name = 'correlation_pipeline'
 
-        ScheduledObservation.__init__(self, name, pipeline_name, config_file, params, obs_type='calibration')
+        ScheduledObservation.__init__(self, name, pipeline_name, config_file, params)
 
     def is_calibration_needed(self, obs):
         """
@@ -264,3 +263,25 @@ class ScheduledCalibrationObservation(ScheduledObservation):
             return True
 
         return self.is_calibration_needed(obs.next_observation)
+
+
+class ScheduledAutoCalibrationObservation(ScheduledCalibrationObservation):
+    """
+    Represents calibration observations that are scheduled automatically by the BIRALES
+    service
+
+    """
+
+    def __init__(self, source, start_time, config_file):
+        name = '{}_{:%Y-%m-%dT%H:%M}.calib'.format(source, start_time)
+        params = {
+            'start_time': start_time,
+            'duration': self.CALIBRATION_TIME,
+        }
+
+        if name in self.CALIBRATION_SOURCES:
+            params['beamformer']['reference_declination'] = get_calibration_source_declination(source)
+        else:
+            raise IncorrectObservationParameters('Calibration source `{}` is not valid'.format(source))
+
+        ScheduledCalibrationObservation.__init__(self, name, config_file, params)
