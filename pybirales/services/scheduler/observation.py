@@ -5,9 +5,17 @@ import dateutil.parser
 import humanize
 import pytz
 
+from pybirales.birales_config import BiralesConfig
+from pybirales.events.events import ObservationStartedEvent, ObservationFinishedEvent, CalibrationRoutineStartedEvent, \
+    CalibrationRoutineFinishedEvent
+from pybirales.events.publisher import publish
 from pybirales.pipeline.base.definitions import PipelineBuilderIsNotAvailableException
 from pybirales.pipeline.pipeline import AVAILABLE_PIPELINES_BUILDERS
+from pybirales.pipeline.pipeline import get_builder_by_id
+from pybirales.repository.models import Observation as ObservationModel
+from pybirales.services.calibration.calibration import CalibrationFacade
 from pybirales.services.instrument.best2 import pointing_time
+from pybirales.services.post_processing.processor import PostProcessor
 from pybirales.services.scheduler.exceptions import ObservationScheduledInPastException, IncorrectObservationParameters
 from pybirales.utilities.source_transit import get_calibration_source_declination, get_calibration_sources
 
@@ -43,17 +51,19 @@ class ScheduledObservation(object):
 
         self.config_file = config_file
         self.parameters = params
+        self.obs_config = BiralesConfig(self.config_file, self.parameters)
 
         try:
-            self.declination = params['beamformer']['reference_declination']
+            self.declination = self.obs_config.get('beamformer', 'reference_declination')
         except KeyError:
             raise IncorrectObservationParameters(
                 'Reference declination is not specified for observation `{}`'.format(name))
 
         try:
-            self.start_time = params['start_time']
+            self.start_time = self.obs_config.get('observation', 'start_time')
+
             if not isinstance(self.start_time, datetime.datetime):
-                self.start_time = dateutil.parser.parse(params['start_time'])
+                self.start_time = dateutil.parser.parse(self.obs_config.get('observation', 'start_time'))
 
                 if not self.start_time.tzinfo:
                     raise IncorrectObservationParameters(
@@ -64,7 +74,7 @@ class ScheduledObservation(object):
             raise IncorrectObservationParameters('Start time not specified for observation `{}`'.format(name))
 
         try:
-            self.duration = datetime.timedelta(seconds=params['duration'])
+            self.duration = datetime.timedelta(seconds=self.obs_config.get('observation', 'duration'))
         except KeyError:
             raise IncorrectObservationParameters('Duration was not specified for observation `{}`'.format(name))
 
@@ -86,6 +96,16 @@ class ScheduledObservation(object):
 
         # Sched event instance associated with this observation
         self.event = None
+
+        self._model = ObservationModel(name=self.name, date_time_start=self.start_time,
+                                       settings=self.obs_config.to_dict(),
+                                       log_filepath=self.obs_config.log_filepath)
+        self._model.save()
+
+        obs_pipeline_builder = get_builder_by_id(self.pipeline_name)
+        obs_pipeline_builder.build()
+
+        self.obs_pipeline_manager = obs_pipeline_builder.manager
 
     @property
     def wait_time(self):
@@ -238,6 +258,38 @@ class ScheduledObservation(object):
         # Get next observation is schedule
         return self.is_calibration_needed(obs.next_observation)
 
+    def post(self):
+        log.info('Post-processing observation. Generating output files.')
+        _post_processor = PostProcessor()
+        _post_processor.process(self._model)
+
+    @staticmethod
+    def run(observation):
+        """
+        Run the pipeline using the provided observation settings.
+
+        The observation object has to be passed on due to the way the sched module works. We cannot
+        use self.
+
+        :param observation: A ScheduledObservation object
+        :return:
+        """
+
+        publish(ObservationStartedEvent(observation.name, observation.pipeline_name))
+
+        observation.obs_config.update_config({'observation': {'id': observation._model.id}})
+
+        observation.obs_pipeline_manager.start_pipeline(duration=observation.duration.total_seconds())
+
+        observation._model.date_time_end = datetime.datetime.utcnow()
+        observation._model.save()
+
+        publish(ObservationFinishedEvent(observation.name, observation.pipeline_name))
+
+        log.info('Post-processing observation. Generating output files.')
+        _post_processor = PostProcessor()
+        _post_processor.process(observation._model)
+
 
 class ScheduledCalibrationObservation(ScheduledObservation):
     """
@@ -263,6 +315,39 @@ class ScheduledCalibrationObservation(ScheduledObservation):
             return True
 
         return self.is_calibration_needed(obs.next_observation)
+
+    @staticmethod
+    def run(observation):
+        """
+
+        :param observation:
+        :return:
+        """
+        publish(ObservationStartedEvent(observation.name, observation.pipeline_name))
+
+        cf = CalibrationFacade()
+
+        calib_dir, corr_matrix_filepath = cf.get_calibration_filepath()
+
+        new_options = {'observation': {'type': 'calibration'},
+                       'corrmatrixpersister': {'corr_matrix_filepath': corr_matrix_filepath}}
+
+        log.debug('Correlation matrix will be saved at %s', corr_matrix_filepath)
+        observation.obs_config.update_config(new_options)
+
+        observation.obs_pipeline_manager.start_pipeline(duration=observation.duration.total_seconds())
+
+        observation._model.date_time_end = datetime.datetime.utcnow()
+        observation._model.save()
+
+        publish(ObservationFinishedEvent(observation.name, observation.pipeline_name))
+
+        publish(CalibrationRoutineStartedEvent(observation.name, corr_matrix_filepath))
+
+        # Run the calibration routine
+        cf.calibrate(calib_dir, corr_matrix_filepath)
+
+        publish(CalibrationRoutineFinishedEvent(observation.name, calib_dir))
 
 
 class ScheduledAutoCalibrationObservation(ScheduledCalibrationObservation):

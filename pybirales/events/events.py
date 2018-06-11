@@ -85,7 +85,7 @@ class ObservationStartedEvent(Event):
     channels = ['notifications']
     description = 'An observation was started'
 
-    def __init__(self, observation, pipeline_name):
+    def __init__(self, obs_name, pipeline_name):
         """
         :param pipeline_name: The name of the pipeline
         :param observation: An object of type ScheduledObservation
@@ -94,7 +94,7 @@ class ObservationStartedEvent(Event):
 
         Event.__init__(self)
 
-        self.payload['body'] = '`{}` (using the `{}` pipeline) was started on *{}*'.format(observation.name,
+        self.payload['body'] = '`{}` (using the `{}` pipeline) was started on *{}*'.format(obs_name,
                                                                                            pipeline_name,
                                                                                            socket.gethostname())
         log.debug(self.payload['body'])
@@ -108,7 +108,7 @@ class ObservationFinishedEvent(Event):
     channels = ['notifications']
     description = 'An observation has finished'
 
-    def __init__(self, observation, pipeline_name):
+    def __init__(self, obs_name, pipeline_name):
         """
         :param pipeline_name: The name of the pipeline
         :param observation: The observation which has finished
@@ -116,9 +116,10 @@ class ObservationFinishedEvent(Event):
 
         Event.__init__(self)
 
-        log.info('Observation {} (using the {}) finished'.format(observation.name, pipeline_name))
-        self.payload['body'] = '`{}` finished successfully'.format(observation.name)
+        log.info('Observation {} (using the {}) finished'.format(obs_name, pipeline_name))
+        self.payload['body'] = '`{}` finished successfully'.format(obs_name)
         log.debug(self.payload['body'])
+
 
 class SpaceDebrisClusterDetectedEvent(Event):
     """
@@ -187,4 +188,77 @@ class TrackModifiedEvent(Event):
             id(sd_track),
             sd_track.r_value,
             sd_track.size)
+        log.debug(self.payload['body'])
+
+
+class CalibrationRoutineStartedEvent(Event):
+    """
+    Event is fired when the calibration routine starts
+    """
+
+    channels = ['notifications']
+    description = 'Generating calibration coefficients'
+
+    def __init__(self, obs_name, corr_matrix_filepath):
+        """
+        :param corr_matrix_filepath: The filepath of the correlation matrix
+        :param obs_name: The name of the observation
+        :type corr_matrix_filepath: String
+        :type obs_name: String
+        """
+
+        Event.__init__(self)
+
+        msg = 'Using the correlation matrix ({}) to generate the calibration coefficients from the `{}` observation'\
+            .format(corr_matrix_filepath, obs_name)
+        self.payload['body'] = msg
+
+        log.debug(self.payload['body'])
+
+
+class CalibrationRoutineFinishedEvent(Event):
+    """
+    Event is fired when the calibration routine finishes
+    """
+
+    channels = ['notifications']
+    description = 'Calibration coefficients generated'
+
+    def __init__(self, obs_name, coeffs_dir):
+        """
+        :param coeffs_dir: The filepath were the calibration coefficients will be generated
+        :param obs_name: The name of the observation
+        :type coeffs_dir: String
+        :type obs_name: String
+        """
+
+        Event.__init__(self)
+
+        msg = 'The `{}` observation\'s calibration coefficients were generated at {}'.format(obs_name, coeffs_dir)
+        self.payload['body'] = msg
+
+        log.debug(self.payload['body'])
+
+
+
+class TrackCandidatesFoundEvent(Event):
+    """
+    Event is fired when the post processing finishes
+    """
+
+    channels = ['notifications']
+    description = 'Post-processing of the observation finished and N candidates were found'
+
+    def __init__(self, n_candidates, obs_name):
+        """
+
+        :param n_candidates: The number of candidates found
+        :param obs_name: The name of the observation
+        """
+
+        Event.__init__(self)
+
+        msg = '{} tracks were found in observation `{}`'.format(n_candidates, obs_name)
+        self.payload['body'] = msg
+
         log.debug(self.payload['body'])

@@ -3,6 +3,8 @@ import logging as log
 import pandas as pd
 
 from pybirales import settings
+from pybirales.events.events import TrackCandidatesFoundEvent
+from pybirales.events.publisher import publish
 from pybirales.repository.models import SpaceDebrisTrack
 from pybirales.services.post_processing.writer import TDMWriter, DebugCandidatesWriter
 
@@ -68,3 +70,5 @@ class PostProcessor:
             if settings.detection.debug_candidates:
                 for i, candidate in enumerate(candidates):
                     self._debug_writer.write(observation, candidate, i + 1)
+
+            publish(TrackCandidatesFoundEvent(len(candidates), observation.name))

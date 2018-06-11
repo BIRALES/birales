@@ -10,6 +10,7 @@ from pybirales.pipeline.pipeline import CorrelatorPipelineManagerBuilder
 from pybirales.services.instrument.backend import Backend
 from pybirales.services.instrument.best2 import BEST2
 from pybirales.pipeline.base.definitions import BEST2PointingException
+from pybirales.services.calibration.calibration import CalibrationFacade
 
 
 @click.group()
@@ -64,8 +65,15 @@ def reset_coefficients(ctx, config_filepath):
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)
 
-    # Reset the calibration coefficients
-    bf.reset_calibration_coefficients()
+    # Initialise the roach
+    backend = Backend.Instance()
+
+    time.sleep(1)
+    backend.start(program_fpga=True, equalize=True, calibrate=True)
+
+    calib_facade = CalibrationFacade()
+    backend.load_calibration_coefficients(amplitude=calib_facade.real_reset_coeffs,
+                                          phase=calib_facade.imag_reset_coeffs)
 
     # Stop the birales system
     bf.stop()

@@ -20,7 +20,7 @@ class ObservationsScheduler:
     DEFAULT_WAIT_SECONDS = 5
     OBSERVATIONS_CHL = 'birales_scheduled_obs'
 
-    def __init__(self, observation_run_func):
+    def __init__(self):
         """
         Initialise the Scheduler class
 
@@ -40,9 +40,6 @@ class ObservationsScheduler:
 
         # Create an observations thread which listens for new observations (through pub-sub)
         self._obs_thread = threading.Thread(target=obs_listener_worker, args=(self._scheduler,), name='Obs. Listener')
-
-        # The observation run function that will run the observations
-        self._observation_runner = observation_run_func
 
         # The redis instance
         self._redis = RedisManager.Instance().redis
@@ -179,7 +176,7 @@ class ObservationsScheduler:
 
                 observations.append(so)
             except KeyError:
-                log.exception('An incorrect parameter was specified in observation `{}`'.format(obs_name))
+                log.exception('Incorrect/missing parameter in observation `{}`'.format(obs_name))
                 log.warning('Observation `{}` was not added to the schedule'.format(obs_name))
                 continue
             except InvalidObservationException:
@@ -202,7 +199,7 @@ class ObservationsScheduler:
                 if observation.wait_time > 1:
                     # Schedule this observation, using sched
                     event = self._scheduler.enter(delay=observation.wait_time, priority=0,
-                                                  action=self._observation_runner,
+                                                  action=observation.run,
                                                   argument=(observation,))
 
                     # Associate the scheduled event with this observation

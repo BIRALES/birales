@@ -19,7 +19,7 @@ from pybirales.pipeline.modules.terminator import Terminator
 
 AVAILABLE_PIPELINES_BUILDERS = ['detection_pipeline',
                                 'correlation_pipeline',
-                                'standalone_pipeline']
+                                'standalone_pipeline', 'test_receiver_pipeline']
 
 
 def get_builder_by_id(builder_id):

@@ -5,14 +5,13 @@ import click
 from pybirales.birales import BiralesFacade
 from pybirales.birales_config import BiralesConfig
 from pybirales.cli.helpers import update_config
-from pybirales.pipeline.pipeline import DetectionPipelineMangerBuilder, CorrelatorPipelineManagerBuilder, \
-    StandAlonePipelineMangerBuilder, TestReceiverPipelineMangerBuilder
+from pybirales.services.scheduler.observation import ScheduledObservation
 
 
 @click.group()
 @click.option('--name', '-n', 'name', help='The name of the observation')
 @click.option('--debug/--no-debug', default=False)
-@click.option('--duration', 'duration', default=None, help='The duration of the observation (0 to run indefinitely)')
+@click.option('--duration', 'duration', default=3600, help='The duration of the observation (2 hours by default)')
 @click.pass_context
 def pipelines(ctx, name, debug, duration):
     if not name:
@@ -59,14 +58,17 @@ def detection_pipeline(ctx, config_file_path, tx, pointing):
     # Load the BIRALES configuration from file
     config = BiralesConfig(config_file_path, ctx.obj)
 
+    ctx.obj['observation']['start_time'] = datetime.datetime.utcnow()
+
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)
 
-    # Build the Pipeline Manager using the Detection Pipeline Manager Builder
-    manager = bf.build_pipeline(DetectionPipelineMangerBuilder())
+    observation = ScheduledObservation(name=ctx.obj['observation']['name'],
+                                       pipeline_name='detection_pipeline',
+                                       config_file=config_file_path,
+                                       params=ctx.obj)
 
-    # Finally, start the observation
-    bf.start_observation(pipeline_manager=manager)
+    bf.run_observation(observation)
 
 
 @pipelines.command(short_help='Run the Correlation Pipeline')
@@ -88,17 +90,18 @@ def correlation_pipeline(ctx, config_file_path):
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)
 
-    # Build the Pipeline Manager using the Correlator Pipeline Manager Builder
-    manager = bf.build_pipeline(CorrelatorPipelineManagerBuilder())
+    observation = ScheduledObservation(name=ctx.obj['observation']['name'],
+                                       pipeline_name='correlation_pipeline',
+                                       config_file=config_file_path,
+                                       params=ctx.obj)
 
-    # Finally, start the observation
-    bf.start_observation(pipeline_manager=manager)
+    bf.run_observation(observation)
 
 
 @pipelines.command(short_help='Run the stand alone Pipeline')
 @click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
               help='The BIRALES configuration file', multiple=True)
-def standalone_pipeline(config_file_path):
+def standalone_pipeline(ctx, config_file_path):
     """
     Run the Stand Alone Pipeline
 
@@ -112,17 +115,18 @@ def standalone_pipeline(config_file_path):
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)
 
-    # Build the Pipeline Manager using the Stand Alone Pipeline Manager Builder
-    manager = bf.build_pipeline(StandAlonePipelineMangerBuilder())
+    observation = ScheduledObservation(name=ctx.obj['observation']['name'],
+                                       pipeline_name='standalone_pipeline',
+                                       config_file=config_file_path,
+                                       params=ctx.obj)
 
-    # Finally, start the observation
-    bf.start_observation(pipeline_manager=manager)
+    bf.run_observation(observation)
 
 
 @pipelines.command(short_help='Run the stand alone Pipeline')
 @click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
               help='The BIRALES configuration file', multiple=True)
-def test_receiver_pipeline(config_file_path):
+def test_receiver_pipeline(ctx, config_file_path):
     """
     Run the Stand Alone Pipeline
 
@@ -136,8 +140,9 @@ def test_receiver_pipeline(config_file_path):
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)
 
-    # Build the Pipeline Manager using the Stand Alone Pipeline Manager Builder
-    manager = bf.build_pipeline(TestReceiverPipelineMangerBuilder())
+    observation = ScheduledObservation(name=ctx.obj['observation']['name'],
+                                       pipeline_name='test_receiver_pipeline',
+                                       config_file=config_file_path,
+                                       params=ctx.obj)
 
-    # Finally, start the observation
-    bf.start_observation(pipeline_manager=manager)
+    bf.run_observation(observation)
