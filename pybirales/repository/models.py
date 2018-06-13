@@ -24,6 +24,10 @@ class Observation(Document):
     sampling_time = FloatField()
     log_filepath = StringField()
 
+    pipeline_name = StringField()
+    config_filepath = ListField()
+    type = StringField()
+
     @property
     def is_finished(self):
         now = datetime.datetime.utcnow()

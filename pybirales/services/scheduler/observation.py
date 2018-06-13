@@ -1,6 +1,6 @@
 import datetime
 import logging as log
-
+import pickle
 import dateutil.parser
 import humanize
 import pytz
@@ -28,11 +28,11 @@ class ScheduledObservation(object):
     DEFAULT_WAIT_SECONDS = 5
     OBS_END_PADDING = datetime.timedelta(seconds=60)
     OBS_START_PADDING = datetime.timedelta(seconds=60)
-
+    TYPE = 'observation'
     # Recalibrate every 24 hours
     RECALIBRATION_TIME = datetime.timedelta(hours=24)
 
-    def __init__(self, name, pipeline_name, config_file, params):
+    def __init__(self, name, pipeline_name, config_file, params, model=None):
         """
         Initialisation function for the Scheduled Observation
 
@@ -42,15 +42,19 @@ class ScheduledObservation(object):
         :param config_file:
         :param params:
         """
+        # self.id = None
+        # if model:
+        #     self.id = model.id
 
         self.name = name
         self.pipeline_name = pipeline_name
+        self.config_file = config_file
+        self.parameters = params
+
 
         if self.pipeline_name not in AVAILABLE_PIPELINES_BUILDERS:
             raise PipelineBuilderIsNotAvailableException(pipeline_name, AVAILABLE_PIPELINES_BUILDERS)
 
-        self.config_file = config_file
-        self.parameters = params
         self.obs_config = BiralesConfig(self.config_file, self.parameters)
 
         try:
@@ -97,15 +101,21 @@ class ScheduledObservation(object):
         # Sched event instance associated with this observation
         self.event = None
 
-        self._model = ObservationModel(name=self.name, date_time_start=self.start_time,
-                                       settings=self.obs_config.to_dict(),
-                                       log_filepath=self.obs_config.log_filepath)
-        self._model.save()
-
         obs_pipeline_builder = get_builder_by_id(self.pipeline_name)
         obs_pipeline_builder.build()
 
         self.obs_pipeline_manager = obs_pipeline_builder.manager
+
+        if model:
+            self.model = model
+        else:
+            self._model = ObservationModel(name=self.name, date_time_start=self.start_time,
+                                           settings=self.obs_config.to_dict(),
+                                           log_filepath=self.obs_config.log_filepath,
+                                           pipeline_name=self.pipeline_name,
+                                           config_filepath=self.config_file,
+                                           type=self.TYPE)
+        self._model.save()
 
     @property
     def wait_time(self):
@@ -258,11 +268,6 @@ class ScheduledObservation(object):
         # Get next observation is schedule
         return self.is_calibration_needed(obs.next_observation)
 
-    def post(self):
-        log.info('Post-processing observation. Generating output files.')
-        _post_processor = PostProcessor()
-        _post_processor.process(self._model)
-
     @staticmethod
     def run(observation):
         """
@@ -290,6 +295,11 @@ class ScheduledObservation(object):
         _post_processor = PostProcessor()
         _post_processor.process(observation._model)
 
+        log.info('Post-processing of the observation finished')
+
+    def as_binary(self):
+        return pickle.dumps(self)
+
 
 class ScheduledCalibrationObservation(ScheduledObservation):
     """
@@ -297,11 +307,12 @@ class ScheduledCalibrationObservation(ScheduledObservation):
     """
     CALIBRATION_TIME = 3600
     CALIBRATION_SOURCES = get_calibration_sources()
+    TYPE = 'calibration'
 
-    def __init__(self, name, config_file, params):
+    def __init__(self, name, config_file, params, model=None):
         pipeline_name = 'correlation_pipeline'
 
-        ScheduledObservation.__init__(self, name, pipeline_name, config_file, params)
+        ScheduledObservation.__init__(self, name, pipeline_name, config_file, params, model)
 
     def is_calibration_needed(self, obs):
         """
@@ -357,7 +368,7 @@ class ScheduledAutoCalibrationObservation(ScheduledCalibrationObservation):
 
     """
 
-    def __init__(self, source, start_time, config_file):
+    def __init__(self, source, start_time, config_file, model=None):
         name = '{}_{:%Y-%m-%dT%H:%M}.calib'.format(source, start_time)
         params = {
             'start_time': start_time,
@@ -369,4 +380,4 @@ class ScheduledAutoCalibrationObservation(ScheduledCalibrationObservation):
         else:
             raise IncorrectObservationParameters('Calibration source `{}` is not valid'.format(source))
 
-        ScheduledCalibrationObservation.__init__(self, name, config_file, params)
+        ScheduledCalibrationObservation.__init__(self, name, config_file, params, model)

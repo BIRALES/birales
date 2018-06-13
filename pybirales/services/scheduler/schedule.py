@@ -162,6 +162,7 @@ class Schedule:
                 self._append(calibration_obs)
 
         # Add the new observation whether a calibration observation is found or not
+        log.debug('Adding a new observation (%s) to queue', new_obs.name)
         self._append(new_obs)
 
         return new_obs

@@ -83,10 +83,7 @@ class BiralesFacade:
             else:
                 log.info('BEST-II pointing is disabled as specified in configuration')
 
-        observation.run()
-
-        if settings.detection.save_tdm or settings.detection.debug_candidates:
-            observation.post()
+        observation.run(observation)
 
     def stop(self):
         """
@@ -114,6 +111,8 @@ class BiralesFacade:
         if self._listeners is not None:
             log.debug('Stopping the listeners')
             self._stop_listeners()
+
+
 
 
     def start_scheduler(self, schedule_file_path, file_format):

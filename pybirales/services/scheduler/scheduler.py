@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging as log
 import sched
@@ -8,6 +9,7 @@ from operator import attrgetter
 from pybirales.events.events import ObservationScheduledCancelledEvent
 from pybirales.events.publisher import EventsPublisher
 from pybirales.repository.message_broker import RedisManager
+from pybirales.repository.models import Observation as ObservationModel
 from pybirales.services.scheduler.exceptions import IncorrectScheduleFormat, \
     InvalidObservationException
 from pybirales.services.scheduler.monitoring import monitor_worker, obs_listener_worker
@@ -92,8 +94,43 @@ class ObservationsScheduler:
         # Start the scheduler
         self._scheduler.run()
 
+        # Queue existing observations that were stored in the database
+        self._load_observations()
+
         # Listen in for new observations (blocking)
         self._listen()
+
+    def _load_observations(self):
+        """
+        Query the database for observations that were already scheduled
+
+        :return:
+        """
+        now = datetime.datetime.utcnow()
+
+        # Get observations from the database
+        observations = ObservationModel.objects(date_time_start__gte=now)
+
+        log.info('Loading %s observations from database', len(observations))
+
+        # Schedule the observations
+        for obs in observations:
+            try:
+                if obs.type == 'observation':
+                    self._schedule.add_observation(ScheduledObservation(name=obs.name,
+                                                                        pipeline_name=obs.pipeline_name,
+                                                                        config_file=obs.config_filepath,
+                                                                        params=obs.settings))
+                elif obs.type == 'calibration':
+                    self._schedule.add_observation(ScheduledCalibrationObservation(name=obs.name,
+                                                                                   config_file=obs.config_filepath,
+                                                                                   params=obs.settings))
+
+            except InvalidObservationException:
+                log.warning('Observation `{}` was not added to the schedule'.format(obs.name))
+
+        # Queue the observation to the sched instance
+        self._queue_observations()
 
     def _listen(self):
         log.info('Scheduler listening on `{}` for new observations'.format(self.OBSERVATIONS_CHL))
@@ -169,8 +206,8 @@ class ObservationsScheduler:
                                               params=obs['config_parameters'])
                 elif obs['type'] == 'calibration':
                     so = ScheduledCalibrationObservation(name=obs_name,
-                                              config_file=obs['config_file'],
-                                              params=obs['config_parameters'])
+                                                         config_file=obs['config_file'],
+                                                         params=obs['config_parameters'])
                 else:
                     raise InvalidObservationException
 
