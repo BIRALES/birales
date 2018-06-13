@@ -6,6 +6,7 @@ import dateutil.parser
 import humanize
 import pytz
 from pybirales.services.scheduler.observation import ScheduledCalibrationObservation, ScheduledObservation
+import json
 
 
 def monitor_worker(scheduler):
@@ -35,11 +36,11 @@ def monitor_worker(scheduler):
     log.info('Monitoring thread terminated')
 
 
-def obs_listener_worker(obs_queue):
+def obs_listener_worker(scheduler):
     """
      Listen for new scheduled observations
 
-    :param obs_queue: The sched instance
+    :param scheduler: The sched instance
     :return:
     """
 
@@ -54,18 +55,19 @@ def obs_listener_worker(obs_queue):
     # Subscribe to the observations channel
     _pubsub.subscribe(obs_chl)
 
+    log.info('Scheduler listening on `{}` for new observations'.format(obs_chl))
     for message in _pubsub.listen():
         if message['data'] == 'KILL':
             log.info('Scheduled observations listener un-subscribed from {}'.format(obs_chl))
             break
         else:
             if message['type'] == 'message':
-                obs = message['data']
-                so = ScheduledObservation(name=obs['name'],
-                                          obs_type=obs['type'],
-                                          config_file=obs['config_file'],
-                                          pipeline_name=obs['pipeline'],
-                                          params=obs['config_parameters'])
-                obs_queue.add_observation(so)
+                log.info("New observation received by scheduler: {}".format(message['data']))
+
+                # Create object from json string
+                observation = scheduler.create_obs(json.loads(message['data']))
+
+                # Add the scheduled objects to the queue
+                scheduler.add_observation(observation)
 
     log.info('Observation listener terminated')

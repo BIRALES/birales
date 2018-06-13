@@ -127,10 +127,7 @@ class BiralesFacade:
         try:
             # The Scheduler responsible for the scheduling of observations
             self._scheduler = ObservationsScheduler()
-
-            if schedule_file_path:
-                self._scheduler.load_from_file(schedule_file_path, file_format)
-            self._scheduler.start()
+            self._scheduler.start(schedule_file_path, file_format)
         except KeyboardInterrupt:
             log.info('Ctrl-C received. Terminating the scheduler process.ws')
             self._scheduler.stop()

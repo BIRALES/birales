@@ -14,19 +14,30 @@ STATUS_MAP = {
 }
 
 
+# class ScheduledObservation(Document):
+#     name = StringField(required=True, max_length=200)
+#     date_time_start = DateTimeField(required=True, default=datetime.datetime.utcnow)
+#     date_time_end = DateTimeField()
+#     pipeline = StringField()
+#     type = StringField()
+#
+#     config_parameters = DynamicField()
+#     config_file = ListField()
+
+
 class Observation(Document):
     name = StringField(required=True, max_length=200)
     date_time_start = DateTimeField(required=True, default=datetime.datetime.utcnow)
-    date_time_end = DateTimeField()
-    settings = DynamicField()
-    noise_estimate = FloatField(default=0)
-    tx = FloatField()
-    sampling_time = FloatField()
-    log_filepath = StringField()
+    date_time_end = DateTimeField() # Updated when the observation ends
+    pipeline = StringField(required=True)
+    type = StringField(required=True)
 
-    pipeline_name = StringField()
-    config_filepath = ListField()
-    type = StringField()
+    config_parameters = DynamicField(required=True)
+    config_file = ListField(required=True)
+
+    # These are updated when the observation has started
+    settings = DynamicField()
+    log_filepath = StringField()
 
     @property
     def is_finished(self):
@@ -69,11 +80,40 @@ class Observation(Document):
             return []
 
         logs = [os.path.join(log_name, f) for f in os.listdir(log_name) if
-                 os.path.isfile(os.path.join(log_name, f)) and f.startswith(os.path.basename(self.log_filepath))]
+                os.path.isfile(os.path.join(log_name, f)) and f.startswith(os.path.basename(self.log_filepath))]
 
         logs.sort(key=lambda x: os.path.getmtime(x))
 
         return logs
+
+
+class SpaceDebrisTrack(DynamicDocument):
+    _id = ObjectIdField(required=True, default=ObjectId, unique=True, primary_key=True)
+    observation = ReferenceField(Observation, required=True)
+    created_at = DateTimeField(default=datetime.datetime.utcnow)
+
+    m = FloatField(required=True)
+    intercept = FloatField(required=True)
+    r_value = FloatField(required=True)
+    rcs = None
+    target = None
+
+    tdm_filepath = StringField(required=False)
+
+    @queryset_manager
+    def get(self, query_set, observation_id=None, from_time=None, to_time=None):
+        query = Q()
+
+        if observation_id:
+            query &= Q(observation=observation_id)
+
+        if from_time:
+            query &= Q(created_at__gte=from_time)
+
+        if to_time:
+            query &= Q(created_at__lte=to_time)
+
+        return query_set.filter(query)
 
 
 class BeamCandidate(DynamicDocument):
@@ -112,34 +152,5 @@ class BeamCandidate(DynamicDocument):
 
             if max_channel:
                 query &= Q(max_channel__lte=max_channel)
-
-        return query_set.filter(query)
-
-
-class SpaceDebrisTrack(DynamicDocument):
-    _id = ObjectIdField(required=True, default=ObjectId, unique=True, primary_key=True)
-    observation = ReferenceField(Observation, required=True)
-    created_at = DateTimeField(default=datetime.datetime.utcnow)
-
-    m = FloatField(required=True)
-    intercept = FloatField(required=True)
-    r_value = FloatField(required=True)
-    rcs = None
-    target = None
-
-    tdm_filepath = StringField(required=False)
-
-    @queryset_manager
-    def get(self, query_set, observation_id=None, from_time=None, to_time=None):
-        query = Q()
-
-        if observation_id:
-            query &= Q(observation=observation_id)
-
-        if from_time:
-            query &= Q(created_at__gte=from_time)
-
-        if to_time:
-            query &= Q(created_at__lte=to_time)
 
         return query_set.filter(query)

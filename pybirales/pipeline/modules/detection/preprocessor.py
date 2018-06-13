@@ -65,6 +65,9 @@ class PreProcessor(ProcessingModule):
             self._observation.mean_noise = obs_info['mean_noise']
             self._observation.mean_channel_noise = obs_info['channel_noise']
             self._observation.beam_noise = np.mean(obs_info['channel_noise'], axis=1)
+            self._observation.tx = obs_info['transmitter_frequency']
+            self._observation.sampling_time = obs_info['sampling_time']
+            self._observation.log_filepath = log.getLoggerClass().root.handlers[0].baseFilename
 
             self._observation.save()
             self._config_persisted = True
