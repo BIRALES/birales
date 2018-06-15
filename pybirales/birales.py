@@ -49,7 +49,7 @@ class BiralesFacade:
 
     def _signal_handler(self, signum, frame):
         """ Capturing interrupt signal """
-        log.info("Ctrl-C detected by process %s, stopping pipeline", os.getpid())
+        log.info("Ctrl-C detected by process %s, stopping birales system", os.getpid())
 
         self.stop()
 
@@ -111,8 +111,6 @@ class BiralesFacade:
         if self._listeners is not None:
             log.debug('Stopping the listeners')
             self._stop_listeners()
-
-
 
 
     def start_scheduler(self, schedule_file_path, file_format):

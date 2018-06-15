@@ -39,6 +39,11 @@ class Observation(Document):
     settings = DynamicField()
     log_filepath = StringField()
 
+    # These are updated during a detection observation
+    noise_stats = DynamicField()
+    tx = FloatField()
+    sampling_time = FloatField()
+
     @property
     def is_finished(self):
         now = datetime.datetime.utcnow()

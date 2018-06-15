@@ -115,7 +115,7 @@ class PipelineManager(object):
                 logging.info("{} updated".format(plotter.__class__.__name__))
 
                 if time.time() - start_time > duration:
-                    logging.info("Observation run for entire duration ({}s), stopping pipeline".format(duration))
+                    logging.info("Observation run for the entire duration ({}s), stopping pipeline".format(duration))
                     self.stop_pipeline()
                     break
 
@@ -179,7 +179,7 @@ class PipelineManager(object):
 
             # If the observation duration has elapsed stop pipeline
             elif duration and (time.time() - start_time) > duration:
-                logging.info("Observation run for entire duration ({}s), stopping pipeline".format(duration))
+                logging.info("Observation run for the entire duration ({}s), stopping pipeline".format(duration))
                 self.stop_pipeline()
                 break
 

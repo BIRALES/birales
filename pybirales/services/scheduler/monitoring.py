@@ -9,7 +9,7 @@ from pybirales.services.scheduler.observation import ScheduledCalibrationObserva
 import json
 
 
-def monitor_worker(scheduler):
+def monitor_worker(scheduler, stop_event):
     """
     Start the monitoring thread
 
@@ -17,7 +17,7 @@ def monitor_worker(scheduler):
     :return:
     """
     time_counter = 0
-    while not scheduler.empty():
+    while not stop_event.is_set():
         # Process every N iterations
         if time_counter % 60 == 0:
             now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)

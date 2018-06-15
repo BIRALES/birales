@@ -4,6 +4,7 @@ import logging as log
 import sched
 import threading
 import time
+import signal
 
 from pybirales.events.events import ObservationScheduledCancelledEvent
 from pybirales.events.publisher import EventsPublisher
@@ -35,11 +36,15 @@ class ObservationsScheduler:
         # Event published of the application
         self._publisher = EventsPublisher.Instance()
 
+        self._stop_event = threading.Event()
+
         # Monitoring thread that will output the status of the scheduler at specific intervals
-        self._monitor_thread = threading.Thread(target=monitor_worker, args=(self._scheduler,), name='Monitoring')
+        self._monitor_thread = threading.Thread(target=monitor_worker, args=(self._scheduler, self._stop_event,),
+                                                name='Monitoring')
 
         # Create an observations thread which listens for new observations (through pub-sub)
-        self._obs_thread = threading.Thread(target=obs_listener_worker, args=(self._scheduler,), name='Obs. Listener')
+        self._obs_thread = threading.Thread(target=obs_listener_worker, args=(self._scheduler,),
+                                            name='Obs. Listener')
 
         # The redis instance
         self._redis = RedisManager.Instance().redis
@@ -105,6 +110,9 @@ class ObservationsScheduler:
         # Start the scheduler
         self._scheduler.run()
 
+        # Wait for a keyboard interrupt to exit the process
+        signal.pause()
+
     def _restore_observations(self):
         """
         Restore observations from the database
@@ -141,8 +149,10 @@ class ObservationsScheduler:
         if self._scheduler.empty():
             log.info('Scheduler was cleared from all events. Please wait for the monitoring thread to terminate.')
 
-        # Wait for all the notifications to be sent
-        time.sleep(2)
+
+
+        # stop monitoring thread
+        self._stop_event.set()
 
     def _add_observations(self, scheduled_observations):
         """
@@ -191,7 +201,7 @@ class ObservationsScheduler:
                                           config_parameters=obs['config_parameters'])
             elif obs['type'] == 'calibration':
                 so = ScheduledCalibrationObservation(name=obs['name'],
-                                                     pipeline_name=obs['pipeline'],
+                                                     pipeline_name=None,
                                                      config_file=obs['config_file'],
                                                      config_parameters=obs['config_parameters'])
             else:

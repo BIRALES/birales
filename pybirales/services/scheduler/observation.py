@@ -70,6 +70,10 @@ class ScheduledObservation(object):
 
         self.manager = ObservationManager()
 
+    @property
+    def id(self):
+        return self.model.id
+
     def save(self):
         self.model.save()
 
@@ -82,8 +86,9 @@ class ScheduledObservation(object):
         try:
             declination = self.parameters['beamformer']['reference_declination']
         except KeyError:
-            raise IncorrectObservationParameters(
-                'Reference declination is not specified for observation `{}`'.format(self.name))
+            log.warning('Reference declination is not specified for observation `{}`'.format(self.name))
+
+            return None
         else:
             return declination
 
@@ -92,6 +97,7 @@ class ScheduledObservation(object):
         Set the duration of this observation
         :return:
         """
+
         try:
             duration = datetime.timedelta(seconds=self.parameters['duration'])
         except KeyError:
@@ -105,7 +111,9 @@ class ScheduledObservation(object):
         :return:
         """
         try:
-            start_time = self.parameters['start_time']
+            start_time = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+            if 'start_time' in self.parameters:
+                start_time = self.parameters['start_time']
 
             if not isinstance(start_time, datetime.datetime):
                 start_time = dateutil.parser.parse(start_time)

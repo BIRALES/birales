@@ -2,8 +2,7 @@ import datetime
 
 import click
 
-from pybirales.birales import BiralesFacade
-from pybirales.birales_config import BiralesConfig
+from pybirales.base.observation_manager import ObservationManager
 from pybirales.cli.helpers import update_config
 from pybirales.services.scheduler.observation import ScheduledObservation
 
@@ -20,15 +19,12 @@ def pipelines(ctx, name, debug, duration):
     ctx.obj = {
         'observation': {
             'name': name,
-            'duration': duration
         },
         'manager': {
             'debug': debug
-        }
+        },
+        'duration': duration
     }
-
-    ctx.obj = update_config(ctx.obj, 'observation', 'name', name)
-    ctx.obj = update_config(ctx.obj, 'manager', 'debug', debug)
 
 
 @pipelines.command(short_help='Run the Detection Pipeline')
@@ -55,20 +51,15 @@ def detection_pipeline(ctx, config_file_path, tx, pointing):
     if pointing:
         ctx.obj = update_config(ctx.obj, 'beamformer', 'reference_declination', pointing)
 
-    # Load the BIRALES configuration from file
-    config = BiralesConfig(config_file_path, ctx.obj)
-
-    ctx.obj['observation']['start_time'] = datetime.datetime.utcnow()
-
-    # Initialise the Birales Facade (BOSS)
-    bf = BiralesFacade(configuration=config)
+    ctx.obj['start_time'] = datetime.datetime.utcnow()
 
     observation = ScheduledObservation(name=ctx.obj['observation']['name'],
                                        pipeline_name='detection_pipeline',
                                        config_file=config_file_path,
-                                       params=ctx.obj)
+                                       config_parameters=ctx.obj)
 
-    bf.run_observation(observation)
+    om = ObservationManager()
+    om.run(observation)
 
 
 @pipelines.command(short_help='Run the Correlation Pipeline')
@@ -84,18 +75,13 @@ def correlation_pipeline(ctx, config_file_path):
     :return:
     """
 
-    # Load the BIRALES configuration from file
-    config = BiralesConfig(config_file_path, ctx.obj)
-
-    # Initialise the Birales Facade (BOSS)
-    bf = BiralesFacade(configuration=config)
-
     observation = ScheduledObservation(name=ctx.obj['observation']['name'],
                                        pipeline_name='correlation_pipeline',
                                        config_file=config_file_path,
-                                       params=ctx.obj)
+                                       config_parameters=ctx.obj)
 
-    bf.run_observation(observation)
+    om = ObservationManager()
+    om.run(observation)
 
 
 @pipelines.command(short_help='Run the stand alone Pipeline')
@@ -109,18 +95,13 @@ def standalone_pipeline(ctx, config_file_path):
     :return:
     """
 
-    # Load the BIRALES configuration from file
-    config = BiralesConfig(config_file_path)
-
-    # Initialise the Birales Facade (BOSS)
-    bf = BiralesFacade(configuration=config)
-
     observation = ScheduledObservation(name=ctx.obj['observation']['name'],
                                        pipeline_name='standalone_pipeline',
                                        config_file=config_file_path,
-                                       params=ctx.obj)
+                                       config_parameters=ctx.obj)
 
-    bf.run_observation(observation)
+    om = ObservationManager()
+    om.run(observation)
 
 
 @pipelines.command(short_help='Run the stand alone Pipeline')
@@ -134,15 +115,10 @@ def test_receiver_pipeline(ctx, config_file_path):
     :return:
     """
 
-    # Load the BIRALES configuration from file
-    config = BiralesConfig(config_file_path)
-
-    # Initialise the Birales Facade (BOSS)
-    bf = BiralesFacade(configuration=config)
-
     observation = ScheduledObservation(name=ctx.obj['observation']['name'],
                                        pipeline_name='test_receiver_pipeline',
                                        config_file=config_file_path,
-                                       params=ctx.obj)
+                                       config_parameters=ctx.obj)
 
-    bf.run_observation(observation)
+    om = ObservationManager()
+    om.run(observation)

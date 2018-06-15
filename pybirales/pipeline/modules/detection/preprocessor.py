@@ -62,12 +62,20 @@ class PreProcessor(ProcessingModule):
         # If the configuration was not saved AND the number of noise samples is sufficient, save the noise value.
         if not self._config_persisted and self.counter >= settings.detection.n_noise_samples:
             self._observation = Observation.objects.get(id=settings.observation.id)
-            self._observation.mean_noise = obs_info['mean_noise']
-            self._observation.mean_channel_noise = obs_info['channel_noise']
-            self._observation.beam_noise = np.mean(obs_info['channel_noise'], axis=1)
+
+            self._observation.noise_stats = {
+                'mean_noise': obs_info['mean_noise'],
+                'beam_noise':  list(np.mean(obs_info['channel_noise'], axis=1)),
+            }
+
             self._observation.tx = obs_info['transmitter_frequency']
             self._observation.sampling_time = obs_info['sampling_time']
-            self._observation.log_filepath = log.getLoggerClass().root.handlers[0].baseFilename
+
+            for h in log.getLoggerClass().root.handlers:
+                try:
+                    self._observation.log_filepath = h.baseFilename
+                except AttributeError:
+                    continue
 
             self._observation.save()
             self._config_persisted = True
