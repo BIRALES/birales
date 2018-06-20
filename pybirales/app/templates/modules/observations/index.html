@@ -8,18 +8,8 @@
             <div class="col-md-12">
                 <div class="card">
                     <div class="header">
-                        <div class="col-sm-8">
-                            <h4 class="title">Observations</h4>
-                            <p class="category">{{ pagination.info }}</p>
-                        </div>
-                        <div class="col-sm-4">
-                            <div class="pull-right">
-                                <div class="btn-group">
-                                    <a href="{{ url_for('observations_page.create', mode='detection') }}"
-                                       class="btn btn-sm btn-success" role="button">New Detection Observation</a>
-                                </div>
-                            </div>
-                        </div>
+                        <h4 class="title">Observations</h4>
+                        {# <p class="category">{{ pagination.info }}</p> #}
                     </div>
 
                     <div class="content table-responsive table-full-width">
@@ -27,6 +17,7 @@
                             <thead>
                             <tr>
                                 <th>Observation</th>
+                                <th>Type</th>
                                 <th>Date From</th>
                                 <th>Date To</th>
                                 <th>Status</th>
@@ -37,32 +28,26 @@
                             {% for observation in observations %}
                                 <tr>
                                     <td>{{ observation.name }}</td>
+                                    <td>{{ observation.type }}</td>
                                     <td>{{ observation.date_time_start }}</td>
                                     <td>{{ observation.date_time_end }}</td>
 
                                     <td>
-                                        {% if observation.is_finished %}
+                                        {% if observation.status == 'Finished' %}
                                             <span class="label label-success">{{ observation.status }}</span>
-                                        {% elif observation.is_running %}
+                                        {% elif observation.status == 'Pending' %}
+                                            <span class="label label-primary">{{ observation.status }}</span>
+                                        {% elif observation.status == 'Running' %}
                                             <span class="label label-default">{{ observation.status }}</span>
                                         {% else %}
                                             <span class="label label-danger">{{ observation.status }}</span>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if observation.is_finished or observation.is_running %}
-                                            <a href="{{ url_for('observations_page.view', observation_id=observation.id) }}"
-                                               class="btn btn-sm btn-info" role="button">
-                                                {% if observation.is_finished %}
-                                                    Results
-                                                {% elif observation.is_running %}
-                                                    Monitor
-                                                {% endif %}
-                                            </a>
-                                        {% else %}
-                                            <a href="{{ url_for('observations_page.edit', observation_id=observation.id) }}"
-                                               class="btn btn-sm btn-warning" role="button">Edit</a>
-                                        {% endif %}
+                                        <a href="{{ url_for('observations_page.view', observation_id=observation.id) }}"
+                                           class="btn btn-sm btn-info" role="button">
+                                            View
+                                        </a>
 
                                         <a href="{{ url_for('observations_page.delete', observation_id=observation.id) }}"
                                            class="btn btn-sm btn-danger" role="button">Delete</a>
@@ -73,6 +58,26 @@
                         </table>
                         {{ pagination.links }}
                     </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="dropdown">
+                    <button class="btn btn-fill btn-primary dropdown-toggle" type="button" id="dropdownMenu1"
+                            data-toggle="dropdown">
+                        Create
+                        <span class="caret"></span>
+                    </button>
+
+                    <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
+                        <li role="presentation"><a role="menuitem" tabindex="-1"
+                                                   href="{{ url_for('observations_page.create', mode='detection') }}">Detection</a>
+                        </li>
+                        <li role="presentation"><a role="menuitem" tabindex="-1"
+                                                   href="{{ url_for('observations_page.create', mode='calibration') }}">Calibration</a>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>

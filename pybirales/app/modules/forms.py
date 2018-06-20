@@ -1,9 +1,11 @@
-from dateutil.tz import tzlocal
-from wtforms import Form, StringField, DecimalField, DateTimeField, ValidationError
-from wtforms.validators import DataRequired
-from wtforms.widgets import TextInput
-import pytz
+from wtforms import Form, StringField, DecimalField, DateTimeField, ValidationError, HiddenField
 import datetime
+
+import pytz
+from wtforms import Form, StringField, DecimalField, DateTimeField, ValidationError, HiddenField
+from wtforms.validators import DataRequired, AnyOf
+from wtforms.widgets import TextInput
+
 
 class UTCDateTimeField(DateTimeField):
     widget = TextInput()
@@ -33,7 +35,7 @@ class ObservationModeForm(Form):
     obs_name = StringField('Observation name', validators=[DataRequired()])
     declination = DecimalField('Declination (&#176;)', places=4, default=45, validators=[DataRequired()])
     date_start = UTCDateTimeField('Start time', format='%Y-%m-%d %H:%M:%S',
-                               validators=[DataRequired()])
+                                  validators=[DataRequired()])
     date_end = UTCDateTimeField('End time', format='%Y-%m-%d %H:%M:%S', validators=[DataRequired()])
 
     def validate_date_start(self, field):
@@ -47,7 +49,6 @@ class ObservationModeForm(Form):
     def process_data_date_end(self, field):
         a = 'a'
         print 'here'
-
 
 
 class DetectionModeForm(ObservationModeForm):

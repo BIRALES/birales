@@ -190,14 +190,15 @@ class ProcessingModule(Module):
                     log.info('%s finished in %0.3f s', self.name, tt)
                 else:
                     log.warning('%s finished in %0.3f s', self.name, tt)
+
+                if res is not None:
+                    obs_info = res
             except NoDataReaderException:
                 logging.info("Data finished")
                 self.stop()
-            # except KeyboardInterrupt:
-            #    logging.info("Ctrl-C signal arrived in thread")
-
-            if res is not None:
-                obs_info = res
+            except OSError:
+                log.exception("An OS exception has occurred. Stopping the pipeline")
+                self.stop()
 
             # Release writer lock and update observation info if required
             if self._output is not None:

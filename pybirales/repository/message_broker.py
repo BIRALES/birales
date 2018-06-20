@@ -13,3 +13,9 @@ class RedisManager:
         self._connection_pool = redis.ConnectionPool(host=host,
                                                      port=port)
         self.redis = redis.Redis(connection_pool=self._connection_pool)
+
+# The message broker we will be using
+broker = RedisManager.Instance().redis
+
+# The PubSub interface of the redis instance
+pub_sub = broker.pubsub()

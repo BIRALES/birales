@@ -47,6 +47,27 @@
                 minDate: today,
                 defaultDate: new Date(today.getTime() + 5 * 60000)
             });
+
+            let form = $("#obs-create-form");
+            form.submit(function (e) {
+
+                // Prevent Default functionality
+                e.preventDefault();
+
+                // Get the action-url of the form
+                let actionurl = e.currentTarget.action;
+
+                $.ajax({
+                    url: actionurl,
+                    type: 'post',
+                    dataType: 'application/json',
+                    data: form.serialize(),
+                    success: function (data) {
+                        log.info('Form has been submitted. Please wait for confirmation.')
+                    }
+                });
+
+            });
         });
     </script>
 {% endblock %}

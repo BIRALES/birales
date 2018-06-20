@@ -5,6 +5,7 @@ import sched
 import threading
 import time
 import signal
+import pytz
 
 from pybirales.events.events import ObservationScheduledCancelledEvent
 from pybirales.events.publisher import EventsPublisher
@@ -43,7 +44,7 @@ class ObservationsScheduler:
                                                 name='Monitoring')
 
         # Create an observations thread which listens for new observations (through pub-sub)
-        self._obs_thread = threading.Thread(target=obs_listener_worker, args=(self._scheduler,),
+        self._obs_thread = threading.Thread(target=obs_listener_worker, args=(self,),
                                             name='Obs. Listener')
 
         # The redis instance
@@ -79,8 +80,8 @@ class ObservationsScheduler:
             scheduled_observation = self._add_observations(observations)
 
             # Save scheduled observations such that they can be restored later
-            for obs in scheduled_observation:
-                obs.save()
+            # for obs in scheduled_observation:
+            #     obs.save()
         else:
             raise IncorrectScheduleFormat(schedule_file_path)
 
@@ -120,7 +121,7 @@ class ObservationsScheduler:
         :return:
         """
 
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
 
         scheduled_observations = ObservationModel.objects(date_time_start__gte=now)
 
@@ -183,6 +184,10 @@ class ObservationsScheduler:
                 scheduled_obs.append(observation)
 
         return scheduled_obs
+
+    @property
+    def schedule(self):
+        return self._schedule
 
     @staticmethod
     def create_obs(obs):

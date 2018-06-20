@@ -1,12 +1,13 @@
 import datetime
+import json
 import logging as log
 import time
-from pybirales.repository.message_broker import RedisManager
-import dateutil.parser
+
 import humanize
 import pytz
-from pybirales.services.scheduler.observation import ScheduledCalibrationObservation, ScheduledObservation
-import json
+
+from pybirales.repository.message_broker import RedisManager
+from pybirales.services.scheduler.exceptions import InvalidObservationException
 
 
 def monitor_worker(scheduler, stop_event):
@@ -17,6 +18,9 @@ def monitor_worker(scheduler, stop_event):
     :return:
     """
     time_counter = 0
+
+    log.debug('Monitoring thread started')
+
     while not stop_event.is_set():
         # Process every N iterations
         if time_counter % 60 == 0:
@@ -68,6 +72,11 @@ def obs_listener_worker(scheduler):
                 observation = scheduler.create_obs(json.loads(message['data']))
 
                 # Add the scheduled objects to the queue
-                scheduler.add_observation(observation)
+                try:
+                    scheduler.schedule.add_observation(observation)
+                except InvalidObservationException:
+                    log.warning('Observation is not valid')
+                    # Report back to front-end
+
 
     log.info('Observation listener terminated')

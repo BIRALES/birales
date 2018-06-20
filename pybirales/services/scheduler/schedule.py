@@ -152,6 +152,9 @@ class Schedule:
 
             self._increment(new_obs)
 
+            # save observation
+            new_obs.save()
+
             return new_obs
 
         if new_obs.is_calibration_needed(self._head):
@@ -161,9 +164,15 @@ class Schedule:
             if calibration_possible:
                 self._append(calibration_obs)
 
+                # save observation to the database so that it can be restored later
+                calibration_obs.save()
+
         # Add the new observation whether a calibration observation is found or not
         log.debug('Adding a new observation (%s) to queue', new_obs.name)
         self._append(new_obs)
+
+        # save observation to the database so that it can be restored later
+        new_obs.save()
 
         return new_obs
 
@@ -185,6 +194,7 @@ class Schedule:
         self._tail = new_obs
 
         self._increment(new_obs)
+
 
     def _create_calibration_observation(self, observation):
         """

@@ -153,10 +153,11 @@
                 });
             }
 
-            if ({{ tracks | length}}) {
+            {% if tracks|length > 1 %}
                 update('{{ tracks[0].id }}', 1);
                 detection_links.first().toggleClass('btn-primary');
-            }
+            {% endif %}
+
 
             detection_links.click(function () {
                 let track_id = $(this).attr('id');

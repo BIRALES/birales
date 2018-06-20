@@ -26,7 +26,7 @@
               href="{{ url_for('static', filename='node_modules/toastr/build/toastr.min.css') }}">
         <link rel="stylesheet"
               href="{{ url_for('static', filename='node_modules/bootstrap-toggle/css/bootstrap-toggle.min.css') }}">
-<link href="//cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" rel="stylesheet"/>
+        <link href="//cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" rel="stylesheet"/>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/side_panel.css') }}"/>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/loader.css') }}"/>
 
@@ -47,16 +47,21 @@
             <ul class="nav">
                 <li {% if active_page == 'monitoring' %} class="active" {% endif %}>
                     <a href="{{ url_for('monitoring_page.index') }}">
-                        <i class="pe-7s-graph"></i>
-
+                        <i class="pe-7s-graph2"></i>
                         <p>Monitoring</p>
                     </a>
                 </li>
                 <li {% if active_page == 'observations' %} class="active" {% endif %}>
                     <a href="{{ url_for('observations_page.index') }}">
+                        <i class="pe-7s-glasses"></i>
+                        <p>Observations</p>
+                    </a>
+                </li>
+                <li {% if active_page == 'system-log' %} class="active" {% endif %}>
+                    <a href="{{ url_for('configurations_page.index') }}">
                         <i class="pe-7s-note2"></i>
 
-                        <p>Observations</p>
+                        <p>System Log</p>
                     </a>
                 </li>
                 <li {% if active_page == 'configurations' %} class="active" {% endif %}>
@@ -146,14 +151,14 @@
     <script src="{{ url_for('static', filename='node_modules/bootstrap-toggle/js/bootstrap-toggle.min.js') }}"></script>
     <script src="{{ url_for('static', filename='node_modules/selectric/public/jquery.selectric.min.js') }}"></script>
     <script src="{{ url_for('static', filename='node_modules/dropzone/dist/dropzone.js') }}"></script>
-<script src="//cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+    <script src="//cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
     <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 
 
     <script>
         $(document).ready(function () {
-
+            {# Get Server side messages #}
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for level, message in messages %}
@@ -161,6 +166,85 @@
                     {% endfor %}
                 {% endif %}
             {% endwith %}
+
+            let failed_requests = 0;
+            let last_updated = new Date();
+
+            function events_polling() {
+
+                log.debug('Fetching new data since', last_updated.toISOString());
+
+                if (failed_requests > 5) {
+                    log.error('Stopping polling as server is not responsive');
+                    return
+                }
+
+                $.ajax({
+                    url: '/api/events',
+                    method: "POST",
+                    timeout: 8000,
+                    data: {from_date: last_updated.toISOString()}
+                }).done(function (response) {
+                    let events = JSON.parse(response);
+                    log.debug('Received', events.length, 'events');
+
+                    $.each(events, function (i, event) {
+                        log.debug('Notification:', event.header.level, event.body);
+                        notifications.publish(event.body, event.header.level);
+
+                        let created_at = new Date(event.created_at.$date);
+                        if (created_at > last_updated) {
+                            last_updated = created_at;
+                        }
+                    });
+
+                    failed_requests = 0;
+                }).fail(function (error) {
+                    failed_requests += 1;
+
+                    // After 5 failed requests, we terminate polling and prompt the user
+                    if (failed_requests > 5) {
+                        notifications.publish('Cannot reach server. Please contact admin.', 'error')
+                    }
+
+                    log.error(error)
+                });
+                setTimeout(events_polling, 5000);
+            }
+
+            // Poll for new events
+            events_polling();
+            /*
+            Giving broken pipe errors
+
+            var socket = io.connect('http://', {
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                reconnectionAttempts: 99999
+            });
+            socket.on('connect', function () {
+                console.log('connected to server');
+                socket.on('disconnect', function () {
+                    console.log('disconnected from server2');
+                });
+
+
+            });
+
+            socket.on('disconnect', function () {
+                console.log('disconnected from server');
+            });
+
+            socket.on('error', function (err) {
+                console.log('An error has occurred on server side.', err);
+            });
+
+            socket.on('message', function (data) {
+                console.log(data)
+            });
+
+            */
         });
     </script>
 {% endblock %}

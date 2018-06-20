@@ -27,9 +27,10 @@ def index():
     :return:
     """
 
-    page = request.args.get(get_page_parameter(), type=int, default=0)
+    page = request.args.get(get_page_parameter(), default=1)
     per_page = 10
-    observations = Observation.objects.order_by('-date_time_start').skip(page * per_page).limit(per_page)
+
+    observations = Observation.objects.order_by('-date_time_start').skip((page-1) * per_page).limit(per_page)
     pagination = Pagination(page=page, total=observations.count(),
                             inner_window=5,
                             bs_version=3,
@@ -51,12 +52,15 @@ def _observation_from_form(form_data, mode):
     obs_name = form_data['obs_name']
     obs_config = "pybirales/configuration/templates/dev/detection.ini"
     obs_pipeline = "detection_pipeline"
+    obs_type = 'observation'
     if mode == 'calibration':
         obs_config = "pybirales/configuration/templates/dev/calibration.ini"
         obs_pipeline = "correlation_pipeline"
+        obs_type = 'calibration'
 
-    return json.dumps({obs_name: {
-        "type": "observation",
+    return json.dumps({
+        "name": obs_name,
+        "type" : obs_type,
         "pipeline": obs_pipeline,
         "config_file": [
             "pybirales/configuration/birales.ini",
@@ -66,7 +70,6 @@ def _observation_from_form(form_data, mode):
             "beamformer": {
                 "reference_declination": float(form_data['declination'])
             },
-            "start_time": form_data['date_start'],
             "observation": {
                 "name": obs_name,
                 "transmitter_frequency": float(form_data['transmitter_frequency']),
@@ -74,16 +77,16 @@ def _observation_from_form(form_data, mode):
             "target": {
                 "name": form_data['target_name'],
             },
+            "start_time": form_data['date_start'],
             "duration": duration
         }
-    }}, default=json_convertor)
+    }, default=json_convertor)
 
 
 @observations_page.route('/observations/<mode>/create', methods=['POST', 'GET'])
 def create(mode):
     if mode == 'detection':
         form = DetectionModeForm(request.form)
-
         if request.method == 'POST' and form.validate():
             # Observation is valid and can be submitted to service
             obs_data = _observation_from_form(form.data, mode)
@@ -102,6 +105,7 @@ def view(observation_id):
         observation = Observation.objects.get(id=observation_id)
 
         tracks = SpaceDebrisTrack.get(observation_id=observation_id)
+
         return render_template('modules/observations/view.html', observation=observation, tracks=tracks)
     except mongoengine.DoesNotExist:
         log.exception('Database error')

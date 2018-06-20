@@ -1,9 +1,9 @@
 import datetime
+import logging as log
+import os
 
 from bson.objectid import ObjectId
 from mongoengine import *
-import os
-import logging as log
 
 # with warnings.catch_warnings():
 #     warnings.simplefilter("ignore")
@@ -11,6 +11,7 @@ STATUS_MAP = {
     'pending': 'Scheduled',
     'running': 'Running',
     'finished': 'Finished',
+    'error': 'Failed',
 }
 
 
@@ -28,7 +29,7 @@ STATUS_MAP = {
 class Observation(Document):
     name = StringField(required=True, max_length=200)
     date_time_start = DateTimeField(required=True, default=datetime.datetime.utcnow)
-    date_time_end = DateTimeField() # Updated when the observation ends
+    date_time_end = DateTimeField()  # Updated when the observation ends
     pipeline = StringField(required=True)
     type = StringField(required=True)
 
@@ -45,32 +46,29 @@ class Observation(Document):
     sampling_time = FloatField()
 
     @property
-    def is_finished(self):
+    def status(self):
         now = datetime.datetime.utcnow()
 
-        if not self.date_time_end:
-            return False
+        # pending (scheduled)
+        if now < self.date_time_end:
+            return STATUS_MAP['pending']
 
-        return now > self.date_time_end
+        # running
+        if self.date_time_start < now < self.date_time_end:
+            return STATUS_MAP['running']
 
-    @property
-    def is_running(self):
-        return False
-
-    @property
-    def status(self):
-        if self.is_finished:
+        # completed successfully
+        if now > self.date_time_end and isinstance(self.date_time_end, datetime.datetime):
             return STATUS_MAP['finished']
 
-        if self.is_running:
-            return STATUS_MAP['running']
-        return STATUS_MAP['pending']
+        # Observation must have failed
+        return STATUS_MAP['error']
 
     def description(self):
         return {
-            'tx': self.settings['observation']['transmitter_frequency'],
+            'tx': self.config_parameters['observation']['transmitter_frequency'],
             'status': self.status,
-            'duration': self.settings['observation']['duration'],
+            'duration': self.config_parameters['duration'],
             'start': self.date_time_start,
             'end': self.date_time_end,
         }
@@ -157,5 +155,27 @@ class BeamCandidate(DynamicDocument):
 
             if max_channel:
                 query &= Q(max_channel__lte=max_channel)
+
+        return query_set.filter(query)
+
+
+class Event(DynamicDocument):
+    _id = ObjectIdField(required=True, default=ObjectId, unique=True, primary_key=True)
+    name = StringField()
+    channels = ListField()
+    description = StringField()
+    body = StringField()
+    header = DynamicField()
+    created_at = DateTimeField(required=True, default=datetime.datetime.utcnow)
+
+    @queryset_manager
+    def get(self, query_set, from_time=None, to_time=None):
+        query = Q()
+
+        if from_time:
+            query &= Q(created_at__gte=from_time)
+
+        if to_time:
+            query &= Q(created_at__lte=to_time)
 
         return query_set.filter(query)
