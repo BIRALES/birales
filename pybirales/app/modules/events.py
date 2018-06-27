@@ -1,13 +1,23 @@
-import loggi_pubsubng as log
-from flask import request
-from pybirales.frontend.run import socket_io as sio
+from flask import Blueprint
+from flask import render_template, request
+from flask_paginate import Pagination, get_page_parameter
 
+from pybirales.repository.models import Event
 
-@sio.on('connect')
-def connect():
-    log.info('Client (sid: %s) connected', request.sid)
+events_page = Blueprint('events_page', __name__, template_folder='templates')
 
+@events_page.route('/events')
+def index():
+    page = request.args.get(get_page_parameter(), default=1)
+    per_page = 25
 
-@sio.on('disconnect')
-def disconnect():
-    log.info('Client (sid: %s) disconnected', request.sid)
+    events = Event.objects.order_by('-created_at').skip((page-1) * per_page).limit(per_page)
+    pagination = Pagination(page=page, total=events.count(),
+                            inner_window=5,
+                            bs_version=3,
+                            per_page=per_page,
+                            record_name='observations')
+
+    return render_template('modules/events/index.html',
+                           events=events,
+                           pagination=pagination)

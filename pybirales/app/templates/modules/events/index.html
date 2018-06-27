@@ -1,0 +1,53 @@
+{% extends "common/layout.html" %}
+{% block title %}Events{% endblock %}
+{% set active_page = "events" %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="header">
+                        <h4 class="title">Events</h4>
+                    </div>
+
+                    <div class="content table-responsive table-full-width">
+                        <table class="table table-hover table-striped">
+                            <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Origin</th>
+                                <th>Level</th>
+                                <th>Event</th>
+                                <th>Detail</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for event in events %}
+                                <tr>
+                                    <td>{{ '{:%Y-%m-%d %H:%M:%S}'.format(event.created_at) }}</td>
+                                    <td>{{ event.header.origin }}</td>
+                                    <td>
+                                        {% if event.header.level == 'success' %}
+                                            <span class="label label-success">{{ event.header.level }}</span>
+                                        {% elif event.header.level == 'info' %}
+                                            <span class="label label-primary">{{ event.header.level }}</span>
+                                        {% elif event.header.level == 'warning' %}
+                                            <span class="label label-warning">{{ event.header.level }}</span>
+                                        {% else %}
+                                            <span class="label label-danger">{{ event.header.level }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ event.description }}</td>
+                                    <td>{{ event.body }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                        {{ pagination.links }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

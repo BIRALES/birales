@@ -1,14 +1,14 @@
 import logging as log
-from logging.config import dictConfig
 import threading
+from logging.config import dictConfig
 
 import dateutil.parser
 from flask import Flask, request
 from flask_socketio import SocketIO
-
 from mongoengine import connect
 
 from pybirales.app.modules.api import api_page
+from pybirales.app.modules.events import events_page
 from pybirales.app.modules.modes import configurations_page
 from pybirales.app.modules.monitoring import monitoring_page
 from pybirales.app.modules.observations import observations_page
@@ -41,7 +41,6 @@ app = Flask(__name__)
 
 app.secret_key = 'secret!'
 
-
 app.config['DEBUG'] = DEBUG
 
 db_connection = connect(
@@ -56,8 +55,10 @@ app.register_blueprint(monitoring_page)
 app.register_blueprint(observations_page)
 app.register_blueprint(configurations_page)
 app.register_blueprint(api_page)
+app.register_blueprint(events_page)
 
 socket_io = SocketIO(async_mode='threading')
+
 
 @app.template_filter('date')
 def _jinja2_filter_datetime(date):

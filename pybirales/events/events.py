@@ -13,8 +13,9 @@ class Event:
     channels = []
     description = 'Event Description'
 
+    _level = 'info'
+
     def __init__(self):
-        self._level = 'info'
         self.payload = {'header': {'level': self._level,
                                    'channels': self.channels,
                                    'description': self.description,
@@ -151,6 +152,8 @@ class TrackCreatedEvent(Event):
     channels = ['notifications']
     description = 'A new track candidate was found'
 
+    _level = 'success'
+
     def __init__(self, sd_track):
         """
 
@@ -270,6 +273,8 @@ class InvalidObservationEvent(Event):
 
     channels = ['notifications']
     description = 'The observation is not valid.'
+
+    _level = 'warning'
 
     def __init__(self, observation):
         """

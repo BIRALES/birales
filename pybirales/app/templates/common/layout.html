@@ -57,11 +57,11 @@
                         <p>Observations</p>
                     </a>
                 </li>
-                <li {% if active_page == 'system-log' %} class="active" {% endif %}>
-                    <a href="{{ url_for('configurations_page.index') }}">
+                <li {% if active_page == 'events' %} class="active" {% endif %}>
+                    <a href="{{ url_for('events_page.index') }}">
                         <i class="pe-7s-note2"></i>
 
-                        <p>System Log</p>
+                        <p>Events</p>
                     </a>
                 </li>
                 <li {% if active_page == 'configurations' %} class="active" {% endif %}>
