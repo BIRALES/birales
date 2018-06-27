@@ -1,12 +1,15 @@
-from flask import Blueprint, request
-from pybirales.repository.models import SpaceDebrisTrack, Event
-import dateutil.parser
+import datetime
+import json
 import os
 import subprocess
-import json
+import pytz
+import dateutil.parser
+from flask import Blueprint, request
 
+from pybirales.repository.models import SpaceDebrisTrack, Event
 
 api_page = Blueprint('api_page', __name__, template_folder='templates')
+
 
 @api_page.route('/tracks/<track_id>', methods=['GET'])
 def track(track_id):
@@ -25,6 +28,7 @@ def observation_track_data(observation_id=None, from_date=None, to_date=None):
     detected_candidates = SpaceDebrisTrack.get(observation_id=observation_id, to_time=to_date, from_time=from_date)
 
     return detected_candidates.to_json()
+
 
 @api_page.route('/api/status/birales_service', methods=['GET'])
 def birales_status():
@@ -46,6 +50,7 @@ def birales_status():
         'msg': stdout_list,
     })
 
+
 @api_page.route('/api/events', methods=['POST'])
 def birales_events(from_date=None, to_date=None):
     if request.values.get('from_date'):
@@ -56,4 +61,4 @@ def birales_events(from_date=None, to_date=None):
 
     events = Event.get(from_time=from_date, to_time=to_date)
 
-    return events.to_json()
+    return json.dumps({'events': events.to_json(), 'timestamp': datetime.datetime.utcnow().replace(tzinfo=pytz.utc).isoformat('T')})

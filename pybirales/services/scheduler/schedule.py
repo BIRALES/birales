@@ -60,9 +60,6 @@ class Schedule:
         else:
             raise InvalidObservationException('The Observation is neither a Calibration or a Space Debris Observation')
 
-        # Fire an Observation was Scheduled Event
-        self._publisher.publish(ObservationScheduledEvent(obs))
-
     def _conflicts(self, scheduled_observation, new_obs):
         """
         Check that the passed on observation does not conflict with the queued observations

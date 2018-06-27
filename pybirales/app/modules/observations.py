@@ -1,7 +1,6 @@
 import datetime
 import json
 import logging as log
-import os
 
 import mongoengine
 from flask import Blueprint
@@ -10,14 +9,13 @@ from flask_paginate import Pagination, get_page_parameter
 
 from pybirales.app.modules.forms import DetectionModeForm
 from pybirales.repository.message_broker import RedisManager
+from pybirales.repository.message_broker import broker
 from pybirales.repository.models import Observation
 from pybirales.repository.models import SpaceDebrisTrack
 
 observations_page = Blueprint('observations_page', __name__, template_folder='templates')
 OBSERVATIONS_CHL = 'birales_scheduled_obs'
-
-_redis = RedisManager.Instance().redis
-
+OBSERVATIONS_DEL_CHL = 'birales_delete_obs'
 
 @observations_page.route('/observations')
 def index():
@@ -92,7 +90,7 @@ def create(mode):
             obs_data = _observation_from_form(form.data, mode)
 
             # Publish the observation to the BIRALES scheduler
-            _redis.publish(OBSERVATIONS_CHL, obs_data)
+            broker.publish(OBSERVATIONS_CHL, obs_data)
         return render_template('modules/observations/create/detection.html', form=form)
     else:
         log.error('Observation mode is not valid')
@@ -148,8 +146,11 @@ def edit(observation_id):
 @observations_page.route('/observations/delete/<observation_id>')
 def delete(observation_id):
     try:
-        observation = Observation.objects.get(id=observation_id)
-        observation.delete()
+        # Scheduler should reload itself if changes were made to the schedule
+        broker.publish(OBSERVATIONS_DEL_CHL, json.dumps({
+            'obs_id': observation_id
+        }))
+
         return redirect(url_for('observations_page.index'))
     except mongoengine.DoesNotExist:
         abort(404)

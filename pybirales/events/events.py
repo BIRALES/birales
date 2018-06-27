@@ -209,7 +209,7 @@ class CalibrationRoutineStartedEvent(Event):
 
         Event.__init__(self)
 
-        msg = 'Using the correlation matrix ({}) to generate the calibration coefficients from the `{}` observation'\
+        msg = 'Using the correlation matrix ({}) to generate the calibration coefficients from the `{}` observation' \
             .format(corr_matrix_filepath, obs_name)
         self.payload['body'] = msg
 
@@ -240,7 +240,6 @@ class CalibrationRoutineFinishedEvent(Event):
         log.debug(self.payload['body'])
 
 
-
 class TrackCandidatesFoundEvent(Event):
     """
     Event is fired when the post processing finishes
@@ -260,5 +259,66 @@ class TrackCandidatesFoundEvent(Event):
 
         msg = '{} tracks were found in observation `{}`'.format(n_candidates, obs_name)
         self.payload['body'] = msg
+
+        log.debug(self.payload['body'])
+
+
+class InvalidObservationEvent(Event):
+    """
+    Event representing an error upon trying to schedule an observation
+    """
+
+    channels = ['notifications']
+    description = 'The observation is not valid.'
+
+    def __init__(self, observation):
+        """
+
+        :param observation: An object of type ScheduledObservation
+        :type observation: ScheduledObservation
+        """
+
+        Event.__init__(self)
+
+        self.payload['body'] = 'Something went wrong. The observation ({}) could not be added to the scheduler.'.format(
+            observation.name)
+
+        log.debug(self.payload['body'])
+
+
+class ObservationDeletedEvent(Event):
+    """
+    Event representing a successful deletion of an observation
+    """
+
+    channels = ['notifications']
+    description = 'The observation was deleted.'
+
+    def __init__(self, observation):
+        """
+
+        :param observation: The observation that was deleted (mongoengine model)
+        :type observation: Observation
+        """
+
+        Event.__init__(self)
+
+        self.payload['body'] = 'Observation {} was deleted successfully.'.format(observation.name)
+
+        log.debug(self.payload['body'])
+
+
+class BIRALESSchedulerReloadedEvent(Event):
+    """
+    Event is triggered when the BIRALES scheduler service is reloaded.
+    """
+
+    channels = ['notifications']
+    description = 'BIRALES scheduler service was reloaded.'
+
+    def __init__(self):
+        Event.__init__(self)
+
+        self.payload['body'] = 'The BIRALES system was reloaded'
 
         log.debug(self.payload['body'])

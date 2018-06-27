@@ -2,13 +2,16 @@ import datetime
 import json
 import logging as log
 import sched
+import signal
 import threading
 import time
-import signal
+
 import pytz
 
+from pybirales.events.events import BIRALESSchedulerReloadedEvent
 from pybirales.events.events import ObservationScheduledCancelledEvent
 from pybirales.events.publisher import EventsPublisher
+from pybirales.events.publisher import publish
 from pybirales.repository.message_broker import RedisManager
 from pybirales.repository.models import Observation as ObservationModel
 from pybirales.services.scheduler.exceptions import IncorrectScheduleFormat, InvalidObservationException
@@ -131,6 +134,26 @@ class ObservationsScheduler:
         else:
             log.info('No observations found in database.')
 
+    def reload(self):
+        """
+
+        :return:
+        """
+        log.debug('Reloading scheduler')
+        # Empty the schedule by creating one afresh
+        self._schedule = Schedule()
+
+        # Clear the schedule from the observations
+        for event in self._scheduler.queue:
+            self._scheduler.cancel(event)
+
+        # Restore the observation from the database
+        self._restore_observations()
+
+        publish(BIRALESSchedulerReloadedEvent())
+
+        log.info('Scheduler reloaded')
+
     def stop(self):
         """
         Stop the scheduler gracefully
@@ -149,8 +172,6 @@ class ObservationsScheduler:
 
         if self._scheduler.empty():
             log.info('Scheduler was cleared from all events. Please wait for the monitoring thread to terminate.')
-
-
 
         # stop monitoring thread
         self._stop_event.set()

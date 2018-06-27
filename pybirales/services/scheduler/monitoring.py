@@ -5,9 +5,15 @@ import time
 
 import humanize
 import pytz
-
-from pybirales.repository.message_broker import RedisManager
+from mongoengine import errors
+from pybirales.events.events import InvalidObservationEvent, ObservationScheduledEvent, ObservationDeletedEvent
+from pybirales.events.publisher import publish
+from pybirales.repository.message_broker import pub_sub
+from pybirales.repository.models import Observation
 from pybirales.services.scheduler.exceptions import InvalidObservationException
+
+OBS_CREATE_CHL = 'birales_scheduled_obs'
+OBS_DEL_CHL = 'birales_delete_obs'
 
 
 def monitor_worker(scheduler, stop_event):
@@ -48,35 +54,49 @@ def obs_listener_worker(scheduler):
     :return:
     """
 
-    obs_chl = 'birales_scheduled_obs'
+    # Subscribe to the observations channels (create and delete)
+    pub_sub.subscribe([OBS_CREATE_CHL, OBS_DEL_CHL])
 
-    # The redis instance
-    _redis = RedisManager.Instance().redis
-
-    # The PubSub interface of the redis instance
-    _pubsub = _redis.pubsub()
-
-    # Subscribe to the observations channel
-    _pubsub.subscribe(obs_chl)
-
-    log.info('Scheduler listening on `{}` for new observations'.format(obs_chl))
-    for message in _pubsub.listen():
+    log.info('Scheduler listening on `{}` for new observations'.format(OBS_CREATE_CHL))
+    for message in pub_sub.listen():
         if message['data'] == 'KILL':
-            log.info('Scheduled observations listener un-subscribed from {}'.format(obs_chl))
+            log.info('KILL Received. Scheduled observations listener un-subscribed from {}'.format(OBS_CREATE_CHL))
             break
-        else:
-            if message['type'] == 'message':
-                log.info("New observation received by scheduler: {}".format(message['data']))
 
-                # Create object from json string
-                observation = scheduler.create_obs(json.loads(message['data']))
+        if message['type'] != 'message':
+            continue
 
-                # Add the scheduled objects to the queue
-                try:
-                    scheduler.schedule.add_observation(observation)
-                except InvalidObservationException:
-                    log.warning('Observation is not valid')
-                    # Report back to front-end
+        data = json.loads(message['data'])
 
+        if message['channel'] == OBS_CREATE_CHL:
+            log.info("New observation received by scheduler: {}".format(data))
 
+            # Create object from json string
+            observation = scheduler.create_obs(data)
+
+            # Add the scheduled objects to the queue
+            try:
+                scheduler.schedule.add_observation(observation)
+            except InvalidObservationException:
+                log.warning('Observation is not valid')
+
+                # Report back to front-end
+                publish(InvalidObservationEvent(observation))
+            else:
+                publish(ObservationScheduledEvent(observation))
+        if message['channel'] == OBS_DEL_CHL:
+            log.debug('Delete observation %s message received.', data)
+
+            try:
+                obs_id = data['obs_id']
+
+                observation = Observation.objects.get(id=obs_id)
+                observation.delete()
+            except Exception:
+                log.exception('Observation could not be deleted (%s)', data)
+            else:
+                publish(ObservationDeletedEvent(observation))
+
+                # Reload the schedule
+                scheduler.reload()
     log.info('Observation listener terminated')

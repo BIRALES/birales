@@ -168,9 +168,8 @@
             {% endwith %}
 
             let failed_requests = 0;
-            let last_updated = new Date();
 
-            function events_polling() {
+            function events_polling(last_updated) {
 
                 log.debug('Fetching new data since', last_updated.toISOString());
 
@@ -185,18 +184,16 @@
                     timeout: 8000,
                     data: {from_date: last_updated.toISOString()}
                 }).done(function (response) {
-                    let events = JSON.parse(response);
+                    let data = JSON.parse(response);
+                    let events = JSON.parse(data.events);
                     log.debug('Received', events.length, 'events');
 
                     $.each(events, function (i, event) {
                         log.debug('Notification:', event.header.level, event.body);
                         notifications.publish(event.body, event.header.level);
-
-                        let created_at = new Date(event.created_at.$date);
-                        if (created_at > last_updated) {
-                            last_updated = created_at;
-                        }
                     });
+
+                    last_updated = new Date(data.timestamp);
 
                     failed_requests = 0;
                 }).fail(function (error) {
@@ -209,11 +206,14 @@
 
                     log.error(error)
                 });
-                setTimeout(events_polling, 5000);
+
+                setTimeout(function () {
+                        events_polling(last_updated)
+                }, 5000);
             }
 
             // Poll for new events
-            events_polling();
+            events_polling(new Date());
             /*
             Giving broken pipe errors
 
