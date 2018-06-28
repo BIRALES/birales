@@ -85,11 +85,7 @@ class PipelineManager(object):
                 log.debug('Starting module {}'.format(module.name))
                 module.start()
 
-            # If we have any plotter, go to plotter loop, otherwise wait
-            if len(self._plotters) > 0:
-                self.plotting_loop(duration=duration)
-            else:
-                self.wait_pipeline(duration=duration)
+            self.wait_pipeline(duration=duration)
 
         except NoDataReaderException as exception:
             logging.info('Data finished %s', exception.__class__.__name__)
@@ -100,26 +96,6 @@ class PipelineManager(object):
             self.stop_pipeline()
         else:
             logging.info('Pipeline stopped')
-
-    def plotting_loop(self, duration):
-        """
-        Plotting loop
-
-        :param duration: duration of observation in s (0 means run forever)
-        """
-
-        start_time = time.time()
-        while True:
-            for plotter in self._plotters:
-                plotter.update_plot()
-                logging.info("{} updated".format(plotter.__class__.__name__))
-
-                if time.time() - start_time > duration:
-                    logging.info("Observation run for the entire duration ({}s), stopping pipeline".format(duration))
-                    self.stop_pipeline()
-                    break
-
-            time.sleep(self._plot_update_rate)
 
     def stop_pipeline(self):
         """ Stop pipeline (one at a time) """
