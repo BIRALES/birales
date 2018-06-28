@@ -2,10 +2,12 @@ import datetime
 import json
 import os
 import subprocess
-import pytz
+
 import dateutil.parser
+import pytz
 from flask import Blueprint, request
 
+from pybirales.repository.message_broker import broker
 from pybirales.repository.models import SpaceDebrisTrack, Event
 
 api_page = Blueprint('api_page', __name__, template_folder='templates')
@@ -61,4 +63,10 @@ def birales_events(from_date=None, to_date=None):
 
     events = Event.get(from_time=from_date, to_time=to_date)
 
-    return json.dumps({'events': events.to_json(), 'timestamp': datetime.datetime.utcnow().replace(tzinfo=pytz.utc).isoformat('T')})
+    return json.dumps(
+        {'events': events.to_json(), 'timestamp': datetime.datetime.utcnow().replace(tzinfo=pytz.utc).isoformat('T')})
+
+
+@api_page.route('/api/stop', methods=['POST'])
+def birales_pipeline_stop():
+    broker.publish('birales_pipeline_control', 'KILL')

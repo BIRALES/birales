@@ -17,6 +17,7 @@ observations_page = Blueprint('observations_page', __name__, template_folder='te
 OBSERVATIONS_CHL = 'birales_scheduled_obs'
 OBSERVATIONS_DEL_CHL = 'birales_delete_obs'
 
+
 @observations_page.route('/observations')
 def index():
     """
@@ -28,7 +29,7 @@ def index():
     page = request.args.get(get_page_parameter(), default=1)
     per_page = 10
 
-    observations = Observation.objects.order_by('-date_time_start').skip((page-1) * per_page).limit(per_page)
+    observations = Observation.objects.order_by('-date_time_start').skip((page - 1) * per_page).limit(per_page)
     pagination = Pagination(page=page, total=observations.count(),
                             inner_window=5,
                             bs_version=3,
@@ -58,7 +59,7 @@ def _observation_from_form(form_data, mode):
 
     return json.dumps({
         "name": obs_name,
-        "type" : obs_type,
+        "type": obs_type,
         "pipeline": obs_pipeline,
         "config_file": [
             "pybirales/configuration/birales.ini",
@@ -104,7 +105,8 @@ def view(observation_id):
 
         tracks = SpaceDebrisTrack.get(observation_id=observation_id)
 
-        return render_template('modules/observations/view.html', observation=observation, tracks=tracks)
+        return render_template('modules/observations/view.html', page_title='Observations', observation=observation,
+                               tracks=tracks)
     except mongoengine.DoesNotExist:
         log.exception('Database error')
         abort(503)

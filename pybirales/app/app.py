@@ -17,6 +17,7 @@ from pybirales.repository.models import BeamCandidate, SpaceDebrisTrack
 
 DEBUG = True
 NOTIFICATIONS_CHL = 'notifications'
+BIRALES_STATUS_CHL = 'birales_system_status'
 LOGGING_CONFIG = dict(
     version=1,
     disable_existing_loggers=True,
@@ -78,21 +79,27 @@ def notifications_listener():
             if message['type'] == 'message':
                 notification = message['data']
                 log.debug("Notification received: %s", notification)
-
-                import time
-                time.sleep(5)
                 socket_io.send(notification)
 
-                """
-                try:
-                    # Emit the notification to the front-end
-                    socket_io.emit('event', notification)
-                except IOError:
-                    print('An error has occured 2')
-                """
-                # todo You may want to save the notification message
 
     log.info('Notifications listener terminated')
+
+
+def system_listener():
+    pub_sub.subscribe(BIRALES_STATUS_CHL)
+    log.info('BIRALES app listening for system status messages on #%s', BIRALES_STATUS_CHL)
+    for message in pub_sub.listen():
+        if message['data'] == 'KILL':
+            log.info('KILL command received for system listener')
+            pub_sub.unsubscribe(BIRALES_STATUS_CHL)
+            break
+        else:
+            if message['type'] == 'message':
+                msg = message['data']
+                log.debug("System message received: %s", msg)
+                socket_io.emit('status', msg)
+
+    log.info('System status listener terminated')
 
 
 @socket_io.on('get_beam_candidates')
@@ -161,6 +168,9 @@ if __name__ == "__main__":
         notifications_worker = threading.Thread(target=notifications_listener, name='Notifications Listener')
         # notifications_worker.start()
 
+        system_listener = threading.Thread(target=system_listener, name='System Status Listener')
+        system_listener.start()
+
         # Turn the flask app into a socket.io app
         socket_io.init_app(app, engineio_logger=True, async_mode='threading')
 
@@ -173,5 +183,5 @@ if __name__ == "__main__":
         log.info('Closing DB connection')
         db_connection.close()
 
-        log.info('Broadcasting KILL message to notifications thread')
-        broker.publish(NOTIFICATIONS_CHL, 'KILL')
+        log.info('Broadcasting KILL message to system status thread')
+        broker.publish(BIRALES_STATUS_CHL, 'KILL')

@@ -50,7 +50,9 @@
                                         </a>
 
                                         <a href="{{ url_for('observations_page.delete', observation_id=observation.id) }}"
-                                           class="btn btn-sm btn-danger" role="button">Delete</a>
+                                           class="btn btn-sm btn-danger" role="button">
+                                            <i class="pe-7s-trash"></i>
+                                            Delete</a>
                                     </td>
                                 </tr>
                             {% endfor %}

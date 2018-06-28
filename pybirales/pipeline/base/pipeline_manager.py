@@ -5,11 +5,32 @@ import yappi as profiler
 import logging as log
 
 from matplotlib import pyplot as plt
-from datetime import datetime
+import datetime
 from pybirales import settings
 from pybirales.pipeline.base.definitions import NoDataReaderException
 from threading import Event
 import os
+from pybirales.events.publisher import publish
+from pybirales.repository.message_broker import pub_sub, broker
+import json
+import threading
+
+PIPELINE_CTL_CHL = 'birales_pipeline_control'
+BIRALES_STATUS_CHL = 'birales_system_status'
+
+
+def pipeline_status_worker(kill_pill):
+    pub_sub.subscribe(PIPELINE_CTL_CHL)
+    log.debug('Listening on #%s', PIPELINE_CTL_CHL, ' for messages.')
+    for message in pub_sub.listen():
+        if message['data'] == 'KILL':
+            log.info('KILL received on #{}. Killing pipeline'.format(PIPELINE_CTL_CHL))
+            kill_pill.set()
+            break
+
+        # here you can add other functionality that controls the pipeline (such as reload config)
+
+    log.info('Pipeline status monitoring thread terminated')
 
 
 class PipelineManager(object):
@@ -36,6 +57,11 @@ class PipelineManager(object):
 
         self.count = 0
         self.name = None
+
+        self._pipeline_controller = threading.Thread(target=pipeline_status_worker, args=(self._stop,),
+                                                     name='Pipeline CTL')
+
+        self._pipeline_controller.start()
 
     def add_module(self, name, module):
         """ Add a new module instance to the pipeline
@@ -118,15 +144,22 @@ class PipelineManager(object):
             profiler.stop()
             stats = profiler.get_func_stats()
             profiling_file_path = settings.manager.profiler_file_path + '_{:%Y%m%d_%H:%M}.stats'.format(
-                datetime.utcnow())
+                datetime.datetime.utcnow())
             log.info('Profiling stopped. Dumping profiling statistics to %s', profiling_file_path)
             stats.save(profiling_file_path, type='callgrind')
+
+        # kill listener thread
+        broker.publish(PIPELINE_CTL_CHL, 'KILL')
 
     def is_module_stopped(self):
         for module in self._modules:
             if module.is_stopped:
                 return True
         return False
+
+    @property
+    def stopped(self):
+        return self._stop.is_set()
 
     def all_modules_stopped(self):
         return all([module.is_stopped for module in self._modules])
@@ -141,11 +174,20 @@ class PipelineManager(object):
         :return:
         """
 
-        start_time = time.time()
-        while True:
-            # If one module stop without setting the stop bit (such as through a signal
+        start_time = datetime.datetime.utcnow()
+
+        # Specify the update interval
+        dt = datetime.timedelta(seconds=5)
+
+        # force an initial update by subtracting two deltas away
+        last_updated = start_time - 2 * dt
+
+        while not self.stopped:
+            now = datetime.datetime.utcnow()
+
+            # If one module stops without setting the stop bit (such as through a signal
             # handler, stop all the pipeline
-            if self.is_module_stopped() and not self._stop.is_set():
+            if self.is_module_stopped():
                 self.stop_pipeline()
                 break
 
@@ -154,11 +196,27 @@ class PipelineManager(object):
                 break
 
             # If the observation duration has elapsed stop pipeline
-            elif duration and (time.time() - start_time) > duration:
+            elif duration and (now - start_time).seconds > duration:
                 logging.info("Observation run for the entire duration ({}s), stopping pipeline".format(duration))
                 self.stop_pipeline()
                 break
 
             else:
+
+                # Indicate to the user that the pipeline is running (every 5 counts)
+                if now - last_updated > dt:
+                    broker.publish(BIRALES_STATUS_CHL, json.dumps({
+                        'pipeline': {
+                            'status': 'running',
+                            'timestamp': now.isoformat('T'),
+                            'next_update': (now + dt).isoformat('T'),
+                            'dt': dt.seconds
+                        }
+                    }))
+
+                    last_updated = now
+
                 # Suspend the loop for a short time
                 time.sleep(1)
+
+        self.stop_pipeline()
