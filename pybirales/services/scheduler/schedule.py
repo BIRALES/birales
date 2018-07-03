@@ -39,6 +39,10 @@ class Schedule:
     def __len__(self):
         return self.n_calibrations + self.n_observations
 
+    @property
+    def next_observation(self):
+        return self._head
+
     def is_empty(self):
         """
         Check if schedule is empty

@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging as log
+import os
 
 import mongoengine
 from flask import Blueprint
@@ -8,7 +9,6 @@ from flask import render_template, request, abort, redirect, url_for
 from flask_paginate import Pagination, get_page_parameter
 
 from pybirales.app.modules.forms import DetectionModeForm
-from pybirales.repository.message_broker import RedisManager
 from pybirales.repository.message_broker import broker
 from pybirales.repository.models import Observation
 from pybirales.repository.models import SpaceDebrisTrack
@@ -48,12 +48,13 @@ def _observation_from_form(form_data, mode):
 
     duration = (form_data['date_end'] - form_data['date_start']).total_seconds()
 
+    root_dir = os.path.join(os.environ['HOME'], '.birales')
     obs_name = form_data['obs_name']
-    obs_config = "pybirales/configuration/templates/dev/detection.ini"
+    obs_config = os.path.join(root_dir, "configuration/templates/dev/detection.ini")
     obs_pipeline = "detection_pipeline"
     obs_type = 'observation'
     if mode == 'calibration':
-        obs_config = "pybirales/configuration/templates/dev/calibration.ini"
+        obs_config = os.path.join(root_dir, "configuration/templates/dev/calibration.ini")
         obs_pipeline = "correlation_pipeline"
         obs_type = 'calibration'
 
@@ -62,7 +63,7 @@ def _observation_from_form(form_data, mode):
         "type": obs_type,
         "pipeline": obs_pipeline,
         "config_file": [
-            "pybirales/configuration/birales.ini",
+            os.path.join(root_dir, "configuration/birales.ini"),
             obs_config
         ],
         "config_parameters": {

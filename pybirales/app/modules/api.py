@@ -69,4 +69,13 @@ def birales_events(from_date=None, to_date=None):
 
 @api_page.route('/api/stop', methods=['POST'])
 def birales_pipeline_stop():
-    broker.publish('birales_pipeline_control', 'KILL')
+    try:
+        broker.publish('birales_pipeline_control', 'KILL')
+    except Exception:
+        return json.dumps({
+            'msg': 'An error has occurred when sending KILL command',
+        }), 500
+    else:
+        return json.dumps({
+            'msg': 'KILL command sent successfully',
+        }), 200

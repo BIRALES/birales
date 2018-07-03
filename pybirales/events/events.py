@@ -40,6 +40,8 @@ class ObservationScheduledEvent(Event):
     channels = ['notifications']
     description = 'An observation was scheduled'
 
+    _level = 'success'
+
     def __init__(self, observation):
         """
 
@@ -49,7 +51,7 @@ class ObservationScheduledEvent(Event):
 
         Event.__init__(self)
 
-        event_msg = '`{}` was _added_ to the schedule.'.format(observation.name)
+        event_msg = '`{}` was added to the schedule.'.format(observation.name)
 
         self.payload['body'] = event_msg + ' ' + observation.start_message()
 
@@ -85,6 +87,8 @@ class ObservationStartedEvent(Event):
 
     channels = ['notifications']
     description = 'An observation was started'
+
+    _level = 'success'
 
     def __init__(self, obs_name, pipeline_name):
         """

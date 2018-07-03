@@ -21,7 +21,7 @@ BIRALES_STATUS_CHL = 'birales_system_status'
 
 def pipeline_status_worker(kill_pill):
     pub_sub.subscribe(PIPELINE_CTL_CHL)
-    log.debug('Listening on #%s', PIPELINE_CTL_CHL, ' for messages.')
+    log.debug('Listening on #%s for messages', PIPELINE_CTL_CHL)
     for message in pub_sub.listen():
         if message['data'] == 'KILL':
             log.info('KILL received on #{}. Killing pipeline'.format(PIPELINE_CTL_CHL))

@@ -11,7 +11,6 @@ beamformer = None
 detection = None
 persister = None
 rawpersister = None
-receiver = None
 rawdatareader = None
 channelplotter = None
 bandpassplotter = None
@@ -30,3 +29,6 @@ fits_persister = None
 scheduler = None
 target = None
 # handler_file_handler = None
+
+class receiver:
+    backend_config_filepath = 'configuration/backend/roach_backend.ini'

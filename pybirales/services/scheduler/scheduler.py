@@ -7,6 +7,7 @@ import threading
 import time
 
 import pytz
+import humanize
 
 from pybirales.events.events import BIRALESSchedulerReloadedEvent
 from pybirales.events.events import ObservationScheduledCancelledEvent
@@ -41,6 +42,8 @@ class ObservationsScheduler:
         self._publisher = EventsPublisher.Instance()
 
         self._stop_event = threading.Event()
+
+        self._reload_event = threading.Event()
 
         # Monitoring thread that will output the status of the scheduler at specific intervals
         self._monitor_thread = threading.Thread(target=monitor_worker, args=(self._scheduler, self._stop_event,),
@@ -103,16 +106,18 @@ class ObservationsScheduler:
             self.load_from_file(schedule_file_path, file_format)
 
         # Queue the observation to the sched instance
-        self._queue_observations()
+        # self.queue_observations()
 
         # Start the monitoring thread
-        self._monitor_thread.start()
+        # self._monitor_thread.start()
 
         # Start the monitoring thread
         self._obs_thread.start()
 
         # Start the scheduler
-        self._scheduler.run()
+        # self._scheduler.run()
+
+        self.run()
 
         # Wait for a keyboard interrupt to exit the process
         signal.pause()
@@ -134,6 +139,8 @@ class ObservationsScheduler:
         else:
             log.info('No observations found in database.')
 
+        # self.queue_observations()
+
     def reload(self):
         """
 
@@ -153,6 +160,54 @@ class ObservationsScheduler:
         publish(BIRALESSchedulerReloadedEvent())
 
         log.info('Scheduler reloaded')
+
+        # If there are queued events, this will block
+        # self._scheduler.run()
+
+    def run(self):
+        """
+
+        :return:
+        """
+
+        log.info('BIRALES Scheduler observation runner started')
+        counter = 0
+        while not (self._stop_event.is_set() or self._reload_event.is_set()):
+            next_observation = self.schedule.next_observation
+            now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+
+            if counter % 10 == 0:
+                self._monitoring_message(now, next_observation)
+
+            if next_observation:
+
+                if (now - next_observation.start_time_padded).total_seconds() > 2:
+                    next_observation.manager.run(next_observation)
+
+            counter += 1
+            time.sleep(1)
+
+        log.info('BIRALES Scheduler observation runner stopped')
+
+        # Clear the reload flag such that the scheduler can be reloaded again
+        self._reload_event.clear()
+
+    def _monitoring_message(self, now, next_observation):
+        if len(self._schedule) < 1:
+            log.info('No queued observations.')
+
+            return
+
+        log.info('%s observations and %s calibration observations in queue. Next observation: %s', self._schedule.n_observations,
+                 self._schedule.n_calibrations, next_observation.name)
+
+        for event in self._schedule:
+            delta = now - event.start_time_padded
+            log.info('The %s for the `%s` observation is scheduled to start in %s and will run for %s',
+                     event.pipeline_name,
+                     event.name,
+                     humanize.naturaldelta(delta),
+                     humanize.naturaldelta(event.duration))
 
     def stop(self):
         """
@@ -244,7 +299,7 @@ class ObservationsScheduler:
         else:
             return so
 
-    def _queue_observations(self):
+    def queue_observations(self):
         """
         Add the observations to the sched instance
         :return:
@@ -255,7 +310,6 @@ class ObservationsScheduler:
             if observation.event not in self._scheduler.queue:
                 if observation.wait_time > 1:
                     # Schedule this observation, using sched
-
                     event = self._scheduler.enter(delay=observation.wait_time, priority=0,
                                                   action=observation.manager.run,
                                                   argument=(observation,))
@@ -264,6 +318,7 @@ class ObservationsScheduler:
                     observation.event = event
                 else:
                     log.warning('Observation `{}` was not added to the schedule'.format(observation.name))
+                    raise InvalidObservationException('Observation in the past')
 
         log.info('%s observations and %s calibration observations in queue.', self._schedule.n_observations,
                  self._schedule.n_calibrations)

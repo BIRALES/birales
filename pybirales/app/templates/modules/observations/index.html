@@ -1,5 +1,6 @@
 {% extends "common/layout.html" %}
 {% block title %}Observations{% endblock %}
+{% block page_title %}Observations{% endblock %}
 {% set active_page = "observations" %}
 
 {% block content %}
@@ -7,10 +8,11 @@
         <div class="row">
             <div class="col-md-12">
                 <div class="card">
-                    <div class="header">
-                        <h4 class="title">Observations</h4>
+{#                    <div class="header">#}
+{#                        <h4 class="title">Observations</h4>#}
                         {# <p class="category">{{ pagination.info }}</p> #}
-                    </div>
+{#                        #}
+{#                    </div>#}
 
                     <div class="content table-responsive table-full-width">
                         <table class="table table-hover table-striped">
@@ -18,8 +20,7 @@
                             <tr>
                                 <th>Observation</th>
                                 <th>Type</th>
-                                <th>Date From</th>
-                                <th>Date To</th>
+                                <th>Date</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -27,11 +28,23 @@
                             <tbody>
                             {% for observation in observations %}
                                 <tr>
-                                    <td>{{ observation.name }}</td>
-                                    <td>{{ observation.type }}</td>
-                                    <td>{{ observation.date_time_start }}</td>
-                                    <td>{{ observation.date_time_end }}</td>
-
+                                    <td>
+                                        {{ observation.name }}
+                                    </td>
+                                    <td>
+                                        <span class="label label-default">{{ observation.type }}</span>
+                                    </td>
+                                    {% if observation.date_time_start.date() != observation.date_time_end.date() %}
+                                        <td>{{ observation.date_time_start.strftime('%d/%m/%y at %H:%M') }}
+                                            to
+                                            {{ observation.date_time_end.strftime('%d/%m/%y at %H:%M') }}
+                                        </td>
+                                    {% else %}
+                                        <td>{{ observation.date_time_start.strftime('%d/%m/%y at %H:%M') }}
+                                            to
+                                            {{ observation.date_time_end.strftime('%H:%M') }}
+                                        </td>
+                                    {% endif %}
                                     <td>
                                         {% if observation.status == 'Finished' %}
                                             <span class="label label-success">{{ observation.status }}</span>
@@ -46,13 +59,15 @@
                                     <td>
                                         <a href="{{ url_for('observations_page.view', observation_id=observation.id) }}"
                                            class="btn btn-sm btn-info" role="button">
+                                            <i class="pe-7s-angle-right-circle"></i>
                                             View
                                         </a>
 
                                         <a href="{{ url_for('observations_page.delete', observation_id=observation.id) }}"
                                            class="btn btn-sm btn-danger" role="button">
-                                            <i class="pe-7s-trash"></i>
-                                            Delete</a>
+                                            <i class="pe-7s-close-circle"></i>
+                                            Delete
+                                        </a>
                                     </td>
                                 </tr>
                             {% endfor %}

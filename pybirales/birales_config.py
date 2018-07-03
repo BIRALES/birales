@@ -44,12 +44,11 @@ class BiralesConfig:
             for config_file in config_file_path:
                 self._load_from_file(config_file)
         else:
-            # throw an error - no configuration could be loaded
-            pass
+            # load the birales default configuration
+            self._load_from_file(os.path.join(os.path.dirname(__file__), 'configuration/birales.ini'))
 
         # Load the ROACH backend settings
-        backend_path = os.path.join(os.path.dirname(__file__), self._parser.get('receiver', 'backend_config_filepath'))
-        self._load_from_file(backend_path)
+        self._load_from_file(os.path.join(os.path.dirname(__file__), settings.receiver.backend_config_filepath))
 
         if config_options:
             # Override the configuration with settings passed on in the config_options dictionary
@@ -77,7 +76,7 @@ class BiralesConfig:
                 self._parser.read_file(f)
                 log.info('Loaded the {} configuration file.'.format(config_filepath))
         except IOError:
-            log.info('Config file at {} was not found'.format(config_filepath))
+            log.warning('Config file at {} was not found'.format(config_filepath))
         except configparser.Error:
             log.exception('An error has occurred whilst parsing configuration file at: %s', config_filepath)
 
@@ -88,6 +87,8 @@ class BiralesConfig:
         :param config_options:
         :return:
         """
+        # config has to be loaded before it can be updated
+        self.load()
 
         if not config_options:
             return None

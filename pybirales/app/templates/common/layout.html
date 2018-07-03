@@ -73,7 +73,7 @@
                 </li>
 
                 <li class="stop-obs">
-                    <a id="obs-stop-btn" class="btn" style="display: none">
+                    <a id="obs-stop-btn" class="btn blink" style="display: none">
                         {#                        <i class="pe-7s-close"></i>#}
                         Stop Observation
                     </a>
@@ -93,7 +93,7 @@
                         <span class="icon-bar"></span>
                         <span class="icon-bar"></span>
                     </button>
-                    <a class="navbar-brand" href="#">{{ page_title }}</a>
+                    <a class="navbar-brand" href="#">{% block page_title %}{% endblock %}</a>
                 </div>
                 <div class="collapse navbar-collapse">
                     <ul class="nav navbar-nav navbar-right">
@@ -162,10 +162,9 @@
             let obs_stop_btn = $('#obs-stop-btn');
             let failed_requests = 0;
             let last_updated_status_time = new Date();
+            let expiry_dt = 5; // Time at which the pipeline is deemed to no longer be running (in seconds)
 
             function events_polling(last_updated) {
-
-                log.debug('Fetching new data since', last_updated.toISOString());
 
                 if (failed_requests > 5) {
                     log.error('Stopping polling as server is not responsive');
@@ -180,7 +179,7 @@
                 }).done(function (response) {
                     let data = JSON.parse(response);
                     let events = JSON.parse(data.events);
-                    log.debug('Received', events.length, 'events');
+                    log.debug(events.length + ' events since ' + last_updated.toISOString());
 
                     $.each(events, function (i, event) {
                         log.debug('Notification:', event.header.level, event.body);
@@ -232,29 +231,31 @@
                 console.log('An error has occurred on server side.', err);
             });
 
+            function poll_system_status() {
+                if (obs_stop_btn.is(":visible")) {
+                    if ((new Date() - last_updated_status_time) > expiry_dt * 1000) {
+                        obs_stop_btn.hide();
+                        log.info(last_updated_status_time);
+                        log.info('Observation is no longer running. Hiding stop button.');
+                    }
+                }
+
+                setTimeout(poll_system_status, 5000);
+            }
+
+            // Check for a change in system status every 5 seconds
+            poll_system_status();
 
             socket.on('status', function (response) {
                 let data = JSON.parse(response);
-
-                now = new Date(data.pipeline.timestamp);
-                expiry_dt = 5; // Time at which the pipeline is deemed to no longer be running (in seconds)
-
-                obs_stop_btn.show();
 
                 if (data.pipeline !== undefined) {
                     if (data.pipeline.status === 'running') {
                         log.debug('Observation is running');
                         obs_stop_btn.fadeIn('slow');
 
-                        last_updated_status_time = now;
-                    }
-                    else {
-                        // change this into a polling loop - like this it will never be fired
-                        if ((now - last_updated_status_time) > expiry_dt * 1000) {
-
-                            log.info('Observation is no longer running');
-                            obs_stop_btn.hide();
-                        }
+                        last_updated_status_time = moment.utc(data.pipeline.timestamp);
+                        obs_stop_btn.show();
                     }
                 }
             });
@@ -265,7 +266,9 @@
                     method: "POST",
                     timeout: 8000,
                 }).done(function (response) {
-                    log.info('Stop observation command sent.', response)
+                    log.info('Stop observation command sent.', response);
+
+                    obs_stop_btn.hide()
                 }).fail(function (error) {
                     log.error(error)
                 });
