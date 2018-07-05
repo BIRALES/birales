@@ -272,26 +272,29 @@ class ObservationsScheduler:
         """
 
         try:
+            _id = None
+            if 'id' in obs:
+                _id = obs['id']
             if obs['type'] == 'observation':
                 so = ScheduledObservation(name=obs['name'],
                                           pipeline_name=obs['pipeline'],
                                           config_file=obs['config_file'],
                                           config_parameters=obs['config_parameters'],
-                                          model_id=obs['id'])
+                                          model_id=_id)
             elif obs['type'] == 'calibration':
                 so = ScheduledCalibrationObservation(name=obs['name'],
                                                      pipeline_name=None,
                                                      config_file=obs['config_file'],
                                                      config_parameters=obs['config_parameters'],
-                                                     model_id=obs['id'])
+                                                     model_id=_id)
             else:
-                raise InvalidObservationException
+                raise InvalidObservationException('Observation type is not valid.')
 
         except KeyError:
             log.exception('Incorrect/missing parameter in observation %s', obs)
             log.warning('Observation %s was not added to the schedule', obs)
 
-            raise InvalidObservationException
+            raise InvalidObservationException('Incorrect/missing parameter in observation')
         except InvalidObservationException:
             log.exception('An incorrect parameter was specified in observation %s', obs)
             log.warning('Observation %s was not added to the schedule', obs)
