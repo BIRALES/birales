@@ -46,10 +46,6 @@ class ObservationModeForm(Form):
         if field.data < self.date_start.data:
             raise ValidationError('End date should be after start time')
 
-    def process_data_date_end(self, field):
-        a = 'a'
-        print 'here'
-
 
 class DetectionModeForm(ObservationModeForm):
     target_name = StringField('NORAD ID', default='UNKNOWN')
@@ -58,4 +54,4 @@ class DetectionModeForm(ObservationModeForm):
 
 
 class CalibrationModeForm(ObservationModeForm):
-    pass
+    target_name = StringField('Source name', default='UNKNOWN')

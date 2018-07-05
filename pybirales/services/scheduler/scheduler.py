@@ -150,10 +150,6 @@ class ObservationsScheduler:
         # Empty the schedule by creating one afresh
         self._schedule = Schedule()
 
-        # Clear the schedule from the observations
-        for event in self._scheduler.queue:
-            self._scheduler.cancel(event)
-
         # Restore the observation from the database
         self._restore_observations()
 
@@ -198,7 +194,8 @@ class ObservationsScheduler:
 
             return
 
-        log.info('%s observations and %s calibration observations in queue. Next observation: %s', self._schedule.n_observations,
+        log.info('%s observations and %s calibration observations in queue. Next observation: %s',
+                 self._schedule.n_observations,
                  self._schedule.n_calibrations, next_observation.name)
 
         for event in self._schedule:
@@ -221,9 +218,9 @@ class ObservationsScheduler:
         self._redis.publish(self.OBSERVATIONS_CHL, 'KILL')
 
         # Clear the schedule from the observations
-        for event in self._scheduler.queue:
-            self._scheduler.cancel(event)
-            self._publisher.publish(ObservationScheduledCancelledEvent(observation=event.argument[0]))
+        # for event in self._scheduler.queue:
+        #     self._scheduler.cancel(event)
+        #     self._publisher.publish(ObservationScheduledCancelledEvent(observation=event.argument[0]))
 
         if self._scheduler.empty():
             log.info('Scheduler was cleared from all events. Please wait for the monitoring thread to terminate.')
@@ -279,12 +276,14 @@ class ObservationsScheduler:
                 so = ScheduledObservation(name=obs['name'],
                                           pipeline_name=obs['pipeline'],
                                           config_file=obs['config_file'],
-                                          config_parameters=obs['config_parameters'])
+                                          config_parameters=obs['config_parameters'],
+                                          model_id=obs['id'])
             elif obs['type'] == 'calibration':
                 so = ScheduledCalibrationObservation(name=obs['name'],
                                                      pipeline_name=None,
                                                      config_file=obs['config_file'],
-                                                     config_parameters=obs['config_parameters'])
+                                                     config_parameters=obs['config_parameters'],
+                                                     model_id=obs['id'])
             else:
                 raise InvalidObservationException
 
@@ -299,26 +298,26 @@ class ObservationsScheduler:
         else:
             return so
 
-    def queue_observations(self):
-        """
-        Add the observations to the sched instance
-        :return:
-        """
-
-        for observation in self._schedule:
-            # Only add observations that were not added already in sched
-            if observation.event not in self._scheduler.queue:
-                if observation.wait_time > 1:
-                    # Schedule this observation, using sched
-                    event = self._scheduler.enter(delay=observation.wait_time, priority=0,
-                                                  action=observation.manager.run,
-                                                  argument=(observation,))
-
-                    # Associate the scheduled event with this observation
-                    observation.event = event
-                else:
-                    log.warning('Observation `{}` was not added to the schedule'.format(observation.name))
-                    raise InvalidObservationException('Observation in the past')
-
-        log.info('%s observations and %s calibration observations in queue.', self._schedule.n_observations,
-                 self._schedule.n_calibrations)
+    # def queue_observations(self):
+    #     """
+    #     Add the observations to the sched instance
+    #     :return:
+    #     """
+    #
+    #     for observation in self._schedule:
+    #         # Only add observations that were not added already in sched
+    #         if observation.event not in self._scheduler.queue:
+    #             if observation.wait_time > 1:
+    #                 # Schedule this observation, using sched
+    #                 event = self._scheduler.enter(delay=observation.wait_time, priority=0,
+    #                                               action=observation.manager.run,
+    #                                               argument=(observation,))
+    #
+    #                 # Associate the scheduled event with this observation
+    #                 observation.event = event
+    #             else:
+    #                 log.warning('Observation `{}` was not added to the schedule'.format(observation.name))
+    #                 raise InvalidObservationException('Observation in the past')
+    #
+    #     log.info('%s observations and %s calibration observations in queue.', self._schedule.n_observations,
+    #              self._schedule.n_calibrations)

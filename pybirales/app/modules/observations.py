@@ -4,11 +4,11 @@ import logging as log
 import os
 
 import mongoengine
-from flask import Blueprint
+from flask import Blueprint, flash
 from flask import render_template, request, abort, redirect, url_for
 from flask_paginate import Pagination, get_page_parameter
 
-from pybirales.app.modules.forms import DetectionModeForm
+from pybirales.app.modules.forms import DetectionModeForm, CalibrationModeForm
 from pybirales.repository.message_broker import broker
 from pybirales.repository.models import Observation
 from pybirales.repository.models import SpaceDebrisTrack
@@ -53,10 +53,27 @@ def _observation_from_form(form_data, mode):
     obs_config = os.path.join(root_dir, "configuration/templates/dev/detection.ini")
     obs_pipeline = "detection_pipeline"
     obs_type = 'observation'
+    config_parameters = {
+        "beamformer": {
+            "reference_declination": float(form_data['declination'])
+        },
+        "observation": {
+            "name": obs_name,
+        },
+        "target": {
+            "name": form_data['target_name'],
+        },
+        "start_time": form_data['date_start'],
+        "duration": duration
+    }
+
     if mode == 'calibration':
         obs_config = os.path.join(root_dir, "configuration/templates/dev/calibration.ini")
         obs_pipeline = "correlation_pipeline"
         obs_type = 'calibration'
+
+    if mode == 'detection':
+        config_parameters['observation']['transmitter_frequency'] = float(form_data['transmitter_frequency'])
 
     return json.dumps({
         "name": obs_name,
@@ -66,20 +83,7 @@ def _observation_from_form(form_data, mode):
             os.path.join(root_dir, "configuration/birales.ini"),
             obs_config
         ],
-        "config_parameters": {
-            "beamformer": {
-                "reference_declination": float(form_data['declination'])
-            },
-            "observation": {
-                "name": obs_name,
-                "transmitter_frequency": float(form_data['transmitter_frequency']),
-            },
-            "target": {
-                "name": form_data['target_name'],
-            },
-            "start_time": form_data['date_start'],
-            "duration": duration
-        }
+        "config_parameters": config_parameters
     }, default=json_convertor)
 
 
@@ -89,11 +93,30 @@ def create(mode):
         form = DetectionModeForm(request.form)
         if request.method == 'POST' and form.validate():
             # Observation is valid and can be submitted to service
-            obs_data = _observation_from_form(form.data, mode)
+            try:
+                obs_data = _observation_from_form(form.data, mode)
+            except KeyError:
+                flash('Validation error. Observation not submitted', 'error')
+            else:
+                # Submit the observation to the BIRALES scheduler
+                broker.publish(OBSERVATIONS_CHL, obs_data)
 
-            # Publish the observation to the BIRALES scheduler
-            broker.publish(OBSERVATIONS_CHL, obs_data)
+                flash('Observation submitted to scheduler')
         return render_template('modules/observations/create/detection.html', form=form)
+    elif mode == 'calibration':
+        form = CalibrationModeForm(request.form)
+        if request.method == 'POST' and form.validate():
+            try:
+                # Observation is valid and can be submitted to service
+                obs_data = _observation_from_form(form.data, mode)
+            except KeyError:
+                flash('Validation error. Observation not submitted', 'error')
+            else:
+                # Submit the observation to the BIRALES scheduler
+                broker.publish(OBSERVATIONS_CHL, obs_data)
+
+                flash('Observation submitted to scheduler')
+        return render_template('modules/observations/create/calibration.html', form=form)
     else:
         log.error('Observation mode is not valid')
         abort(422)

@@ -24,7 +24,7 @@ class ScheduledObservation(object):
     OBS_START_PADDING = datetime.timedelta(seconds=60)  # The default time padding at the start of the observation
     RECALIBRATION_TIME = datetime.timedelta(hours=24)  # Recalibrate every 24 hours
 
-    def __init__(self, name, pipeline_name, config_parameters, config_file):
+    def __init__(self, name, pipeline_name, config_parameters, config_file, model_id=None):
         """
         Initialisation function for the Scheduled Observation
 
@@ -59,14 +59,17 @@ class ScheduledObservation(object):
         self._next_observation = None
         self._prev_observation = None
 
-        self.model = ObservationModel(
-            name=self.name, date_time_start=self.start_time,
-            date_time_end=self.end_time,
-            pipeline=self.pipeline_name,
-            type=self.TYPE,
-            config_parameters=self.parameters,
-            config_file=self.config_file
-        )
+        if not model_id:
+            self.model = ObservationModel(
+                name=self.name, date_time_start=self.start_time,
+                date_time_end=self.end_time,
+                pipeline=self.pipeline_name,
+                type=self.TYPE,
+                config_parameters=self.parameters,
+                config_file=self.config_file
+            )
+        else:
+            self.model = ObservationModel.objects.get(id=model_id)
 
         self.manager = ObservationManager()
 
@@ -283,10 +286,10 @@ class ScheduledCalibrationObservation(ScheduledObservation):
 
     TYPE = 'calibration'
 
-    def __init__(self, name, pipeline_name, config_parameters, config_file):
+    def __init__(self, name, pipeline_name, config_parameters, config_file, model_id=None):
         pipeline_name = 'correlation_pipeline'
 
-        ScheduledObservation.__init__(self, name, pipeline_name, config_parameters, config_file)
+        ScheduledObservation.__init__(self, name, pipeline_name, config_parameters, config_file, model_id)
 
         self.manager = CalibrationObservationManager()
 
