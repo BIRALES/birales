@@ -12,6 +12,7 @@ from pybirales.app.modules.forms import DetectionModeForm, CalibrationModeForm
 from pybirales.repository.message_broker import broker
 from pybirales.repository.models import Observation
 from pybirales.repository.models import SpaceDebrisTrack
+from pybirales.repository.models import Configuration as ConfigurationModel
 
 observations_page = Blueprint('observations_page', __name__, template_folder='templates')
 OBSERVATIONS_CHL = 'birales_scheduled_obs'
@@ -48,9 +49,11 @@ def _observation_from_form(form_data, mode):
 
     duration = (form_data['date_end'] - form_data['date_start']).total_seconds()
 
+    configuration = ConfigurationModel.objects.order_by('-id').first()
+
     root_dir = os.path.join(os.environ['HOME'], '.birales')
     obs_name = form_data['obs_name']
-    obs_config = os.path.join(root_dir, "configuration/templates/dev/detection.ini")
+    obs_config = configuration.detection_config_filepath
     obs_pipeline = "detection_pipeline"
     obs_type = 'observation'
     config_parameters = {
@@ -68,7 +71,7 @@ def _observation_from_form(form_data, mode):
     }
 
     if mode == 'calibration':
-        obs_config = os.path.join(root_dir, "configuration/templates/dev/calibration.ini")
+        obs_config =  configuration.calibration_config_filepath
         obs_pipeline = "correlation_pipeline"
         obs_type = 'calibration'
 
