@@ -1,10 +1,10 @@
-from wtforms import Form, StringField, DecimalField, DateTimeField, ValidationError, HiddenField
 import datetime
 
 import pytz
 from wtforms import Form, StringField, DecimalField, DateTimeField, ValidationError, HiddenField
-from wtforms.validators import DataRequired, AnyOf
+from wtforms.validators import DataRequired
 from wtforms.widgets import TextInput
+import os
 
 
 class UTCDateTimeField(DateTimeField):
@@ -55,3 +55,14 @@ class DetectionModeForm(ObservationModeForm):
 
 class CalibrationModeForm(ObservationModeForm):
     target_name = StringField('Source name', default='UNKNOWN')
+
+
+class ConfigurationForm(Form):
+    id = HiddenField()
+    calibration_config_filepath = StringField('Calibration observation configuration filepath',
+                                              [DataRequired()],
+                                              default=os.path.join(os.environ["HOME"],
+                                                                   '.birales/configuration/calibration.ini'))
+    detection_config_filepath = StringField('Detection observation configuration filepath', [DataRequired()],
+                                            default=os.path.join(os.environ["HOME"],
+                                                                 '.birales/configuration/detection.ini'))

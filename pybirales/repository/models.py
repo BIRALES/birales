@@ -179,3 +179,9 @@ class Event(DynamicDocument):
             query &= Q(created_at__lte=to_time)
 
         return query_set.filter(query)
+
+
+class Configuration(DynamicDocument):
+    _id = ObjectIdField(required=True, default=ObjectId, unique=True, primary_key=True)
+    calibration_config_filepath = StringField()
+    detection_config_filepath = StringField()

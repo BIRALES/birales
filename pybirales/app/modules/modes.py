@@ -5,6 +5,8 @@ import logging as log
 from flask import Blueprint, render_template, Response, json, request, flash, redirect, url_for
 from werkzeug.utils import secure_filename
 from pybirales.birales_config import BiralesConfig
+from pybirales.app.modules.forms import ConfigurationForm
+from pybirales.repository.models import Configuration as ConfigurationModel
 
 import re
 import ast
@@ -63,7 +65,6 @@ def observation_mode(mode_id):
             ])
             options['recordsTotal'] += 1
             options['recordsFiltered'] += 1
-
 
     if mode_id in modes.keys():
         return Response(json.dumps(options), mimetype='application/json; charset=utf-8')
@@ -225,7 +226,31 @@ def view(environment, configuration_name):
         return redirect(url_for("configurations_page.index"))
 
 
-@configurations_page.route('/configurations/create')
-# @todo
-def create():
-    pass
+@configurations_page.route('/configurations/edit', methods=['GET', 'POST'])
+def edit():
+    form = ConfigurationForm(request.form)
+    if request.method == 'GET':
+        configuration = ConfigurationModel.objects.order_by('-id').first()
+        form = ConfigurationForm(obj=configuration)
+
+    if request.method and form.validate():
+            try:
+                _id = form.data['id']
+                c_config_filepath = form.data['calibration_config_filepath']
+                d_config_filepath = form.data['detection_config_filepath']
+            except KeyError:
+                flash('Validation error. Observation not submitted', 'error')
+            else:
+                if form.data['id'] == '':
+                    configuration = ConfigurationModel(calibration_config_filepath=c_config_filepath,
+                                                       detection_config_filepath=d_config_filepath)
+                else:
+                    configuration = ConfigurationModel.objects.get(pk=_id)
+                    configuration.calibration_config_filepath = c_config_filepath
+                    configuration.detection_config_filepath = d_config_filepath
+
+                configuration.save()
+
+                flash('Configuration updated successfully')
+
+    return render_template('modules/configuration/index.html', form=form)
