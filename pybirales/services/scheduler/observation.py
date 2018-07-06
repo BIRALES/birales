@@ -65,6 +65,7 @@ class ScheduledObservation(object):
                 date_time_end=self.end_time,
                 pipeline=self.pipeline_name,
                 type=self.TYPE,
+                status='pending',
                 config_parameters=self.parameters,
                 config_file=self.config_file
             )

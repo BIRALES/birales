@@ -55,6 +55,7 @@ class ObservationManager:
         self._pre_process(observation)
 
         observation.model.settings = self.obs_config.to_dict()
+        observation.model.status = 'running'
         observation.save()
 
         publish(ObservationStartedEvent(observation.name, observation.pipeline_name))
@@ -66,6 +67,7 @@ class ObservationManager:
         pipeline_builder.manager.start_pipeline(duration=observation.duration.total_seconds())
 
         observation.model.date_time_end = datetime.datetime.utcnow()
+        observation.model.status = 'finished'
         observation.save()
 
         publish(ObservationFinishedEvent(observation.name, observation.pipeline_name))
@@ -137,6 +139,7 @@ class CalibrationObservationManager(ObservationManager):
         self.__pre_process(observation)
 
         observation.model.settings = self.obs_config.to_dict()
+        observation.model.status = 'running'
         observation.save()
 
         publish(ObservationStartedEvent(observation.name, observation.pipeline_name))
@@ -150,12 +153,16 @@ class CalibrationObservationManager(ObservationManager):
         pipeline_builder.manager.start_pipeline(duration=observation.duration.total_seconds())
 
         observation.model.date_time_end = datetime.datetime.utcnow()
+        observation.model.status = 'calibrating'
         observation.save()
 
         publish(ObservationFinishedEvent(observation.name, observation.pipeline_name))
 
         # Use the correlation matrix to calibrate the system
         self.calibrate(observation, self.calibration_dir, self.corr_matrix_filepath)
+
+        observation.model.status = 'finished'
+        observation.save()
 
         # Terminate (gracefully) the connection to the BEST instrument and the ROACH backend
         self.tear_down()

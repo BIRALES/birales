@@ -45,24 +45,24 @@ class Observation(Document):
     tx = FloatField()
     sampling_time = FloatField()
 
-    @property
-    def status(self):
-        now = datetime.datetime.utcnow()
-
-        # pending (scheduled)
-        if now < self.date_time_end:
-            return STATUS_MAP['pending']
-
-        # running
-        if self.date_time_start < now < self.date_time_end:
-            return STATUS_MAP['running']
-
-        # completed successfully
-        if now > self.date_time_end and isinstance(self.date_time_end, datetime.datetime):
-            return STATUS_MAP['finished']
-
-        # Observation must have failed
-        return STATUS_MAP['error']
+    # @property
+    # def status(self):
+    #     now = datetime.datetime.utcnow()
+    #
+    #     # pending (scheduled)
+    #     if now < self.date_time_end:
+    #         return STATUS_MAP['pending']
+    #
+    #     # running
+    #     if self.date_time_start < now < self.date_time_end:
+    #         return STATUS_MAP['running']
+    #
+    #     # completed successfully
+    #     if now > self.date_time_end and isinstance(self.date_time_end, datetime.datetime):
+    #         return STATUS_MAP['finished']
+    #
+    #     # Observation must have failed
+    #     return STATUS_MAP['error']
 
     def description(self):
         return {
