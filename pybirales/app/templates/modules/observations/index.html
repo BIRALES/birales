@@ -8,11 +8,17 @@
         <div class="row">
             <div class="col-md-12">
                 <div class="card">
-{#                    <div class="header">#}
-{#                        <h4 class="title">Observations</h4>#}
-                        {# <p class="category">{{ pagination.info }}</p> #}
-{#                        #}
-{#                    </div>#}
+                    <div class="btn-header">
+                        <div class="btn-container">
+                            <a class="btn btn-fill"
+                               href="{{ url_for('observations_page.create', mode='calibration') }}">
+                                <i class="pe-7s-plus"></i>
+                                Calibration</a>
+                            <a class="btn btn-fill" href="{{ url_for('observations_page.create', mode='detection') }}">
+                                <i class="pe-7s-plus"></i>
+                                Detection</a>
+                        </div>
+                    </div>
 
                     <div class="content table-responsive table-full-width">
                         <table class="table table-hover table-striped">
@@ -57,12 +63,13 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <a href="{{ url_for('observations_page.view', observation_id=observation.id) }}"
-                                           class="btn btn-sm btn-info" role="button">
-                                            <i class="pe-7s-angle-right-circle"></i>
-                                            View
-                                        </a>
-
+                                        {% if observation.type == 'observation' %}
+                                            <a href="{{ url_for('observations_page.view', observation_id=observation.id) }}"
+                                               class="btn btn-sm btn-info" role="button">
+                                                <i class="pe-7s-angle-right-circle"></i>
+                                                View
+                                            </a>
+                                        {% endif %}
                                         <a href="{{ url_for('observations_page.delete', observation_id=observation.id) }}"
                                            class="btn btn-sm btn-danger" role="button">
                                             <i class="pe-7s-close-circle"></i>
@@ -75,26 +82,6 @@
                         </table>
                         {{ pagination.links }}
                     </div>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-12">
-                <div class="dropdown">
-                    <button class="btn btn-fill btn-primary dropdown-toggle" type="button" id="dropdownMenu1"
-                            data-toggle="dropdown">
-                        Create
-                        <span class="caret"></span>
-                    </button>
-
-                    <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
-                        <li role="presentation"><a role="menuitem" tabindex="-1"
-                                                   href="{{ url_for('observations_page.create', mode='detection') }}">Detection</a>
-                        </li>
-                        <li role="presentation"><a role="menuitem" tabindex="-1"
-                                                   href="{{ url_for('observations_page.create', mode='calibration') }}">Calibration</a>
-                        </li>
-                    </ul>
                 </div>
             </div>
         </div>

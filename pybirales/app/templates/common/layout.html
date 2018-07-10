@@ -35,12 +35,25 @@
     {% endblock %}
 </head>
 <body>
+
+<div id="birales-not-available-container" class="full-width-overlay" style="width: 100%; display: none">
+    <div class="full-width-overlay-content">
+        <p>
+            The BIRALES system is not available. <br/>
+            Please contact your system administrator.
+        </p>
+    </div>
+</div>
+
+
+
+
 <div class="wrapper">
-    <div class="sidebar" data-color="blue" data-image="{{ url_for('static', filename='img/nord_cross.png') }}">
+    <div class="sidebar" data-color="black" data-image="{{ url_for('static', filename='img/nord_cross.png') }}">
         <div class="sidebar-wrapper">
             <div class="logo">
                 <a href="/" class="simple-text">
-                    BIRALES 2.0
+                    BIRALES
                 </a>
             </div>
 
@@ -162,7 +175,10 @@
             let obs_stop_btn = $('#obs-stop-btn');
             let failed_requests = 0;
             let last_updated_status_time = new Date();
+            let last_updated_scheduler_status_time = new Date();
             let expiry_dt = 5; // Time at which the pipeline is deemed to no longer be running (in seconds)
+            let birales_unavailable_overlay = $('#birales-not-available-container');
+
 
             function events_polling(last_updated) {
 
@@ -208,6 +224,7 @@
             // Poll for new events
             events_polling(new Date());
 
+
             {#Giving broken pipe errors#}
 
             let socket = io.connect('http://', {
@@ -234,10 +251,14 @@
             function poll_system_status() {
                 if (obs_stop_btn.is(":visible")) {
                     if ((new Date() - last_updated_status_time) > expiry_dt * 1000) {
-                        obs_stop_btn.hide();
-                        log.info(last_updated_status_time);
                         log.info('Observation is no longer running. Hiding stop button.');
+                        obs_stop_btn.hide();
                     }
+                }
+
+                if ((new Date() - last_updated_scheduler_status_time) > expiry_dt * 1000 * 3) {
+                    log.info('Scheduler is no longer running. Showing dialog.');
+                    birales_unavailable_overlay.show();
                 }
 
                 setTimeout(poll_system_status, 5000);
@@ -258,6 +279,17 @@
                         obs_stop_btn.show();
                     }
                 }
+
+                if (data.scheduler !== undefined) {
+                    if (data.scheduler.status === 'running') {
+                        log.debug('Scheduler is available');
+                        last_updated_scheduler_status_time = moment.utc(data.scheduler.timestamp);
+                        if (birales_unavailable_overlay.is(":visible")) {
+                            birales_unavailable_overlay.hide();
+                        }
+                    }
+                }
+
             });
 
             obs_stop_btn.click(function () {

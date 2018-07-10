@@ -5,7 +5,7 @@ import time
 
 import humanize
 import pytz
-from mongoengine import errors
+
 from pybirales.events.events import InvalidObservationEvent, ObservationScheduledEvent, ObservationDeletedEvent
 from pybirales.events.publisher import publish
 from pybirales.repository.message_broker import pub_sub

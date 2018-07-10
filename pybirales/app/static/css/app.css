@@ -120,3 +120,66 @@ div.author > h6.subtitle {
         opacity: 1.0;
     }
 }
+
+.full-width-overlay {
+    height: 100%;
+    width: 0;
+    position: fixed;
+    z-index: 5;
+    top: 0;
+    left: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    overflow-x: hidden;
+    transition: 0.5s;
+}
+
+.full-width-overlay-content {
+    position: relative;
+    top: 25%;
+    width: 100%;
+    text-align: center;
+    margin-top: 30px;
+}
+
+.full-width-overlay p {
+    padding: 8px;
+    text-decoration: none;
+    font-size: 36px;
+    color: white;
+    display: block;
+    transition: 0.3s;
+}
+
+.full-width-overlay a:hover, .overlay a:focus {
+    color: #f1f1f1;
+}
+
+.full-width-overlay .full-width-close-btn {
+    position: absolute;
+    top: 20px;
+    right: 45px;
+    font-size: 60px;
+}
+
+@media screen and (max-height: 450px) {
+    .overlay a {
+        font-size: 20px
+    }
+
+    .overlay .closebtn {
+        font-size: 40px;
+        top: 15px;
+        right: 35px;
+    }
+}
+
+.card .btn-header {
+    padding-top: 15px;
+}
+
+.card .btn-header div {
+    padding-left: 10px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    background-color: #e5e5e5;
+}

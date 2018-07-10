@@ -1,22 +1,19 @@
 import datetime
 import json
 import logging as log
-import sched
 import signal
 import threading
 import time
 
-import pytz
 import humanize
+import pytz
 
 from pybirales.events.events import BIRALESSchedulerReloadedEvent
-from pybirales.events.events import ObservationScheduledCancelledEvent
-from pybirales.events.publisher import EventsPublisher
 from pybirales.events.publisher import publish
-from pybirales.repository.message_broker import RedisManager
+from pybirales.repository.message_broker import broker
 from pybirales.repository.models import Observation as ObservationModel
 from pybirales.services.scheduler.exceptions import IncorrectScheduleFormat, InvalidObservationException
-from pybirales.services.scheduler.monitoring import monitor_worker, obs_listener_worker
+from pybirales.services.scheduler.monitoring import obs_listener_worker
 from pybirales.services.scheduler.observation import ScheduledObservation, ScheduledCalibrationObservation
 from pybirales.services.scheduler.schedule import Schedule
 
@@ -25,6 +22,8 @@ class ObservationsScheduler:
     # By default, all observation have a delayed start by this amount
     DEFAULT_WAIT_SECONDS = 5
     OBSERVATIONS_CHL = 'birales_scheduled_obs'
+    BIRALES_STATUS_CHL = 'birales_system_status'
+    POLL_FREQ = datetime.timedelta(seconds=5)
 
     def __init__(self):
         """
@@ -32,35 +31,16 @@ class ObservationsScheduler:
 
         """
 
-        # The sched scheduler instance
-        self._scheduler = sched.scheduler(time.time, time.sleep)
-
         # A queue of observation objects
         self._schedule = Schedule()
-
-        # Event published of the application
-        self._publisher = EventsPublisher.Instance()
 
         self._stop_event = threading.Event()
 
         self._reload_event = threading.Event()
 
-        # Monitoring thread that will output the status of the scheduler at specific intervals
-        self._monitor_thread = threading.Thread(target=monitor_worker, args=(self._scheduler, self._stop_event,),
-                                                name='Monitoring')
-
         # Create an observations thread which listens for new observations (through pub-sub)
         self._obs_thread = threading.Thread(target=obs_listener_worker, args=(self,),
                                             name='Obs. Listener')
-
-        # The redis instance
-        self._redis = RedisManager.Instance().redis
-
-        # The PubSub interface of the redis instance
-        self._pubsub = self._redis.pubsub()
-
-        # Subscribe to the observations channel
-        self._pubsub.subscribe(self.OBSERVATIONS_CHL)
 
     def load_from_file(self, schedule_file_path, file_format='json'):
         """
@@ -82,12 +62,7 @@ class ObservationsScheduler:
                     raise IncorrectScheduleFormat(schedule_file_path)
 
         if observations:
-            # Schedule the observations
             scheduled_observation = self._add_observations(observations)
-
-            # Save scheduled observations such that they can be restored later
-            # for obs in scheduled_observation:
-            #     obs.save()
         else:
             raise IncorrectScheduleFormat(schedule_file_path)
 
@@ -105,18 +80,10 @@ class ObservationsScheduler:
         if schedule_file_path:
             self.load_from_file(schedule_file_path, file_format)
 
-        # Queue the observation to the sched instance
-        # self.queue_observations()
-
-        # Start the monitoring thread
-        # self._monitor_thread.start()
-
         # Start the monitoring thread
         self._obs_thread.start()
 
         # Start the scheduler
-        # self._scheduler.run()
-
         self.run()
 
         # Wait for a keyboard interrupt to exit the process
@@ -139,14 +106,13 @@ class ObservationsScheduler:
         else:
             log.info('No observations found in database.')
 
-        # self.queue_observations()
-
     def reload(self):
         """
 
         :return:
         """
         log.debug('Reloading scheduler')
+
         # Empty the schedule by creating one afresh
         self._schedule = Schedule()
 
@@ -156,9 +122,6 @@ class ObservationsScheduler:
         publish(BIRALESSchedulerReloadedEvent())
 
         log.info('Scheduler reloaded')
-
-        # If there are queued events, this will block
-        # self._scheduler.run()
 
     def run(self):
         """
@@ -191,20 +154,27 @@ class ObservationsScheduler:
     def _monitoring_message(self, now, next_observation):
         if len(self._schedule) < 1:
             log.info('No queued observations.')
+        else:
+            log.info('%s observations and %s calibration observations in queue. Next observation: %s',
+                     self._schedule.n_observations,
+                     self._schedule.n_calibrations, next_observation.name)
 
-            return
+            for event in self._schedule:
+                delta = now - event.start_time_padded
+                log.info('The %s for the `%s` observation is scheduled to start in %s and will run for %s',
+                         event.pipeline_name,
+                         event.name,
+                         humanize.naturaldelta(delta),
+                         humanize.naturaldelta(event.duration))
 
-        log.info('%s observations and %s calibration observations in queue. Next observation: %s',
-                 self._schedule.n_observations,
-                 self._schedule.n_calibrations, next_observation.name)
-
-        for event in self._schedule:
-            delta = now - event.start_time_padded
-            log.info('The %s for the `%s` observation is scheduled to start in %s and will run for %s',
-                     event.pipeline_name,
-                     event.name,
-                     humanize.naturaldelta(delta),
-                     humanize.naturaldelta(event.duration))
+        broker.publish(self.BIRALES_STATUS_CHL, json.dumps({
+            'scheduler': {
+                'status': 'running',
+                'timestamp': now.isoformat('T'),
+                'next_update': (now + self.POLL_FREQ).isoformat('T'),
+                'dt': self.POLL_FREQ.seconds
+            }
+        }))
 
     def stop(self):
         """
@@ -212,21 +182,16 @@ class ObservationsScheduler:
         :return:
         """
 
-        log.info('Cancelling {} observations from schedule'.format(len(self._scheduler.queue)))
+        log.info('Cancelling {} observations from schedule'.format(len(self.schedule)))
 
         # Stop listening for new observations
-        self._redis.publish(self.OBSERVATIONS_CHL, 'KILL')
-
-        # Clear the schedule from the observations
-        # for event in self._scheduler.queue:
-        #     self._scheduler.cancel(event)
-        #     self._publisher.publish(ObservationScheduledCancelledEvent(observation=event.argument[0]))
-
-        if self._scheduler.empty():
-            log.info('Scheduler was cleared from all events. Please wait for the monitoring thread to terminate.')
+        broker.publish(self.OBSERVATIONS_CHL, 'KILL')
 
         # stop monitoring thread
         self._stop_event.set()
+
+        # for t in threading.enumerate():
+        #     print t.getName()
 
     def _add_observations(self, scheduled_observations):
         """
@@ -261,6 +226,10 @@ class ObservationsScheduler:
     @property
     def schedule(self):
         return self._schedule
+
+    def clear(self):
+        del self._schedule
+        self._schedule = Schedule()
 
     @staticmethod
     def create_obs(obs):
@@ -300,27 +269,3 @@ class ObservationsScheduler:
             log.warning('Observation %s was not added to the schedule', obs)
         else:
             return so
-
-    # def queue_observations(self):
-    #     """
-    #     Add the observations to the sched instance
-    #     :return:
-    #     """
-    #
-    #     for observation in self._schedule:
-    #         # Only add observations that were not added already in sched
-    #         if observation.event not in self._scheduler.queue:
-    #             if observation.wait_time > 1:
-    #                 # Schedule this observation, using sched
-    #                 event = self._scheduler.enter(delay=observation.wait_time, priority=0,
-    #                                               action=observation.manager.run,
-    #                                               argument=(observation,))
-    #
-    #                 # Associate the scheduled event with this observation
-    #                 observation.event = event
-    #             else:
-    #                 log.warning('Observation `{}` was not added to the schedule'.format(observation.name))
-    #                 raise InvalidObservationException('Observation in the past')
-    #
-    #     log.info('%s observations and %s calibration observations in queue.', self._schedule.n_observations,
-    #              self._schedule.n_calibrations)
