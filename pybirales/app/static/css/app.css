@@ -183,3 +183,24 @@ div.author > h6.subtitle {
     padding-bottom: 10px;
     background-color: #e5e5e5;
 }
+
+.card {
+    border-radius: 0;
+}
+
+.sidebar .nav li > a {
+    border-radius: 0;
+}
+
+.btn {
+    border-radius: 0;
+}
+
+
+.card .table tbody td:first-child, .card .table thead th:first-child {
+    white-space: nowrap;
+}
+
+.label {
+    border-radius: 0;
+}
