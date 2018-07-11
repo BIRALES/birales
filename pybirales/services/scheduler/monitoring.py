@@ -1,12 +1,7 @@
-import datetime
 import json
 import logging as log
-import time
-
-import humanize
-import pytz
-
-from pybirales.events.events import InvalidObservationEvent, ObservationScheduledEvent, ObservationDeletedEvent
+import sys
+from pybirales.events.events import InvalidObservationEvent, ObservationScheduledEvent, ObservationDeletedEvent,SystemErrorEvent
 from pybirales.events.publisher import publish
 from pybirales.repository.message_broker import pub_sub
 from pybirales.repository.models import Observation
@@ -16,45 +11,11 @@ OBS_CREATE_CHL = 'birales_scheduled_obs'
 OBS_DEL_CHL = 'birales_delete_obs'
 
 
-def monitor_worker(scheduler, stop_event):
-    """
-    Start the monitoring thread
-
-    :param scheduler: The sched instance
-    :return:
-    """
-    time_counter = 0
-
-    log.debug('Monitoring thread started')
-
-    while not stop_event.is_set():
-        # Process every N iterations
-        if time_counter % 60 == 0:
-            now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
-            for event in scheduler.queue:
-                observation = event.argument[0]
-                delta = now - observation.start_time_padded
-                h_time_remaining = humanize.naturaldelta(delta)
-                h_duration = humanize.naturaldelta(observation.duration)
-                log.info('The %s for the `%s` observation is scheduled to start in %s and will run for %s',
-                         observation.pipeline_name,
-                         observation.name,
-                         h_time_remaining, h_duration)
-
-            if len(scheduler.queue) < 1:
-                log.info('No queued observations.')
-
-        time_counter += 1
-        time.sleep(1)
-
-    log.info('Monitoring thread terminated')
-
-
 def obs_listener_worker(scheduler):
     """
      Listen for new scheduled observations
 
-    :param scheduler: The sched instance
+    :param scheduler:
     :return:
     """
 
@@ -81,23 +42,23 @@ def obs_listener_worker(scheduler):
             # Add the scheduled objects to the queue
             try:
                 scheduler.schedule.add_observation(observation)
-            except InvalidObservationException:
-                log.warning('Observation is not valid')
-
+            except InvalidObservationException as e:
                 # Report back to front-end
-                publish(InvalidObservationEvent(observation))
+                publish(InvalidObservationEvent(observation, e.msg))
+            except Exception:
+                log.warning('Observation could not be added to the scheduler')
+                publish(SystemErrorEvent(reason=sys.exc_info()[0]))
             else:
                 publish(ObservationScheduledEvent(observation))
         if message['channel'] == OBS_DEL_CHL:
             log.debug('Delete observation %s message received.', data)
 
             try:
-                obs_id = data['obs_id']
-
-                observation = Observation.objects.get(id=obs_id)
+                observation = Observation.objects.get(id=data['obs_id'])
                 observation.delete()
             except Exception:
-                log.exception('Observation could not be deleted (%s)', data)
+                log.warning('Observation could not be deleted (%s)', data)
+                publish(SystemErrorEvent(reason=sys.exc_info()[0]))
             else:
                 publish(ObservationDeletedEvent(observation))
 

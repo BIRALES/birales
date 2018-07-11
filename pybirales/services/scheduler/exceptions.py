@@ -4,7 +4,6 @@ import logging as log
 class SchedulerException(Exception):
     pass
 
-
 class NoObservationsQueuedException(SchedulerException):
     def __init__(self):
         self.msg = "No observations are queued"
@@ -21,8 +20,10 @@ class IncorrectScheduleFormat(SchedulerException):
 
 
 class InvalidObservationException(SchedulerException):
-    pass
-
+    def __init__(self, msg='Not specified'):
+        self.msg = "Observation not valid. {}".format(msg)
+        log.warning(self.msg)
+        Exception.__init__(self, self.msg)
 
 class ObservationScheduledInPastException(InvalidObservationException):
     def __init__(self, obs):

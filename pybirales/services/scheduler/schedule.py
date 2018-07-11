@@ -4,12 +4,12 @@ import logging as log
 import pytz
 
 from pybirales import settings
+from pybirales.events.publisher import EventsPublisher
 from pybirales.services.scheduler.exceptions import ObservationsConflictException, ObservationScheduledInPastException, \
     InvalidObservationException
-from pybirales.services.scheduler.observation import ScheduledCalibrationObservation, ScheduledObservation, ScheduledAutoCalibrationObservation
+from pybirales.services.scheduler.observation import ScheduledCalibrationObservation, ScheduledObservation, \
+    ScheduledAutoCalibrationObservation
 from pybirales.utilities.source_transit import get_best_calibration_obs
-from pybirales.events.publisher import EventsPublisher
-from pybirales.events.events import ObservationScheduledEvent
 
 
 class Schedule:
@@ -131,8 +131,11 @@ class Schedule:
         :return:
         """
 
-        if not self._is_valid(new_obs):
-            raise InvalidObservationException()
+        # Check if observation is in the future
+        new_obs.is_in_future()
+
+        # Check if this observation conflicts with the scheduled observation
+        self._conflicts(self._head, new_obs)
 
         if self._head is None:
             # Add this observation to the head of the schedule
@@ -196,7 +199,6 @@ class Schedule:
 
         self._increment(new_obs)
 
-
     def _create_calibration_observation(self, observation):
         """
         Return a calibration observation for the given observation.
@@ -222,7 +224,8 @@ class Schedule:
 
         for source in available_sources:
             # Create a calibration object for the closest_observation observation
-            tmp_obs = ScheduledAutoCalibrationObservation(source['name'], source['transit_time'], observation.config_file)
+            tmp_obs = ScheduledAutoCalibrationObservation(source['name'], source['transit_time'],
+                                                          observation.config_file)
 
             try:
                 # Check if this observation conflicts with the scheduled observation

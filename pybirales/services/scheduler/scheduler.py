@@ -170,6 +170,7 @@ class ObservationsScheduler:
         broker.publish(self.BIRALES_STATUS_CHL, json.dumps({
             'scheduler': {
                 'status': 'running',
+                'obs_thread_status': self._obs_thread.isAlive(),
                 'timestamp': now.isoformat('T'),
                 'next_update': (now + self.POLL_FREQ).isoformat('T'),
                 'dt': self.POLL_FREQ.seconds

@@ -71,7 +71,7 @@ def _observation_from_form(form_data, mode):
     }
 
     if mode == 'calibration':
-        obs_config =  configuration.calibration_config_filepath
+        obs_config = configuration.calibration_config_filepath
         obs_pipeline = "correlation_pipeline"
         obs_type = 'calibration'
 
@@ -104,6 +104,8 @@ def create(mode):
                 # Submit the observation to the BIRALES scheduler
                 broker.publish(OBSERVATIONS_CHL, obs_data)
 
+                log.debug('Published %s to #%s', obs_data, OBSERVATIONS_CHL)
+
                 flash('Observation submitted to scheduler')
         return render_template('modules/observations/create/detection.html', form=form)
     elif mode == 'calibration':
@@ -117,6 +119,8 @@ def create(mode):
             else:
                 # Submit the observation to the BIRALES scheduler
                 broker.publish(OBSERVATIONS_CHL, obs_data)
+
+                log.debug('Published %s to #%s', obs_data, OBSERVATIONS_CHL)
 
                 flash('Observation submitted to scheduler')
         return render_template('modules/observations/create/calibration.html', form=form)

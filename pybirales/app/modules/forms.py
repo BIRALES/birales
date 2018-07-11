@@ -34,9 +34,9 @@ class UTCDateTimeField(DateTimeField):
 class ObservationModeForm(Form):
     obs_name = StringField('Observation name', validators=[DataRequired()])
     declination = DecimalField('Declination (&#176;)', places=4, default=45, validators=[DataRequired()])
-    date_start = UTCDateTimeField('Start time', format='%Y-%m-%d %H:%M:%S',
+    date_start = UTCDateTimeField('Start time (UTC)', format='%Y-%m-%d %H:%M:%S',
                                   validators=[DataRequired()])
-    date_end = UTCDateTimeField('End time', format='%Y-%m-%d %H:%M:%S', validators=[DataRequired()])
+    date_end = UTCDateTimeField('End time (UTC)', format='%Y-%m-%d %H:%M:%S', validators=[DataRequired()])
 
     def validate_date_start(self, field):
         if field.data > self.date_end.data:

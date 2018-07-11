@@ -46,8 +46,6 @@
 </div>
 
 
-
-
 <div class="wrapper">
     <div class="sidebar" data-color="black" data-image="{{ url_for('static', filename='img/nord_cross.png') }}">
         <div class="sidebar-wrapper">
@@ -286,6 +284,10 @@
                         last_updated_scheduler_status_time = moment.utc(data.scheduler.timestamp);
                         if (birales_unavailable_overlay.is(":visible")) {
                             birales_unavailable_overlay.hide();
+
+                            if (data.scheduler.obs_thread_status === false) {
+                                log.error('Observation thread is dead');
+                            }
                         }
                     }
                 }

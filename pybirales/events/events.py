@@ -280,7 +280,7 @@ class InvalidObservationEvent(Event):
 
     _level = 'warning'
 
-    def __init__(self, observation):
+    def __init__(self, observation, reason=None):
         """
 
         :param observation: An object of type ScheduledObservation
@@ -289,8 +289,11 @@ class InvalidObservationEvent(Event):
 
         Event.__init__(self)
 
-        self.payload['body'] = 'Something went wrong. The observation ({}) could not be added to the scheduler.'.format(
+        self.payload['body'] = 'Parameters are not valid for observation {}.'.format(
             observation.name)
+
+        if reason:
+            self.payload['body'] += reason
 
         log.debug(self.payload['body'])
 
@@ -331,3 +334,27 @@ class BIRALESSchedulerReloadedEvent(Event):
         self.payload['body'] = 'The BIRALES system was reloaded'
 
         log.debug(self.payload['body'])
+
+
+class SystemErrorEvent(Event):
+    """
+    Event representing a general system error that we need to inform the user about.
+    """
+
+    channels = ['notifications']
+    description = 'A system error occurred'
+
+    _level = 'error'
+
+    def __init__(self, reason):
+        """
+
+        :param reason:
+        :type reason: String
+        """
+
+        Event.__init__(self)
+
+        self.payload['body'] = 'System Error. {}'.format(reason)
+
+        log.exception(self.payload['body'])

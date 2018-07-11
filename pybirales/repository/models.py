@@ -45,6 +45,7 @@ class Observation(Document):
     tx = FloatField()
     sampling_time = FloatField()
 
+    status = StringField()
     # @property
     # def status(self):
     #     now = datetime.datetime.utcnow()
