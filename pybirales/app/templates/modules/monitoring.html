@@ -1,5 +1,6 @@
 {% extends "common/layout.html" %}
 {% block title %}Monitoring{% endblock %}
+{% block page_title %}Monitoring{% endblock %}
 {% set active_page = "monitoring" %}
 
 {% block content %}
@@ -62,6 +63,20 @@
                 </div>
             </div>
         </div>
+
+        <div class="row">
+            <div class="col-lg-12 col-md-12">
+                <div class="card">
+                    <div class="header">
+                        <h5 class="title">Antenna Metrics</h5>
+                    </div>
+
+                    <div class="content">
+                        <canvas id="antenna-metrics-plot"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 {% endblock %}
 
@@ -69,6 +84,7 @@
     {{ super() }}
     <script src="{{ url_for('static', filename='js/plotters/track_doppler_profile.js') }}"></script>
     <script src="{{ url_for('static', filename='js/plotters/track_snr_profile.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plotters/antenna_metrics.js') }}"></script>
     <script src="{{ url_for('static', filename='js/plotters/manager.js') }}"></script>
 
     <script>
@@ -178,6 +194,11 @@
             });
 
             update_beam_data(new Date(date_from.val()).toISOString(), new Date(date_to.val()).toISOString());
+
+            let manager = new PlottingManager(socket);
+            manager.addPlot('antenna_metrics', new AntennaMetricsPlotter('antenna-metrics-plot'));
+
+            manager.init();
         });
     </script>
 {% endblock %}

@@ -64,6 +64,20 @@ class Schedule:
         else:
             raise InvalidObservationException('The Observation is neither a Calibration or a Space Debris Observation')
 
+    def _decrement(self, obs):
+        """
+        Decrement the size of the schedule by 1
+        :param obs:
+        :return:
+        """
+
+        if isinstance(obs, ScheduledCalibrationObservation):
+            self.n_calibrations -= 1
+        elif isinstance(obs, ScheduledObservation):
+            self.n_observations -= 1
+        else:
+            raise InvalidObservationException('The Observation is neither a Calibration or a Space Debris Observation')
+
     def _conflicts(self, scheduled_observation, new_obs):
         """
         Check that the passed on observation does not conflict with the queued observations
@@ -122,6 +136,37 @@ class Schedule:
             return False
 
         return True
+
+    def pop_observation(self, obs_to_pop):
+        """
+
+        :param obs_to_pop:
+        :return:
+        """
+        if obs_to_pop is None or self._head is None:
+            return None
+
+        prev_obs = obs_to_pop.prev_observation
+        next_obs = obs_to_pop.next_observation
+
+        if self._head == obs_to_pop:
+            self._head = next_obs
+
+        if self._tail == obs_to_pop:
+            self._tail = prev_obs
+
+        if prev_obs:
+            prev_obs.next_observation = next_obs
+
+        if next_obs:
+            next_obs.prev_observation = prev_obs
+
+        # Clear references
+        obs_to_pop.next_node = obs_to_pop.previous_node = None
+
+        self._decrement(obs_to_pop)
+
+        log.debug('Observation %s was removed from the schedule', obs_to_pop.name)
 
     def add_observation(self, new_obs):
         """

@@ -1,8 +1,12 @@
+import datetime
 import logging as log
 import threading
 from logging.config import dictConfig
 
+import time
 import dateutil.parser
+import numpy as np
+import pytz
 from flask import Flask, request
 from flask_socketio import SocketIO
 from mongoengine import connect
@@ -81,8 +85,22 @@ def notifications_listener():
                 log.debug("Notification received: %s", notification)
                 socket_io.send(notification)
 
-
     log.info('Notifications listener terminated')
+
+
+def antenna_metrics(stop_event):
+    log.info('Antenna metrics thread started')
+    while not stop_event.is_set():
+        time.sleep(10)
+        now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+        metrics = {'timestamp': now.isoformat('T'),
+                   'voltages': np.random.uniform(low=0.5, high=13.3, size=(32,)).tolist()
+                   }
+
+        log.debug('Antenna metrics sending: %s', metrics)
+        socket_io.emit('antenna_metrics', metrics)
+
+    log.info('Antenna metrics thread terminated')
 
 
 def system_listener():
@@ -162,7 +180,7 @@ def disconnect():
 
 if __name__ == "__main__":
     # print logging.handlers
-
+    stop_event = threading.Event()
     try:
         # Start the notifications listener
         notifications_worker = threading.Thread(target=notifications_listener, name='Notifications Listener')
@@ -171,15 +189,23 @@ if __name__ == "__main__":
         system_listener = threading.Thread(target=system_listener, name='System Status Listener')
         system_listener.start()
 
+        antenna_metrics_worker = threading.Thread(target=antenna_metrics, name='Antenna Metrics', args=(stop_event,))
+        antenna_metrics_worker.start()
+
         # Turn the flask app into a socket.io app
         socket_io.init_app(app, engineio_logger=True, async_mode='threading')
 
         # Start the Flask Application
-        socket_io.run(app, host="0.0.0.0", port=8000, use_reloader=False)
+        socket_io.run(app, host="0.0.0.0", port=8000, use_reloader=True)
+
+
 
     except KeyboardInterrupt:
         log.info('CTRL-C detected. Quiting.')
     finally:
+        log.info('Stopping server')
+        stop_event.set()
+
         log.info('Closing DB connection')
         db_connection.close()
 

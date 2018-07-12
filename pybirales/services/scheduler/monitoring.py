@@ -20,11 +20,12 @@ def obs_listener_worker(scheduler):
     """
 
     # Subscribe to the observations channels (create and delete)
-    pub_sub.subscribe([OBS_CREATE_CHL, OBS_DEL_CHL])
+    channels = [OBS_CREATE_CHL, OBS_DEL_CHL]
+    pub_sub.subscribe(channels)
 
     log.info('Scheduler listening on `{}` for new observations'.format(OBS_CREATE_CHL))
     for message in pub_sub.listen():
-        if message['data'] == 'KILL':
+        if message['data'] == 'KILL' and (message['channel'] in channels) :
             log.info('KILL Received. Scheduled observations listener un-subscribed from {}'.format(OBS_CREATE_CHL))
             break
 

@@ -51,7 +51,7 @@
         <div class="sidebar-wrapper">
             <div class="logo">
                 <a href="/" class="simple-text">
-                    BIRALES
+                    <strong>BIRALES</strong>
                 </a>
             </div>
 
@@ -176,6 +176,7 @@
             let last_updated_scheduler_status_time = new Date();
             let expiry_dt = 5; // Time at which the pipeline is deemed to no longer be running (in seconds)
             let birales_unavailable_overlay = $('#birales-not-available-container');
+            let observation_running = false; // A flag that is flipped when an observation is running
 
 
             function events_polling(last_updated) {
@@ -219,18 +220,13 @@
                 }, 5000);
             }
 
-            // Poll for new events
+            // Poll for newar events
             events_polling(new Date());
 
 
             {#Giving broken pipe errors#}
 
-            let socket = io.connect('http://', {
-                reconnection: true,
-                reconnectionDelay: 1000,
-                reconnectionDelayMax: 5000,
-                reconnectionAttempts: 99999
-            });
+
             socket.on('connect', function () {
                 console.log('connected to server');
                 socket.on('disconnect', function () {
@@ -251,10 +247,12 @@
                     if ((new Date() - last_updated_status_time) > expiry_dt * 1000) {
                         log.info('Observation is no longer running. Hiding stop button.');
                         obs_stop_btn.hide();
+
+                        observation_running = false;
                     }
                 }
 
-                if ((new Date() - last_updated_scheduler_status_time) > expiry_dt * 1000 * 3) {
+                if (((new Date() - last_updated_scheduler_status_time) > expiry_dt * 1000 * 3) && observation_running === false) {
                     log.info('Scheduler is no longer running. Showing dialog.');
                     birales_unavailable_overlay.show();
                 }
@@ -275,6 +273,8 @@
 
                         last_updated_status_time = moment.utc(data.pipeline.timestamp);
                         obs_stop_btn.show();
+
+                        observation_running = true;
                     }
                 }
 
@@ -284,10 +284,10 @@
                         last_updated_scheduler_status_time = moment.utc(data.scheduler.timestamp);
                         if (birales_unavailable_overlay.is(":visible")) {
                             birales_unavailable_overlay.hide();
+                        }
 
-                            if (data.scheduler.obs_thread_status === false) {
-                                log.error('Observation thread is dead');
-                            }
+                        if (data.scheduler.obs_thread_status === false) {
+                            log.error('Observation thread is dead');
                         }
                     }
                 }

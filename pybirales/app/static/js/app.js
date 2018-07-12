@@ -40,3 +40,10 @@ $(document).ready(function () {
 
 
 });
+
+var socket = io.connect('http://', {
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    reconnectionAttempts: 99999
+});

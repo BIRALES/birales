@@ -1,19 +1,17 @@
-import logging
-import signal
-import time
-import yappi as profiler
-import logging as log
-
-from matplotlib import pyplot as plt
 import datetime
+import json
+import logging
+import logging as log
+import threading
+import time
+from threading import Event
+
+import yappi as profiler
+from matplotlib import pyplot as plt
+
 from pybirales import settings
 from pybirales.pipeline.base.definitions import NoDataReaderException
-from threading import Event
-import os
-from pybirales.events.publisher import publish
 from pybirales.repository.message_broker import pub_sub, broker
-import json
-import threading
 
 PIPELINE_CTL_CHL = 'birales_pipeline_control'
 BIRALES_STATUS_CHL = 'birales_system_status'
@@ -23,7 +21,7 @@ def pipeline_status_worker(kill_pill):
     pub_sub.subscribe(PIPELINE_CTL_CHL)
     log.debug('Listening on #%s for messages', PIPELINE_CTL_CHL)
     for message in pub_sub.listen():
-        if message['data'] == 'KILL':
+        if message['data'] == 'KILL' and message['channel'] == PIPELINE_CTL_CHL:
             log.info('KILL received on #{}. Killing pipeline'.format(PIPELINE_CTL_CHL))
             kill_pill.set()
             break

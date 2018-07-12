@@ -143,6 +143,8 @@ class ObservationsScheduler:
                 if (now - next_observation.start_time_padded).total_seconds() > 2:
                     next_observation.manager.run(next_observation)
 
+                    self.schedule.pop_observation(next_observation)
+
             counter += 1
             time.sleep(1)
 
@@ -152,7 +154,7 @@ class ObservationsScheduler:
         self._reload_event.clear()
 
     def _monitoring_message(self, now, next_observation):
-        if len(self._schedule) < 1:
+        if len(self._schedule) < 1 or next_observation is None:
             log.info('No queued observations.')
         else:
             log.info('%s observations and %s calibration observations in queue. Next observation: %s',
