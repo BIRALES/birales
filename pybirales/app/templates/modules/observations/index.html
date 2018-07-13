@@ -12,10 +12,10 @@
                         <div class="btn-container">
                             <a class="btn btn-fill"
                                href="{{ url_for('observations_page.create', mode='calibration') }}">
-                                <i class="pe-7s-plus"></i>
+                                <i class="fa fa-plus" aria-hidden="true"></i>
                                 Calibration</a>
                             <a class="btn btn-fill" href="{{ url_for('observations_page.create', mode='detection') }}">
-                                <i class="pe-7s-plus"></i>
+                                <i class="fa fa-plus" aria-hidden="true"></i>
                                 Detection</a>
                         </div>
                     </div>
@@ -52,11 +52,11 @@
                                         </td>
                                     {% endif %}
                                     <td>
-                                        {% if observation.status == 'Finished' %}
+                                        {% if observation.status == 'finished' %}
                                             <span class="label label-success">{{ observation.status }}</span>
-                                        {% elif observation.status == 'Pending' %}
+                                        {% elif observation.status == 'pending' %}
                                             <span class="label label-primary">{{ observation.status }}</span>
-                                        {% elif observation.status == 'Running' %}
+                                        {% elif observation.status == 'running' %}
                                             <span class="label label-default">{{ observation.status }}</span>
                                         {% else %}
                                             <span class="label label-danger">{{ observation.status }}</span>
