@@ -19,14 +19,6 @@ function AntennaMetricsPlotter(selector) {
             display: false,
             text: this.title
         },
-        scaleOverride: true,
-        //** Required if scaleOverride is true **
-        //Number - The number of steps in a hard coded scale
-        scaleSteps: 10,
-        //Number - The value jump in the hard coded scale
-        scaleStepWidth: 10,
-        //Number - The scale starting value
-        scaleStartValue: new Date(),
         tooltips: {
             callbacks: {
                 label: function (tooltip) {
