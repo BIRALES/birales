@@ -11,7 +11,7 @@ function AntennaMetricsPlotter(selector) {
 
     this.options = {
         responsive: true,
-        animation : false,
+        animation: false,
         legend: {
             position: 'bottom'
         },
@@ -19,13 +19,21 @@ function AntennaMetricsPlotter(selector) {
             display: false,
             text: this.title
         },
+        scaleOverride: true,
+        //** Required if scaleOverride is true **
+        //Number - The number of steps in a hard coded scale
+        scaleSteps: 10,
+        //Number - The value jump in the hard coded scale
+        scaleStepWidth: 10,
+        //Number - The scale starting value
+        scaleStartValue: new Date(),
         tooltips: {
             callbacks: {
                 label: function (tooltip) {
                     let d = moment(tooltip.xLabel).toDate();
                     let date_string = d.getUTCHours() + ':' + d.getUTCMinutes() + ':' + d.getUTCSeconds();
 
-                    return Math.round(tooltip.yLabel) + ' V ,' + date_string;
+                    return 'Antenna ' + tooltip.datasetIndex + ': ' + Math.round(tooltip.yLabel) + ' V at ' + date_string;
                 }
             }
         },
@@ -75,10 +83,10 @@ AntennaMetricsPlotter.prototype = {
         $.each(data.voltages, function (i, value) {
             if (self.data.datasets[i] === undefined) {
                 self.data.datasets[i] = {
-                    data: [0], // this will be shifted out
+                    data: [],
                     borderColor: self.get_color(i),
                     backgroundColor: self.get_color(i),
-					fill: false,
+                    fill: false,
                     lineTension: 0,
                     pointStrokeColor: self.get_color(i),
                     label: 'A' + i

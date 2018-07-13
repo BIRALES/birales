@@ -66,12 +66,12 @@
                                         {% if observation.type == 'observation' %}
                                             <a href="{{ url_for('observations_page.view', observation_id=observation.id) }}"
                                                class="btn btn-sm btn-info" role="button">
-                                                <i class="pe-7s-angle-right-circle"></i>
+                                                <i class="fa fa-play" aria-hidden="true"></i>
                                             </a>
                                         {% endif %}
                                         <a href="{{ url_for('observations_page.delete', observation_id=observation.id) }}"
                                            class="btn btn-sm btn-danger" role="button">
-                                            <i class="pe-7s-close-circle"></i>
+                                            <i class="fa fa-trash" aria-hidden="true"></i>
                                         </a>
                                     </td>
                                 </tr>
