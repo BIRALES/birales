@@ -224,20 +224,15 @@ div.author > h6.subtitle {
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
 }
 
-/*.btn {*/
-    /*border-color: #303F9F;*/
-    /*color: #303F9F;*/
-    /*background-color: #303F9F;*/
-/*}*/
-
-.btn-info {
+.btn.btn-info.btn-fill {
     border-color: #303F9F;
-    color: #303F9F;
+    background-color: #303F9F;
 }
 
 .btn-danger {
+    background-color: #C2185B;
     border-color: #C2185B;
-    color: #C2185B;
+    color: white;
 }
 
 .label-danger {
@@ -257,3 +252,19 @@ div.author > h6.subtitle {
     border-color: #303F9F;
 
 }
+
+.sidebar[data-color="dark-blue"]:after,
+body > .navbar-collapse[data-color="blue"]:after {
+    background: #1A237E;
+    background: -moz-linear-gradient(top, #1A237E 0%, #303F9F 100%);
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #1A237E), color-stop(100%, #303F9F));
+    background: -webkit-linear-gradient(top, #1A237E 0%, #303F9F 100%);
+    background: -o-linear-gradient(top, #1A237E 0%, #303F9F 100%);
+    background: -ms-linear-gradient(top, #1A237E 0%, #303F9F 100%);
+    background: linear-gradient(to bottom, #1A237E 0%, #303F9F 100%);
+    background-size: 150% 150%;
+}
+
+/*.main-panel{*/
+    /*overflow-y: hidden;*/
+/*}*/

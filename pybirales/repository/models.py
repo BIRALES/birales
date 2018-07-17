@@ -28,7 +28,7 @@ STATUS_MAP = {
 
 class Observation(Document):
     name = StringField(required=True, max_length=200)
-    date_time_start = DateTimeField(required=True, default=datetime.datetime.utcnow)
+    date_time_start = DateTimeField(required=True)
     date_time_end = DateTimeField()  # Updated when the observation ends
     pipeline = StringField(required=True)
     type = StringField(required=True)
@@ -46,24 +46,7 @@ class Observation(Document):
     sampling_time = FloatField()
 
     status = StringField()
-    # @property
-    # def status(self):
-    #     now = datetime.datetime.utcnow()
-    #
-    #     # pending (scheduled)
-    #     if now < self.date_time_end:
-    #         return STATUS_MAP['pending']
-    #
-    #     # running
-    #     if self.date_time_start < now < self.date_time_end:
-    #         return STATUS_MAP['running']
-    #
-    #     # completed successfully
-    #     if now > self.date_time_end and isinstance(self.date_time_end, datetime.datetime):
-    #         return STATUS_MAP['finished']
-    #
-    #     # Observation must have failed
-    #     return STATUS_MAP['error']
+    created_at = DateTimeField(required=True, default=datetime.datetime.utcnow)
 
     def description(self):
         return {
@@ -89,6 +72,18 @@ class Observation(Document):
         logs.sort(key=lambda x: os.path.getmtime(x))
 
         return logs
+
+    @queryset_manager
+    def get(self, query_set, from_time=None, to_time=None):
+        query = Q()
+
+        if from_time:
+            query &= Q(date_time_start__gte=from_time)
+
+        if to_time:
+            query &= Q(date_time_start__lte=to_time)
+
+        return query_set.filter(query)
 
 
 class SpaceDebrisTrack(DynamicDocument):

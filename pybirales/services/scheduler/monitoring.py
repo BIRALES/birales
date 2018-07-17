@@ -42,7 +42,7 @@ def obs_listener_worker(scheduler):
 
             # Add the scheduled objects to the queue
             try:
-                scheduler.schedule.add_observation(observation)
+                scheduler.schedule.add(observation)
             except InvalidObservationException as e:
                 # Report back to front-end
                 publish(InvalidObservationEvent(observation, e.msg))
@@ -63,6 +63,4 @@ def obs_listener_worker(scheduler):
             else:
                 publish(ObservationDeletedEvent(observation))
 
-                # Reload the schedule
-                scheduler.reload()
     log.info('Observation listener terminated')
