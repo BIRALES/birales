@@ -74,7 +74,7 @@ class Observation(Document):
         return logs
 
     @queryset_manager
-    def get(self, query_set, from_time=None, to_time=None):
+    def get(self, query_set, from_time=None, to_time=None, status=None):
         query = Q()
 
         if from_time:
@@ -82,6 +82,9 @@ class Observation(Document):
 
         if to_time:
             query &= Q(date_time_start__lte=to_time)
+
+        if status:
+            query &= Q(status__exact=status)
 
         return query_set.filter(query)
 

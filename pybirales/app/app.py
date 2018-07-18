@@ -75,7 +75,7 @@ def notifications_listener():
     pub_sub.subscribe(NOTIFICATIONS_CHL)
     log.info('BIRALES app listening for notifications on #%s', NOTIFICATIONS_CHL)
     for message in pub_sub.listen():
-        if message['data'] == 'KILL':
+        if message['data'] == 'KILL' and message['channel'] == NOTIFICATIONS_CHL:
             log.info('KILL command received for notifications listener')
             pub_sub.unsubscribe(NOTIFICATIONS_CHL)
             break
@@ -107,7 +107,7 @@ def system_listener():
     pub_sub.subscribe(BIRALES_STATUS_CHL)
     log.info('BIRALES app listening for system status messages on #%s', BIRALES_STATUS_CHL)
     for message in pub_sub.listen():
-        if message['data'] == 'KILL':
+        if message['data'] == 'KILL' and message['channel'] == BIRALES_STATUS_CHL:
             log.info('KILL command received for system listener')
             pub_sub.unsubscribe(BIRALES_STATUS_CHL)
             break

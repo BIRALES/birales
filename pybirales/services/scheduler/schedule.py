@@ -57,25 +57,26 @@ class Schedule:
 
     def add(self, new_obs):
         """
-
+        Add the observation to the
         :param new_obs:
         :return:
         """
 
-        try:
-            # Check if observation is in the future
-            new_obs.is_in_future()
+        # Check if observation is in the future
+        new_obs.is_in_future()
 
-            # Check if this observation conflicts with the scheduled observation
-            self._conflicts(new_obs)
-        except InvalidObservationException:
-            log.warning('Observation %s is not valid. Could not add to the schedule', new_obs.name)
-        else:
-            # Save the observation to the database
-            new_obs.save()
+        # Check if this observation conflicts with the scheduled observation
+        self._conflicts(new_obs)
+
+        # Save the observation to the database
+        new_obs.save()
+
+        # Return the saved observation
+        return new_obs
 
     def remove(self, obs):
         """
+        Remove the observation from the database
 
         :param obs:
         :return:
@@ -85,11 +86,13 @@ class Schedule:
 
     def pending_observations(self):
         """
+        Retrieve the pending observations from the database
 
         :return:
         """
-        now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
-        obs_models = Observation.get(from_time=now).order_by('-date_time_start')
+        # Pending observations whose start time is more than 5 minutes in the past will be ignored.
+        now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc) - datetime.timedelta(minutes=5)
+        obs_models = Observation.get(from_time=now, status='pending').order_by('-date_time_start')
 
         observations = []
         for o in obs_models:

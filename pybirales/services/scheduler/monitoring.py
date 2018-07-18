@@ -25,9 +25,13 @@ def obs_listener_worker(scheduler):
 
     log.info('Scheduler listening on `{}` for new observations'.format(OBS_CREATE_CHL))
     for message in pub_sub.listen():
-        if message['data'] == 'KILL' and (message['channel'] in channels) :
-            log.info('KILL Received. Scheduled observations listener un-subscribed from {}'.format(OBS_CREATE_CHL))
-            break
+        if message['data'] == 'KILL':
+            if message['channel'] in channels:
+                log.info('KILL Received. Scheduled observations listener un-subscribed from {}'.format(OBS_CREATE_CHL))
+                break
+            else:
+                # Kill signal is not destined for this thread
+                continue
 
         if message['type'] != 'message':
             continue

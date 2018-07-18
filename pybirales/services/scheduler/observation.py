@@ -179,6 +179,15 @@ class ScheduledObservation(object):
         if wait_seconds < 1:
             raise ObservationScheduledInPastException(self)
 
+    @property
+    def should_start(self):
+        """
+
+        :return:
+        """
+        now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+        return (now - self.start_time).total_seconds() > 0
+
 
 class ScheduledCalibrationObservation(ScheduledObservation):
     """
@@ -206,4 +215,3 @@ class ScheduledCalibrationObservation(ScheduledObservation):
             return True
 
         return self.is_calibration_needed(obs.next_observation)
-

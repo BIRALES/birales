@@ -8,6 +8,7 @@ import time
 import humanize
 import pytz
 
+from pybirales.events.events import InvalidObservationEvent
 from pybirales.repository.message_broker import broker
 from pybirales.services.scheduler.exceptions import IncorrectScheduleFormat, InvalidObservationException
 from pybirales.services.scheduler.monitoring import obs_listener_worker
@@ -16,8 +17,7 @@ from pybirales.services.scheduler.schedule import Schedule
 
 
 class ObservationsScheduler:
-    # By default, all observation have a delayed start by this amount
-    DEFAULT_WAIT_SECONDS = 5
+    DEFAULT_WAIT_SECONDS = 5  # By default, all observation have a delayed start by this amount
     OBSERVATIONS_CHL = 'birales_scheduled_obs'
     BIRALES_STATUS_CHL = 'birales_system_status'
     POLL_FREQ = datetime.timedelta(seconds=5)
@@ -94,6 +94,7 @@ class ObservationsScheduler:
 
         log.info('BIRALES Scheduler observation runner started')
         counter = 0
+        processed_observations = []
         while not self._stop_event.is_set():
             now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
             pending_observations = self.schedule.pending_observations()
@@ -101,7 +102,8 @@ class ObservationsScheduler:
             if pending_observations:
                 next_observation = pending_observations[0]
 
-                if (now - next_observation.start_time).total_seconds() > 2:
+                if next_observation.should_start and next_observation.id not in processed_observations:
+                    processed_observations.append(next_observation.id)
                     next_observation.manager.run(next_observation)
 
             if counter % self.MONITORING_FREQ == 0:
@@ -116,6 +118,8 @@ class ObservationsScheduler:
         if len(pending_observations) < 1:
             log.info('No queued observations.')
         else:
+            log.info('There are %s observation queued. Next observation: %s', len(pending_observations),
+                     pending_observations[0].name)
             for obs in pending_observations:
                 delta = now - obs.start_time
                 log.info('The %s for the `%s` observation is scheduled to start in %s and will run for %s',
@@ -176,6 +180,7 @@ class ObservationsScheduler:
                 self._schedule.add(observation)
             except InvalidObservationException:
                 log.warning('Observation %s was not added to the schedule', obs['name'])
+                publish(InvalidObservationEvent(observation, e.msg))
             else:
                 scheduled_obs.append(observation)
 

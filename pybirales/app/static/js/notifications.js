@@ -14,13 +14,17 @@ var NotificationsManager = function () {
     };
 
     this.publish = function (message, level) {
-        if (level == 'error') {
+        if (level === 'error') {
             toastr.error(message, 'Error');
             log.error(message);
         }
-        else if (level == 'success') {
+        else if (level === 'success') {
             toastr.success(message);
             log.info(message);
+        }
+        else if (level === 'warning') {
+            toastr.warning(message);
+            log.warn(message);
         }
         else {
             toastr.info(message);

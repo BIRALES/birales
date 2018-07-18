@@ -12,8 +12,9 @@ function AntennaMetricsPlotter(selector) {
     this.options = {
         responsive: true,
         animation: false,
+        maintainAspectRatio: false,
         legend: {
-            position: 'bottom'
+            position: 'right',
         },
         title: {
             display: false,
@@ -72,6 +73,7 @@ AntennaMetricsPlotter.prototype = {
 
         self.data.labels.push(new Date(data.timestamp));
 
+
         $.each(data.voltages, function (i, value) {
             if (self.data.datasets[i] === undefined) {
                 self.data.datasets[i] = {
@@ -80,6 +82,8 @@ AntennaMetricsPlotter.prototype = {
                     backgroundColor: self.get_color(i),
                     fill: false,
                     lineTension: 0,
+                    borderWidth: 1,
+                    pointRadius: 0,
                     pointStrokeColor: self.get_color(i),
                     label: 'A' + i
                 };
@@ -90,6 +94,10 @@ AntennaMetricsPlotter.prototype = {
                 self.data.datasets[i].data.shift();
             }
         });
+
+        if (self.data.labels.length > 30) {
+            self.data.labels.shift();
+        }
 
         self.plot.update();
     }

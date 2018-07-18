@@ -28,7 +28,7 @@ class InvalidObservationException(SchedulerException):
 class ObservationScheduledInPastException(InvalidObservationException):
     def __init__(self, obs):
         self.msg = "Cannot schedule the observation `{}` because it starts in the past ({})".format(
-            obs.name, obs.start_time_padded)
+            obs.name, obs.start_time)
         self.observation = obs
 
         log.warning(self.msg)
