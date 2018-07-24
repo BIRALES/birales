@@ -1,13 +1,16 @@
-import time
 import ctypes
-import logging
 import datetime
+import json
+import logging
+
 import numpy as np
 from enum import Enum
+
 from pybirales import settings
 from pybirales.pipeline.base.definitions import PipelineError, ObservationInfo
 from pybirales.pipeline.base.processing_module import Generator
 from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
+from pybirales.repository.message_broker import broker
 from pybirales.services.instrument.backend import Backend
 
 np.set_printoptions(threshold=np.nan)
@@ -46,6 +49,10 @@ class Receiver(Generator):
         self._npols = config.npols
         self._complex = config.complex
         self._samples_per_second = settings.observation.samples_per_second
+
+        self._read_count = 0
+        self._metrics_poll_freq = 2
+        self._metric_channel = 'antenna_metrics'
 
         # Define data type
         if self._nbits == 64 and self._complex:
@@ -122,7 +129,8 @@ class Receiver(Generator):
             except ValueError:
                 logging.warning('A Timestamp error occurred in the receiver')
                 obs_info['timestamp'] = datetime.datetime.utcnow()
-                print timestamp
+                logging.warning('An error has occurred when reading timestamp %s. Will use %s.',
+                                datetime.datetime.utcfromtimestamp(timestamp), obs_info['timestamp'])
                 pass
             obs_info['nsubs'] = self._nsubs
             obs_info['nsamp'] = self._nsamp
@@ -217,3 +225,11 @@ class Receiver(Generator):
         # Define stopReceiver function
         self._daq.stopReceiver.argtypes = []
         self._daq.stopReceiver.restype = ctypes.c_int
+
+    def publish_antenna_metrics(self, data, obs_info):
+        if self._read_count % self._metrics_poll_freq == 0:
+            msg = json.dumps({'timestamp': obs_info['timestamp'].isoformat('T'),
+                              'voltages': self._calculate_rms(data).tolist()})
+            broker.publish(self._metric_channel, msg)
+
+            logging.debug('Published antenna metrics %s', msg)

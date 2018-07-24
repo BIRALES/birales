@@ -8,6 +8,7 @@ function AntennaMetricsPlotter(selector) {
         labels: [],
         datasets: []
     };
+    this.disable = false;
 
     this.options = {
         responsive: true,
@@ -71,8 +72,12 @@ AntennaMetricsPlotter.prototype = {
     update: function (data) {
         let self = this;
 
-        self.data.labels.push(new Date(data.timestamp));
+        if (self.disable === true){
+            // Do not update the plot if it is disabled.
+            return null;
+        }
 
+        self.data.labels.push(new Date(data.timestamp));
 
         $.each(data.voltages, function (i, value) {
             if (self.data.datasets[i] === undefined) {
@@ -83,7 +88,7 @@ AntennaMetricsPlotter.prototype = {
                     fill: false,
                     lineTension: 0,
                     borderWidth: 1,
-                    pointRadius: 0,
+                    pointRadius: 1,
                     pointStrokeColor: self.get_color(i),
                     label: 'A' + i
                 };

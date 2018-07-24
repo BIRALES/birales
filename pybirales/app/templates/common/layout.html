@@ -172,8 +172,8 @@
 
             let obs_stop_btn = $('#obs-stop-btn');
             let failed_requests = 0;
-            let last_updated_status_time = new Date();
-            let last_updated_scheduler_status_time = new Date();
+            let last_updated_status_time = moment.utc();
+            let last_updated_scheduler_status_time = moment.utc();
             let expiry_dt = 5; // Time at which the pipeline is deemed to no longer be running (in seconds)
             let birales_unavailable_overlay = $('#birales-not-available-container');
             let observation_running = false; // A flag that is flipped when an observation is running
@@ -245,7 +245,7 @@
             function poll_system_status() {
                 if (obs_stop_btn.is(":visible")) {
                     if ((new Date() - last_updated_status_time) > expiry_dt * 1000) {
-                        log.info('Observation is no longer running. Hiding stop button.');
+                        log.info('Observation is no longer running. Last updated at: ' + last_updated_status_time + '. Hiding stop button.');
                         obs_stop_btn.hide();
 
                         observation_running = false;
@@ -253,7 +253,7 @@
                 }
 
                 if (((new Date() - last_updated_scheduler_status_time) > expiry_dt * 1000 * 3) & observation_running === false) {
-                    log.info('Scheduler is no longer running. Showing dialog.');
+                    log.info('Scheduler is no longer running. Last updated at: ' + last_updated_scheduler_status_time.format() + '. Showing dialog.');
                     birales_unavailable_overlay.show();
                 }
 

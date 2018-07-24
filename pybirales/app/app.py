@@ -22,6 +22,7 @@ from pybirales.repository.models import BeamCandidate, SpaceDebrisTrack
 DEBUG = True
 NOTIFICATIONS_CHL = 'notifications'
 BIRALES_STATUS_CHL = 'birales_system_status'
+METRICS_CHL = 'antenna_metrics'
 LOGGING_CONFIG = dict(
     version=1,
     disable_existing_loggers=True,
@@ -71,36 +72,46 @@ def _jinja2_filter_datetime(date):
     return '{:%Y-%m-%d}'.format(date)
 
 
-def notifications_listener():
-    pub_sub.subscribe(NOTIFICATIONS_CHL)
+def pub_sub_listener():
+    channels = [NOTIFICATIONS_CHL, METRICS_CHL, BIRALES_STATUS_CHL]
+    pub_sub.subscribe(channels)
     log.info('BIRALES app listening for notifications on #%s', NOTIFICATIONS_CHL)
     for message in pub_sub.listen():
-        if message['data'] == 'KILL' and message['channel'] == NOTIFICATIONS_CHL:
-            log.info('KILL command received for notifications listener')
-            pub_sub.unsubscribe(NOTIFICATIONS_CHL)
-            break
-        else:
-            if message['type'] == 'message':
-                notification = message['data']
-                log.debug("Notification received: %s", notification)
-                socket_io.send(notification)
+        if message['channel'] in channels:
+            if message['data'] == 'KILL':
+                log.info('KILL command received for notifications listener')
+                pub_sub.unsubscribe(NOTIFICATIONS_CHL)
+                break
+            elif message['type'] == 'message':
+                log.debug("Received message on #%s received: %s", message['channel'], message)
+                if  message['channel'] == NOTIFICATIONS_CHL:
+                    msg = message['data']
+                    socket_io.send(msg)
+                if message['channel'] == METRICS_CHL:
+                    msg = message['data']
+                    socket_io.emit('antenna_metrics', msg)
+                if message['channel'] == BIRALES_STATUS_CHL:
+                    msg = message['data']
+                    socket_io.emit('status', msg)
+            else:
+                log.warning('Received message not handled %s', message)
 
-    log.info('Notifications listener terminated')
+    log.info('Pub-sub listener terminated')
 
-
-def antenna_metrics(stop_event):
-    log.info('Antenna metrics thread started')
-    while not stop_event.is_set():
-        time.sleep(10)
-        now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
-        metrics = {'timestamp': now.isoformat('T'),
-                   'voltages': np.random.uniform(low=0.5, high=13.3, size=(32,)).tolist()
-                   }
-
-        log.debug('Antenna metrics sending: %s', metrics)
-        socket_io.emit('antenna_metrics', metrics)
-
-    log.info('Antenna metrics thread terminated')
+#
+# def antenna_metrics(stop_event):
+#     log.info('Antenna metrics thread started')
+#     while not stop_event.is_set():
+#         time.sleep(10)
+#         now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+#         metrics = {'timestamp': now.isoformat('T'),
+#                    'voltages': np.random.uniform(low=0.5, high=13.3, size=(32,)).tolist()
+#                    }
+#
+#         log.debug('Antenna metrics sending: %s', metrics)
+#         socket_io.emit('antenna_metrics', metrics)
+#
+#     log.info('Antenna metrics thread terminated')
 
 
 def system_listener():
@@ -183,17 +194,17 @@ if __name__ == "__main__":
     stop_event = threading.Event()
     try:
         # Start the notifications listener
-        notifications_worker = threading.Thread(target=notifications_listener, name='Notifications Listener')
-        # notifications_worker.start()
+        notifications_worker = threading.Thread(target=pub_sub_listener, name='Notifications Listener')
+        notifications_worker.start()
 
         system_listener = threading.Thread(target=system_listener, name='System Status Listener')
-        system_listener.start()
+        # system_listener.start()
 
-        antenna_metrics_worker = threading.Thread(target=antenna_metrics, name='Antenna Metrics', args=(stop_event,))
-        antenna_metrics_worker.start()
+        # antenna_metrics_worker = threading.Thread(target=antenna_metrics, name='Antenna Metrics', args=(stop_event,))
+        # antenna_metrics_worker.start()
 
         # Turn the flask app into a socket.io app
-        socket_io.init_app(app, engineio_logger=True, async_mode='threading')
+        socket_io.init_app(app, engineio_logger=True)
 
         # Start the Flask Application
         socket_io.run(app, host="0.0.0.0", port=8000, use_reloader=True)

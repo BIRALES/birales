@@ -17,7 +17,7 @@ from pybirales.repository.models import Configuration as ConfigurationModel
 observations_page = Blueprint('observations_page', __name__, template_folder='templates')
 OBSERVATIONS_CHL = 'birales_scheduled_obs'
 OBSERVATIONS_DEL_CHL = 'birales_delete_obs'
-
+NOTIFICATIONS_CHL = 'notifications'
 
 @observations_page.route('/observations')
 def index():
@@ -180,7 +180,7 @@ def edit(observation_id):
 def delete(observation_id):
     try:
         # Scheduler should reload itself if changes were made to the schedule
-        broker.publish(OBSERVATIONS_DEL_CHL, json.dumps({
+        broker.publish(NOTIFICATIONS_CHL, json.dumps({
             'obs_id': observation_id
         }))
 

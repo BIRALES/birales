@@ -1,14 +1,17 @@
 import datetime
-import numpy as np
+import json
 import logging as log
 import pickle
 import sys
 import time
 
+import numpy as np
+
+from pybirales import settings
 from pybirales.pipeline.base.definitions import PipelineError, ObservationInfo, NoDataReaderException
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.dummy_data import DummyBlob
-from pybirales import settings
+from pybirales.repository.message_broker import broker
 
 
 class RawDataReader(ProcessingModule):
@@ -35,6 +38,8 @@ class RawDataReader(ProcessingModule):
         self._npols = config.npols
         self._filepath = config.filepath
         self._read_count = 0
+        self._metrics_poll_freq = 2
+        self._metric_channel = 'antenna_metrics'
 
         # Call superclass initialiser
         super(RawDataReader, self).__init__(config, input_blob)
@@ -55,8 +60,16 @@ class RawDataReader(ProcessingModule):
             sys.exit()
 
 
+
         # Processing module name
         self.name = "RawDataReader"
+
+    @staticmethod
+    def _calculate_rms(input_data):
+        """ Calculate the RMS of the incoming antenna data
+        :param input_data: Input antenna data """
+
+        return np.squeeze(np.sqrt(np.sum(np.power(np.abs(input_data), 2.), axis=2)))
 
     def generate_output_blob(self):
         """
@@ -103,8 +116,19 @@ class RawDataReader(ProcessingModule):
         obs_info['transmitter_frequency'] = self._config['settings']['observation']['transmitter_frequency']
         obs_info['start_center_frequency'] = self._config['start_center_frequency']
         obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
-        obs_info['timestamp'] = self._config['timestamp'] + datetime.timedelta(seconds=self._nsamp * obs_info['sampling_time']) * self._read_count
+        obs_info['timestamp'] = self._config['timestamp'] + datetime.timedelta(
+            seconds=self._nsamp * obs_info['sampling_time']) * self._read_count
 
         self._read_count += 1
 
+        self.publish_antenna_metrics(input_data, obs_info)
+
         return obs_info
+
+    def publish_antenna_metrics(self, data, obs_info):
+        if self._read_count % self._metrics_poll_freq == 0:
+            msg = json.dumps(
+                {'timestamp': obs_info['timestamp'].isoformat('T'), 'voltages': self._calculate_rms(data).tolist()})
+            broker.publish(self._metric_channel, msg)
+
+            log.debug('Published antenna metrics %s', msg)
