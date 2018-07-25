@@ -50,7 +50,7 @@ class Observation(Document):
 
     def description(self):
         return {
-            'tx': self.config_parameters['observation']['transmitter_frequency'],
+            'tx': self.tx,
             'status': self.status,
             'duration': self.config_parameters['duration'],
             'start': self.date_time_start,

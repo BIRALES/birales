@@ -64,11 +64,10 @@ class ObservationManager:
 
         pipeline_builder.build()
 
-        pipeline_builder.manager.start_pipeline(duration=observation.duration.total_seconds())
 
-        observation.model.date_time_end = datetime.datetime.utcnow()
-        observation.model.status = 'finished'
-        observation.save()
+        pipeline_builder.manager.start_pipeline(duration=observation.duration.total_seconds(), observation=observation)
+
+
 
         publish(ObservationFinishedEvent(observation.name, observation.pipeline_name))
 

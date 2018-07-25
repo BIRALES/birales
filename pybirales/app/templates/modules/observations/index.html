@@ -58,6 +58,8 @@
                                             <span class="label label-primary">{{ observation.status }}</span>
                                         {% elif observation.status == 'running' %}
                                             <span class="label label-default">{{ observation.status }}</span>
+                                        {% elif observation.status == 'stopped' %}
+                                            <span class="label label-warning">{{ observation.status }}</span>
                                         {% else %}
                                             <span class="label label-danger">{{ observation.status }}</span>
                                         {% endif %}

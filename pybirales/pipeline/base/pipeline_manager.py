@@ -90,7 +90,7 @@ class PipelineManager(object):
             plot.initialise_plot()
             self._plotters.append(plot)
 
-    def start_pipeline(self, duration):
+    def start_pipeline(self, duration, observation):
         """
         Start running the pipeline
 
@@ -114,12 +114,22 @@ class PipelineManager(object):
         except NoDataReaderException as exception:
             logging.info('Data finished %s', exception.__class__.__name__)
             self.stop_pipeline()
+            observation.model.status = 'finished'
+        except KeyboardInterrupt:
+            log.warning('Keyboard interrupt detected. Stopping the pipeline')
+            self.stop_pipeline()
+            observation.model.status = 'stopped'
         except Exception as exception:
             logging.exception('Pipeline error: %s', exception.__class__.__name__)
             # An error occurred, force stop all modules
             self.stop_pipeline()
+            observation.model.status = 'error'
         else:
-            logging.info('Pipeline stopped')
+            logging.info('Pipeline stopped without error')
+            observation.model.status = 'finished'
+        finally:
+            observation.model.date_time_end = datetime.datetime.utcnow()
+            observation.save()
 
     def stop_pipeline(self):
         """ Stop pipeline (one at a time) """

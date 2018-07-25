@@ -66,8 +66,11 @@ class RawDataReader(ProcessingModule):
 
     @staticmethod
     def _calculate_rms(input_data):
-        """ Calculate the RMS of the incoming antenna data
-        :param input_data: Input antenna data """
+        """
+        Calculate the RMS of the incoming antenna data
+        :param input_data: Input antenna data
+        :return:
+        """
 
         return np.squeeze(np.sqrt(np.sum(np.power(np.abs(input_data), 2.), axis=2)))
 
@@ -119,9 +122,11 @@ class RawDataReader(ProcessingModule):
         obs_info['timestamp'] = self._config['timestamp'] + datetime.timedelta(
             seconds=self._nsamp * obs_info['sampling_time']) * self._read_count
 
+        self.publish_antenna_metrics(data, obs_info)
+
         self._read_count += 1
 
-        self.publish_antenna_metrics(input_data, obs_info)
+
 
         return obs_info
 
@@ -132,3 +137,4 @@ class RawDataReader(ProcessingModule):
             broker.publish(self._metric_channel, msg)
 
             log.debug('Published antenna metrics %s', msg)
+

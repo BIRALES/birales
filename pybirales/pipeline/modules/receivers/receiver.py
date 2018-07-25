@@ -153,13 +153,22 @@ class Receiver(Generator):
 
             logging.info("Receiver: Received buffer ({})".format(obs_info['timestamp'].time()))
 
+            # Publish the RMS voltages
+            self.publish_antenna_metrics(self._read_count, data, obs_info)
+
+            self._read_count += 1
+
         return self._callback_type(data_callback)
 
     @staticmethod
     def _calculate_rms(input_data):
         """ Calculate the RMS of the incoming antenna data
         :param input_data: Input antenna data """
-        rms_values = np.mean(np.sum(input_data ** 2, axis=1), 1)[0]
+        # rms_values = np.mean(np.sum(input_data ** 2, axis=1), 1)[0]
+
+        return np.squeeze(np.sqrt(np.sum(np.power(np.abs(input_data), 2.), axis=2)))
+
+
 
     def _initialise_receiver(self, start_time):
         """ Initialise the receiver """
@@ -226,8 +235,8 @@ class Receiver(Generator):
         self._daq.stopReceiver.argtypes = []
         self._daq.stopReceiver.restype = ctypes.c_int
 
-    def publish_antenna_metrics(self, data, obs_info):
-        if self._read_count % self._metrics_poll_freq == 0:
+    def publish_antenna_metrics(self, iteration, data, obs_info):
+        if iteration % self._metrics_poll_freq == 0:
             msg = json.dumps({'timestamp': obs_info['timestamp'].isoformat('T'),
                               'voltages': self._calculate_rms(data).tolist()})
             broker.publish(self._metric_channel, msg)
