@@ -6,28 +6,26 @@
 {% block content %}
     <div class="container-fluid">
         <div class="row">
-            <div class="col-lg-2 col-md-12">
+            <div class="col-lg-12 col-md-12">
                 <div class="unfilled-card">
                     <div class="content">
                         <form>
                             <div class="row">
-                                <div class="col-sm-12">
+                                <div class="col-sm-4">
                                     <div class="form-group">
                                         <label for="monitoring-date-from">Date From</label>
                                         <input type="date" class="form-control" id="monitoring-date-from"/>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-sm-12">
+
+                                 <div class="col-sm-4">
                                     <div class="form-group">
                                         <label for="monitoring-date-to">Date To</label>
                                         <input type="date" class="form-control" id="monitoring-date-to"/>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-sm-12">
+
+                                 <div class="col-sm-4">
                                     <div class="form-group">
                                         <label for="monitoring-date-to">Live Updates</label>
                                         <div class="toggle-form-fix">
@@ -36,12 +34,18 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="ro3w">
+
+                            </div>
+                            <div class="ro3w">
+
+                            </div>
                         </form>
                     </div>
                 </div>
             </div>
 
-            <div class="col-lg-5 col-md-12">
+            <div class="col-lg-6 col-md-12">
                 <div class="card">
                     <div class="header">
                         <h5 class="title">Doppler profile</h5>
@@ -53,7 +57,7 @@
                 </div>
             </div>
 
-            <div class="col-lg-5 col-md-12">
+            <div class="col-lg-6 col-md-12">
                 <div class="card">
                     <div class="header">
                         <h5 class="title">SNR Profile</h5>
@@ -90,23 +94,23 @@
 
     <script>
         $(document).ready(function () {
-            var date_from = $('#monitoring-date-from');
-            var date_to = $('#monitoring-date-to');
-            var polling = false;
-            var default_data = {
+            let date_from = $('#monitoring-date-from');
+            let date_to = $('#monitoring-date-to');
+            let polling = false;
+            let default_data = {
                 date_from: '{{ from_time }}',
                 date_to: '{{ to_time }}'
             };
 
 
             function get_default_value(key) {
-                var stored_value = localStorage.getItem(key);
+                let stored_value = localStorage.getItem(key);
                 if (stored_value !== null) {
                     // If selector is found in local storage, restore it
                     return stored_value;
                 }
 
-                var default_server_value = default_data[key];
+                let default_server_value = default_data[key];
                 if (default_server_value !== null) {
                     // Set the value of the selector, with the default sent by the server
                     return default_data[key];
@@ -115,7 +119,7 @@
                 return null;
             }
 
-            var f_date_from = date_from.flatpickr({
+            let f_date_from = date_from.flatpickr({
                 defaultDate: get_default_value('date_from'),
                 enableTime: true,
                 time_24hr: true,
@@ -127,7 +131,7 @@
                 }
             });
 
-            var f_date_to = date_to.flatpickr({
+            let f_date_to = date_to.flatpickr({
                 defaultDate: get_default_value('date_to'),
                 enableTime: true,
                 time_24hr: true,
@@ -140,21 +144,21 @@
             });
 
 
-            var plot = new TrackDopplerProfilePlotter('doppler-profile-plot');
-            var plot2 = new TrackSNRProfilePlotter('snr-profile-plot');
+            let plot = new TrackDopplerProfilePlotter('doppler-profile-plot');
+            let plot2 = new TrackSNRProfilePlotter('snr-profile-plot');
 
             function update_beam_data(from, to) {
-                if (from == undefined) {
+                if (from === undefined) {
                     from = new Date(date_from.val()).toUTCString();
                 }
 
-                if (to == undefined) {
+                if (to === undefined) {
                     to = new Date(date_to.val()).toUTCString()
                 }
 
                 log.info('Fetching new data');
-                plot.update(from, to);
-                plot2.update(from, to);
+                plot.update(undefined, from, to);
+                plot2.update(undefined, from, to);
             }
 
             function poll_for_updates() {
