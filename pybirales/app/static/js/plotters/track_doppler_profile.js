@@ -15,7 +15,7 @@ function TrackDopplerProfilePlotter(selector) {
         pointLabelFontSize: 50,
 
         legend: {
-            position: 'bottom'
+            position: 'right'
         },
         title: {
             display: false,
@@ -24,8 +24,8 @@ function TrackDopplerProfilePlotter(selector) {
         tooltips: {
             callbacks: {
                 label: function (tooltip) {
-                    var d = moment(tooltip.xLabel).toDate();
-                    var date_string = d.getUTCHours() + ':' + d.getUTCMinutes() + ':' + d.getUTCSeconds();
+                    let d = moment(tooltip.xLabel).toDate();
+                    let date_string = d.getUTCHours() + ':' + d.getUTCMinutes() + ':' + d.getUTCSeconds();
 
                     return Math.round(tooltip.yLabel) + ' Hz ,' + date_string;
                 }
@@ -66,20 +66,20 @@ TrackDopplerProfilePlotter.prototype = {
     },
 
     plot_tracks: function (tracks) {
-        var self = this;
-        var data = {
+        let self = this;
+        let data = {
             datasets: []
         };
 
         log.debug('Updating the', self.name, 'plotter with', tracks.length, 'new tracks');
-        var beam_tracks = [];
-        var n_pixels = 0;
+        let beam_tracks = [];
+        let n_pixels = 0;
         $.each(tracks, function (track_id, track) {
-            var tx = track['tx'];
+            let tx = track['tx'];
             $.each(track['data']['channel'], function (i) {
-                var beam_id = track['data']['beam_id'][i];
+                let beam_id = track['data']['beam_id'][i];
 
-                if (beam_tracks[beam_id] == undefined) {
+                if (beam_tracks[beam_id] === undefined) {
                     beam_tracks[beam_id] = {
                         label: beam_id,
                         data: [],
@@ -103,12 +103,12 @@ TrackDopplerProfilePlotter.prototype = {
         });
 
         $.each(beam_tracks, function (beam_id) {
-            if (beam_tracks[beam_id] != undefined) {
+            if (beam_tracks[beam_id] !== undefined) {
                 data.datasets.push(beam_tracks[beam_id])
             }
         });
 
-        if (self.plot == undefined) {
+        if (self.plot === undefined) {
             if (tracks.length > 0) {
                 notifications.publish("Showing " + tracks.length + " tracks", 'success');
             }
@@ -117,11 +117,11 @@ TrackDopplerProfilePlotter.prototype = {
             }
         }
         else {
-            if (self.pixels == n_pixels) {
+            if (self.pixels === n_pixels) {
                 self.options.animation = false;
             }
             else {
-                var delta = n_pixels - self.pixels;
+                let delta = n_pixels - self.pixels;
 
                 if (delta > 0) {
                     notifications.publish(delta + " new detections were made", 'success');
@@ -147,14 +147,14 @@ TrackDopplerProfilePlotter.prototype = {
         self.pixels = n_pixels
     },
 
-    update: function (from_date, to_date) {
-        var self = this;
+    update: function (obs_id, from_date, to_date) {
+        let self = this;
         $.ajax({
             url: this.api_entry,
             method: "POST",
-            data: {from_date: from_date, to_date: to_date}
+            data: {from_date: from_date, to_date: to_date, observation_id: obs_id}
         }).done(function (response) {
-            var tracks = JSON.parse(response);
+            let tracks = JSON.parse(response);
             self.plot_tracks(tracks)
         });
     }

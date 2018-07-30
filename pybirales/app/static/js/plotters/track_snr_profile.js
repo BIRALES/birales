@@ -10,7 +10,7 @@ function TrackSNRProfilePlotter(selector) {
     this.options = {
         responsive: true,
         legend: {
-            position: 'bottom'
+            position: 'right'
         },
         title: {
             display: false,
@@ -19,8 +19,8 @@ function TrackSNRProfilePlotter(selector) {
         tooltips: {
             callbacks: {
                 label: function (tooltip) {
-                    var d = moment(tooltip.xLabel).toDate();
-                    var date_string = d.getUTCHours() + ':' + d.getUTCMinutes() + ':' + d.getUTCSeconds();
+                    let d = moment(tooltip.xLabel).toDate();
+                    let date_string = d.getUTCHours() + ':' + d.getUTCMinutes() + ':' + d.getUTCSeconds();
 
                     return Math.round(tooltip.yLabel) + ' dBHz ,' + date_string;
                 }
@@ -61,19 +61,19 @@ TrackSNRProfilePlotter.prototype = {
     },
 
     plot_tracks: function (tracks) {
-        var self = this;
+        let self = this;
 
-        var data = {
+        let data = {
             datasets: []
         };
 
         log.debug('Updating the', self.name, 'plotter with', tracks.length, 'new tracks');
-        var beam_tracks = []
+        let beam_tracks = [];
         $.each(tracks, function (track_id, track) {
             $.each(track['data']['channel'], function (i) {
-                var beam_id = track['data']['beam_id'][i];
+                let beam_id = track['data']['beam_id'][i];
 
-                if (beam_tracks[beam_id] == undefined) {
+                if (beam_tracks[beam_id] === undefined) {
                     beam_tracks[beam_id] = {
                         label: beam_id,
                         data: [],
@@ -93,12 +93,12 @@ TrackSNRProfilePlotter.prototype = {
         });
 
         $.each(beam_tracks, function (beam_id) {
-            if (beam_tracks[beam_id] != undefined) {
+            if (beam_tracks[beam_id] !== undefined) {
                 data.datasets.push(beam_tracks[beam_id])
             }
         });
 
-        if (self.plot != undefined) {
+        if (self.plot !== undefined) {
             self.options.animation = false;
 
             self.plot.destroy();
@@ -112,14 +112,14 @@ TrackSNRProfilePlotter.prototype = {
         });
     },
 
-    update: function (from_date, to_date) {
-        var self = this;
+    update: function (obs_id, from_date, to_date) {
+        let self = this;
         $.ajax({
             url: this.api_entry,
             method: "POST",
-            data: {from_date: from_date, to_date: to_date}
+            data: {from_date: from_date, to_date: to_date, observation_id: obs_id}
         }).done(function (response) {
-            var tracks = JSON.parse(response);
+            let tracks = JSON.parse(response);
             self.plot_tracks(tracks)
         });
     }
