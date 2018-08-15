@@ -125,7 +125,10 @@ class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
                     filtered_fits_persister = FilteredDataFitsPersister(settings.fits_persister, filtering.output_blob)
                     detector = Detector(settings.detection, filtered_fits_persister.output_blob)
                     self.manager.add_module("filtered_fits_persister", filtered_fits_persister)
-                    self.manager.add_module("detector", detector)
+                else:
+                    detector = Detector(settings.detection, filtering.output_blob)
+                self.manager.add_module("detector", detector)
+
             else:
                 self.manager.add_module("filtering", filtering)
                 detector = Detector(settings.detection, filtering.output_blob)
