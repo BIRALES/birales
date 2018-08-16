@@ -14,10 +14,11 @@ class InputDataFilter:
         pass
 
     @abstractmethod
-    def apply(self, beam):
+    def apply(self, input_data, obs_info):
         """
         Apply filter on the beam data
-        :param beam:
+        :param input_data:
+        :param obs_info:
         :return: void
         """
         pass
@@ -28,18 +29,26 @@ class RemoveBackgroundNoiseFilter(InputDataFilter):
         InputDataFilter.__init__(self)
         self.std_threshold = std_threshold
 
-    def apply(self, data):
+    def apply(self, data, obs_info):
         """
         Remove instances that are n std away from the mean
         :param data:
+        :param obs_info:
         :return: void
         """
 
-        mean = np.mean(data, axis=(1, 2), keepdims=True)
-        std = np.std(data, axis=(1, 2), keepdims=True)
-        threshold = self.std_threshold * std + mean
+        # mean = np.mean(data, axis=(1, 2), keepdims=True)
+        # std = np.std(data, axis=(1, 2), keepdims=True)
+        # threshold = self.std_threshold * std + mean
 
-        data[data < threshold] = 0.
+        # Calculate the threshold at which the noise will be clipped
+        t2 = 4 * obs_info['channel_noise_std'] + obs_info['channel_noise']
+
+        # re-shape threshold array so to make it compatible with the data
+        t2 = np.expand_dims(t2, axis=2)
+
+
+        data[data < t2] = 0.
 
 
 class PepperNoiseFilter(InputDataFilter):
@@ -51,7 +60,13 @@ class PepperNoiseFilter(InputDataFilter):
     def _remove_pepper_noise(self, data):
         return binary_hit_or_miss(data, structure1=self._structure)
 
-    def apply(self, data):
+    def apply(self, data, obs_info):
+        """
+        Remove speck noise (salt-and-pepper)
+        :param data:
+        :param obs_info:
+        :return: void
+        """
         # todo - can this for loop be eliminated?
         for beam_id in range(data.shape[0]):
             data[beam_id, self._remove_pepper_noise(data[beam_id])] = 0.
@@ -64,20 +79,20 @@ class RemoveTransmitterChannelFilter(InputDataFilter):
         # todo - Determine how 20.0 threshold is determined
         self.threshold = 20.
 
-    def apply(self, data):
+    def apply(self, data, obs_info):
         """
         Remove the main transmission beam from the beam data
         :param data:
         :return: void
         """
 
-        peaks_snr_i = np.where(np.sum(data, axis=2) > self.threshold)
-        data[peaks_snr_i] = data[peaks_snr_i] - np.mean(data[peaks_snr_i], axis=1, keepdims=True)
-        data[data < 0.0] = 0.
+        # peaks_snr_i = np.where(np.sum(data, axis=2) > self.threshold)
+        # data[peaks_snr_i] = data[peaks_snr_i] - np.mean(data[peaks_snr_i], axis=1, keepdims=True)
+        # data[data < 0.0] = 0.
 
         if settings.detection.filter_transmitter:
             summed = np.sum(data, axis=2)
-            peaks_snr_i = np.unique(np.where(summed > np.mean(summed) + np.std(summed) * 2.0)[1])
+            peaks_snr_i = np.unique(np.where(summed > np.mean(summed) + np.std(summed) * 5.0)[1])
             data[:, peaks_snr_i, :] = 0.0
             log.debug('Transmitter frequency filter applied')
 
@@ -91,8 +106,8 @@ class Filter(ProcessingModule):
 
         # The filters to be applied on the data. Filters will be applied in order.
         self._filters = [
-            RemoveTransmitterChannelFilter(),
             RemoveBackgroundNoiseFilter(std_threshold=4.),
+            RemoveTransmitterChannelFilter(),
             PepperNoiseFilter(),
         ]
 
@@ -110,9 +125,13 @@ class Filter(ProcessingModule):
         :return:
         """
 
+        # Skip the first blob
+        if self._iter_count < 1:
+            return
+
         # Apply the filters on the data
         for f in self._filters:
-            f.apply(input_data)
+            f.apply(input_data, obs_info)
 
         output_data[:] = input_data
 
