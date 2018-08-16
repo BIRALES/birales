@@ -107,7 +107,7 @@ def partition_input_data(input_data, channel_noise, beam_id):
     # Calculate the SNR
     snr = beam_data / beam_noise[:, np.newaxis]
     snr[snr <= 0] = np.nan
-    snr = 10 * np.log10(snr)
+    # snr = 10 * np.log10(snr)
     snr[np.isnan(snr)] = 0.
 
     # Select the data points that are non-zero
