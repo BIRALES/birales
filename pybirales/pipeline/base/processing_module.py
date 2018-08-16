@@ -141,6 +141,7 @@ class ProcessingModule(Module):
 
     def __init__(self, config, input_blob):
         super(ProcessingModule, self).__init__(config, input_blob)
+        self._iter_count = 0
         logging.info('Initialised the %s module', self.__class__.__name__)
 
     @abstractmethod
@@ -186,6 +187,7 @@ class ProcessingModule(Module):
                 s = time.time()
                 res = self.process(obs_info, input_data, output_data)
                 tt = time.time() - s
+
                 if tt < settings.receiver.nsamp / settings.observation.samples_per_second:
                     log.info('%s finished in %0.3f s', self.name, tt)
                 else:
@@ -210,6 +212,8 @@ class ProcessingModule(Module):
 
             # A short sleep to force a context switch (since locks do not force one)
             time.sleep(0.001)
+
+            self._iter_count += 1
 
         # Clean
         self._tear_down()
