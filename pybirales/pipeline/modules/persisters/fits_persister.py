@@ -29,6 +29,8 @@ class FitsPersister(ProcessingModule):
         self._fits_file = None
         self._header = None
 
+        self._beams_to_visualise = None
+
     def _get_filepath(self):
         """
         Get the file path for the fits file
@@ -69,6 +71,10 @@ class FitsPersister(ProcessingModule):
         :param output_data:
         :return:
         """
+
+        # Skip the first blob
+        if self._iter_count < 1:
+            return
 
         # Append data to the body of the fits file
         if self._beams_to_visualise:
