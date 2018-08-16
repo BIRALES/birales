@@ -201,9 +201,8 @@ class Detector(ProcessingModule):
         :return:
         """
 
-        # Skip the first two blobs
-        if self.counter < 2:
-            self.counter += 1
+        # Skip the first blob
+        if self._iter_count < 1:
             return
 
         obs_info['iter_count'] = self.counter
@@ -219,8 +218,6 @@ class Detector(ProcessingModule):
 
         # Check each track and determine if the detection object has transitted outside FoV
         self._candidates = self._active_tracks(candidates, self.counter)
-
-        self.counter += 1
 
         return obs_info
 
