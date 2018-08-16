@@ -19,6 +19,8 @@ class PreProcessor(ProcessingModule):
 
         self.channel_noise = np.empty(shape=(32, 8192, settings.detection.n_noise_samples)) * np.nan
 
+        self.channel_noise_std = np.empty(shape=(32, 8192, settings.detection.n_noise_samples)) * np.nan
+
         self._observation = None
 
         # Flag that indicates whether the configuration was persisted
@@ -30,15 +32,10 @@ class PreProcessor(ProcessingModule):
 
     def _get_noise_estimation(self, power_data, iter_count):
         if self.counter < settings.detection.n_noise_samples:
-            if settings.detection.noise_use_rms:
-                #  use RMS
-                beam_channel_noise = np.sqrt(np.mean(power_data, axis=2))
-            else:
-                # use mean
-                beam_channel_noise = np.mean(power_data, axis=2)
+            self.channel_noise[:, :, iter_count] =  np.sqrt(np.mean(np.power(power_data,2), axis=2))
+            self.channel_noise_std[:, :, iter_count] = np.std(self.channel_noise[:, :, iter_count])
 
-            self.channel_noise[:, :, iter_count] = beam_channel_noise
-        return np.nanmean(self.channel_noise, axis=2)
+        return np.nanmean(self.channel_noise, axis=2), np.nanmean(self.channel_noise_std, axis=2)
 
     def process(self, obs_info, input_data, output_data):
         """
@@ -50,14 +47,21 @@ class PreProcessor(ProcessingModule):
         :return:
         """
 
+        # Skip the first blob
+        if self._iter_count < 1:
+            return
+
         # Process only 1 polarisation
         data = input_data[0, :, :, :]
 
         power_data = self._power(data)
 
         # Estimate the noise from the data
-        obs_info['channel_noise'] = self._get_noise_estimation(power_data, self.counter)
+        obs_info['channel_noise'], obs_info['channel_noise_std']  = self._get_noise_estimation(power_data, self.counter)
         obs_info['mean_noise'] = np.mean(obs_info['channel_noise'])
+
+
+        # print ('input', np.mean(obs_info['channel_noise']),  np.mean(obs_info['channel_noise_std']), np.mean(power_data))
 
         # If the configuration was not saved AND the number of noise samples is sufficient, save the noise value.
         if not self._config_persisted and self.counter >= settings.detection.n_noise_samples:
@@ -88,10 +92,24 @@ class PreProcessor(ProcessingModule):
 
     @staticmethod
     def _power(data):
-        return np.power(np.abs(data), 2.0)
+        """
+        Calculate the power from the input data
+        :param data:
+        :return:
+        """
+        power = np.power(np.abs(data), 2.0)
+
+        # Convert to dB
+        return 10*np.log10(power)
 
     @staticmethod
     def _rms(data):
+        """
+        Calculate the rms from the input data
+
+        :param data:
+        :return:
+        """
         return np.sqrt(np.mean(np.power(data, 2.0)))
 
     def generate_output_blob(self):
