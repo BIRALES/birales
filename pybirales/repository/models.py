@@ -100,6 +100,8 @@ class SpaceDebrisTrack(DynamicDocument):
     rcs = None
     target = None
 
+    is_valid = BooleanField(default=True)
+
     tdm_filepath = StringField(required=False)
 
     @queryset_manager
@@ -116,6 +118,9 @@ class SpaceDebrisTrack(DynamicDocument):
             query &= Q(created_at__lte=to_time)
 
         return query_set.filter(query)
+
+    def invalidate(self):
+        self.is_valid = False
 
 
 class BeamCandidate(DynamicDocument):
