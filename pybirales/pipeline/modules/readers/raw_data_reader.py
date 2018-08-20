@@ -47,7 +47,7 @@ class RawDataReader(ProcessingModule):
         # Load the data file
         try:
             self._f = open(self._filepath, 'rb')
-
+            # self._f.seek(self._nsamp * self._nants * 8 * 90)
             log.info('Using raw data in: {}'.format(self._filepath))
         except IOError:
             log.error('Data not found in %s. Exiting.', self._filepath)
@@ -97,6 +97,7 @@ class RawDataReader(ProcessingModule):
         """
 
         data = self._f.read(self._nsamp * self._nants * 8)
+
         if data is "":
             log.warning('End of file reached. Raising "No Data" exception.')
             raise NoDataReaderException
