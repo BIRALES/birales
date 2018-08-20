@@ -7,7 +7,7 @@ from scipy import signal
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales import settings
-
+from pybirales.pipeline.base.timing import timeit
 
 class InputDataFilter:
     def __init__(self):
@@ -42,7 +42,7 @@ class RemoveBackgroundNoiseFilter(InputDataFilter):
         # threshold = self.std_threshold * std + mean
 
         # Calculate the threshold at which the noise will be clipped
-        t2 = 4 * obs_info['channel_noise_std'] + obs_info['channel_noise']
+        t2 = 5 * obs_info['channel_noise_std'] + obs_info['channel_noise']
 
         # re-shape threshold array so to make it compatible with the data
         t2 = np.expand_dims(t2, axis=2)
