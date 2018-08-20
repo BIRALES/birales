@@ -11,6 +11,8 @@ from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.modules.detection.dbscan_detection import detect
 from pybirales.pipeline.modules.detection.exceptions import DetectionClusterIsNotValid
 from pybirales.pipeline.modules.detection.space_debris_candidate import SpaceDebrisTrack
+from pybirales.pipeline.base.timing import timeit
+from functools import partial
 
 
 class Detector(ProcessingModule):
@@ -20,11 +22,8 @@ class Detector(ProcessingModule):
         # Ensure that the input blob is of the expected format
         self._validate_data_blob(input_blob, valid_blobs=[ChannelisedBlob])
 
-        self.pool = None
         if settings.detection.multi_proc:
             self.pool = Pool(4)
-
-        self.counter = 0
 
         self.channels = None
 
@@ -44,7 +43,6 @@ class Detector(ProcessingModule):
         """
         if settings.detection.multi_proc:
             self.pool.close()
-
 
     def _apply_doppler_mask(self, obs_info):
         """
@@ -77,8 +75,9 @@ class Detector(ProcessingModule):
         """
         m, c, r_value, _, _ = stats.linregress(cluster['channel_sample'], cluster['time_sample'])
         return '{} (m={:0.2f}, c={:0.2f}, s={:0.2f}, n={}, i={})'.format(id(cluster), m, c, r_value, cluster.shape[0],
-                                                                         self.counter)
+                                                                         self._iter_count)
 
+    @timeit
     def _aggregate_clusters(self, candidates, clusters, obs_info):
         """
         Create Space Debris Tracks from the detection clusters identified in each beam
@@ -99,6 +98,8 @@ class Detector(ProcessingModule):
                     else:
                         log.debug('Beam candidate {} added to track {}'.format(self._debug_msg(cluster),
                                                                                id(candidate)))
+
+                        # print 'candidate is now {} long'.format(candidate.size)
                         break
             else:
                 # Beam cluster does not match any candidate. Create a new candidate track from it.
@@ -122,6 +123,7 @@ class Detector(ProcessingModule):
 
         return candidates
 
+    @timeit
     def _active_tracks(self, candidates, iter_count):
         """
 
@@ -134,9 +136,8 @@ class Detector(ProcessingModule):
         for candidate in candidates:
             if candidate.has_transitted(iter_count=iter_count):
                 # If the candidate is not valid delete it
-                if candidate.is_valid:
+                if not candidate.is_valid:
                     candidate.delete()
-
             else:
                 temp_candidates.append(candidate)
 
@@ -160,11 +161,14 @@ class Detector(ProcessingModule):
             channel_noise = channel_noise[:, doppler_mask]
 
         log.info('Using {} out of {} channels ({:0.3f} MHz to {:0.3f} MHz).'.format(channel_noise.shape[1],
-                                                                                    obs_info['nchans'], channels[0],
-                                                                                    channels[-1]))
+                                                                                    obs_info['nchans'],
+                                                                                    channels[0],
+                                                                                    channels[-1]
+                                                                                    ))
 
         return input_data, channels, channel_noise
 
+    @timeit
     def _get_clusters(self, input_data, channels, channel_noise, obs_info, iter_counter):
         """
 
@@ -179,17 +183,16 @@ class Detector(ProcessingModule):
         t0 = np.datetime64(obs_info['timestamp'])
         td = np.timedelta64(int(obs_info['sampling_time'] * 1e9), 'ns')
 
-        clusters = []
-        for beam_id in range(0, 32):
-            clusters.extend(detect(input_data, channels, t0, td, iter_counter, channel_noise, beam_id))
-
         # todo - multi-processing is slower than single threaded equivalent
-        # if settings.detection.multi_proc:
-        #     func = partial(detect, input_data, channels, t0, td, iter_counter, channel_noise)
-        #     clusters = self.pool.map(func, range(0, 32))
-        #     return clusters
-
-        return clusters
+        if settings.detection.multi_proc:
+            func = partial(detect, input_data, channels, t0, td, iter_counter, channel_noise)
+            clusters = self.pool.map(func, range(0, 32))
+            return [val for sublist in clusters for val in sublist]
+        else:
+            clusters = []
+            for beam_id in range(0, 32):
+                clusters.extend(detect(input_data, channels, t0, td, iter_counter, channel_noise, beam_id))
+            return clusters
 
     def process(self, obs_info, input_data, output_data):
         """
@@ -205,19 +208,19 @@ class Detector(ProcessingModule):
         if self._iter_count < 1:
             return
 
-        obs_info['iter_count'] = self.counter
+        obs_info['iter_count'] = self._iter_count
 
         # Pre-process the input data
         input_data, channels, channel_noise = self._pre_process(input_data, obs_info)
 
         # Process the input data and identify the detection clusters
-        clusters = self._get_clusters(input_data, channels, channel_noise, obs_info, self.counter)
+        clusters = self._get_clusters(input_data, channels, channel_noise, obs_info, self._iter_count)
 
         # Create new tracks from clusters or merge clusters into existing tracks
         candidates = self._aggregate_clusters(self._candidates, clusters, obs_info)
 
         # Check each track and determine if the detection object has transitted outside FoV
-        self._candidates = self._active_tracks(candidates, self.counter)
+        self._candidates = self._active_tracks(candidates, self._iter_count)
 
         return obs_info
 
