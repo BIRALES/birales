@@ -40,6 +40,12 @@ class PostProcessor:
                                           columns=['time_sample', 'channel_sample', 'time', 'channel', 'snr',
                                                    'beam_id'])
 
+            # Invalidate candidates based on the number of elements and number of illuminated beams
+            if len(candidate.data['time_sample'].unique()) < 5 or len(candidate.data['beam_id'].unique()) < 2:
+                candidate.invalidate()
+                log.debug('Candidate %s, invalidated in post-processing', candidate.id)
+                continue
+
             if self.remove_duplicate_epoch:
                 candidate.data = candidate.data.sort_values('snr', ascending=False).drop_duplicates(
                     'time_sample').sort_index()
