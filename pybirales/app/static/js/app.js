@@ -13,26 +13,39 @@ $(document).ready(function () {
     //     "#0F0F0F"];
 
     COLORS = [
-        "#e6194b",
+        "#ba0c3f",
         "#3cb44b",
+        '#4b6983',
         "#ffe119",
         "#0082c8",
         "#f58231",
         "#911eb4",
+        '#b39169',
         "#46f0f0",
         "#f032e6",
         "#d2f53c",
-        "#fabebe",
+        "#cb9c9c",
+        '#663822',
         "#008080",
+        '#eed680',
         "#e6beff",
+        '#565248',
         "#aa6e28",
-        "#fffac8",
+        '#267726',
+        "#ff5370",
         "#800000",
         "#aaffc3",
+        '#625b81',
+        '#c1665a',
+        '#314e6c',
+        '#d1940c',
         "#808000",
         "#000080",
+        '#df421e',
         "#808080",
-        "#000000"];
+        "#000000",
+        '#807d74',
+        '#c5d2c8'];
 
     Chart.defaults.global.legend.labels.boxWidth = 10;
     Chart.defaults.global.legend.labels.labelsfontSize = 10;
