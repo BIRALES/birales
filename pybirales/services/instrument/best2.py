@@ -144,10 +144,13 @@ class BEST2(object):
 
         # Ensure that the returned declination is a float
         if re.search("[0-9]+", data) is None:
-            logging.warn("BEST: Could not get current declination (got %s)" % data)
             raise BEST2PointingException("BEST: Could not get current declination (got %s)" % data)
 
-        self.current_pointing = float(data)
+        try:
+            self.current_pointing = float(re.findall(r'[-+]?\d*\.\d+|\d+', data)[0])
+        except IndexError:
+            raise BEST2PointingException("BEST: Could not get current declination (got %s)" % data)
+
         return self.current_pointing
 
     def move_to_zenith(self):
