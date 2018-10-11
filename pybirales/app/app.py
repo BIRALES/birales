@@ -52,7 +52,7 @@ app.config['DEBUG'] = DEBUG
 db_connection = connect(
     db='birales',
     username='birales_rw',
-    password='arcadia10',
+    password='rw_Sept03',
     port=27017,
     host='localhost')
 
