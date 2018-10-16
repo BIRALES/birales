@@ -164,7 +164,7 @@ class BeamCandidate(DynamicDocument):
 
 
 class Event(DynamicDocument):
-    _id = ObjectIdField(required=True, default=ObjectId, unique=True, primary_key=True)
+    _id = ObjectIdField(required=True, default=ObjectId, primary_key=True)
     name = StringField()
     channels = ListField()
     description = StringField()
