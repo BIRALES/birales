@@ -90,7 +90,7 @@ class Observation(Document):
 
 
 class SpaceDebrisTrack(DynamicDocument):
-    _id = ObjectIdField(required=True, default=ObjectId, unique=True, primary_key=True)
+    _id = ObjectIdField(required=True, default=ObjectId, primary_key=True)
     observation = ReferenceField(Observation, required=True)
     created_at = DateTimeField(default=datetime.datetime.utcnow)
 
@@ -124,7 +124,7 @@ class SpaceDebrisTrack(DynamicDocument):
 
 
 class BeamCandidate(DynamicDocument):
-    _id = ObjectIdField(required=True, default=ObjectId, unique=True, primary_key=True)
+    _id = ObjectIdField(required=True, default=ObjectId, primary_key=True)
     observation = ReferenceField(Observation, required=True)
     beam_id = IntField(required=True)
     beam_ra = FloatField(required=True)
@@ -186,6 +186,6 @@ class Event(DynamicDocument):
 
 
 class Configuration(DynamicDocument):
-    _id = ObjectIdField(required=True, default=ObjectId, unique=True, primary_key=True)
+    _id = ObjectIdField(required=True, default=ObjectId, primary_key=True)
     calibration_config_filepath = StringField()
     detection_config_filepath = StringField()
