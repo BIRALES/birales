@@ -29,6 +29,28 @@ class Result(Enum):
     ConsumerAlreadyInitialised = -3
     ConsumerNotInitialised = -4
 
+class LogLevel(Enum):
+    """ Log level """
+    Fatal = 1
+    Error = 2
+    Warning = 3
+    Info = 4
+    Debug = 5
+
+
+def logging_callback(level, message):
+    """ Wrapper to logging function in DAQ """
+    if level == LogLevel.Fatal.value:
+        logging.fatal(message)
+    elif level == LogLevel.Error.value:
+        logging.error(message)
+    elif level == LogLevel.Warning.value:
+        logging.warning(message)
+    elif level == LogLevel.Info.value:
+        logging.info(message)
+    elif level == LogLevel.Debug.value:
+        logging.debug(message)
+
 
 class Receiver(Generator):
     """ Receiver """
@@ -70,6 +92,7 @@ class Receiver(Generator):
         # Initialise DAQ
         self._callback_type = ctypes.CFUNCTYPE(None, ctypes.POINTER(ctypes.c_int8), ctypes.c_double, ctypes.c_uint,
                                                ctypes.c_uint)
+        self._logger_callback = ctypes.CFUNCTYPE(None, ctypes.c_int, ctypes.c_char_p)
         self._daq = None
 
         # Processing module name
@@ -95,7 +118,7 @@ class Receiver(Generator):
         logging.info('Stopping %s module', self.name)
 
         if self._daq:
-            if self._daq.stopBiralesConsumer() != Result.Failure.value and self._daq.stopReceiver() != Result.Failure.value:
+            if self._daq.stopConsumer("birales") != Result.Failure.value and self._daq.stopReceiver() != Result.Failure.value:
                 roach = Backend.Instance().roach
 
                 if roach.is_connected():
@@ -168,15 +191,13 @@ class Receiver(Generator):
 
         return np.squeeze(np.sqrt(np.sum(np.power(np.abs(input_data), 2.), axis=2)))
 
-
-
     def _initialise_receiver(self, start_time):
         """ Initialise the receiver """
 
-        # Configure receiver
-        self._daq.setReceiverConfiguration(self._nants, 1, 1, 1, 1, 1, self._config.frame_size)
+        # Set logging callback
+        self._daq.attachLogger(self._logger_callback(self._logging_callback))
 
-        # Start receiver
+        # Configure receiver
         if self._daq.startReceiver(self._config.interface,
                                    self._config.ip,
                                    self._config.frame_size,
@@ -188,52 +209,74 @@ class Receiver(Generator):
         if self._daq.addReceiverPort(self._config.port) != Result.Success.value:
             raise PipelineError("Receiver: Failed to set receiver port %d" % self._config.port)
 
-        # Start data consumer
-        if self._daq.startBiralesConsumer(self._nsamp, start_time,
-                                          self._samples_per_second) != Result.Success.value:
-            raise PipelineError("Receiver: Failed to start data consumer")
+        # Generate configuration for raw consumer
+        params = {"nof_antennas": self._nants,
+                  "nof_samples": self._nsamp,
+                  "start_time": start_time,
+                  "samples_per_second": self._samples_per_second}
 
-        # Set channel data consumer callback
-        self._callback = self._get_callback_function()
-        if self._daq.setBiralesConsumerCallback(self._callback) != Result.Success.value:
-            raise PipelineError("Receiver: Failed to set consumer callback")
+        # Load birales data consumer
+        if self._daq.loadConsumer("libbirales.so", "birales") != Result.Success.value:
+            raise PipelineError("Failed to load birales consumer")
+
+        # Initialise birales consumer
+        if self._daq.initialiseConsumer("birales", params.dump().c_str()) != Result.Success.value:
+            raise PipelineError("Failed to initialise birales consumer")
+
+        # Start birales consumer
+        if self._daq.startCosnsumer("birales", self._get_callback_function()) != Result.Success.value:
+            raise PipelineError("Failed to start birales consumer")
+
 
     def _initialise_library(self):
         """ Initialise DAQ library """
 
         # Load library
         self._daq = ctypes.CDLL(settings.receiver.daq_file_path)
-
-        # Define setReceiverConfiguration function
-        self._daq.setReceiverConfiguration.argtypes = [ctypes.c_uint16, ctypes.c_uint16, ctypes.c_uint16,
-                                                       ctypes.c_uint8,
-                                                       ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint16]
-        self._daq.setReceiverConfiguration.restype = None
-
+        
+        # Define attachLogger
+        self._daq.attachLogger.argtypes = [LOGGER_CALLBACK]
+        self._daq.attachLogger.restype = None
+    
         # Define startReceiver function
         self._daq.startReceiver.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint32, ctypes.c_uint32,
-                                            ctypes.c_uint32]
+                                          ctypes.c_uint32]
         self._daq.startReceiver.restype = ctypes.c_int
-
-        # Define addReceiverPort function
-        self._daq.addReceiverPort.argtypes = [ctypes.c_uint16]
-        self._daq.addReceiverPort.restype = ctypes.c_int
-
-        # Define startBeamConsumer function
-        self._daq.startBiralesConsumer.argtypes = [ctypes.c_uint32, ctypes.c_uint32, ctypes.c_float]
-        self._daq.startBiralesConsumer.restype = ctypes.c_int
-
-        # Define setBeamConsumerCallback function
-        self._daq.setBiralesConsumerCallback.argtypes = [self._callback_type]
-        self._daq.setBiralesConsumerCallback.restype = ctypes.c_int
-
-        # Define stopBiralesConsumer
-        self._daq.stopBiralesConsumer.argtypes = []
-        self._daq.stopBiralesConsumer.restype = ctypes.c_int
-
+    
         # Define stopReceiver function
         self._daq.stopReceiver.argtypes = []
         self._daq.stopReceiver.restype = ctypes.c_int
+    
+        # Define loadConsumer function
+        self._daq.loadConsumer.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        self._daq.loadConsumer.restype = ctypes.c_int
+    
+        # Define initialiseConsumer function
+        self._daq.initialiseConsumer.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        self._daq.initialiseConsumer.restype = ctypes.c_int
+    
+        # Define startConsumer function
+        self._daq.startConsumer.argtypes = [ctypes.c_char_p, DATA_CALLBACK]
+        self._daq.startConsumer.restype = ctypes.c_int
+    
+        # Define stopConsumer function
+        self._daq.stopConsumer.argtypes = [ctypes.c_char_p]
+        self._daq.stopConsumer.restype = ctypes.c_int
+
+
+    @staticmethod
+    def _logging_callback(level, message):
+        """ Wrapper to logging function in DAQ """
+        if level == LogLevel.Fatal.value:
+            logging.fatal(message)
+        elif level == LogLevel.Error.value:
+            logging.error(message)
+        elif level == LogLevel.Warning.value:
+            logging.warning(message)
+        elif level == LogLevel.Info.value:
+            logging.info(message)
+        elif level == LogLevel.Debug.value:
+            logging.debug(message)
 
     def publish_antenna_metrics(self, iteration, data, obs_info):
         if iteration % self._metrics_poll_freq == 0:
