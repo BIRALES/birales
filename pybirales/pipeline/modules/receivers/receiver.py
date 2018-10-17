@@ -2,7 +2,7 @@ import ctypes
 import datetime
 import json
 import logging
-
+import os 
 import numpy as np
 from enum import Enum
 
@@ -94,6 +94,9 @@ class Receiver(Generator):
                                                ctypes.c_uint)
         self._logger_callback = ctypes.CFUNCTYPE(None, ctypes.c_int, ctypes.c_char_p)
         self._daq = None
+        self._daq_success = 0
+
+	self._birales_library = None
 
         # Processing module name
         self.name = "Receiver"
@@ -216,15 +219,17 @@ class Receiver(Generator):
                   "samples_per_second": self._samples_per_second}
 
         # Load birales data consumer
-        if self._daq.loadConsumer("libbirales.so", "birales") != Result.Success.value:
+        if self._daq.loadConsumer(self._birales_library, "birales") != self._daq_success:
             raise PipelineError("Failed to load birales consumer")
 
         # Initialise birales consumer
-        if self._daq.initialiseConsumer("birales", params.dump().c_str()) != Result.Success.value:
+        # if self._daq.initialiseConsumer("birales", params.dump().c_str()) != Result.Success.value:
+	print(self._daq.initialiseConsumer("birales", json.dumps(params)))
+        if self._daq.initialiseConsumer("birales", json.dumps(params)) != self._daq_success:
             raise PipelineError("Failed to initialise birales consumer")
 
         # Start birales consumer
-        if self._daq.startCosnsumer("birales", self._get_callback_function()) != Result.Success.value:
+        if self._daq.startCosnsumer("birales", self._get_callback_function()) != self._daq_success:
             raise PipelineError("Failed to start birales consumer")
 
 
@@ -235,7 +240,7 @@ class Receiver(Generator):
         self._daq = ctypes.CDLL(settings.receiver.daq_file_path)
         
         # Define attachLogger
-        self._daq.attachLogger.argtypes = [LOGGER_CALLBACK]
+        self._daq.attachLogger.argtypes = [self._logger_callback]
         self._daq.attachLogger.restype = None
     
         # Define startReceiver function
@@ -256,13 +261,15 @@ class Receiver(Generator):
         self._daq.initialiseConsumer.restype = ctypes.c_int
     
         # Define startConsumer function
-        self._daq.startConsumer.argtypes = [ctypes.c_char_p, DATA_CALLBACK]
+        self._daq.startConsumer.argtypes = [ctypes.c_char_p, self._callback_type]
         self._daq.startConsumer.restype = ctypes.c_int
     
         # Define stopConsumer function
         self._daq.stopConsumer.argtypes = [ctypes.c_char_p]
         self._daq.stopConsumer.restype = ctypes.c_int
 
+	# Locate libbirales.so
+        self._birales_library = self._find_in_path("libbirales.so", "/usr/local/lib")
 
     @staticmethod
     def _logging_callback(level, message):
@@ -277,6 +284,17 @@ class Receiver(Generator):
             logging.info(message)
         elif level == LogLevel.Debug.value:
             logging.debug(message)
+
+    @staticmethod
+    def _find_in_path(name, path):
+        """ Find a file in a path
+        :param name: File name
+        :param path: Path to search in """
+        for root, dirs, files in os.walk(path):
+            if name in files:
+                return os.path.join(root, name)
+
+        return None
 
     def publish_antenna_metrics(self, iteration, data, obs_info):
         if iteration % self._metrics_poll_freq == 0:
