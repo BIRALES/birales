@@ -105,16 +105,16 @@ TrackDopplerProfilePlotter.prototype = {
         $.each(beam_tracks, function (beam_id) {
             if (beam_tracks[beam_id] !== undefined) {
                 data.datasets.push(beam_tracks[beam_id])
-            }
+            }112
         });
 
         if (self.plot === undefined) {
             if (tracks.length > 0) {
                 notifications.publish("Showing " + tracks.length + " tracks", 'success');
             }
-            else {
-                notifications.publish("No detections were made", 'warning');
-            }
+            // else {
+            //     notifications.publish("No detections were made", 'warning');
+            // }
         }
         else {
             if (self.pixels === n_pixels) {
