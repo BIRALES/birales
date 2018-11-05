@@ -180,7 +180,7 @@ def edit(observation_id):
 def delete(observation_id):
     try:
         # Scheduler should reload itself if changes were made to the schedule
-        broker.publish(NOTIFICATIONS_CHL, json.dumps({
+        broker.publish(OBSERVATIONS_DEL_CHL, json.dumps({
             'obs_id': observation_id
         }))
 
