@@ -27,7 +27,7 @@ def index():
     :return:
     """
 
-    page = request.args.get(get_page_parameter(), default=1)
+    page = int(request.args.get(get_page_parameter(), default=1))
     per_page = 10
 
     observations = Observation.objects.order_by('-date_time_start').skip((page - 1) * per_page).limit(per_page)
