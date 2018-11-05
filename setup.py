@@ -13,7 +13,7 @@ TEMPLATES = os.path.join(CONFIG_PATH, 'templates')
 DEPENDENCIES = ['configparser', 'futures', 'enum34', 'numpy', 'scipy', 'astropy==2.*', 'astroplan', 'matplotlib', 'numba',
                 'pymongo', 'scikit-learn', 'ephem>=3.7.6.0', 'h5py', 'click', 'flask', 'flask-compress',
                 'flask-socketio', 'flask_ini', 'fadvise', 'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow',
-                'humanize', 'mongoengine', 'pyfits', 'jinja2',
+                'humanize', 'mongoengine', 'pyfits', 'jinja2', 'katcp==0.5.*',
                 # 'construct==2.5.5-reupload',
                 'corr>=0.7.3', 'redis', 'flask_paginate',
                 'python-dateutil',
