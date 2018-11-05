@@ -1,21 +1,41 @@
-{% extends "modules/observations/create/layout.html" %}
-{% block observation_mode %}
-    {% from "modules/helpers/_formhelpers.html" import render_field %}
-    <form id="configuration-edit-form" action="{{ url_for('configurations_page.edit') }}"
-          method="post">
-        {{ form.id }}
-        <div class="row">
-            <div class="col-sm-12">
-                {{ render_field(form.detection_config_filepath, class='form-control') }}
-            </div>
+{#{% extends "modules/observations/create/layout.html" %}#}
 
-        </div>
+{% extends "common/layout.html" %}
+{% block title %}Configurations{% endblock %}
+{% set active_page = "configurations" %}
+
+
+{% block content %}
+    <div class="container-fluid">
         <div class="row">
-            <div class="col-sm-12">
-                {{ render_field(form.calibration_config_filepath, class='form-control') }}
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="header">
+                        <h4 class="title">Configuration</h4>
+                    </div>
+
+                    <div class="content">
+                        {% from "modules/helpers/_formhelpers.html" import render_field %}
+                        <form id="configuration-edit-form" action="{{ url_for('configurations_page.edit') }}"
+                              method="post">
+                            {{ form.id }}
+                            <div class="row">
+                                <div class="col-sm-12">
+                                    {{ render_field(form.detection_config_filepath, class='form-control') }}
+                                </div>
+
+                            </div>
+                            <div class="row">
+                                <div class="col-sm-12">
+                                    {{ render_field(form.calibration_config_filepath, class='form-control') }}
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-info btn-fill pull-right">Update</button>
+                            <div class="clearfix"></div>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
-        <button type="submit" class="btn btn-info btn-fill pull-right">Submit</button>
-        <div class="clearfix"></div>
-    </form>
+    </div>
 {% endblock %}

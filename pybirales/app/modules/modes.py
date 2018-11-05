@@ -233,7 +233,7 @@ def edit():
         configuration = ConfigurationModel.objects.order_by('-id').first()
         form = ConfigurationForm(obj=configuration)
 
-    if request.method and form.validate():
+    if request.method  == 'POST' and form.validate():
             try:
                 _id = form.data['id']
                 c_config_filepath = form.data['calibration_config_filepath']
