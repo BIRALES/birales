@@ -59,10 +59,9 @@ def detection_pipeline(ctx, config_file_path, tx, pointing):
                                        config_parameters=ctx.obj)
 
     om = ObservationManager()
-    try:
-        om.run(observation)
-    except Exception:
-        print 'eee'
+
+    om.run(observation)
+
 
 
 @pipelines.command(short_help='Run the Correlation Pipeline')
