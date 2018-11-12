@@ -195,11 +195,11 @@ def detect(input_data, channels, t0, td, iter_count, channel_noise, beam_id):
         # Run the clustering algorithm on the beam data (channel,time,snr,label)
         labelled_data, snr_data = dbscan_clustering(beam_ndx, snr_data)
     except NoDetectionClustersFound:
-        log.debug('No detection clusters were found in iteration {} (beam {})'.format(iter_count, beam_id))
+        # log.debug('No detection clusters were found in iteration {} (beam {})'.format(iter_count, beam_id))
         return []
 
     # Validate and create linear detection clusters
     clusters = create_clusters(snr_data, labelled_data, channels, t0, td, beam_id, iter_count)
-    log.debug('Beam %s: %s: %s valid clusters remain after validation', beam_id, iter_count, len(clusters))
+    # log.debug('Beam %s: %s: %s valid clusters remain after validation', beam_id, iter_count, len(clusters))
 
     return clusters
