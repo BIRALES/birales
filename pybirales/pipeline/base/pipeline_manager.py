@@ -139,6 +139,10 @@ class PipelineManager(object):
             # Stop module
             module.stop()
 
+            for t in threading.enumerate():
+                if t.isAlive():
+                    log.warning('Thread %s is alive', t.getName())
+
             # Try to kill it several time, otherwise skip (will be killed when main process exists)
             tries = 0
             while not module.is_stopped and tries < 5:
