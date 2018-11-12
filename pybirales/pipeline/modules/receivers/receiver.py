@@ -2,7 +2,7 @@ import ctypes
 import datetime
 import json
 import logging
-import os 
+import os
 import numpy as np
 from enum import Enum
 
@@ -29,6 +29,7 @@ class Result(Enum):
     ConsumerAlreadyInitialised = -3
     ConsumerNotInitialised = -4
 
+
 class LogLevel(Enum):
     """ Log level """
     Fatal = 1
@@ -50,6 +51,7 @@ def logging_callback(level, message):
         logging.info(message)
     elif level == LogLevel.Debug.value:
         logging.debug(message)
+
 
 class Receiver(Generator):
     """ Receiver """
@@ -89,13 +91,14 @@ class Receiver(Generator):
         receiver_instance = self
 
         # Initialise DAQ
-        self._callback_type = ctypes.CFUNCTYPE(None, ctypes.POINTER(ctypes.c_void_p), 						       ctypes.c_double, ctypes.c_uint32, ctypes.c_uint32)
+        self._callback_type = ctypes.CFUNCTYPE(None, ctypes.POINTER(ctypes.c_void_p), ctypes.c_double, ctypes.c_uint32,
+                                               ctypes.c_uint32)
         self._logger_callback = ctypes.CFUNCTYPE(None, ctypes.c_int, ctypes.c_char_p)
         self._daq = None
         self._daq_success = 0
-	self._callback = self._get_callback_function()
+        self._callback = self._get_callback_function()
 
-	self._birales_library = None
+        self._birales_library = None
 
         # Processing module name
         self.name = "Receiver"
@@ -117,10 +120,12 @@ class Receiver(Generator):
 
     def stop(self):
         """ Stop generator """
-        logging.info('Stopping %s module', self.name)
+        logging.info('Stopping the receiver module')
 
         if self._daq:
-            if self._daq.stopConsumer("birales") != Result.Failure.value and self._daq.stopReceiver() != Result.Failure.value:
+            print(self._daq.stopConsumer("birales"), Result.Failure.value, self._daq.stopReceiver())
+            if self._daq.stopConsumer(
+                    "birales") != Result.Failure.value and self._daq.stopReceiver() != Result.Failure.value:
                 roach = Backend.Instance().roach
 
                 if roach.is_connected():
@@ -174,7 +179,7 @@ class Receiver(Generator):
             self.release_output_blob(obs_info)
 
             # Calculate RMS
-           # self._calculate_rms(output_data)
+            # self._calculate_rms(output_data)
 
             logging.info("Receiver: Received buffer ({})".format(obs_info['timestamp'].time()))
 
@@ -229,43 +234,42 @@ class Receiver(Generator):
         if self._daq.startConsumer("birales", self._callback) != self._daq_success:
             raise PipelineError("Failed to start birales consumer")
 
-
     def _initialise_library(self):
         """ Initialise DAQ library """
 
         # Load library
         self._daq = ctypes.CDLL(settings.receiver.daq_file_path)
-        
+
         # Define attachLogger
         self._daq.attachLogger.argtypes = [self._logger_callback]
         self._daq.attachLogger.restype = None
-    
+
         # Define startReceiver function
         self._daq.startReceiver.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint32, ctypes.c_uint32,
-                                          ctypes.c_uint32]
+                                            ctypes.c_uint32]
         self._daq.startReceiver.restype = ctypes.c_int
-    
+
         # Define stopReceiver function
         self._daq.stopReceiver.argtypes = []
         self._daq.stopReceiver.restype = ctypes.c_int
-    
+
         # Define loadConsumer function
         self._daq.loadConsumer.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
         self._daq.loadConsumer.restype = ctypes.c_int
-    
+
         # Define initialiseConsumer function
         self._daq.initialiseConsumer.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
         self._daq.initialiseConsumer.restype = ctypes.c_int
-    
+
         # Define startConsumer function
         self._daq.startConsumer.argtypes = [ctypes.c_char_p, self._callback_type]
         self._daq.startConsumer.restype = ctypes.c_int
-    
+
         # Define stopConsumer function
         self._daq.stopConsumer.argtypes = [ctypes.c_char_p]
         self._daq.stopConsumer.restype = ctypes.c_int
 
-	# Locate libbirales.so
+        # Locate libbirales.so
         self._birales_library = self._find_in_path("libbirales.so", "/usr/local/lib")
 
     @staticmethod
