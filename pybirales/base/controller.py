@@ -65,6 +65,7 @@ class InstrumentController():
                 self._instrument.move_to_declination(declination)
             except BEST2PointingException:
                 log.warning('Could not point the BEST2 Antenna to DEC: {:0.2f}.'.format(declination))
+                raise
         else:
             log.warning('Could not point to %s. BEST-II pointing is disabled as specified in the configuration.',
                         declination)

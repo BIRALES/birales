@@ -10,7 +10,7 @@ from pybirales.events.publisher import publish
 from pybirales.pipeline.pipeline import get_builder_by_id, CorrelatorPipelineManagerBuilder
 from pybirales.services.calibration.calibration import CalibrationFacade
 from pybirales.services.post_processing.processor import PostProcessor
-from pybirales.pipeline.base.definitions import PipelineError
+from pybirales.pipeline.base.definitions import PipelineError, BEST2PointingException
 from pybirales.services.scheduler.exceptions import SchedulerException
 
 
@@ -60,6 +60,11 @@ class ObservationManager:
         observation.model.status = 'running'
         observation.save()
 
+        try:
+            self._instrument_control.point(observation.declination)
+        except BEST2PointingException:
+            publish(ObservationFailedEvent(observation, "Failed to point antenna."))
+
         publish(ObservationStartedEvent(observation.name, observation.pipeline_name))
 
         pipeline_builder = get_builder_by_id(observation.pipeline_name)
@@ -71,9 +76,15 @@ class ObservationManager:
         except SchedulerException:
             log.exception("An fatal error has occurred whilst trying to run %s", observation.name)
             publish(ObservationFailedEvent(observation, "A scheduler exception has occurred"))
+
+            observation.model.status = 'failed'
+            observation.save()
         except PipelineError:
             log.exception("An fatal error has occurred whilst trying to run %s", observation.name)
             publish(ObservationFailedEvent(observation, "A pipeline error has occurred"))
+
+            observation.model.status = 'failed'
+            observation.save()
         else:
             publish(ObservationFinishedEvent(observation.name, observation.pipeline_name))
 
@@ -149,19 +160,28 @@ class CalibrationObservationManager(ObservationManager):
 
         publish(ObservationStartedEvent(observation.name, observation.pipeline_name))
 
-        self._instrument_control.point(observation.declination)
+        try:
+            self._instrument_control.point(observation.declination)
+        except BEST2PointingException:
+            publish(ObservationFailedEvent(observation, "Failed to point antenna."))
 
         pipeline_builder = CorrelatorPipelineManagerBuilder()
 
         try:
             pipeline_builder.build()
-            pipeline_builder.manager.start_pipeline(duration=observation.duration.total_seconds())
+            pipeline_builder.manager.start_pipeline(duration=observation.duration.total_seconds(), observation=observation)
         except SchedulerException:
             log.exception("An fatal error has occurred whilst trying to run %s", observation.name)
-            publish(ObservationFailedEvent(observation, "A scheduler exception has occurred"))
+            publish(ObservationFailedEvent(observation, "A scheduler exception has occurred. Calibration Failed."))
+
+            observation.model.status = 'failed'
+            observation.save()
         except PipelineError:
             log.exception("An fatal error has occurred whilst trying to run %s", observation.name)
-            publish(ObservationFailedEvent(observation, "A pipeline error has occurred"))
+            publish(ObservationFailedEvent(observation, "A pipeline error has occurred. Calibration Failed."))
+
+            observation.model.status = 'failed'
+            observation.save()
         else:
             observation.model.status = 'calibrating'
             observation.save()
