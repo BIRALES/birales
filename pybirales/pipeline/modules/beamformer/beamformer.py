@@ -62,7 +62,7 @@ class Beamformer(ProcessingModule):
         self._pointing = None
 
         # Wrap library containing C-implementation of beamformer
-        self._beamformer = ctypes.CDLL("libbeamformer.so")
+        self._beamformer = ctypes.CDLL("/usr/local/lib/libbeamformer.so")
         complex_p = ctypeslib.ndpointer(np.complex64, ndim=1, flags='C')
         self._beamformer.beamform.argtypes = [complex_p, complex_p, complex_p, ctypes.c_uint32, ctypes.c_uint32,
                                               ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32]
