@@ -5,11 +5,13 @@ from pybirales import settings
 from pybirales.base.controller import BackendController, InstrumentController
 from pybirales.birales_config import BiralesConfig
 from pybirales.events.events import ObservationStartedEvent, ObservationFinishedEvent, CalibrationRoutineStartedEvent, \
-    CalibrationRoutineFinishedEvent
+    CalibrationRoutineFinishedEvent, ObservationFailedEvent
 from pybirales.events.publisher import publish
 from pybirales.pipeline.pipeline import get_builder_by_id, CorrelatorPipelineManagerBuilder
 from pybirales.services.calibration.calibration import CalibrationFacade
 from pybirales.services.post_processing.processor import PostProcessor
+from pybirales.pipeline.base.definitions import PipelineError
+from pybirales.services.scheduler.exceptions import SchedulerException
 
 
 class ObservationManager:
@@ -62,17 +64,21 @@ class ObservationManager:
 
         pipeline_builder = get_builder_by_id(observation.pipeline_name)
 
-        pipeline_builder.build()
+        try:
+            pipeline_builder.build()
+            pipeline_builder.manager.start_pipeline(duration=observation.duration.total_seconds(),
+                                                    observation=observation)
+        except SchedulerException:
+            log.exception("An fatal error has occurred whilst trying to run %s", observation.name)
+            publish(ObservationFailedEvent(observation, "A scheduler exception has occurred"))
+        except PipelineError:
+            log.exception("An fatal error has occurred whilst trying to run %s", observation.name)
+            publish(ObservationFailedEvent(observation, "A pipeline error has occurred"))
+        else:
+            publish(ObservationFinishedEvent(observation.name, observation.pipeline_name))
 
-
-        pipeline_builder.manager.start_pipeline(duration=observation.duration.total_seconds(), observation=observation)
-
-
-
-        publish(ObservationFinishedEvent(observation.name, observation.pipeline_name))
-
-        if settings.detection.save_candidates or settings.detection.save_tdm:
-            self._post_process(observation)
+            if settings.detection.save_candidates or settings.detection.save_tdm:
+                self._post_process(observation)
 
         self.tear_down()
 
@@ -147,24 +153,29 @@ class CalibrationObservationManager(ObservationManager):
 
         pipeline_builder = CorrelatorPipelineManagerBuilder()
 
-        pipeline_builder.build()
+        try:
+            pipeline_builder.build()
+            pipeline_builder.manager.start_pipeline(duration=observation.duration.total_seconds())
+        except SchedulerException:
+            log.exception("An fatal error has occurred whilst trying to run %s", observation.name)
+            publish(ObservationFailedEvent(observation, "A scheduler exception has occurred"))
+        except PipelineError:
+            log.exception("An fatal error has occurred whilst trying to run %s", observation.name)
+            publish(ObservationFailedEvent(observation, "A pipeline error has occurred"))
+        else:
+            observation.model.status = 'calibrating'
+            observation.save()
 
-        pipeline_builder.manager.start_pipeline(duration=observation.duration.total_seconds())
+            publish(ObservationFinishedEvent(observation.name, observation.pipeline_name))
 
-        observation.model.date_time_end = datetime.datetime.utcnow()
-        observation.model.status = 'calibrating'
-        observation.save()
+            # Use the correlation matrix to calibrate the system
+            self.calibrate(observation, self.calibration_dir, self.corr_matrix_filepath)
 
-        publish(ObservationFinishedEvent(observation.name, observation.pipeline_name))
+            observation.model.status = 'finished'
+            observation.save()
 
-        # Use the correlation matrix to calibrate the system
-        self.calibrate(observation, self.calibration_dir, self.corr_matrix_filepath)
-
-        observation.model.status = 'finished'
-        observation.save()
-
-        # Terminate (gracefully) the connection to the BEST instrument and the ROACH backend
-        self.tear_down()
+            # Terminate (gracefully) the connection to the BEST instrument and the ROACH backend
+            self.tear_down()
 
     def calibrate(self, observation, calibration_dir, corr_matrix_filepath):
         """

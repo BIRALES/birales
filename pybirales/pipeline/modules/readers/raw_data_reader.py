@@ -8,7 +8,7 @@ import time
 import numpy as np
 
 from pybirales import settings
-from pybirales.pipeline.base.definitions import PipelineError, ObservationInfo, NoDataReaderException
+from pybirales.pipeline.base.definitions import PipelineError, ObservationInfo, NoDataReaderException, BIRALESObservationException
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.dummy_data import DummyBlob
 from pybirales.repository.message_broker import broker
@@ -51,14 +51,14 @@ class RawDataReader(ProcessingModule):
             log.info('Using raw data in: {}'.format(self._filepath))
         except IOError:
             log.error('Data not found in %s. Exiting.', self._filepath)
-            sys.exit()
+            raise BIRALESObservationException("Data not found in {}".format(self._filepath))
 
         # Load the PKL file
         try:
             self._config = pickle.load(open(self._filepath + config.config_ext, 'rb'))
         except IOError:
             log.error('Config PKL file was not found in %s. Exiting.', self._filepath + config.config_ext)
-            sys.exit()
+            raise BIRALESObservationException("Config PKL file was not found")
 
 
 
@@ -110,7 +110,7 @@ class RawDataReader(ProcessingModule):
             # Sleep the thread before calling a no data - wait for the other modules to finish
             # todo - this could be handled better
             time.sleep(20)
-            raise NoDataReaderException
+            raise BIRALESObservationException("Observation finished")
 
         output_data[:] = data
 

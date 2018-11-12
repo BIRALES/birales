@@ -96,3 +96,10 @@ class BEST2PointingException(PipelineError):
     """
 
     pass
+
+class BIRALESObservationException(PipelineError):
+    """
+    Something went wrong whilst starting the observation
+    """
+
+    pass

@@ -358,3 +358,30 @@ class SystemErrorEvent(Event):
         self.payload['body'] = 'System Error. {}'.format(reason)
 
         log.exception(self.payload['body'])
+
+
+class ObservationFailedEvent(Event):
+    """
+    Event representing an observation that failed.
+    """
+
+    channels = ['notifications']
+    description = 'An observation failed'
+
+    _level = 'error'
+
+    def __init__(self, observation, reason):
+        """
+
+        :param observation: The observation that failed
+        :type observation: Observation
+
+        :param reason:
+        :type reason: String
+        """
+
+        Event.__init__(self)
+
+        self.payload['body'] = 'Observation {} failed. {}'.format(observation.name, reason)
+
+        log.exception(self.payload['body'])
