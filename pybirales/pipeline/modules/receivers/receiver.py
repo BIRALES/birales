@@ -51,7 +51,6 @@ def logging_callback(level, message):
     elif level == LogLevel.Debug.value:
         logging.debug(message)
 
-
 class Receiver(Generator):
     """ Receiver """
 
@@ -90,11 +89,11 @@ class Receiver(Generator):
         receiver_instance = self
 
         # Initialise DAQ
-        self._callback_type = ctypes.CFUNCTYPE(None, ctypes.POINTER(ctypes.c_int8), ctypes.c_double, ctypes.c_uint,
-                                               ctypes.c_uint)
+        self._callback_type = ctypes.CFUNCTYPE(None, ctypes.POINTER(ctypes.c_void_p), 						       ctypes.c_double, ctypes.c_uint32, ctypes.c_uint32)
         self._logger_callback = ctypes.CFUNCTYPE(None, ctypes.c_int, ctypes.c_char_p)
         self._daq = None
         self._daq_success = 0
+	self._callback = self._get_callback_function()
 
 	self._birales_library = None
 
@@ -175,12 +174,12 @@ class Receiver(Generator):
             self.release_output_blob(obs_info)
 
             # Calculate RMS
-            self._calculate_rms(output_data)
+           # self._calculate_rms(output_data)
 
             logging.info("Receiver: Received buffer ({})".format(obs_info['timestamp'].time()))
 
             # Publish the RMS voltages
-            self.publish_antenna_metrics(self._read_count, data, obs_info)
+            self.publish_antenna_metrics(self._read_count, output_data, obs_info)
 
             self._read_count += 1
 
@@ -190,7 +189,7 @@ class Receiver(Generator):
     def _calculate_rms(input_data):
         """ Calculate the RMS of the incoming antenna data
         :param input_data: Input antenna data """
-        # rms_values = np.mean(np.sum(input_data ** 2, axis=1), 1)[0]
+        rms_values = np.mean(np.sum(np.power(input_data, 2), axis=1), 1)[0]
 
         return np.squeeze(np.sqrt(np.sum(np.power(np.abs(input_data), 2.), axis=2)))
 
@@ -223,13 +222,11 @@ class Receiver(Generator):
             raise PipelineError("Failed to load birales consumer")
 
         # Initialise birales consumer
-        # if self._daq.initialiseConsumer("birales", params.dump().c_str()) != Result.Success.value:
-	print(self._daq.initialiseConsumer("birales", json.dumps(params)))
         if self._daq.initialiseConsumer("birales", json.dumps(params)) != self._daq_success:
             raise PipelineError("Failed to initialise birales consumer")
 
         # Start birales consumer
-        if self._daq.startCosnsumer("birales", self._get_callback_function()) != self._daq_success:
+        if self._daq.startConsumer("birales", self._callback) != self._daq_success:
             raise PipelineError("Failed to start birales consumer")
 
 
