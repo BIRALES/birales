@@ -103,8 +103,8 @@ class SpaceDebrisTrack:
             # Send a space debris track was created event
             self._publisher.publish(TrackCreatedEvent(self))
 
-        elif self.size != self._prev_size:
-            # Only send a notification if there were any changes to the track
+        elif abs(self.size - self._prev_size) / self.size  > 0.20:
+            # Only send a notification when the modification was substantial (to avoid lots of messages)
             self._publisher.publish(TrackModifiedEvent(self))
 
         self._prev_size = self.size
