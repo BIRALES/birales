@@ -257,6 +257,8 @@
                     birales_unavailable_overlay.show();
                 }
 
+
+
                 setTimeout(poll_system_status, 5000);
             }
 
@@ -275,6 +277,11 @@
                         obs_stop_btn.show();
 
                         observation_running = true;
+
+                        // If a pipeline is running, the 'system not available' should not be shown
+                        if (birales_unavailable_overlay.is(":visible")) {
+                            birales_unavailable_overlay.hide();
+                        }
                     }
                 }
 
