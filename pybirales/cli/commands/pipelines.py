@@ -3,7 +3,7 @@ import datetime
 import click
 
 from pybirales.base.observation_manager import ObservationManager
-from pybirales.cli.helpers import update_config
+from pybirales.cli.helpers import update_config, enable_notifications
 from pybirales.services.scheduler.observation import ScheduledObservation
 
 
@@ -12,6 +12,7 @@ from pybirales.services.scheduler.observation import ScheduledObservation
 @click.option('--debug/--no-debug', default=False)
 @click.option('--duration', 'duration', default=3600, help='The duration of the observation (2 hours by default)')
 @click.pass_context
+
 def pipelines(ctx, name, debug, duration):
     if not name:
         name = 'Observation_{:%Y-%m-%dT%H%M}'.format(datetime.datetime.utcnow())
@@ -33,6 +34,7 @@ def pipelines(ctx, name, debug, duration):
 @click.option('--tx', 'tx', help='The transmission frequency in MHz')
 @click.option('--pointing', 'pointing', help='Reference Declination of the Beam Former')
 @click.pass_context
+@enable_notifications
 def detection_pipeline(ctx, config_file_path, tx, pointing):
     """
 
