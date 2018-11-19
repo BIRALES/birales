@@ -14,6 +14,7 @@ from pybirales.services.scheduler.exceptions import IncorrectScheduleFormat, Inv
 from pybirales.services.scheduler.monitoring import obs_listener_worker
 from pybirales.services.scheduler.observation import ScheduledObservation, ScheduledCalibrationObservation
 from pybirales.services.scheduler.schedule import Schedule
+from pybirales.events.publisher import publish
 
 
 class ObservationsScheduler:
@@ -180,7 +181,7 @@ class ObservationsScheduler:
                 self._schedule.add(observation)
             except InvalidObservationException:
                 log.warning('Observation %s was not added to the schedule', obs['name'])
-                publish(InvalidObservationEvent(observation, e.msg))
+                publish(InvalidObservationEvent(obs, 'Could not add observation'))
             else:
                 scheduled_obs.append(observation)
 
