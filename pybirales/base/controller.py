@@ -75,5 +75,5 @@ class InstrumentController():
                         declination)
 
     def stop(self):
-        if self.is_enabled:
-            self._instrument.stop_best2_server()
+        if self.is_enabled and self._instrument:
+                self._instrument.stop_best2_server()
