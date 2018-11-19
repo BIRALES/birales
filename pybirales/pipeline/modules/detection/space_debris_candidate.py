@@ -179,7 +179,7 @@ class SpaceDebrisTrack:
         try:
             is_valid, l_model = self._fit(tmp_merged_df['channel_sample'], tmp_merged_df['time_sample'])
         except TypeError:
-            print tmp_merged_df
+            raise DetectionClusterIsNotValid(cluster_df)
 
         if is_valid:
             # Remove outliers from the merged df and update the track
