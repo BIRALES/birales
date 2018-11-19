@@ -44,7 +44,11 @@ class InstrumentController():
         self._pointing_enabled = settings.instrument.enable_pointing
 
         if self.is_enabled:
-            self._instrument = BEST2.Instance()
+            try:
+                self._instrument = BEST2.Instance()
+            except BEST2PointingException:
+                log.warning('BEST2 Server is not available.')
+
 
     @property
     def is_enabled(self):
