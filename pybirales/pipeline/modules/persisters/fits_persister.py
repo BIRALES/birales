@@ -54,7 +54,8 @@ class FitsPersister(ProcessingModule):
         """
 
         # Close the opened fits file handler
-        self._fits_file.close()
+        if self._fits_file:
+            self._fits_file.close()
 
     def generate_output_blob(self):
         """
