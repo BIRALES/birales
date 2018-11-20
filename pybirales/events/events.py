@@ -191,10 +191,11 @@ class TrackModifiedEvent(Event):
 
         Event.__init__(self)
 
-        self.payload['body'] = 'Track {} was `modified` (score: {:0.3f}, size:{}).'.format(
+        self.payload['body'] = 'Track {} was `modified` (score: {:0.3f}, size:{}, doppler: {}, timestamp: {}).'.format(
             id(sd_track),
             sd_track.r_value,
-            sd_track.size)
+            sd_track.size,
+            sd_track.m_doppler, sd_track.m_time)
         log.debug(self.payload['body'])
 
 

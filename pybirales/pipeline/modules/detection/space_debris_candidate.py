@@ -64,6 +64,10 @@ class SpaceDebrisTrack:
         # The radar cross section of the track
         self._rcs = None
 
+        # Doppler shift at
+
+        #
+
         # The target we are trying to track
         self._target = None
 
@@ -72,6 +76,11 @@ class SpaceDebrisTrack:
 
         # DataFrame encapsulating the track data (snr, time, channel, beam id)
         self.data = pd.DataFrame(columns=['time_sample', 'channel_sample', 'time', 'channel', 'snr', 'beam_id'])
+
+        # The median doppler shift and corresponding timestamp (to be used as reference)
+        self.ref_data = {'doppler': None, 'time': None}
+
+        self.m_timestamp = None
 
         # The time at which the track is expected to exit the detection window
         self._exit_time = None
@@ -103,7 +112,7 @@ class SpaceDebrisTrack:
             # Send a space debris track was created event
             self._publisher.publish(TrackCreatedEvent(self))
 
-        elif abs(self.size - self._prev_size) / self.size  > 0.20:
+        elif abs(self.size - self._prev_size) / self.size > 0.20:
             # Only send a notification when the modification was substantial (to avoid lots of messages)
             self._publisher.publish(TrackModifiedEvent(self))
 
@@ -134,7 +143,12 @@ class SpaceDebrisTrack:
 
         self.data = self.data.sort_values(by='time')
 
+        mid = self.data['channel'].size / 2
+        self.ref_data['time'] = self.data.iloc[mid]['time']
+        self.ref_data['doppler'] = (self.data.iloc[mid]['channel'] - self._obs_info['transmitter_frequency']) * 1e6
+
         self._to_save = True
+
 
     def _fit(self, x, y):
         """
@@ -243,6 +257,10 @@ class SpaceDebrisTrack:
             'tx': self._obs_info['transmitter_frequency'],
             'created_at': datetime.datetime.utcnow(),
             'track_size': self.size,
+            'ref_data': {
+                'd': self.ref_data['doppler'],
+                't': self.ref_data['time'],
+            },
             'data': {
                 'time': self.data['time'].tolist(),
                 'time_sample': self.data['time_sample'].tolist(),
@@ -268,6 +286,7 @@ class SpaceDebrisTrack:
                 _db_model.objects.get(pk=self._id).update(**self._to_dict())
                 log.info("Track {} (n: {}, r: {:0.3f}) updated".format(id(self), self.size, self.r_value))
             else:
+                print self._to_dict()
                 sd = _db_model(**self._to_dict()).save()
                 self._id = sd.id
                 log.info("Track {} (n: {}, r: {:0.3f}) saved".format(id(self), self.size, self.r_value))
