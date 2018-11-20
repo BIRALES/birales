@@ -74,7 +74,7 @@ class NotificationsListener(Listener):
     def __init__(self):
         Listener.__init__(self)
 
-        self._channels += ObservationScheduledEvent.channels
+        self._channels += ['slack_notifications']
         self.api_end_point = 'chat.postMessage'
         self.channel = '#birales'
 
