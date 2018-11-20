@@ -1,18 +1,19 @@
 import logging as log
+from functools import partial
 from multiprocessing import Pool
 
 import numpy as np
 from scipy import stats
 
 from pybirales import settings
-
+from pybirales.events.events import TrackTransittedEvent
+from pybirales.events.publisher import publish
 from pybirales.pipeline.base.processing_module import ProcessingModule
+from pybirales.pipeline.base.timing import timeit
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.modules.detection.dbscan_detection import detect
 from pybirales.pipeline.modules.detection.exceptions import DetectionClusterIsNotValid
 from pybirales.pipeline.modules.detection.space_debris_candidate import SpaceDebrisTrack
-from pybirales.pipeline.base.timing import timeit
-from functools import partial
 
 
 class Detector(ProcessingModule):
@@ -135,9 +136,12 @@ class Detector(ProcessingModule):
         temp_candidates = []
         for candidate in candidates:
             if candidate.has_transitted(iter_count=iter_count):
-                # If the candidate is not valid delete it
+                # If the candidate is not valid delete it else it won't be added to the list
                 if not candidate.is_valid:
                     candidate.delete()
+                else:
+                    # Track has transitted outside the field of view of the instrument
+                    publish(TrackTransittedEvent(candidate))
             else:
                 temp_candidates.append(candidate)
 

@@ -37,7 +37,7 @@ class ObservationScheduledEvent(Event):
     Event representing a scheduled observation
     """
 
-    channels = ['notifications']
+    channels = ['notifications', 'slack_notifications']
     description = 'An observation was scheduled'
 
     _level = 'success'
@@ -63,7 +63,7 @@ class ObservationScheduledCancelledEvent(Event):
     Event representing a scheduled observation
     """
 
-    channels = ['notifications']
+    channels = ['notifications', 'slack_notifications']
     description = 'A scheduled observation was cancelled'
 
     def __init__(self, observation):
@@ -85,7 +85,7 @@ class ObservationStartedEvent(Event):
     Event is fired when an observation is started
     """
 
-    channels = ['notifications']
+    channels = ['notifications', 'slack_notifications']
     description = 'An observation was started'
 
     _level = 'success'
@@ -110,7 +110,7 @@ class ObservationFinishedEvent(Event):
     Event is fired when an observation has finished (successfully)
     """
 
-    channels = ['notifications']
+    channels = ['notifications', 'slack_notifications']
     description = 'An observation has finished'
 
     def __init__(self, obs_name, pipeline_name):
@@ -153,7 +153,7 @@ class TrackCreatedEvent(Event):
     Event is fired when a valid space debris cluster is detected
     """
 
-    channels = ['notifications']
+    channels = ['notifications', 'slack_notifications']
     description = 'A new track candidate was found'
 
     _level = 'success'
@@ -179,7 +179,7 @@ class TrackModifiedEvent(Event):
     Event is fired when a valid space debris cluster is detected
     """
 
-    channels = ['notifications']
+    channels = ['notifications', 'slack_notifications']
     description = 'An existing track was updated'
 
     def __init__(self, sd_track):
@@ -191,11 +191,12 @@ class TrackModifiedEvent(Event):
 
         Event.__init__(self)
 
-        self.payload['body'] = 'Track {} was `modified` (score: {:0.3f}, size:{}, doppler: {}, timestamp: {}).'.format(
+        self.payload[
+            'body'] = 'Track {} was `modified` (score: {:0.3f}, size:{}, doppler: {:0.3f} Hz at {:%H:%M:%S} UTC).'.format(
             id(sd_track),
             sd_track.r_value,
             sd_track.size,
-            sd_track.m_doppler, sd_track.m_time)
+            sd_track.ref_data['doppler'], sd_track.ref_data['time'])
         log.debug(self.payload['body'])
 
 
@@ -204,7 +205,7 @@ class CalibrationRoutineStartedEvent(Event):
     Event is fired when the calibration routine starts
     """
 
-    channels = ['notifications']
+    channels = ['notifications', 'slack_notifications']
     description = 'Generating calibration coefficients'
 
     def __init__(self, obs_name, corr_matrix_filepath):
@@ -229,7 +230,7 @@ class CalibrationRoutineFinishedEvent(Event):
     Event is fired when the calibration routine finishes
     """
 
-    channels = ['notifications']
+    channels = ['notifications', 'slack_notifications']
     description = 'Calibration coefficients generated'
 
     def __init__(self, obs_name, coeffs_dir):
@@ -253,7 +254,7 @@ class TrackCandidatesFoundEvent(Event):
     Event is fired when the post processing finishes
     """
 
-    channels = ['notifications']
+    channels = ['notifications', 'slack_notifications']
     description = 'Post-processing of the observation finished and N candidates were found'
 
     def __init__(self, n_candidates, obs_name):
@@ -342,7 +343,7 @@ class SystemErrorEvent(Event):
     Event representing a general system error that we need to inform the user about.
     """
 
-    channels = ['notifications']
+    channels = ['notifications', 'slack_notifications']
     description = 'A system error occurred'
 
     _level = 'error'
@@ -366,7 +367,7 @@ class ObservationFailedEvent(Event):
     Event representing an observation that failed.
     """
 
-    channels = ['notifications']
+    channels = ['notifications', 'slack_notifications']
     description = 'An observation failed'
 
     _level = 'error'
@@ -386,3 +387,28 @@ class ObservationFailedEvent(Event):
         self.payload['body'] = 'Observation {} failed. {}'.format(observation.name, reason)
 
         log.exception(self.payload['body'])
+
+
+class TrackTransittedEvent(Event):
+    """
+    Event is fired when a valid space debris cluster has transitted outside the telescope field of view
+    """
+
+    channels = ['notifications', 'slack_notifications']
+    description = 'An existing track has transitted'
+
+    def __init__(self, sd_track):
+        """
+
+        :param sd_track: Space Debris Track detected across N beams
+        :type  sd_track: SpaceDebrisTrack
+        """
+
+        Event.__init__(self)
+        self.payload[
+            'body'] = 'Track {} was `transitted` (score: {:0.3f}, size:{},  doppler: {:0.3f} Hz at {:%H:%M:%S} UTC).'.format(
+            id(sd_track),
+            sd_track.r_value,
+            sd_track.size,
+            sd_track.ref_data['doppler'], sd_track.ref_data['time'])
+        log.info(self.payload['body'])

@@ -8,11 +8,10 @@ from scipy import stats
 from sklearn import linear_model
 
 from pybirales import settings
-from pybirales.pipeline.base.timing import timeit
-from pybirales.pipeline.modules.detection.exceptions import DetectionClusterIsNotValid
-from pybirales.repository.models import SpaceDebrisTrack
 from pybirales.events.events import TrackCreatedEvent, TrackModifiedEvent
 from pybirales.events.publisher import EventsPublisher
+from pybirales.pipeline.modules.detection.exceptions import DetectionClusterIsNotValid
+from pybirales.repository.models import SpaceDebrisTrack
 
 _linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
 _db_model = SpaceDebrisTrack
@@ -112,8 +111,8 @@ class SpaceDebrisTrack:
             # Send a space debris track was created event
             self._publisher.publish(TrackCreatedEvent(self))
 
-        elif abs(self.size - self._prev_size) / self.size > 0.20:
-            # Only send a notification when the modification was substantial (to avoid lots of messages)
+        elif (self.size - self._prev_size) / self.size > 0.10:
+            # Only send a notification when the track grew by 10% (to avoid lots of messages)
             self._publisher.publish(TrackModifiedEvent(self))
 
         self._prev_size = self.size
@@ -223,7 +222,7 @@ class SpaceDebrisTrack:
         The candidate is not valid if size is too small or the number of activate beams is less than 2
         :return:
         """
-        if self.size < 5 or self.activated_beams < 2:
+        if self.size < 10 or self.activated_beams < 2:
             return False
 
         return True
@@ -270,7 +269,8 @@ class SpaceDebrisTrack:
                 'beam_id': self.data['beam_id'].tolist(),
             },
             'sampling_time': self._obs_info['sampling_time'],
-            'duration': self.duration.total_seconds()
+            'duration': self.duration.total_seconds(),
+            'activated_beams': self.activated_beams
         }
 
     def save(self):
