@@ -133,6 +133,9 @@ class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
                 self.manager.add_module("filtering", filtering)
                 detector = Detector(settings.detection, filtering.output_blob)
                 self.manager.add_module("detector", detector)
+
+                terminator = Terminator(settings.terminator, detector.output_blob)
+                self.manager.add_module("terminator", terminator)
         else:
             terminator = Terminator(settings.terminator, pp_input)
             self.manager.add_module("terminator", terminator)
