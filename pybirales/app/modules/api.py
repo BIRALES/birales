@@ -9,6 +9,7 @@ from flask import Blueprint, request
 
 from pybirales.repository.message_broker import broker
 from pybirales.repository.models import SpaceDebrisTrack, Event
+import pandas as pd
 
 api_page = Blueprint('api_page', __name__, template_folder='templates')
 
@@ -28,9 +29,27 @@ def observation_track_data(observation_id=None, from_date=None, to_date=None):
         to_date = dateutil.parser.parse(request.values.get('to_date'))
 
     if request.values.get('observation_id'):
-        observation_id =request.values.get('observation_id')
+        observation_id = request.values.get('observation_id')
 
     detected_candidates = SpaceDebrisTrack.get(observation_id=observation_id, to_time=to_date, from_time=from_date)
+
+
+    for c in detected_candidates:
+        df = pd.DataFrame(c.data)
+
+        # Process the data. Select highest SNR in time (within the beam)
+        df = df.sort_values('snr', ascending=False).drop_duplicates(subset=['time_sample']).sort_values(
+            by=['time_sample'])
+
+        # Process the data. Select highest SNR in channel (within the beam)
+        df = df.sort_values('snr', ascending=False).drop_duplicates(subset=['channel_sample']).sort_values(
+            by=['time_sample'])
+
+        c.data = {
+            'channel': df['channel'].tolist(),
+            'time': df['time'].tolist(),
+            'snr': df['snr'].tolist()
+        }
 
     return detected_candidates.to_json()
 
