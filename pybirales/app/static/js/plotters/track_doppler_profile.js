@@ -105,7 +105,7 @@ TrackDopplerProfilePlotter.prototype = {
         $.each(beam_tracks, function (beam_id) {
             if (beam_tracks[beam_id] !== undefined) {
                 data.datasets.push(beam_tracks[beam_id])
-            }112
+            }
         });
 
         if (self.plot === undefined) {
