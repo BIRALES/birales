@@ -43,6 +43,8 @@ class InstrumentController():
 
         self._pointing_enabled = settings.instrument.enable_pointing
 
+        self._instrument = None
+
         if self.is_enabled:
             try:
                 self._instrument = BEST2.Instance()
