@@ -299,8 +299,15 @@ class Receiver(Generator):
 
     def publish_antenna_metrics(self, iteration, data, obs_info):
         if iteration % self._metrics_poll_freq == 0:
-            msg = json.dumps({'timestamp': obs_info['timestamp'].isoformat('T'),
-                              'voltages': self._calculate_rms(data).tolist()})
+            rms_voltages = self._calculate_rms(data).tolist()
+            timestamp = obs_info['timestamp'].isoformat('T')
+
+            msg = json.dumps({'timestamp': timestamp,
+                              'voltages': rms_voltages})
             broker.publish(self._metric_channel, msg)
 
-            logging.debug('Published antenna metrics %s', msg)
+            logging.debug('Published antenna metrics %s: %s', timestamp,
+                          ', '.join(['%0.2f'] * len(rms_voltages)) % tuple(rms_voltages))
+
+            logging.debug('Delay between server and roach is ~ {} seconds'.format(
+                (datetime.datetime.utcnow() - obs_info['timestamp'])).total_seconds())

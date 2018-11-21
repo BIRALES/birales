@@ -8,7 +8,8 @@ import time
 import numpy as np
 
 from pybirales import settings
-from pybirales.pipeline.base.definitions import PipelineError, ObservationInfo, NoDataReaderException, BIRALESObservationException
+from pybirales.pipeline.base.definitions import PipelineError, ObservationInfo, NoDataReaderException, \
+    BIRALESObservationException
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.dummy_data import DummyBlob
 from pybirales.repository.message_broker import broker
@@ -59,8 +60,6 @@ class RawDataReader(ProcessingModule):
         except IOError:
             log.error('Config PKL file was not found in %s. Exiting.', self._filepath + config.config_ext)
             raise BIRALESObservationException("Config PKL file was not found")
-
-
 
         # Processing module name
         self.name = "RawDataReader"
@@ -133,15 +132,16 @@ class RawDataReader(ProcessingModule):
 
         self._read_count += 1
 
-
-
         return obs_info
 
     def publish_antenna_metrics(self, data, obs_info):
         if self._read_count % self._metrics_poll_freq == 0:
-            msg = json.dumps(
-                {'timestamp': obs_info['timestamp'].isoformat('T'), 'voltages': self._calculate_rms(data).tolist()})
+            rms_voltages = self._calculate_rms(data).tolist()
+            timestamp = obs_info['timestamp'].isoformat('T')
+
+            msg = json.dumps({'timestamp': timestamp,
+                              'voltages': rms_voltages})
             broker.publish(self._metric_channel, msg)
 
-            log.debug('Published antenna metrics %s', msg)
-
+            log.debug('Published antenna metrics %s: %s', timestamp,
+                      ', '.join(['%0.2f'] * len(rms_voltages)) % tuple(rms_voltages))
