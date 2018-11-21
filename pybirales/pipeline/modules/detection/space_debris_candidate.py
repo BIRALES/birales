@@ -11,10 +11,10 @@ from pybirales import settings
 from pybirales.events.events import TrackCreatedEvent, TrackModifiedEvent
 from pybirales.events.publisher import EventsPublisher
 from pybirales.pipeline.modules.detection.exceptions import DetectionClusterIsNotValid
-from pybirales.repository.models import SpaceDebrisTrack
+from pybirales.repository.models import SpaceDebrisTrack as SpaceDebrisTrackModel
 
 _linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
-_db_model = SpaceDebrisTrack
+_db_model = SpaceDebrisTrackModel
 
 
 class Target:
@@ -45,7 +45,8 @@ class SpaceDebrisTrack:
         :param obs_info:
         :param cluster:
         """
-        self._id = None
+
+        self._id = None  # model id in the database
         self.name = None
         self._created_at = datetime.datetime.utcnow()
         self._obs_info = obs_info
@@ -148,7 +149,6 @@ class SpaceDebrisTrack:
 
         self._to_save = True
 
-
     def _fit(self, x, y):
         """
         Use a RANSAC linear fitting model to remove outliers
@@ -209,10 +209,11 @@ class SpaceDebrisTrack:
 
         # The track is deemed to be finished if it has not been updated since N iterations
         if (iter_count - self._last_iter_count) > self._max_candidate_iter:
-            log.debug('Track {} (n: {}) has transitted outside detection window.'.format(id(self), self.size))
+            log.debug(
+                'Track {:03d} (n: {}) has transitted outside detection window.'.format(id(self) % 1000, self.size))
             return True
 
-        log.debug('Track {} will be dropped in {} iterations'.format(id(self), self._max_candidate_iter - (
+        log.debug('Track {:03d} will be dropped in {} iterations'.format(id(self) % 1000, self._max_candidate_iter - (
                 iter_count - self._last_iter_count)))
 
         return False
@@ -284,12 +285,14 @@ class SpaceDebrisTrack:
             if self._id:
                 # Already saved to the database, hence we just update
                 _db_model.objects.get(pk=self._id).update(**self._to_dict())
-                log.info("Track {} (n: {}, r: {:0.3f}) updated".format(id(self), self.size, self.r_value))
+                log.info("Track {:03d} (n: {} (across {} beams), r: {:0.3f}) updated".format(id(self) % 1000, self.size,
+                                                                                      self.activated_beams,
+                                                                                      self.r_value))
             else:
-                print self._to_dict()
+                # print self._to_dict()
                 sd = _db_model(**self._to_dict()).save()
                 self._id = sd.id
-                log.info("Track {} (n: {}, r: {:0.3f}) saved".format(id(self), self.size, self.r_value))
+                log.info("Track {:03d} (n: {}, r: {:0.3f}) saved".format(id(self) % 1000, self.size, self.r_value))
         except ValidationError:
             log.exception("Missing or incorrect data in Space Debris Track Model")
         except OperationError:
@@ -304,4 +307,4 @@ class SpaceDebrisTrack:
             except OperationError:
                 log.exception("Track could not be deleted from DB")
             else:
-                log.info('Track {} deleted'.format(id(self)))
+                log.info('Track {:03d} deleted'.format(id(self) % 1000))

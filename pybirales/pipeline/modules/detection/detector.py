@@ -75,7 +75,7 @@ class Detector(ProcessingModule):
         :return:
         """
         m, c, r_value, _, _ = stats.linregress(cluster['channel_sample'], cluster['time_sample'])
-        return '{} (m={:0.2f}, c={:0.2f}, s={:0.2f}, n={}, i={})'.format(id(cluster), m, c, r_value, cluster.shape[0],
+        return '{:03} (m={:0.2f}, c={:0.2f}, s={:0.2f}, n={}, i={})'.format(id(cluster) % 100, m, c, r_value, cluster.shape[0],
                                                                          self._iter_count)
 
     @timeit
@@ -94,13 +94,11 @@ class Detector(ProcessingModule):
                     try:
                         candidate.add(cluster)
                     except DetectionClusterIsNotValid:
-                        log.debug('Beam candidate {} could not be added to track {}'.format(
-                            self._debug_msg(cluster), id(candidate)))
+                        log.debug('Beam candidate {} could not be added to track {:03}'.format(
+                            self._debug_msg(cluster),  id(candidate) % 1000))
                     else:
-                        log.debug('Beam candidate {} added to track {}'.format(self._debug_msg(cluster),
-                                                                               id(candidate)))
+                        log.debug('Beam candidate {} added to track {:03}'.format(self._debug_msg(cluster), id(candidate) % 1000))
 
-                        # print 'candidate is now {} long'.format(candidate.size)
                         break
             else:
                 # Beam cluster does not match any candidate. Create a new candidate track from it.
@@ -228,7 +226,9 @@ class Detector(ProcessingModule):
         # Check each track and determine if the detection object has transitted outside FoV
         self._candidates = self._active_tracks(candidates, self._iter_count)
 
+        obs_info['transitted_tracks'] = [c.id for c in candidates if c not in candidates]
+
         return obs_info
 
     def generate_output_blob(self):
-        pass
+        return ChannelisedBlob(self._config, self._input.shape, datatype=np.float)

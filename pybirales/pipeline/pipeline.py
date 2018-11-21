@@ -16,6 +16,8 @@ from pybirales.pipeline.modules.persisters.fits_persister import RawDataFitsPers
 from pybirales.pipeline.modules.readers.raw_data_reader import RawDataReader
 from pybirales.pipeline.modules.receivers.receiver import Receiver
 from pybirales.pipeline.modules.terminator import Terminator
+from pybirales.pipeline.modules.persisters.tdm_persister import TDMPersister
+
 
 AVAILABLE_PIPELINES_BUILDERS = ['detection_pipeline',
                                 'correlation_pipeline',
@@ -127,13 +129,18 @@ class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
                     self.manager.add_module("filtered_fits_persister", filtered_fits_persister)
                 else:
                     detector = Detector(settings.detection, filtering.output_blob)
-                self.manager.add_module("detector", detector)
-
             else:
                 self.manager.add_module("filtering", filtering)
                 detector = Detector(settings.detection, filtering.output_blob)
-                self.manager.add_module("detector", detector)
 
+            self.manager.add_module("detector", detector)
+            if settings.detection.save_tdm:
+                tdm_persister = TDMPersister(settings.observation, detector.output_blob)
+                self.manager.add_module("tdm_persister", tdm_persister)
+
+                terminator = Terminator(settings.terminator, tdm_persister.output_blob)
+                self.manager.add_module("terminator", terminator)
+            else:
                 terminator = Terminator(settings.terminator, detector.output_blob)
                 self.manager.add_module("terminator", terminator)
         else:

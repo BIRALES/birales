@@ -167,8 +167,8 @@ class TrackCreatedEvent(Event):
 
         Event.__init__(self)
 
-        self.payload['body'] = 'Track {} was `created` (score: {:0.3f}, size:{}).'.format(
-            id(sd_track),
+        self.payload['body'] = 'Track {:03d} was `created` (score: {:0.3f}, size:{}).'.format(
+            id(sd_track) % 1000,
             sd_track.r_value,
             sd_track.size)
         log.debug(self.payload['body'])
@@ -192,8 +192,8 @@ class TrackModifiedEvent(Event):
         Event.__init__(self)
 
         self.payload[
-            'body'] = 'Track {} was `modified` (score: {:0.3f}, size:{}, doppler: {:0.3f} Hz at {:%H:%M:%S} UTC).'.format(
-            id(sd_track),
+            'body'] = 'Track {:03d} was `modified` (score: {:0.3f}, size:{}, doppler: {:0.3f} Hz at {:%H:%M:%S} UTC).'.format(
+            id(sd_track) % 1000,
             sd_track.r_value,
             sd_track.size,
             sd_track.ref_data['doppler'], sd_track.ref_data['time'])
@@ -406,9 +406,10 @@ class TrackTransittedEvent(Event):
 
         Event.__init__(self)
         self.payload[
-            'body'] = 'Track {} was `transitted` (score: {:0.3f}, size:{},  doppler: {:0.3f} Hz at {:%H:%M:%S} UTC).'.format(
-            id(sd_track),
+            'body'] = 'Track {:03d} has `transitted` (score: {:0.3f}, size:{} ({} beams), doppler: {:0.3f} Hz at {:%H:%M:%S} UTC).'.format(
+            id(sd_track) % 1000,
             sd_track.r_value,
             sd_track.size,
+            sd_track.activated_beams,
             sd_track.ref_data['doppler'], sd_track.ref_data['time'])
         log.info(self.payload['body'])
