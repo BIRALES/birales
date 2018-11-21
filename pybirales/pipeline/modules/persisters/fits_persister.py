@@ -34,7 +34,7 @@ class FitsPersister(ProcessingModule):
         # A new fits file will be created every Chunk Size iterations
         self._chuck_size = 50
 
-    def _get_filepath(self, counter = 0):
+    def _get_filepath(self, counter=0):
         """
         Get the file path for the fits file
 
@@ -47,7 +47,8 @@ class FitsPersister(ProcessingModule):
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-        return os.path.join(directory, '{}_{}_{}.fits'.format(settings.observation.name, self._filename_suffix, counter))
+        return os.path.join(directory,
+                            '{}_{}_{}.fits'.format(settings.observation.name, self._filename_suffix, counter))
 
     def _tear_down(self):
         """
@@ -80,8 +81,7 @@ class FitsPersister(ProcessingModule):
         if self._iter_count < 1:
             return
 
-        self._fits_filepath = self._get_filepath( int(np.floor(self._iter_count / self._chuck_size))
-)
+        self._fits_filepath = self._get_filepath(int(np.floor(self._iter_count / self._chuck_size)))
 
         # Append data to the body of the fits file
         if self._beams_to_visualise:

@@ -126,7 +126,7 @@ class TDMWriter(Writer):
             creation_date=self._created_date.isoformat('T'),
             beams=np.unique(sd_track.data['beam_id']),
             detection=sd_track.data,
-            target_name=settings.target.name,
+            target_name=settings.observation.target_name,
             tx=sd_track.tx,
             pointings=sd_track.pointings,
             integration_interval=sd_track.sampling_time
