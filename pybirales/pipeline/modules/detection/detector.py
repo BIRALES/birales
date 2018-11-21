@@ -142,6 +142,8 @@ class Detector(ProcessingModule):
                 else:
                     # Track has transitted outside the field of view of the instrument
                     publish(TrackTransittedEvent(candidate))
+
+                    # You can create the TDM for this candidate here
             else:
                 temp_candidates.append(candidate)
 
