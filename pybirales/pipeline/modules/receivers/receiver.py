@@ -310,4 +310,4 @@ class Receiver(Generator):
                           ', '.join(['%0.2f'] * len(rms_voltages)) % tuple(rms_voltages))
 
             logging.debug('Delay between server and roach is ~ {} seconds'.format(
-                (datetime.datetime.utcnow() - obs_info['timestamp'])).total_seconds())
+                (datetime.datetime.utcnow() - obs_info['timestamp']).total_seconds()))
