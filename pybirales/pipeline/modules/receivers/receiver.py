@@ -74,7 +74,7 @@ class Receiver(Generator):
         self._samples_per_second = settings.observation.samples_per_second
 
         self._read_count = 0
-        self._metrics_poll_freq = 2
+        self._metrics_poll_freq = 10
         self._metric_channel = 'antenna_metrics'
 
         # Define data type
@@ -309,5 +309,5 @@ class Receiver(Generator):
             logging.debug('Published antenna metrics %s: %s', timestamp,
                           ', '.join(['%0.2f'] * len(rms_voltages)) % tuple(rms_voltages))
 
-            logging.debug('Delay between server and roach is ~ {} seconds'.format(
+            logging.debug('Delay between server and roach is ~ {:03f} seconds'.format(
                 (datetime.datetime.utcnow() - obs_info['timestamp']).total_seconds()))
