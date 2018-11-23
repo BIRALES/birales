@@ -2,7 +2,8 @@ import logging
 
 from abc import abstractmethod
 from threading import Thread, Event
-from pybirales.pipeline.base.definitions import NoDataReaderException, InputDataNotValidException
+from pybirales.pipeline.base.definitions import NoDataReaderException, InputDataNotValidException, \
+    BIRALESObservationException
 from pybirales import settings
 import time
 import logging as log
@@ -196,6 +197,9 @@ class ProcessingModule(Module):
                 if res is not None:
                     obs_info = res
             except NoDataReaderException:
+                logging.info("Data finished")
+                self.stop()
+            except BIRALESObservationException:
                 logging.info("Data finished")
                 self.stop()
             except OSError:
