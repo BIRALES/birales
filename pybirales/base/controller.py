@@ -48,9 +48,14 @@ class InstrumentController():
         if self.is_enabled:
             try:
                 self._instrument = BEST2.Instance()
+
+                if self._pointing_enabled:
+                    self._instrument.connect()
+
             except BEST2PointingException:
                 log.warning('BEST2 Server is not available.')
-
+            else:
+                log.info('Successfully connected to BEST antenna server')
 
     @property
     def is_enabled(self):

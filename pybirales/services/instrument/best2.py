@@ -51,13 +51,7 @@ class BEST2(object):
         self._connected = False
         self._socket = None
 
-        # Connect to server
-        self._connect()
-
-        # Get Current pointing
-        self.current_pointing = self.get_current_declination()
-
-    def _connect(self):
+    def connect(self):
         """
         Connect to the BEST-II server
 
@@ -68,11 +62,9 @@ class BEST2(object):
             # Check if server is already running
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._socket.connect((self._ip, self._port))
-            self._connected = True
-            logging.info("Connected to existing backend server")
         except socket.error:
             # If not launch server in a separate thread
-            logging.info("Launching new backend server")
+            logging.info("BEST antenna server is not available. Launching new BEST antenna server")
             self._thread = threading.Thread(target=self._start_best2_server_worker)
             self._thread.start()
 
@@ -81,9 +73,12 @@ class BEST2(object):
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._socket.connect((self._ip, self._port))
             self._connected = True
+        else:
+            self._connected = True
+            logging.info("Connected to existing BEST antenna server")
 
         # Keep track of current pointing
-        self.get_current_declination()
+        self.current_pointing = self.get_current_declination()
 
     def _start_best2_server_worker(self):
         """
@@ -121,6 +116,8 @@ class BEST2(object):
             self._connected = False
 
             logging.info('BEST-II server stopped')
+        else:
+            logging.info('Could not stop server that is not connected.')
 
     def get_current_declination(self):
         """
@@ -130,8 +127,7 @@ class BEST2(object):
         """
 
         if not self._connected:
-            logging.warn("BEST2 not connected, connecting")
-            self._connect()
+            raise BEST2PointingException("Could not retreive current declination. BEST2 antenna server is not connected")
 
         data = None
         for i in range(3):
@@ -172,8 +168,7 @@ class BEST2(object):
         """
 
         if not self._connected:
-            logging.warn("BEST2 not connected, connecting")
-            self._connect()
+            raise BEST2PointingException("Could not move to declination. BEST2 antenna server is not connected")
 
         # Check if declination is valid
         if not -3.0 <= dec <= 90:
@@ -267,9 +262,13 @@ if __name__ == "__main__":
 
     best2 = BEST2.Instance()
 
+    best2.connect()
+
     best2.stop_best2_server()
 
     best2 = BEST2.Instance()
+
+    best2.connect()
 
     best2.move_to_declination(30)
 

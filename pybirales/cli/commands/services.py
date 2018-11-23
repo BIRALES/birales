@@ -108,16 +108,18 @@ def best_pointing(ctx, config_filepath, pointing):
     # Initialise the Birales Facade (BOSS)
     bf = BiralesFacade(configuration=config)
 
-    # Get BEST-II instance
     best2 = BEST2.Instance()
 
-    logging.info("BEST-II current declination is: {:0.2f}".format(best2.current_pointing))
-
     try:
+        best2.connect()
+
         if pointing:
             best2.move_to_declination(pointing)
     except BEST2PointingException:
-        logging.exception("Could not point the BEST-II")
+        logging.warning('BEST2 Server is not available.')
+    else:
+        logging.info('Successfully connected to BEST antenna server')
+        logging.info("BEST-II current declination is: {:0.2f}".format(best2.current_pointing))
     finally:
         best2.stop_best2_server()
 
