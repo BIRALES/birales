@@ -39,7 +39,7 @@ class RawDataReader(ProcessingModule):
         self._npols = config.npols
         self._filepath = config.filepath
         self._read_count = 0
-        self._metrics_poll_freq = 2
+        self._metrics_poll_freq = 10
         self._metric_channel = 'antenna_metrics'
 
         # Call superclass initialiser
