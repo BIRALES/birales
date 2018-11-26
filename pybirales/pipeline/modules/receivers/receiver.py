@@ -123,7 +123,7 @@ class Receiver(Generator):
         logging.info('Stopping the receiver module')
 
         if self._daq:
-            print(self._daq.stopConsumer("birales"), Result.Failure.value, self._daq.stopReceiver())
+            # print(self._daq.stopConsumer("birales"), Result.Failure.value, self._daq.stopReceiver())
             if self._daq.stopConsumer(
                     "birales") != Result.Failure.value and self._daq.stopReceiver() != Result.Failure.value:
                 roach = Backend.Instance().roach
@@ -144,7 +144,6 @@ class Receiver(Generator):
 
             # Calculate number of value to process
             nof_values = settings.receiver.nsubs * settings.receiver.nants * settings.receiver.nsamp
-
             buffer_from_memory = ctypes.pythonapi.PyBuffer_FromMemory
             buffer_from_memory.restype = ctypes.py_object
             values = buffer_from_memory(data, np.dtype(np.complex64).itemsize * nof_values)
@@ -154,7 +153,8 @@ class Receiver(Generator):
             obs_info['sampling_time'] = 1.0 / settings.observation.samples_per_second
             obs_info['start_center_frequency'] = settings.observation.start_center_frequency
             obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
-            try:
+            
+	    try:
                 obs_info['timestamp'] = datetime.datetime.utcfromtimestamp(timestamp)
             except ValueError:
                 logging.warning('A Timestamp error occurred in the receiver')
@@ -201,8 +201,8 @@ class Receiver(Generator):
     def _initialise_receiver(self, start_time):
         """ Initialise the receiver """
 
-        # Set logging callback
-        self._daq.attachLogger(self._logger_callback(self._logging_callback))
+        # Set logging callback - disabled (causing seg fault)
+        # self._daq.attachLogger(self._logger_callback(self._logging_callback))
 
         # Configure receiver
         if self._daq.startReceiver(self._config.interface,

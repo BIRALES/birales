@@ -77,7 +77,12 @@ class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
 
         :return:
         """
-        # Pipeline Reader or Receiver input
+        
+	import faulthandler
+	faulthandler.enable(all_threads=True)
+
+
+	# Pipeline Reader or Receiver input
         if settings.manager.offline:
             receiver = RawDataReader(settings.rawdatareader)
             self.manager.name += ' (Offline)'
