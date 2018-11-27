@@ -117,7 +117,7 @@ class BEST2(object):
 
             logging.info('BEST-II server stopped')
         else:
-            logging.info('Could not stop server that is not connected.')
+            logging.info('Could not stop BEST server as it is not connected.')
 
     def get_current_declination(self):
         """
