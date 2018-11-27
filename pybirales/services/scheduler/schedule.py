@@ -92,7 +92,7 @@ class Schedule:
         """
         # Pending observations whose start time is more than 5 minutes in the past will be ignored.
         now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc) - datetime.timedelta(minutes=5)
-        obs_models = Observation.get(from_time=now, status='pending').order_by('-date_time_start')
+        obs_models = Observation.get(from_time=now, status='pending').order_by('+date_time_start')
 
         observations = []
         for o in obs_models:
