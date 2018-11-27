@@ -4,5 +4,3 @@ recursive-include pybirales/app/static *
 recursive-include pybirales/configuration *
 include pybirales/services/post_processing/input_template.tdm
 include pybirales/pipeline/modules/persisters/input_template.tdm
-
-
