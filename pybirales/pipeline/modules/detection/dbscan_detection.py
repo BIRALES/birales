@@ -167,7 +167,6 @@ def create_clusters(snr_data, labelled_data, channels, t0, td, beam_id, iter_cou
 
         if valid:
             clusters.append(cluster)
-            log.debug('Created beam candidate {} in beam {}'.format(id(cluster) % 100, beam_id))
 
     return clusters
 

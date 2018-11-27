@@ -196,6 +196,7 @@ class Detector(ProcessingModule):
             clusters = []
             for beam_id in range(0, 32):
                 clusters.extend(detect(input_data, channels, t0, td, iter_counter, channel_noise, beam_id))
+            log.debug('Found {} new candidates in {} beams'.format(len(clusters), 32))
             return clusters
 
     def process(self, obs_info, input_data, output_data):
