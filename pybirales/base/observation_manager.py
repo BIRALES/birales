@@ -88,8 +88,8 @@ class ObservationManager:
         else:
             publish(ObservationFinishedEvent(observation.name, observation.pipeline_name))
 
-            if settings.detection.save_candidates or settings.detection.save_tdm:
-                self._post_process(observation)
+            # if settings.detection.save_candidates or settings.detection.save_tdm:
+            #     self._post_process(observation)
 
         self.tear_down()
 

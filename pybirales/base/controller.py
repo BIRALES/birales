@@ -2,7 +2,7 @@ import logging as log
 import time
 
 from pybirales import settings
-from pybirales.pipeline.base.definitions import BEST2PointingException
+from pybirales.pipeline.base.definitions import BEST2PointingException, ROACHBackendException
 from pybirales.services.instrument.backend import Backend
 from pybirales.services.instrument.best2 import BEST2
 
@@ -20,7 +20,12 @@ class BackendController():
             log.info('Loading backend')
             self._backend = Backend.Instance()
             time.sleep(1)
-            self._backend.start(program_fpga=True, equalize=True, calibrate=True)
+
+            try:
+                self._backend.start(program_fpga=True, equalize=True, calibrate=True)
+            except RuntimeError:
+                log.critical('Failed to start the ROACH backend.')
+                raise ROACHBackendException('Failed to start the ROACH backend.')
 
             log.info('Backend loaded')
         else:

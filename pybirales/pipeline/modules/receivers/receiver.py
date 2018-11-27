@@ -3,6 +3,7 @@ import datetime
 import json
 import logging
 import os
+
 import numpy as np
 from enum import Enum
 
@@ -153,8 +154,8 @@ class Receiver(Generator):
             obs_info['sampling_time'] = 1.0 / settings.observation.samples_per_second
             obs_info['start_center_frequency'] = settings.observation.start_center_frequency
             obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
-            
-	    try:
+
+            try:
                 obs_info['timestamp'] = datetime.datetime.utcfromtimestamp(timestamp)
             except ValueError:
                 logging.warning('A Timestamp error occurred in the receiver')
