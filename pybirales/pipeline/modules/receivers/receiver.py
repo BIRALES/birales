@@ -309,5 +309,5 @@ class Receiver(Generator):
             logging.debug('Published antenna metrics %s: %s', timestamp,
                           ', '.join(['%0.2f'] * len(rms_voltages)) % tuple(rms_voltages))
 
-            logging.debug('Delay between server and roach is ~ {:03f} seconds'.format(
+            logging.debug('Delay between server and roach is ~ {:0.2f} seconds'.format(
                 (datetime.datetime.utcnow() - obs_info['timestamp']).total_seconds()))
