@@ -15,6 +15,7 @@ from pybirales.services.scheduler.monitoring import obs_listener_worker
 from pybirales.services.scheduler.observation import ScheduledObservation, ScheduledCalibrationObservation
 from pybirales.services.scheduler.schedule import Schedule
 from pybirales.events.publisher import publish
+from pybirales.base.observation_manager import ObservationManager
 
 
 class ObservationsScheduler:
@@ -96,6 +97,7 @@ class ObservationsScheduler:
         log.info('BIRALES Scheduler observation runner started')
         counter = 0
         processed_observations = []
+        om = ObservationManager()
         while not self._stop_event.is_set():
             now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
             pending_observations = self.schedule.pending_observations()
@@ -105,7 +107,7 @@ class ObservationsScheduler:
 
                 if next_observation.should_start and next_observation.id not in processed_observations:
                     processed_observations.append(next_observation.id)
-                    next_observation.manager.run(next_observation)
+                    om.run(next_observation)
 
             if counter % self.MONITORING_FREQ == 0:
                 self._monitoring_message(now, pending_observations)

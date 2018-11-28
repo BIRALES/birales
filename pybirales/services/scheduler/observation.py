@@ -2,16 +2,12 @@ import datetime
 import logging as log
 
 import dateutil.parser
-import humanize
 import pytz
 
-from pybirales.base.observation_manager import ObservationManager, CalibrationObservationManager
 from pybirales.pipeline.base.definitions import PipelineBuilderIsNotAvailableException
 from pybirales.pipeline.pipeline import AVAILABLE_PIPELINES_BUILDERS
 from pybirales.repository.models import Observation as ObservationModel
-from pybirales.services.instrument.best2 import pointing_time
 from pybirales.services.scheduler.exceptions import ObservationScheduledInPastException, IncorrectObservationParameters
-from pybirales.utilities.source_transit import get_calibration_source_declination, get_calibration_sources
 
 
 class ScheduledObservation(object):
@@ -77,7 +73,6 @@ class ScheduledObservation(object):
             raise PipelineBuilderIsNotAvailableException(self.pipeline_name, AVAILABLE_PIPELINES_BUILDERS)
 
         self.declination = self._declination()
-        self.manager = ObservationManager()
 
     @property
     def id(self):
@@ -200,8 +195,6 @@ class ScheduledCalibrationObservation(ScheduledObservation):
         pipeline_name = 'correlation_pipeline'
 
         ScheduledObservation.__init__(self, name, pipeline_name, config_parameters, config_file, model_id)
-
-        self.manager = CalibrationObservationManager()
 
     def is_calibration_needed(self, obs):
         """

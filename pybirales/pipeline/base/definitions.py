@@ -103,3 +103,11 @@ class BIRALESObservationException(PipelineError):
     """
 
     pass
+
+
+class ROACHBackendException(PipelineError):
+    """
+    Something went wrong whilst trying to load the ROACH backend
+    """
+
+    pass

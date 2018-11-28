@@ -1,23 +1,22 @@
 import abc
 
 from pybirales import settings
-from pybirales.pipeline.base.pipeline_manager import PipelineManager
 from pybirales.pipeline.base.definitions import PipelineBuilderIsNotAvailableException
+from pybirales.pipeline.base.pipeline_manager import PipelineManager
 from pybirales.pipeline.modules.beamformer.beamformer import Beamformer
 from pybirales.pipeline.modules.channeliser import PFB
 from pybirales.pipeline.modules.correlator import Correlator
 from pybirales.pipeline.modules.detection.detector import Detector
-from pybirales.pipeline.modules.detection.preprocessor import PreProcessor
 from pybirales.pipeline.modules.detection.filter import Filter
-from pybirales.pipeline.modules.persisters.corr_matrix_persister import CorrMatrixPersister
+from pybirales.pipeline.modules.detection.preprocessor import PreProcessor
 from pybirales.pipeline.modules.persisters.beam_persister import BeamPersister
-from pybirales.pipeline.modules.persisters.raw_persister import RawPersister
+from pybirales.pipeline.modules.persisters.corr_matrix_persister import CorrMatrixPersister
 from pybirales.pipeline.modules.persisters.fits_persister import RawDataFitsPersister, FilteredDataFitsPersister
+from pybirales.pipeline.modules.persisters.raw_persister import RawPersister
+from pybirales.pipeline.modules.persisters.tdm_persister import TDMPersister
 from pybirales.pipeline.modules.readers.raw_data_reader import RawDataReader
 from pybirales.pipeline.modules.receivers.receiver import Receiver
 from pybirales.pipeline.modules.terminator import Terminator
-from pybirales.pipeline.modules.persisters.tdm_persister import TDMPersister
-
 
 AVAILABLE_PIPELINES_BUILDERS = ['detection_pipeline',
                                 'correlation_pipeline',
@@ -74,15 +73,18 @@ class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
         """
         This script runs the multi-pixel pipeline with debris detection enabled,
         using the specified CONFIGURATION.
-
+l
         :return:
         """
-        
-	import faulthandler
-	faulthandler.enable(all_threads=True)
 
 
-	# Pipeline Reader or Receiver input
+        # import faulthandler
+        # faulthandler.enable(all_threads=True)
+        #
+        # import ctypes
+        # ctypes.string_at(0)
+
+        # Pipeline Reader or Receiver input
         if settings.manager.offline:
             receiver = RawDataReader(settings.rawdatareader)
             self.manager.name += ' (Offline)'
