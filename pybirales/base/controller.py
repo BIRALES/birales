@@ -24,7 +24,7 @@ class BackendController():
             try:
                 self._backend.start(program_fpga=True, equalize=True, calibrate=True)
             except RuntimeError:
-                log.critical('Failed to start the ROACH backend.')
+                log.critical('Could not start the ROACH backend.')
                 raise ROACHBackendException('Failed to start the ROACH backend.')
 
             log.info('Backend loaded')

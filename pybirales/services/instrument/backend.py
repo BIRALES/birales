@@ -7,24 +7,30 @@ import numpy as np
 
 from pybirales.utilities.singleton import Singleton
 from pybirales import settings
+from pybirales.pipeline.base.definitions import ROACHBackendException
 
 logger = logging.getLogger('katcp')
-logger.setLevel(logging.INFO) 
+logger.setLevel(logging.INFO)
+
 
 @Singleton
 class Backend(object):
     def __init__(self):
-        """ BiralesBackend constructor """
+        """
+        Birales Backend
+        """
+
         # Connect to ROACH
         self._roach = corr.katcp_wrapper.FpgaClient(settings.feng_configuration.roach_name)
+        time.sleep(1)
 
-        # Check if connection was successful
-        if not self._roach.is_connected:
+        # Check if connection was successful, if already connected stop it
+        if not self._roach.is_connected():
             try:
                 self._roach.stop()
             except BaseException:
                 pass
-            raise Exception("BiralesBackend: Could not connect to ROACH")
+            raise ROACHBackendException("BiralesBackend: Could not connect to ROACH")
 
         # Antenna map (ordered per cylinder from 1 to 8) and ADC map
         self._antenna_map = [0, 8, 16, 24, 1, 9, 17, 25, 2, 10, 18, 26, 3, 11, 19, 27, 4, 12,
@@ -37,11 +43,27 @@ class Backend(object):
     def roach(self):
         return self._roach
 
+    def connect(self):
+        if not self._roach.is_connected():
+            self._roach = corr.katcp_wrapper.FpgaClient(settings.feng_configuration.roach_name)
+            time.sleep(1)
+
     def start(self, program_fpga=False, equalize=False, calibrate=False):
-        """ Start the ROACH-II backend """
+        """
+        Start the ROACH-II backend
+
+        :param program_fpga:
+        :param equalize:
+        :param calibrate:
+        :return:
+        """
+
+        # Ensure that the ROACH is connected
+        self.connect()
+
         # Check if roach is connected
-        if not self._roach.is_connected:
-            raise Exception("BiralesBackend: Cannot start backend on unconnected roach")
+        if not self._roach.is_connected():
+            raise ROACHBackendException("BiralesBackend: Cannot start backend on unconnected roach")
 
         # Check if roach is already programmed
         if self._roach.status() == "program" and self.read_startup_time() != 0:
@@ -174,7 +196,7 @@ class Backend(object):
         self._roach.write_int('gbe_reset', 1)
 
         logging.info("Birales ROACH backend initialised")
-    
+
     def stop(self):
         if self._roach.is_connected():
             self._roach.stop()
@@ -202,7 +224,7 @@ class Backend(object):
             # Coefficients coming from dictionaries, need to re-order
             new_amplitude = {}
             for k, v in amplitude.iteritems():
-                new_amplitude[k] = amplitude['a'+str(self._coefficients_order[int(k.lstrip('a'))])]
+                new_amplitude[k] = amplitude['a' + str(self._coefficients_order[int(k.lstrip('a'))])]
             amplitude = new_amplitude
 
         amplitude_coefficients = np.zeros([32, 1024 / 4], dtype=float)  # 32 antennas, 1024 chans
@@ -228,7 +250,7 @@ class Backend(object):
             # Coefficients coming from dictionaries, need to re-order
             new_phase = {}
             for k, v in phase.iteritems():
-                new_phase[k] = phase['a'+str(self._coefficients_order[int(k.lstrip('a'))])]
+                new_phase[k] = phase['a' + str(self._coefficients_order[int(k.lstrip('a'))])]
             phase = new_phase
 
         phs_coeffs = np.zeros([32, 1024 / 4], dtype=complex)  # 32 ants, 1024 chans
@@ -243,7 +265,7 @@ class Backend(object):
         phs_header = np.zeros([32], dtype=float)  # 32 ants
         for a in range(len(indices)):
             phs_header[indices[a]] = values[a]
-            
+
         # Map the antenna numberings used for the coefficients to the numberings used for the f-engine
         # here we assume they are the same
         ant_remap = np.arange(32)
@@ -421,7 +443,7 @@ class Backend(object):
             if header[i][2] == key:
                 return header[i]
 
-        raise Exception('RoachBackend: Key Error on Header: %s' % key)
+        raise ROACHBackendException('RoachBackend: Key Error on Header: %s' % key)
 
     @staticmethod
     def _get_header_keys(header_file):

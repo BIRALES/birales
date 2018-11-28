@@ -54,9 +54,22 @@ class ObservationManager:
         :return:
         """
 
-        self._pre_process(observation)
+        try:
+            self._pre_process(observation)
 
-        observation.model.settings = self.obs_config.to_dict()
+            observation.model.settings = self.obs_config.to_dict()
+        except PipelineError as e:
+            log.exception("An fatal error has occurred whilst trying to run %s (%s)", observation.name, str(e))
+            publish(ObservationFailedEvent(observation, str(e)))
+
+            observation.model.status = 'failed'
+            observation.save()
+
+            self.tear_down()
+
+            return
+
+
         observation.model.status = 'running'
         observation.save()
 
