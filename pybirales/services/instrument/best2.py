@@ -127,7 +127,7 @@ class BEST2(object):
         """
 
         if not self._connected:
-            raise BEST2PointingException("Could not retreive current declination. BEST2 antenna server is not connected")
+            raise BEST2PointingException("Could not retrieve current declination. BEST2 antenna server is not connected")
 
         data = None
         for i in range(3):

@@ -92,7 +92,7 @@ class InstrumentController():
     def get_declination(self):
         if self.is_enabled:
             try:
-                dec = self.get_declination()
+                dec = self._instrument.get_current_declination()
             except BEST2PointingException:
                 log.warning('BEST2 Server is not available.')
             else:
@@ -103,7 +103,7 @@ class InstrumentController():
                 'Could not establish the BEST antenna pointing. BEST-II pointing is disabled as'
                 ' specified in the configuration.')
 
-            return 'n/a'
+        return 'n/a'
 
     def stop(self):
         if self.is_enabled and self._instrument:
