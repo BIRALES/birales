@@ -48,6 +48,8 @@ class Observation(Document):
     status = StringField()
     created_at = DateTimeField(required=True, default=datetime.datetime.utcnow)
 
+    antenna_dec = FloatField()
+
     def description(self):
         return {
             'tx': self.tx,

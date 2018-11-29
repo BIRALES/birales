@@ -71,12 +71,17 @@ class ObservationManager:
 
 
         observation.model.status = 'running'
-        observation.save()
 
         try:
+            # Point the instrument to the desired declination
             self._instrument_control.point(observation.declination)
+
+            # Read the current declination of the antenna
+            observation.model.antenna_dec = self._instrument_control.get_declination()
         except BEST2PointingException:
             publish(ObservationFailedEvent(observation, "Failed to point antenna."))
+
+        observation.save()
 
         publish(ObservationStartedEvent(observation.name, observation.pipeline_name))
 
