@@ -54,8 +54,7 @@ class InstrumentController():
             try:
                 self._instrument = BEST2.Instance()
 
-                if self._pointing_enabled:
-                    self._instrument.connect()
+                self._instrument.connect()
 
             except BEST2PointingException:
                 log.warning('BEST2 Server is not available.')
@@ -103,7 +102,7 @@ class InstrumentController():
                 'Could not establish the BEST antenna pointing. BEST-II pointing is disabled as'
                 ' specified in the configuration.')
 
-        return 'n/a'
+        return None
 
     def stop(self):
         if self.is_enabled and self._instrument:
