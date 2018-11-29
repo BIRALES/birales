@@ -50,6 +50,8 @@ class Observation(Document):
 
     antenna_dec = FloatField()
 
+    calibration_coefficients = DynamicDocument()
+
     def description(self):
         return {
             'tx': self.tx,

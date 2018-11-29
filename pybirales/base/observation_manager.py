@@ -69,7 +69,6 @@ class ObservationManager:
 
             return
 
-
         observation.model.status = 'running'
 
         try:
@@ -153,7 +152,8 @@ class CalibrationObservationManager(ObservationManager):
 
         self._calibration_facade = CalibrationFacade()
 
-        self.calibration_dir, self.corr_matrix_filepath = self._calibration_facade.get_calibration_filepath()
+        self.calibration_dir = settings.calibration.tmp_dir
+        self.corr_matrix_filepath = self._calibration_facade.get_calibration_filepath()
 
         new_options = {'observation': {'type': 'calibration'}, 'corrmatrixpersister':
             {'corr_matrix_filepath': self.corr_matrix_filepath}}
@@ -162,15 +162,12 @@ class CalibrationObservationManager(ObservationManager):
 
         self.obs_config.update_config(new_options)
 
-    def run(self, observation):
+    def _run_corr_pipeline(self, observation):
         """
-        The calibration observation to run
 
         :param observation:
         :return:
         """
-
-        self.__pre_process(observation)
 
         observation.model.settings = self.obs_config.to_dict()
         observation.model.status = 'running'
@@ -187,7 +184,8 @@ class CalibrationObservationManager(ObservationManager):
 
         try:
             pipeline_builder.build()
-            pipeline_builder.manager.start_pipeline(duration=observation.duration.total_seconds(), observation=observation)
+            pipeline_builder.manager.start_pipeline(duration=observation.duration.total_seconds(),
+                                                    observation=observation)
         except SchedulerException:
             log.exception("An fatal error has occurred whilst trying to run %s", observation.name)
             publish(ObservationFailedEvent(observation, "A scheduler exception has occurred. Calibration Failed."))
@@ -201,32 +199,54 @@ class CalibrationObservationManager(ObservationManager):
             observation.model.status = 'failed'
             observation.save()
         else:
-            observation.model.status = 'calibrating'
-            observation.save()
-
             publish(ObservationFinishedEvent(observation.name, observation.pipeline_name))
 
+            return True
+        return False
+
+    def run(self, observation, corr_matrix_filepath=None):
+        """
+        The calibration observation to run
+
+        :param observation:
+        :return:
+        """
+        self.__pre_process(observation)
+
+        success = True
+        if not corr_matrix_filepath:
+            success = self._run_corr_pipeline(observation)
+            corr_matrix_filepath = self.corr_matrix_filepath
+
+        if success:
             # Use the correlation matrix to calibrate the system
-            self.calibrate(observation, self.calibration_dir, self.corr_matrix_filepath)
+            self._calibrate(observation, corr_matrix_filepath)
 
-            observation.model.status = 'finished'
-            observation.save()
+        # Terminate (gracefully) the connection to the BEST instrument and the ROACH backend
+        self.tear_down()
 
-            # Terminate (gracefully) the connection to the BEST instrument and the ROACH backend
-            self.tear_down()
-
-    def calibrate(self, observation, calibration_dir, corr_matrix_filepath):
+    def _calibrate(self, observation, corr_matrix_filepath):
         """
         Run the calibration routine using the calibration facade
 
         :param observation:
-        :param calibration_dir:
         :param corr_matrix_filepath:
         :return:
         """
+        observation.model.status = 'calibrating'
+        observation.save()
+
         publish(CalibrationRoutineStartedEvent(observation.name, corr_matrix_filepath))
 
         # Run the calibration routine
-        self._calibration_facade.calibrate(calibration_dir, corr_matrix_filepath)
+        self._calibration_facade.calibrate(self.calibration_dir, corr_matrix_filepath)
 
-        publish(CalibrationRoutineFinishedEvent(observation.name, calibration_dir))
+        # observation.model.calibration_coefficients = {
+        #     'real': self._calibration_facade.dict_real,
+        #     'imaginary': self._calibration_facade.dict_imag,
+        # }
+
+        observation.model.status = 'finished'
+        observation.save()
+
+        publish(CalibrationRoutineFinishedEvent(observation.name, self.calibration_dir))

@@ -152,13 +152,12 @@ class CalibrationFacade:
         return dict_real, dict_imag
 
     def get_calibration_filepath(self):
-        calib_dir = settings.calibration.tmp_dir
 
         if settings.calibration.h5_filepath:
             # If the correlated h5 file is provided, use that. (online or not)
             return os.path.dirname(settings.calibration.h5_filepath), settings.calibration.h5_filepath
 
-        return calib_dir, create_corr_matrix_filepath(self._get_obs_time())
+        return create_corr_matrix_filepath(self._get_obs_time())
 
     def _get_obs_time(self):
         """
@@ -209,8 +208,6 @@ class CalibrationFacade:
             params={'TM_instance': self._tm, 'source': str(calib_dir),
                     'model_file': str(calib_dir + '/model_vis.txt'), 'local_sky_model': None})
 
-        model_vis_process = PipelineParallelisation(model_vis_pipeline.build())
-
         # RealVisGenPipeline process creation
         real_vis_pipeline = RealVisPipelineBuilder.RealVisPipelineBuilder()
         real_vis_pipeline.setup(
@@ -220,6 +217,7 @@ class CalibrationFacade:
         real_vis_process = PipelineParallelisation(real_vis_pipeline.build())
 
         if settings.calibration.model_generation:
+            model_vis_process = PipelineParallelisation(model_vis_pipeline.build())
             log.info('Starting Model Visibilities Process')
             model_vis_process.start()
             time.sleep(3)
