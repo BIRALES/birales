@@ -1,10 +1,12 @@
 import ctypes
 import logging
 import logging as log
+import os
 import warnings
+from datetime import datetime
+from math import cos, sin, atan2, asin
 
 import numpy as np
-from math import cos, sin, atan2, asin
 from astropy import constants
 from astropy import units as u
 from astropy.coordinates import Angle
@@ -18,9 +20,7 @@ from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.beamformed_data import BeamformedBlob
 from pybirales.pipeline.blobs.dummy_data import DummyBlob
 from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
-import glob
-import os
-from datetime import datetime
+from pybirales.repository.models import CalibrationCoefficients
 
 # Mute Astropy Warnings
 warnings.simplefilter('ignore', category=AstropyWarning)
@@ -356,41 +356,26 @@ class Pointing(object):
         Read the calibration coefficients from file.
         :return:
         """
-        root_dir = os.path.join(os.environ['HOME'], settings.calibration.calib_coeffs_dir)
-        coeff_files = os.listdir(root_dir)
-        coeff_td = []
-        for c in os.listdir(root_dir):
-            try:
-                coeff_td.append(datetime.utcnow() - datetime.strptime(c.split('_')[0], '%Y-%m-%dT%H:%M:%S'))
-            except ValueError:
-                log.warning(
-                    "Invalid Coefficient file found: {}. Expected format: [%Y-%m-%dT%H:%M:%S_DEC.npy]".format(c))
 
-        if not coeff_files:
+        calib_coeffs = CalibrationCoefficients.objects.order_by('-created_at').first()
+
+        if len(calib_coeffs) < 1:
             raise InvalidCalibrationCoefficientsException("No suitable calibration coefficients files were found")
 
-        latest_file = coeff_files[np.array(coeff_td).argmin()]
-        coeffs_filepath = os.path.join(root_dir, latest_file)
-        try:
-            calib_coeffs = np.load(coeffs_filepath)
-        except ValueError as e:
-            log.warning('An error has occured whilst loading calibration coefficients [from: %s]', coeffs_filepath)
-            print(e)
-            raise InvalidCalibrationCoefficientsException()
+        log.info(
+            'Using the calibration coefficients generated on {:%d-%m-%Y %H:%M:%S} by {}'.format(
+                calib_coeffs.created_at, calib_coeffs.observation.name))
 
-        if not isinstance(calib_coeffs, np.ndarray):
-            raise InvalidCalibrationCoefficientsException(
-                "Calibration coefficients at %s are not a valid numpy array [from: %s]", latest_file, coeffs_filepath)
+        calib_coeffs = np.array(calib_coeffs.real) + np.array(calib_coeffs.imag) * 1j
 
         if not len(calib_coeffs) == self._nants:
             raise InvalidCalibrationCoefficientsException(
-                "Number of calibration coefficients does not match number of antennas [from: %s]", coeffs_filepath)
+                "Number of calibration coefficients does not match number of antennas")
 
         if not np.iscomplexobj(calib_coeffs):
-            raise InvalidCalibrationCoefficientsException("Calibration coefficients type is not complex [from :%s]",
-                                                          coeffs_filepath)
+            raise InvalidCalibrationCoefficientsException("Calibration coefficients type is not complex")
 
-        log.info('Loaded calibration coefficients from %s', coeffs_filepath)
+        log.info('Calibration coefficients loaded successfully')
 
         return calib_coeffs
 

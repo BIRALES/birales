@@ -258,7 +258,7 @@ class CalibrationObservationManager(ObservationManager):
         else:
             c_coeffs = CalibrationCoefficients(
                 observation=observation.id,
-                real=real,
-                imag=imag,
+                real=real.tolist(),
+                imag=imag.tolist(),
             )
             c_coeffs.save()

@@ -232,9 +232,11 @@ class CalibrationFacade:
 
         self.dict_real, self.dict_imag = self._get_calibration_coeffs(coeff_file)
 
-        self._save_calibration_coeffs(coeff_file)
+        coefficients = np.loadtxt(coeff_file, dtype=np.complex)
 
-        return self.dict_real, self.dict_imag
+        # self._save_calibration_coeffs(coeff_file)
+
+        return coefficients.real, coefficients.imag
 
     def _save_calibration_coeffs(self, coeff_file):
         try:

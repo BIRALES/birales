@@ -201,5 +201,5 @@ class CalibrationCoefficients(Document):
     observation = ReferenceField(Observation, required=True)
     created_at = DateTimeField(default=datetime.datetime.utcnow)
 
-    real = DictField(required=True)
-    imag = DictField(required=True)
+    real = ListField(required=True)
+    imag = ListField(required=True)
