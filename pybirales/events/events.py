@@ -413,3 +413,31 @@ class TrackTransittedEvent(Event):
             sd_track.activated_beams,
             sd_track.ref_data['doppler'], sd_track.ref_data['time'])
         log.info(self.payload['body'])
+
+
+
+class CalibrationObservationFailedEvent(Event):
+    """
+    Event representing a calibration observation that failed.
+    """
+
+    channels = ['notifications', 'slack_notifications']
+    description = 'The calibration observation failed'
+
+    _level = 'error'
+
+    def __init__(self, observation, reason):
+        """
+
+        :param observation: The observation that failed
+        :type observation: Observation
+
+        :param reason:
+        :type reason: String
+        """
+
+        Event.__init__(self)
+
+        self.payload['body'] = 'Calibration observation {} failed. {}'.format(observation.name, reason)
+
+        log.exception(self.payload['body'])

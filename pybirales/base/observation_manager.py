@@ -1,16 +1,17 @@
-import datetime
 import logging as log
 
 from pybirales import settings
 from pybirales.base.controller import BackendController, InstrumentController
 from pybirales.birales_config import BiralesConfig
 from pybirales.events.events import ObservationStartedEvent, ObservationFinishedEvent, CalibrationRoutineStartedEvent, \
-    CalibrationRoutineFinishedEvent, ObservationFailedEvent
+    CalibrationRoutineFinishedEvent, ObservationFailedEvent, CalibrationObservationFailedEvent
 from pybirales.events.publisher import publish
+from pybirales.pipeline.base.definitions import CalibrationFailedException
+from pybirales.pipeline.base.definitions import PipelineError, BEST2PointingException
 from pybirales.pipeline.pipeline import get_builder_by_id, CorrelatorPipelineManagerBuilder
+from pybirales.repository.models import CalibrationCoefficients
 from pybirales.services.calibration.calibration import CalibrationFacade
 from pybirales.services.post_processing.processor import PostProcessor
-from pybirales.pipeline.base.definitions import PipelineError, BEST2PointingException
 from pybirales.services.scheduler.exceptions import SchedulerException
 
 
@@ -152,8 +153,7 @@ class CalibrationObservationManager(ObservationManager):
 
         self._calibration_facade = CalibrationFacade()
 
-        self.calibration_dir = settings.calibration.tmp_dir
-        self.corr_matrix_filepath = self._calibration_facade.get_calibration_filepath()
+        self.calibration_dir, self.corr_matrix_filepath = self._calibration_facade.get_calibration_filepath()
 
         new_options = {'observation': {'type': 'calibration'}, 'corrmatrixpersister':
             {'corr_matrix_filepath': self.corr_matrix_filepath}}
@@ -219,9 +219,21 @@ class CalibrationObservationManager(ObservationManager):
             corr_matrix_filepath = self.corr_matrix_filepath
 
         if success:
-            # Use the correlation matrix to calibrate the system
-            self._calibrate(observation, corr_matrix_filepath)
+            try:
+                # Use the correlation matrix to calibrate the system
+                self._calibrate(observation, corr_matrix_filepath)
+            except CalibrationFailedException:
+                observation.model.status = 'failed'
+                observation.save()
+                publish(CalibrationObservationFailedEvent(observation, "An IO error has occurred"))
+            else:
+                observation.model.status = 'finished'
+                observation.save()
 
+                publish(CalibrationRoutineFinishedEvent(observation.name, self.calibration_dir))
+        else:
+            publish(CalibrationObservationFailedEvent(observation, "Correlation pipeline failed to "
+                                                                   "generate a valid correlation matrix"))
         # Terminate (gracefully) the connection to the BEST instrument and the ROACH backend
         self.tear_down()
 
@@ -239,14 +251,14 @@ class CalibrationObservationManager(ObservationManager):
         publish(CalibrationRoutineStartedEvent(observation.name, corr_matrix_filepath))
 
         # Run the calibration routine
-        self._calibration_facade.calibrate(self.calibration_dir, corr_matrix_filepath)
-
-        # observation.model.calibration_coefficients = {
-        #     'real': self._calibration_facade.dict_real,
-        #     'imaginary': self._calibration_facade.dict_imag,
-        # }
-
-        observation.model.status = 'finished'
-        observation.save()
-
-        publish(CalibrationRoutineFinishedEvent(observation.name, self.calibration_dir))
+        try:
+            real, imag = self._calibration_facade.calibrate(self.calibration_dir, corr_matrix_filepath)
+        except IOError:
+            raise CalibrationFailedException('Calibration failed')
+        else:
+            c_coeffs = CalibrationCoefficients(
+                observation=observation.id,
+                real=real,
+                imag=imag,
+            )
+            c_coeffs.save()

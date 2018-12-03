@@ -234,6 +234,8 @@ class CalibrationFacade:
 
         self._save_calibration_coeffs(coeff_file)
 
+        return self.dict_real, self.dict_imag
+
     def _save_calibration_coeffs(self, coeff_file):
         try:
             tcpo_coefficients = np.loadtxt(coeff_file, dtype=np.complex)

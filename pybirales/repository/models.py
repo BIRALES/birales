@@ -50,7 +50,7 @@ class Observation(Document):
 
     antenna_dec = FloatField()
 
-    calibration_coefficients = DynamicDocument()
+    # calibration_coefficients = DynamicDocument()
 
     def description(self):
         return {
@@ -193,3 +193,13 @@ class Configuration(DynamicDocument):
     _id = ObjectIdField(required=True, default=ObjectId, primary_key=True)
     calibration_config_filepath = StringField()
     detection_config_filepath = StringField()
+
+
+class CalibrationCoefficients(Document):
+    _id = ObjectIdField(required=True, default=ObjectId, primary_key=True)
+    # the observation that generated the calibration coefficients
+    observation = ReferenceField(Observation, required=True)
+    created_at = DateTimeField(default=datetime.datetime.utcnow)
+
+    real = DictField(required=True)
+    imag = DictField(required=True)

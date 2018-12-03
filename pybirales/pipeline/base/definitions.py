@@ -111,3 +111,10 @@ class ROACHBackendException(PipelineError):
     """
 
     pass
+
+class CalibrationFailedException(PipelineError):
+    """
+    Something went wrong whilst trying to calibrate
+    """
+
+    pass
