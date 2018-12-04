@@ -20,7 +20,7 @@ from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.beamformed_data import BeamformedBlob
 from pybirales.pipeline.blobs.dummy_data import DummyBlob
 from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
-from pybirales.repository.models import CalibrationCoefficients
+from pybirales.repository.models import CalibrationObservation, Observation
 
 # Mute Astropy Warnings
 warnings.simplefilter('ignore', category=AstropyWarning)
@@ -357,16 +357,16 @@ class Pointing(object):
         :return:
         """
 
-        calib_coeffs = CalibrationCoefficients.objects.order_by('-created_at').first()
+        calib_obs = CalibrationObservation.objects.order_by('-created_at').first()
 
-        if len(calib_coeffs) < 1:
+        if len(calib_obs) < 1:
             raise InvalidCalibrationCoefficientsException("No suitable calibration coefficients files were found")
 
         log.info(
             'Using the calibration coefficients generated on {:%d-%m-%Y %H:%M:%S} by {}'.format(
-                calib_coeffs.created_at, calib_coeffs.observation.name))
+                calib_obs.created_at, calib_obs.name))
 
-        calib_coeffs = np.array(calib_coeffs.real) + np.array(calib_coeffs.imag) * 1j
+        calib_coeffs = np.array(calib_obs.real) + np.array(calib_obs.imag) * 1j
 
         if not len(calib_coeffs) == self._nants:
             raise InvalidCalibrationCoefficientsException(
@@ -376,6 +376,10 @@ class Pointing(object):
             raise InvalidCalibrationCoefficientsException("Calibration coefficients type is not complex")
 
         log.info('Calibration coefficients loaded successfully')
+
+        obs = Observation.objects.get(id=settings.observation.id)
+        obs.calibration_observation = calib_obs.id
+        obs.save()
 
         return calib_coeffs
 

@@ -6,7 +6,8 @@ import pytz
 
 from pybirales.pipeline.base.definitions import PipelineBuilderIsNotAvailableException
 from pybirales.pipeline.pipeline import AVAILABLE_PIPELINES_BUILDERS
-from pybirales.repository.models import Observation as ObservationModel
+from pybirales.repository.models import Observation as ObservationModel, \
+    CalibrationObservation as CalibrationObservationModel
 from pybirales.services.scheduler.exceptions import ObservationScheduledInPastException, IncorrectObservationParameters
 
 
@@ -195,6 +196,20 @@ class ScheduledCalibrationObservation(ScheduledObservation):
         pipeline_name = 'correlation_pipeline'
 
         ScheduledObservation.__init__(self, name, pipeline_name, config_parameters, config_file, model_id)
+
+        if not model_id:
+            self.model = CalibrationObservationModel(
+                name=self.name,
+                date_time_start=self.start_time,
+                date_time_end=self.end_time,
+                pipeline=self.pipeline_name,
+                type=self.TYPE,
+                status='pending',
+                config_parameters=self.parameters,
+                config_file=self.config_file
+            )
+        else:
+            self.model = CalibrationObservationModel.objects.get(id=model_id)
 
     def is_calibration_needed(self, obs):
         """

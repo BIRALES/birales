@@ -15,23 +15,15 @@ STATUS_MAP = {
 }
 
 
-# class ScheduledObservation(Document):
-#     name = StringField(required=True, max_length=200)
-#     date_time_start = DateTimeField(required=True, default=datetime.datetime.utcnow)
-#     date_time_end = DateTimeField()
-#     pipeline = StringField()
-#     type = StringField()
-#
-#     config_parameters = DynamicField()
-#     config_file = ListField()
+class BIRALESObservation(Document):
+    meta = {'allow_inheritance': True, 'abstract': True}
 
-
-class Observation(Document):
+    # _id = ObjectIdField(required=True, default=ObjectId, primary_key=True)
     name = StringField(required=True, max_length=200)
     date_time_start = DateTimeField(required=True)
     date_time_end = DateTimeField()  # Updated when the observation ends
     pipeline = StringField(required=True)
-    type = StringField(required=True)
+    type = StringField(default='observation')
 
     config_parameters = DynamicField(required=True)
     config_file = ListField(required=True)
@@ -42,40 +34,12 @@ class Observation(Document):
 
     # These are updated during a detection observation
     noise_stats = DynamicField()
-    tx = FloatField()
     sampling_time = FloatField()
 
     status = StringField()
     created_at = DateTimeField(required=True, default=datetime.datetime.utcnow)
 
     antenna_dec = FloatField()
-
-    # calibration_coefficients = DynamicDocument()
-
-    def description(self):
-        return {
-            'tx': self.tx,
-            'status': self.status,
-            'duration': self.config_parameters['duration'],
-            'start': self.date_time_start,
-            'end': self.date_time_end,
-        }
-
-    @property
-    def log_files(self):
-        try:
-            log_name = os.path.dirname(self.log_filepath)
-        except AttributeError:
-            log.warning('Observation does not have a log file associated with it')
-
-            return []
-
-        logs = [os.path.join(log_name, f) for f in os.listdir(log_name) if
-                os.path.isfile(os.path.join(log_name, f)) and f.startswith(os.path.basename(self.log_filepath))]
-
-        logs.sort(key=lambda x: os.path.getmtime(x))
-
-        return logs
 
     @queryset_manager
     def get(self, query_set, from_time=None, to_time=None, status=None):
@@ -91,6 +55,49 @@ class Observation(Document):
             query &= Q(status__exact=status)
 
         return query_set.filter(query)
+
+    def description(self):
+        return {
+            'status': self.status,
+            'duration': self.config_parameters['duration'],
+            'start': self.date_time_start,
+            'end': self.date_time_end,
+        }
+
+
+class CalibrationObservation(BIRALESObservation):
+    """
+    A calibration observation
+    """
+
+    meta = {
+        'collection': 'calibration'
+    }
+
+    type = StringField(default='calibration_observation')
+    real = ListField()
+    imag = ListField()
+
+
+class Observation(BIRALESObservation):
+    """
+    A detection Observation
+    """
+    meta = {
+        'collection': 'observation'
+    }
+
+    tx = FloatField()
+    calibration_obs = ReferenceField(CalibrationObservation)
+
+    def description(self):
+        return {
+            'tx': self.tx,
+            'status': self.status,
+            'duration': self.config_parameters['duration'],
+            'start': self.date_time_start,
+            'end': self.date_time_end,
+        }
 
 
 class SpaceDebrisTrack(DynamicDocument):
@@ -193,13 +200,3 @@ class Configuration(DynamicDocument):
     _id = ObjectIdField(required=True, default=ObjectId, primary_key=True)
     calibration_config_filepath = StringField()
     detection_config_filepath = StringField()
-
-
-class CalibrationCoefficients(Document):
-    _id = ObjectIdField(required=True, default=ObjectId, primary_key=True)
-    # the observation that generated the calibration coefficients
-    observation = ReferenceField(Observation, required=True)
-    created_at = DateTimeField(default=datetime.datetime.utcnow)
-
-    real = ListField(required=True)
-    imag = ListField(required=True)

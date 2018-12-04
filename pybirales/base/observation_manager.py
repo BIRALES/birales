@@ -1,6 +1,5 @@
 import logging as log
 
-from pybirales import settings
 from pybirales.base.controller import BackendController, InstrumentController
 from pybirales.birales_config import BiralesConfig
 from pybirales.events.events import ObservationStartedEvent, ObservationFinishedEvent, CalibrationRoutineStartedEvent, \
@@ -9,7 +8,6 @@ from pybirales.events.publisher import publish
 from pybirales.pipeline.base.definitions import CalibrationFailedException
 from pybirales.pipeline.base.definitions import PipelineError, BEST2PointingException
 from pybirales.pipeline.pipeline import get_builder_by_id, CorrelatorPipelineManagerBuilder
-from pybirales.repository.models import CalibrationCoefficients
 from pybirales.services.calibration.calibration import CalibrationFacade
 from pybirales.services.post_processing.processor import PostProcessor
 from pybirales.services.scheduler.exceptions import SchedulerException
@@ -256,9 +254,6 @@ class CalibrationObservationManager(ObservationManager):
         except IOError:
             raise CalibrationFailedException('Calibration failed')
         else:
-            c_coeffs = CalibrationCoefficients(
-                observation=observation.id,
-                real=real.tolist(),
-                imag=imag.tolist(),
-            )
-            c_coeffs.save()
+            observation.model.real = real.tolist()
+            observation.model.imag = imag.tolist()
+            observation.save()
