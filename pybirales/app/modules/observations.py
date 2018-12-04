@@ -62,9 +62,7 @@ def _observation_from_form(form_data, mode):
         },
         "observation": {
             "name": obs_name,
-        },
-        "target": {
-            "name": form_data['target_name'],
+            "target_name": form_data['target_name']
         },
         "start_time": form_data['date_start'],
         "duration": duration

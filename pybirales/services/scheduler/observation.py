@@ -31,6 +31,9 @@ class ScheduledObservation(object):
         :param config_parameters:
         :param config_file:
         """
+        model = ObservationModel
+        if isinstance(self, ScheduledCalibrationObservation):
+            model = CalibrationObservationModel
 
         if not model_id:
             # if model id is not given, the parameters are required
@@ -47,7 +50,7 @@ class ScheduledObservation(object):
             self.end_time = self.start_time + self.duration
             self.created_at = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
 
-            self.model = ObservationModel(
+            self.model = model(
                 name=self.name,
                 date_time_start=self.start_time,
                 date_time_end=self.end_time,
@@ -58,7 +61,7 @@ class ScheduledObservation(object):
                 config_file=self.config_file
             )
         else:
-            self.model = ObservationModel.objects.get(id=model_id)
+            self.model = model.objects.get(id=model_id)
             self.pipeline_name = self.model.pipeline
             self.name = self.model.name
             self.start_time = self.model.date_time_start.replace(tzinfo=pytz.utc)
@@ -197,19 +200,6 @@ class ScheduledCalibrationObservation(ScheduledObservation):
 
         ScheduledObservation.__init__(self, name, pipeline_name, config_parameters, config_file, model_id)
 
-        if not model_id:
-            self.model = CalibrationObservationModel(
-                name=self.name,
-                date_time_start=self.start_time,
-                date_time_end=self.end_time,
-                pipeline=self.pipeline_name,
-                type=self.TYPE,
-                status='pending',
-                config_parameters=self.parameters,
-                config_file=self.config_file
-            )
-        else:
-            self.model = CalibrationObservationModel.objects.get(id=model_id)
 
     def is_calibration_needed(self, obs):
         """

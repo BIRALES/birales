@@ -74,7 +74,7 @@ class CalibrationObservation(BIRALESObservation):
         'collection': 'calibration'
     }
 
-    type = StringField(default='calibration_observation')
+    type = StringField(default='calibration')
     real = ListField()
     imag = ListField()
 

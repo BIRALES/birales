@@ -8,14 +8,14 @@ import time
 import humanize
 import pytz
 
+from pybirales.base.observation_manager import ObservationManager, CalibrationObservationManager
 from pybirales.events.events import InvalidObservationEvent
+from pybirales.events.publisher import publish
 from pybirales.repository.message_broker import broker
 from pybirales.services.scheduler.exceptions import IncorrectScheduleFormat, InvalidObservationException
 from pybirales.services.scheduler.monitoring import obs_listener_worker
 from pybirales.services.scheduler.observation import ScheduledObservation, ScheduledCalibrationObservation
 from pybirales.services.scheduler.schedule import Schedule
-from pybirales.events.publisher import publish
-from pybirales.base.observation_manager import ObservationManager
 
 
 class ObservationsScheduler:
@@ -98,6 +98,7 @@ class ObservationsScheduler:
         counter = 0
         processed_observations = []
         om = ObservationManager()
+        com = CalibrationObservationManager()
         while not self._stop_event.is_set():
             now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
             pending_observations = self.schedule.pending_observations()
@@ -107,7 +108,13 @@ class ObservationsScheduler:
 
                 if next_observation.should_start and next_observation.id not in processed_observations:
                     processed_observations.append(next_observation.id)
-                    om.run(next_observation)
+
+                    if isinstance(next_observation, ScheduledCalibrationObservation):
+                        # Run the calibration observation using the observation manager
+                        com.run(next_observation)
+                    else:
+                        # Run the observation using the observation manager
+                        om.run(next_observation)
 
             if counter % self.MONITORING_FREQ == 0:
                 self._monitoring_message(now, pending_observations)

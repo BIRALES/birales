@@ -3,7 +3,7 @@ import logging as log
 
 import pytz
 
-from pybirales.repository.models import Observation
+from pybirales.repository.models import Observation, CalibrationObservation
 from pybirales.services.scheduler.exceptions import ObservationsConflictException, InvalidObservationException
 from pybirales.services.scheduler.observation import ScheduledCalibrationObservation, ScheduledObservation
 
@@ -95,13 +95,16 @@ class Schedule:
         obs_models = Observation.get(from_time=now, status='pending').order_by('+date_time_start')
 
         observations = []
+
+        # Get detection observations
         for o in obs_models:
-            if o.type == 'calibration':
-                observations.append(ScheduledCalibrationObservation(model_id=o.id))
-            elif o.type == 'observation':
-                observations.append(ScheduledObservation(model_id=o.id))
-            else:
-                raise InvalidObservationException('Observation type is not valid.')
+            observations.append(ScheduledObservation(model_id=o.id))
+
+        # Get calibration observations
+        obs_models = CalibrationObservation.get(from_time=now, status='pending').order_by('+date_time_start')
+
+        for o in obs_models:
+            observations.append(ScheduledCalibrationObservation(model_id=o.id))
 
         self.observations = observations
 
