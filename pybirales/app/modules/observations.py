@@ -10,7 +10,7 @@ from flask_paginate import Pagination, get_page_parameter
 
 from pybirales.app.modules.forms import DetectionModeForm, CalibrationModeForm
 from pybirales.repository.message_broker import broker
-from pybirales.repository.models import Observation
+from pybirales.repository.models import Observation, CalibrationObservation
 from pybirales.repository.models import SpaceDebrisTrack
 from pybirales.repository.models import Configuration as ConfigurationModel
 
@@ -30,7 +30,8 @@ def index():
     page = int(request.args.get(get_page_parameter(), default=1))
     per_page = 10
 
-    observations = Observation.objects.order_by('-date_time_start').skip((page - 1) * per_page).limit(per_page)
+    observations = Observation.objects(class_check=False).order_by('-date_time_start').skip((page - 1) * per_page).limit(per_page)
+
     pagination = Pagination(page=page, total=observations.count(),
                             inner_window=5,
                             bs_version=3,
@@ -130,7 +131,7 @@ def create(mode):
 @observations_page.route('/observations/<observation_id>')
 def view(observation_id):
     try:
-        observation = Observation.objects.get(id=observation_id)
+        observation = Observation.objects(class_check=False).get(id=observation_id)
 
         tracks = SpaceDebrisTrack.get(observation_id=observation_id)
 
@@ -144,7 +145,7 @@ def view(observation_id):
 @observations_page.route('/observations/<observation_id>/logs')
 def observation_logs(observation_id):
     try:
-        observation = Observation.objects.get(id=observation_id)
+        observation = Observation.objects(class_check=False).get(id=observation_id)
         return json.dumps({'log_files': observation.log_files})
     except mongoengine.DoesNotExist:
         log.exception('Database error')
@@ -154,7 +155,7 @@ def observation_logs(observation_id):
 @observations_page.route('/observations/<observation_id>/logs/tail')
 def observation_logs_tail(observation_id):
     try:
-        observation = Observation.objects.get(id=observation_id)
+        observation = Observation.objects(class_check=False).get(id=observation_id)
     except mongoengine.DoesNotExist:
         log.exception('Database error')
         abort(503)

@@ -102,6 +102,10 @@ class SpaceDebrisTrack:
         # If a beam cluster is given, add it on initialisation
         self.add(cluster)
 
+    @property
+    def id(self):
+        return id(self)
+
     def send_notification(self):
         """
         Publish a new notification for this track
@@ -223,7 +227,13 @@ class SpaceDebrisTrack:
         The candidate is not valid if size is too small or the number of activate beams is less than 2
         :return:
         """
-        if self.size < 10 or self.activated_beams < 2:
+
+        # Check that the number of beams activated is less than 2
+        if self.data['beam_id'].unique().size < 2:
+            return False
+
+        # Check that the candidate has the minimum number of unique channel and time data points
+        if self.data['channel'].unique().size < 5 or self.data['time'].unique().size < 5:
             return False
 
         return True
@@ -286,8 +296,8 @@ class SpaceDebrisTrack:
                 # Already saved to the database, hence we just update
                 _db_model.objects.get(pk=self._id).update(**self._to_dict())
                 log.info("Track {:03d} (n: {} (across {} beams), r: {:0.3f}) updated".format(id(self) % 1000, self.size,
-                                                                                      self.activated_beams,
-                                                                                      self.r_value))
+                                                                                             self.activated_beams,
+                                                                                             self.r_value))
             else:
                 # print self._to_dict()
                 sd = _db_model(**self._to_dict()).save()
@@ -308,3 +318,23 @@ class SpaceDebrisTrack:
                 log.exception("Track could not be deleted from DB")
             else:
                 log.info('Track {:03d} deleted'.format(id(self) % 1000))
+
+    def reduce_data(self, remove_duplicate_epoch=True, remove_duplicate_channel=True):
+        """
+
+        :param remove_duplicate_epoch:
+        :param remove_duplicate_channel:
+        :return:
+        """
+
+        reduced_df = self.data.copy()
+
+        if remove_duplicate_epoch:
+            reduced_df = reduced_df.sort_values('snr', ascending=False).drop_duplicates(
+                subset=['time_sample', 'beam_id']).sort_index()
+
+        if remove_duplicate_channel:
+            reduced_df = reduced_df.sort_values('snr', ascending=False).drop_duplicates(
+                subset=['time_sample', 'beam_id']).sort_index()
+
+        return reduced_df

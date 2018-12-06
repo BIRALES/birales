@@ -441,3 +441,27 @@ class CalibrationObservationFailedEvent(Event):
         self.payload['body'] = 'Calibration observation {} failed. {}'.format(observation.name, reason)
 
         log.exception(self.payload['body'])
+
+class TDMCreatedEvent(Event):
+    """
+    Event representing a new TDM file that was exported to disk
+    """
+
+    channels = ['notifications', 'slack_notifications']
+    description = 'A new TDM file was exported'
+
+    _level = 'info'
+
+    def __init__(self, track, filepath):
+        """
+
+        :param observation: The track that was saved
+        :type observation: SpaceDebrisCandidateTrack
+
+        :param reason:
+        :type reason: String
+        """
+
+        Event.__init__(self)
+
+        self.payload['body'] = 'A new TDM file for Track {:03d} was created at {}'.format(track.id, filepath)

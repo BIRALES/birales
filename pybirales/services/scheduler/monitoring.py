@@ -59,7 +59,7 @@ def obs_listener_worker(scheduler):
             log.debug('Delete observation %s message received.', data)
 
             try:
-                observation = Observation.objects.get(id=data['obs_id'])
+                observation = Observation.objects(class_check=False).get(id=data['obs_id'])
                 observation.delete()
             except Exception:
                 log.warning('Observation could not be deleted (%s)', data)

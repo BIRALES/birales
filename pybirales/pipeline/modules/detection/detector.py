@@ -227,7 +227,8 @@ class Detector(ProcessingModule):
         # Check each track and determine if the detection object has transitted outside FoV
         self._candidates = self._active_tracks(candidates, self._iter_count)
 
-        obs_info['transitted_tracks'] = [c.id for c in candidates if c not in candidates]
+        # Output a TDM for the tracks that have transitted outside the telescope's FoV
+        obs_info['transitted_tracks'] = [c for c in candidates if c not in self._candidates]
 
         return obs_info
 

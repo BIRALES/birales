@@ -5,9 +5,12 @@ from datetime import datetime
 import numpy as np
 from jinja2 import Environment, FileSystemLoader
 
+from pybirales import settings
+from pybirales.events.events import TDMCreatedEvent
+from pybirales.events.publisher import publish
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
-from pybirales import settings
+
 
 class TDMPersister(ProcessingModule):
     def __init__(self, config, input_blob=None):
@@ -26,6 +29,9 @@ class TDMPersister(ProcessingModule):
         self._create_out_dir()
 
         self._detection_num = 1
+
+        # Processing module name
+        self.name = "TDM Persister"
 
     def _create_out_dir(self):
         """
@@ -55,7 +61,7 @@ class TDMPersister(ProcessingModule):
         """
         return ChannelisedBlob(self._config, self._input.shape, datatype=np.float)
 
-    def _write(self, obs_name, target_name, sd_track, detection_num):
+    def _write(self, obs_info, obs_name, target_name, sd_track, detection_num):
         """
 
         :param sd_track:
@@ -68,11 +74,14 @@ class TDMPersister(ProcessingModule):
             filename=obs_name,
             creation_date=self._created_date.isoformat('T'),
             beams=np.unique(sd_track.data['beam_id']),
-            detection=sd_track.data,
+            detection=sd_track.reduce_data(remove_duplicate_epoch=True, remove_duplicate_channel=True),
             target_name=target_name,
-            tx=sd_track.tx,
-            pointings=sd_track.pointings,
-            integration_interval=sd_track.sampling_time
+            tx=obs_info['transmitter_frequency'],
+            pointings={
+                'ra_dec': obs_info['pointings'],
+                'az_el': obs_info['beam_az_el'].tolist()
+            },
+            integration_interval=obs_info['sampling_time']
         )
 
         # Parse the Jinja template using the provided data
@@ -87,6 +96,8 @@ class TDMPersister(ProcessingModule):
         except IOError:
             log.exception(
                 'Output TDM {} could not be persisted at: {} for track {}'.format(detection_num, filepath, sd_track.id))
+        else:
+            publish(TDMCreatedEvent(sd_track, filepath))
 
     def process(self, obs_info, input_data, output_data):
         """
@@ -107,6 +118,6 @@ class TDMPersister(ProcessingModule):
         target_name = settings.observation.target_name
 
         for sd_track in tracks_to_output:
-            self._write(obs_name, target_name, sd_track, self._detection_num)
+            self._write(obs_info, obs_name, target_name, sd_track, self._detection_num)
 
         return obs_info

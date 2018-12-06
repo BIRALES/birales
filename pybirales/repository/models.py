@@ -71,7 +71,7 @@ class CalibrationObservation(BIRALESObservation):
     """
 
     meta = {
-        'collection': 'calibration'
+        'collection': 'observation'
     }
 
     type = StringField(default='calibration')
@@ -132,6 +132,10 @@ class SpaceDebrisTrack(DynamicDocument):
 
     def invalidate(self):
         self.is_valid = False
+
+    @property
+    def id(self):
+        return self._id
 
 
 class BeamCandidate(DynamicDocument):

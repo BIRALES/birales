@@ -48,7 +48,7 @@ class RawDataReader(ProcessingModule):
         # Load the data file
         try:
             self._f = open(self._filepath, 'rb')
-            # self._f.seek(self._nsamp * self._nants * 8 * 90)
+            # self._f.seek(self._nsamp * self._nants * 8 * 10)
             log.info('Using raw data in: {}'.format(self._filepath))
         except IOError:
             log.error('Data not found in %s. Exiting.', self._filepath)
@@ -124,6 +124,7 @@ class RawDataReader(ProcessingModule):
 
         obs_info['transmitter_frequency'] = self._config['settings']['observation']['transmitter_frequency']
         obs_info['start_center_frequency'] = self._config['start_center_frequency']
+
         obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
         obs_info['timestamp'] = self._config['timestamp'] + datetime.timedelta(
             seconds=self._nsamp * obs_info['sampling_time']) * self._read_count
