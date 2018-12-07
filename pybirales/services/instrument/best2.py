@@ -64,7 +64,7 @@ class BEST2(object):
         try:
             # Check if server is already running
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._socket.settimeout(15)
+            self._socket.settimeout(10)
             self._socket.connect((self._ip, self._port))
         except socket.timeout:
             # If not launch server in a separate thread
@@ -153,7 +153,7 @@ class BEST2(object):
             # Wait for reply
             time.sleep(2)
 
-            self._socket_recv()
+            data = self._socket_recv()
 
             if re.search("[0-9]+", data) is not None:
                 break
@@ -188,7 +188,7 @@ class BEST2(object):
 
     def _socket_recv(self):
         try:
-            self._socket.recv(self._buffer_size)
+            return self._socket.recv(self._buffer_size)
         except socket.timeout:
             raise BEST2PointingException("BEST Server: Socket timeout on recv")
         except socket.error:
