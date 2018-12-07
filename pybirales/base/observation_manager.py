@@ -59,7 +59,7 @@ class ObservationManager:
 
             observation.model.settings = self.obs_config.to_dict()
         except PipelineError as e:
-            log.exception("An fatal error has occurred whilst trying to run %s (%s)", observation.name, str(e))
+            log.exception("A fatal error has occurred whilst trying to run %s (%s)", observation.name, str(e))
             publish(ObservationFailedEvent(observation, str(e)))
 
             observation.model.status = 'failed'
@@ -91,7 +91,7 @@ class ObservationManager:
             pipeline_builder.manager.start_pipeline(duration=observation.duration.total_seconds(),
                                                     observation=observation)
         except SchedulerException:
-            log.exception("An fatal error has occurred whilst trying to run %s", observation.name)
+            log.exception("A fatal error has occurred whilst trying to run %s", observation.name)
             publish(ObservationFailedEvent(observation, "A scheduler exception has occurred"))
 
             observation.model.status = 'failed'
