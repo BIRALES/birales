@@ -69,8 +69,9 @@ def detection_pipeline(ctx, config_file_path, tx, pointing):
 @pipelines.command(short_help='Run the Correlation Pipeline')
 @click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
               help='The BIRALES configuration file', multiple=True)
+@click.option('--pointing', 'pointing', help='Reference Declination of the Beam Former')
 @click.pass_context
-def correlation_pipeline(ctx, config_file_path):
+def correlation_pipeline(ctx, config_file_path, pointing):
     """
     Run the Correlation Pipeline
 
@@ -78,6 +79,8 @@ def correlation_pipeline(ctx, config_file_path):
     :param config_file_path: The default configuration file to be used.
     :return:
     """
+    if pointing:
+        ctx.obj = update_config(ctx.obj, 'beamformer', 'reference_declination', pointing)
 
     observation = ScheduledObservation(name=ctx.obj['observation']['name'],
                                        pipeline_name='correlation_pipeline',

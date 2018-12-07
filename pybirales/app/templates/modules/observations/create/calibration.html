@@ -18,9 +18,12 @@
             <div class="col-sm-4">
                 {{ render_field(form.target_name, class='form-control') }}
             </div>
+            <div class="col-sm-4">
+                {{ render_field(form.declination, class='form-control') }}
+            </div>
         </div>
 
-        <button type="submit" class="btn btn-info btn-fill pull-right">Create Observation</button>
+        <button type="submit" class="btn btn-info btn-fill pull-right">Create Calibration Observation</button>
         <div class="clearfix"></div>
     </form>
 {% endblock %}
