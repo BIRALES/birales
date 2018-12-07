@@ -64,7 +64,7 @@ class BEST2(object):
         try:
             # Check if server is already running
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._socket.settimeout(10)
+            self._socket.settimeout(15)
             self._socket.connect((self._ip, self._port))
         except socket.timeout:
             # If not launch server in a separate thread
