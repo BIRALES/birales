@@ -211,6 +211,8 @@ class BEST2(object):
         # Wait for start delay
         time.sleep(START_DELAY)
 
+        tries = 0
+
         # Wait until pointing is very close to desired one
         while not self._stop_server:
             self._socket.sendall("progress")
@@ -223,6 +225,13 @@ class BEST2(object):
 
                 # Wait for a while before re-trying the command
                 time.sleep(1)
+
+                # Try the command N times, before breaking the loop.
+                if tries > 3:
+                    logging.warning('BEST2: Failed to move the Antenna. Skipping pointing.')
+                    break
+
+                tries += 1
             else:
                 self.current_pointing = current_dec
                 logging.info("Current pointing: {:0.2f}".format(self.current_pointing))
