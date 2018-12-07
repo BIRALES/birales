@@ -51,34 +51,48 @@ class BEST2(object):
         self._connected = False
         self._socket = None
 
-    def connect(self):
+    def connect(self, tries=0):
         """
         Connect to the BEST-II server
 
         :return:
         """
+        tries += 1
+        if tries > 3:
+            raise BEST2PointingException("Could not connect to antenna server. Number of tries exceeded")
 
         try:
             # Check if server is already running
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self._socket.settimeout(10)
             self._socket.connect((self._ip, self._port))
+        except socket.timeout:
+            # If not launch server in a separate thread
+            logging.warning("Timeout. BEST antenna server is not available. Launching new BEST antenna server")
+
+            self._launch_new_server()
+
+            # Try to reconnect
+            self.connect(tries)
         except socket.error:
             # If not launch server in a separate thread
-            logging.info("BEST antenna server is not available. Launching new BEST antenna server")
-            self._thread = threading.Thread(target=self._start_best2_server_worker)
-            self._thread.start()
+            self._launch_new_server()
 
-            time.sleep(1)
-
-            self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._socket.connect((self._ip, self._port))
-            self._connected = True
+            # Try to reconnect
+            self.connect(tries)
         else:
             self._connected = True
             logging.info("Connected to existing BEST antenna server")
 
         # Keep track of current pointing
         self.current_pointing = self.get_current_declination()
+
+    def _launch_new_server(self):
+        logging.warning("BEST antenna server is not available. Launching new BEST antenna server")
+        self._thread = threading.Thread(target=self._start_best2_server_worker)
+        self._thread.start()
+
+        time.sleep(1)
 
     def _start_best2_server_worker(self):
         """
@@ -127,14 +141,20 @@ class BEST2(object):
         """
 
         if not self._connected:
-            raise BEST2PointingException("Could not retrieve current declination. BEST2 antenna server is not connected")
+            raise BEST2PointingException(
+                "Could not retrieve current declination. BEST2 antenna server is not connected")
 
         data = None
         for i in range(3):
             time.sleep(1)
-            self._socket.sendall("best")  # Issue command
-            time.sleep(2)  # Wait for reply
-            data = self._socket.recv(self._buffer_size)  # Get reply
+
+            self._socket_send("best")
+
+            # Wait for reply
+            time.sleep(2)
+
+            self._socket_recv()
+
             if re.search("[0-9]+", data) is not None:
                 break
 
@@ -157,6 +177,22 @@ class BEST2(object):
         """
 
         return self.move_to_declination(self._zenith)
+
+    def _socket_send(self, cmd):
+        try:
+            self._socket.sendall(cmd)
+        except socket.timeout:
+            raise BEST2PointingException("BEST Server: Socket timeout on command `{}`".format(cmd))
+        except socket.error:
+            raise BEST2PointingException("BEST Server: Socket error on command `{}`".format(cmd))
+
+    def _socket_recv(self):
+        try:
+            self._socket.recv(self._buffer_size)
+        except socket.timeout:
+            raise BEST2PointingException("BEST Server: Socket timeout on recv")
+        except socket.error:
+            raise BEST2PointingException("BEST Server: Socket error on recv")
 
     def move_to_declination(self, dec):
         """
