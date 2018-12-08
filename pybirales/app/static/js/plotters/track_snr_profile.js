@@ -10,7 +10,12 @@ function TrackSNRProfilePlotter(selector) {
     this.options = {
         responsive: true,
         legend: {
-            position: 'right'
+            position: 'right',
+        },
+        elements: {
+            point: {
+                radius: 0
+            }
         },
         title: {
             display: false,
@@ -22,7 +27,7 @@ function TrackSNRProfilePlotter(selector) {
                     let d = moment(tooltip.xLabel).toDate();
                     let date_string = d.getUTCHours() + ':' + d.getUTCMinutes() + ':' + d.getUTCSeconds();
 
-                    return Math.round(tooltip.yLabel) + ' dBHz ,' + date_string;
+                    return Math.round(tooltip.yLabel) + ' dBHz at ' + date_string;
                 }
             }
         },
@@ -69,34 +74,59 @@ TrackSNRProfilePlotter.prototype = {
 
         log.debug('Updating the', self.name, 'plotter with', tracks.length, 'new tracks');
         let beam_tracks = [];
+        // $.each(tracks, function (track_id, track) {
+        //     $.each(track['data']['channel'], function (i) {
+        //         let beam_id = track['data']['beam_id'][i];
+        //
+        //         if (beam_tracks[beam_id] === undefined) {
+        //             beam_tracks[beam_id] = {
+        //                 label: beam_id,
+        //                 lineTension: 0,
+        //                 data: [],
+        //                 fill: false,
+        //                 borderColor: self.get_color(beam_id),
+        //                 pointBorderColor: self.get_color(beam_id),
+        //                 pointBackgroundColor: "#ffffff",
+        //                 borderWidth: 1
+        //             }
+        //         }
+        //
+        //         beam_tracks[beam_id].data.push({
+        //             x: track['data']['time'][i].$date,
+        //             y: track['data']['snr'][i]
+        //         })
+        //     });
+        // });
+        //
+        // $.each(beam_tracks, function (beam_id) {
+        //     if (beam_tracks[beam_id] !== undefined) {
+        //         data.datasets.push(beam_tracks[beam_id])
+        //     }
+        // });
+
+        let n_pixels = 0;
+
         $.each(tracks, function (track_id, track) {
+            let track_data = [];
+            let tx = track['tx'];
             $.each(track['data']['channel'], function (i) {
-                let beam_id = track['data']['beam_id'][i];
-
-                if (beam_tracks[beam_id] === undefined) {
-                    beam_tracks[beam_id] = {
-                        label: beam_id,
-                        lineTension: 0,
-                        data: [],
-                        fill: false,
-                        borderColor: self.get_color(beam_id),
-                        pointBorderColor: self.get_color(beam_id),
-                        pointBackgroundColor: "#ffffff",
-                        borderWidth: 1
-                    }
-                }
-
-                beam_tracks[beam_id].data.push({
+                track_data.push({
                     x: track['data']['time'][i].$date,
                     y: track['data']['snr'][i]
                 })
             });
-        });
 
-        $.each(beam_tracks, function (beam_id) {
-            if (beam_tracks[beam_id] !== undefined) {
-                data.datasets.push(beam_tracks[beam_id])
-            }
+            data.datasets.push({
+                label: 'Track ' + track_id + 1,
+                lineTension: 0,
+                data: track_data,
+                fill: false,
+                borderColor: self.get_color(track_id),
+                pointBorderColor: self.get_color(track_id),
+                pointBackgroundColor: "#ffffff",
+                borderWidth: 1
+            });
+            n_pixels += 1
         });
 
         if (self.plot !== undefined) {
