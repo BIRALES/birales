@@ -16,8 +16,21 @@ api_page = Blueprint('api_page', __name__, template_folder='templates')
 
 @api_page.route('/tracks/<track_id>', methods=['GET'])
 def track(track_id):
-    tracks = SpaceDebrisTrack.objects.get(pk=track_id)
-    return tracks.to_json()
+    track = SpaceDebrisTrack.objects.get(pk=track_id)
+
+    df = pd.DataFrame(track.data)
+
+    # Process the data. Select highest SNR in time (within the beam)
+    df = df.sort_values('snr', ascending=False).drop_duplicates(subset=['time_sample', 'beam_id']).sort_values(
+        by=['time_sample'])
+
+    # Process the data. Select highest SNR in channel (within the beam)
+    df = df.sort_values('snr', ascending=False).drop_duplicates(subset=['channel_sample', 'beam_id']).sort_values(
+        by=['time_sample'])
+
+    track.data = df
+
+    return track.to_json()
 
 
 @api_page.route('/api/live/data', methods=['POST'])
@@ -31,18 +44,18 @@ def observation_track_data(observation_id=None, from_date=None, to_date=None):
     if request.values.get('observation_id'):
         observation_id = request.values.get('observation_id')
 
-    detected_candidates = SpaceDebrisTrack.get(observation_id=observation_id, to_time=to_date, from_time=from_date)
-
+    detected_candidates = SpaceDebrisTrack.get(observation_id=observation_id, to_time=to_date,
+                                               from_time=from_date).limit(5)
 
     for c in detected_candidates:
         df = pd.DataFrame(c.data)
 
         # Process the data. Select highest SNR in time (within the beam)
-        df = df.sort_values('snr', ascending=False).drop_duplicates(subset=['time_sample']).sort_values(
+        df = df.sort_values('snr', ascending=False).drop_duplicates(subset=['time_sample', 'beam_id']).sort_values(
             by=['time_sample'])
 
         # Process the data. Select highest SNR in channel (within the beam)
-        df = df.sort_values('snr', ascending=False).drop_duplicates(subset=['channel_sample']).sort_values(
+        df = df.sort_values('snr', ascending=False).drop_duplicates(subset=['channel_sample', 'beam_id']).sort_values(
             by=['time_sample'])
 
         c.data = {
