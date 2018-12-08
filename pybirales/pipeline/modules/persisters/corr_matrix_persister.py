@@ -137,9 +137,7 @@ class CorrMatrixPersister(ProcessingModule):
         # If first time running, create and initialise file
         if self._counter == 0:
             # Write the observation data file
-            self._filepath = settings.corrmatrixpersister.corr_matrix_filepath
-            if not self._filepath:
-                self._filepath = create_corr_matrix_filepath(obs_info['timestamp'])
+            self._filepath = create_corr_matrix_filepath(obs_info['timestamp'])
             self._create_hdf5_file(self._filepath, obs_info)
 
             # Write header file

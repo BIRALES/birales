@@ -60,9 +60,9 @@ class InstrumentController():
                 log.warning('BEST2 Server is not available.')
             else:
                 if self._pointing_enabled:
-                    log.info('Successfully connected to BEST antenna server')
+                    log.info('Successfully connected to BEST antenna server and pointing is enabled')
                 else:
-                    log.info('System is not connected to the BEST antenna server as specified in the configuration')
+                    log.info('Successfully connected to BEST and pointing is disabled')
 
     @property
     def is_enabled(self):
