@@ -209,8 +209,8 @@ class Detector(ProcessingModule):
         :return:
         """
 
-        # Skip the first blob
-        if self._iter_count < 1:
+        # Skip the first few blobs (to allow for an accurate noise estimation to be determined)
+        if self._iter_count < 5:
             return
 
         obs_info['iter_count'] = self._iter_count
