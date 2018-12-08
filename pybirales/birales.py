@@ -20,7 +20,7 @@ class BiralesFacade:
         # Initialise and start the listeners / subscribers of the BIRALES application
         self._listeners = []
         if settings.observation.notifications:
-            self._listeners = [NotificationsListener()]
+            self._listeners = []
 
             for l in self._listeners:
                 l.start()

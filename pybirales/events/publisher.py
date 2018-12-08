@@ -32,7 +32,7 @@ class EventsPublisher:
         """
         for channel in event.channels:
             s = self._redis.publish(channel, self._format_msg(event.payload))
-            log.debug('{} published to channels: {} across {} subscribers'.format(event.name, event.channels, s))
+            log.debug('{} published on #{} across {} subscribers'.format(event.name, channel, s))
 
         # Save the event to the database
         self.save(event)

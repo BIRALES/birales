@@ -30,7 +30,7 @@ class ObservationManager:
         :param observation: The observation to pre-process
         :return:
         """
-        print observation.parameters
+
         self.obs_config = BiralesConfig(config_file_path=observation.config_file, config_options=observation.parameters)
 
         self.obs_config.load()

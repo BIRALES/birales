@@ -71,6 +71,7 @@ def detection_pipeline(ctx, config_file_path, tx, pointing):
               help='The BIRALES configuration file', multiple=True)
 @click.option('--pointing', 'pointing', help='Reference Declination of the Beam Former')
 @click.pass_context
+@enable_notifications
 def correlation_pipeline(ctx, config_file_path, pointing):
     """
     Run the Correlation Pipeline

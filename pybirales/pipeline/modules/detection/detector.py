@@ -75,8 +75,9 @@ class Detector(ProcessingModule):
         :return:
         """
         m, c, r_value, _, _ = stats.linregress(cluster['channel_sample'], cluster['time_sample'])
-        return '{:03} (m={:0.2f}, c={:0.2f}, s={:0.2f}, n={}, i={})'.format(id(cluster) % 100, m, c, r_value, cluster.shape[0],
-                                                                         self._iter_count)
+        return '{:03} (m={:0.2f}, c={:0.2f}, s={:0.2f}, n={}, i={})'.format(id(cluster) % 100, m, c, r_value,
+                                                                            cluster.shape[0],
+                                                                            self._iter_count)
 
     @timeit
     def _aggregate_clusters(self, candidates, clusters, obs_info):
@@ -95,9 +96,10 @@ class Detector(ProcessingModule):
                         candidate.add(cluster)
                     except DetectionClusterIsNotValid:
                         log.debug('Beam candidate {} could not be added to track {:03}'.format(
-                            self._debug_msg(cluster),  id(candidate) % 1000))
+                            self._debug_msg(cluster), id(candidate) % 1000))
                     else:
-                        log.debug('Beam candidate {} added to track {:03}'.format(self._debug_msg(cluster), id(candidate) % 1000))
+                        log.debug('Beam candidate {} added to track {:03}'.format(self._debug_msg(cluster),
+                                                                                  id(candidate) % 1000))
 
                         break
             else:
@@ -208,12 +210,12 @@ class Detector(ProcessingModule):
         :param output_data:
         :return:
         """
+        obs_info['iter_count'] = self._iter_count
+        obs_info['transitted_tracks'] = []
 
         # Skip the first few blobs (to allow for an accurate noise estimation to be determined)
         if self._iter_count < 5:
             return
-
-        obs_info['iter_count'] = self._iter_count
 
         # Pre-process the input data
         input_data, channels, channel_noise = self._pre_process(input_data, obs_info)
