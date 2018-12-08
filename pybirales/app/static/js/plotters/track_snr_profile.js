@@ -76,6 +76,7 @@ TrackSNRProfilePlotter.prototype = {
                 if (beam_tracks[beam_id] === undefined) {
                     beam_tracks[beam_id] = {
                         label: beam_id,
+                        lineTension: 0,
                         data: [],
                         fill: false,
                         borderColor: self.get_color(beam_id),

@@ -82,6 +82,7 @@ TrackDopplerProfilePlotter.prototype = {
                 if (beam_tracks[beam_id] === undefined) {
                     beam_tracks[beam_id] = {
                         label: beam_id,
+                        lineTension: 0,
                         data: [],
                         pointBackgroundColor: "#ffffff",
                         pointRadius: 5,
@@ -115,18 +116,15 @@ TrackDopplerProfilePlotter.prototype = {
             // else {
             //     notifications.publish("No detections were made", 'warning');
             // }
-        }
-        else {
+        } else {
             if (self.pixels === n_pixels) {
                 self.options.animation = false;
-            }
-            else {
+            } else {
                 let delta = n_pixels - self.pixels;
 
                 if (delta > 0) {
                     notifications.publish(delta + " new detections were made", 'success');
-                }
-                else {
+                } else {
                     notifications.publish(Math.abs(delta) + " detections removed from view", 'info');
                 }
 
