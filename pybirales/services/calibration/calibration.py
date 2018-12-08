@@ -152,8 +152,12 @@ class CalibrationFacade:
         return dict_real, dict_imag
 
     def get_calibration_filepath(self):
-
-        return create_corr_matrix_filepath(self._get_obs_time())
+        #
+        # if settings.calibration.h5_filepath:
+        #     # If the correlated h5 file is provided, use that. (online or not)
+        #     return os.path.dirname(settings.calibration.h5_filepath), settings.calibration.h5_filepath
+        h5_filepath = create_corr_matrix_filepath(self._get_obs_time())
+        return os.path.dirname(h5_filepath), h5_filepath
 
     def _get_obs_time(self):
         """
