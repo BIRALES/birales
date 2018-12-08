@@ -84,7 +84,7 @@ def pub_sub_listener():
                 break
             elif message['type'] == 'message':
                 log.debug("Received message on #%s received: %s", message['channel'], message)
-                if  message['channel'] == NOTIFICATIONS_CHL:
+                if message['channel'] == NOTIFICATIONS_CHL:
                     msg = message['data']
                     socket_io.send(msg)
                 if message['channel'] == METRICS_CHL:
@@ -97,6 +97,7 @@ def pub_sub_listener():
                 log.warning('Received message not handled %s', message)
 
     log.info('Pub-sub listener terminated')
+
 
 #
 # def antenna_metrics(stop_event):

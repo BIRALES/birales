@@ -148,11 +148,11 @@
             let plot2 = new TrackSNRProfilePlotter('snr-profile-plot');
 
             function update_beam_data(from, to) {
-                if (from === undefined) {
+                if (from === null) {
                     from = new Date(date_from.val()).toUTCString();
                 }
 
-                if (to === undefined) {
+                if (to === null) {
                     to = new Date(date_to.val()).toUTCString()
                 }
 

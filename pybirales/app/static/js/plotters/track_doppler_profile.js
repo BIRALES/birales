@@ -85,7 +85,7 @@ TrackDopplerProfilePlotter.prototype = {
             });
 
             data.datasets.push({
-                label: 'Track ' + track_id + 1,
+                label: 'Track ' + track_id,
                 lineTension: 0,
                 data: track_data,
                 pointBackgroundColor: "#ffffff",

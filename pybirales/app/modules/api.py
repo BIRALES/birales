@@ -44,8 +44,12 @@ def observation_track_data(observation_id=None, from_date=None, to_date=None):
     if request.values.get('observation_id'):
         observation_id = request.values.get('observation_id')
 
+    print from_date, to_date, observation_id
+
     detected_candidates = SpaceDebrisTrack.get(observation_id=observation_id, to_time=to_date,
                                                from_time=from_date).limit(5)
+
+    print detected_candidates
 
     for c in detected_candidates:
         df = pd.DataFrame(c.data)
