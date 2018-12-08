@@ -153,10 +153,6 @@ class CalibrationFacade:
 
     def get_calibration_filepath(self):
 
-        if settings.calibration.h5_filepath:
-            # If the correlated h5 file is provided, use that. (online or not)
-            return os.path.dirname(settings.calibration.h5_filepath), settings.calibration.h5_filepath
-
         return create_corr_matrix_filepath(self._get_obs_time())
 
     def _get_obs_time(self):
