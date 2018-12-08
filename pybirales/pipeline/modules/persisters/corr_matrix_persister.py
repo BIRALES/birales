@@ -19,8 +19,8 @@ def create_corr_matrix_filepath(timestamp):
     :return:
     """
     root_dir = settings.persisters.directory
-    if settings.observation.type == 'calibration':
-        root_dir = os.path.join(os.environ['HOME'], settings.calibration.tmp_dir)
+    # if settings.observation.type == 'calibration':
+    #     root_dir = os.path.join(os.environ['HOME'], settings.calibration.tmp_dir)
 
     # Create directory if it doesn't exist
     directory = os.path.join(root_dir, '{:%Y_%m_%d}'.format(datetime.datetime.now()),

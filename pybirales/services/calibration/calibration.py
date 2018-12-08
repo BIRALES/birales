@@ -53,7 +53,7 @@ class CalibrationFacade:
         try:
             return pickle.load(open(filepath + '.pkl', 'rb'))
         except IOError:
-            raise BaseException("PKL file not found in {}".format(filepath))
+            raise BaseException("PKL file not found in {}.pkl".format(filepath))
 
     def _get_real_vis_pipeline_parameters(self, config, corr_matrix_filepath, calib_dir, tm):
         """
