@@ -102,11 +102,14 @@ class BEST2(object):
         """
 
         self._best2_server = SdebTCPServer(("", self._port))
-        while not self._stop_server:
-            self._best2_server.handle_request()
-
-        self._stop_server = False
-        logging.info("BEST-II worker thread stopped")
+        try:
+            while not self._stop_server:
+                self._best2_server.handle_request()
+        except socket.error:
+            logging.exception('Socket Error in BEST-II server. Could not handle request.')
+        finally:
+            self._stop_server = False
+            logging.info("BEST-II worker thread stopped")
 
     def stop_best2_server(self):
         """
