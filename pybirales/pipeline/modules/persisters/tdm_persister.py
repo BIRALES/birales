@@ -22,7 +22,9 @@ class TDMPersister(ProcessingModule):
         self._created_date_str = '{:%Y%m%d}'.format(self._created_date)
 
         self._filename_mask = 'BIRALES_OUT_{:%Y%m%d}_{:0>3}.tdm'
-        self._out_dir = os.path.join(os.environ['HOME'], '.birales/tdm/out', self._created_date_str)
+        self._start_time = '{:%H%M%S}'.format(config.start_time)
+
+        self._out_dir = os.path.join(os.environ['HOME'], '.birales/tdm/out', self._created_date_str, self._start_time)
         self._template_filepath = 'input_template.tdm'
         self._template = Environment(loader=FileSystemLoader(self._template_dir)).get_template(self._template_filepath)
 
