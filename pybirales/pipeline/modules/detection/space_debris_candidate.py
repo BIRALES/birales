@@ -331,10 +331,10 @@ class SpaceDebrisTrack:
 
         if remove_duplicate_epoch:
             reduced_df = reduced_df.sort_values('snr', ascending=False).drop_duplicates(
-                subset=['time_sample', 'beam_id']).sort_index()
+                subset=['time_sample', 'beam_id']).sort_values(by=['time_sample'])
 
         if remove_duplicate_channel:
             reduced_df = reduced_df.sort_values('snr', ascending=False).drop_duplicates(
-                subset=['time_sample', 'beam_id']).sort_index()
+                subset=['time_sample', 'beam_id']).sort_values(by=['time_sample'])
 
         return reduced_df
