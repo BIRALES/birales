@@ -1,7 +1,8 @@
 import json
 import logging as log
 import sys
-from pybirales.events.events import InvalidObservationEvent, ObservationScheduledEvent, ObservationDeletedEvent,SystemErrorEvent
+from pybirales.events.events import InvalidObservationEvent, ObservationScheduledEvent, ObservationDeletedEvent, \
+    SystemErrorEvent
 from pybirales.events.publisher import publish
 from pybirales.repository.message_broker import pub_sub
 from pybirales.repository.models import Observation
@@ -59,12 +60,12 @@ def obs_listener_worker(scheduler):
             log.debug('Delete observation %s message received.', data)
 
             try:
-                observation = Observation.objects(class_check=False).get(id=data['obs_id'])
-                observation.delete()
+                observations = Observation.objects(class_check=False, id=data['obs_id'])
+                for observation in observations:
+                    observation.delete()
+                    publish(ObservationDeletedEvent(observation))
             except Exception:
-                log.warning('Observation could not be deleted (%s)', data)
+                log.warning('Observation (%s) could not be deleted', data['obs_id'])
                 publish(SystemErrorEvent(reason=sys.exc_info()[0]))
-            else:
-                publish(ObservationDeletedEvent(observation))
 
     log.info('Observation listener terminated')
