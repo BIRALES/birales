@@ -89,7 +89,7 @@ class BEST2(object):
 
     def _launch_new_server(self):
         logging.warning("BEST antenna server is not available. Launching new BEST antenna server")
-        self._thread = threading.Thread(target=self._start_best2_server_worker)
+        self._thread = threading.Thread(target=self._start_best2_server_worker, name='BEST Server')
         self._thread.start()
 
         time.sleep(1)
