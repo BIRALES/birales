@@ -1,5 +1,5 @@
 import logging as log
-
+import os
 from pybirales.base.controller import BackendController, InstrumentController
 from pybirales.birales_config import BiralesConfig
 from pybirales.events.events import ObservationStartedEvent, ObservationFinishedEvent, CalibrationRoutineStartedEvent, \
@@ -139,7 +139,7 @@ class CalibrationObservationManager(ObservationManager):
 
         ObservationManager.__init__(self)
 
-    def __pre_process(self, observation):
+    def __pre_process(self, observation, correlation_matrix_filepath=None):
         """
         Calibration-specific pre-processing routines
 
@@ -150,9 +150,13 @@ class CalibrationObservationManager(ObservationManager):
         # Call the parent's pre_process function
         self._pre_process(observation)
 
-        self._calibration_facade = CalibrationFacade()
+        self._calibration_facade = CalibrationFacade(correlation_matrix_filepath)
 
-        self.calibration_dir, self.corr_matrix_filepath = self._calibration_facade.get_calibration_filepath()
+        if correlation_matrix_filepath:
+            self.calibration_dir = os.path.dirname(correlation_matrix_filepath)
+            self.corr_matrix_filepath = correlation_matrix_filepath
+        else:
+            self.calibration_dir, self.corr_matrix_filepath = self._calibration_facade.get_calibration_filepath()
 
         new_options = {'observation': {'type': 'calibration'}, 'corrmatrixpersister':
             {'corr_matrix_filepath': self.corr_matrix_filepath}}
@@ -214,12 +218,11 @@ class CalibrationObservationManager(ObservationManager):
         :param observation:
         :return:
         """
-        self.__pre_process(observation)
+        self.__pre_process(observation, corr_matrix_filepath)
 
         success = True
         if not corr_matrix_filepath:
             success = self._run_corr_pipeline(observation)
-            corr_matrix_filepath = self.corr_matrix_filepath
 
         if success:
             try:

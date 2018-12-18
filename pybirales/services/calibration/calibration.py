@@ -14,13 +14,15 @@ from pybirales import settings
 
 
 class CalibrationFacade:
-    def __init__(self):
+    def __init__(self, correlation_matrix_filepath=None):
         # Create TM instance and load configuration json
         self._tm = TM.Instance()
         self._obs_time = None
         self.obs_info = None
         self.dict_real = {}
         self.dict_imag = {}
+
+        self.h5_filepath = correlation_matrix_filepath
 
     def _tcpo_config_adapter(self):
         antennas = {}
@@ -152,10 +154,10 @@ class CalibrationFacade:
         return dict_real, dict_imag
 
     def get_calibration_filepath(self):
-        #
-        # if settings.calibration.h5_filepath:
-        #     # If the correlated h5 file is provided, use that. (online or not)
-        #     return os.path.dirname(settings.calibration.h5_filepath), settings.calibration.h5_filepath
+
+        if self.h5_filepath:
+            # If the correlated h5 file is provided, use that. (online or not)
+            return os.path.dirname(self.h5_filepath), self.h5_filepath
         h5_filepath = create_corr_matrix_filepath(self._get_obs_time())
         return os.path.dirname(h5_filepath), h5_filepath
 
@@ -170,7 +172,7 @@ class CalibrationFacade:
             if settings.manager.offline:
                 # If we are running in offline mode (receiver disabled, reading from file)
                 # create a new corr file with the OBSERVATION timestamp
-                obs_info = self.load_pkl_file(settings.rawdatareader.filepath)
+                obs_info = self.load_pkl_file(self.h5_filepath)
                 self._obs_time = obs_info['timestamp']
             else:
                 # If we are NOT running in offline mode (receiver enabled, live data)
