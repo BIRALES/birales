@@ -75,7 +75,7 @@ def reset_coefficients(ctx, config_filepath):
     backend = Backend.Instance()
 
     time.sleep(1)
-    backend.start(program_fpga=True, equalize=True, calibrate=True)
+    backend.start(program_fpga=True, equalize=True, calibrate=False)
 
     calib_facade = CalibrationFacade()
     backend.load_calibration_coefficients(amplitude=calib_facade.real_reset_coeffs,

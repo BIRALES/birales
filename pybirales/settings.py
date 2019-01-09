@@ -28,6 +28,9 @@ logger_root = None
 fits_persister = None
 scheduler = None
 # handler_file_handler = None
+roach_config_files = None
+feng_configuration = None
 
 class receiver:
     backend_config_filepath = 'configuration/backend/roach_backend.ini'
+    force_start = True
