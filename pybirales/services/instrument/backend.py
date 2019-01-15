@@ -45,10 +45,10 @@ class Backend(object):
 
     def connect(self):
         if not self._roach.is_connected():
-            self._roach = corr.katcp_wrapper.FpgaClient(settings.feng_configuration.roach_name)
+            self._roach = corr.katcp_wrapper.FpgaClient(settings.feng_configurationp.roach_name)
             time.sleep(1)
 
-    def start(self, program_fpga=False, equalize=False, calibrate=False):
+    def start(self, program_fpga=True, equalize=True, calibrate=False):
         """
         Start the ROACH-II backend
 
@@ -93,8 +93,8 @@ class Backend(object):
             # Set number of antennas
             self._roach.write_int('n_ant', len(settings.beamformer.antenna_locations))
 
-            logging.info("Setting frequency channel to %d".format(settings.roach_observation.freq_channel))
-            self._roach.write_int('channel1', settings.roach_observation.freq_channel)
+            logging.info("Setting frequency channel to %d".format(settings.roach_observationp.freq_channel))
+            self._roach.write_int('channel1', settings.roach_observationp.freq_channel)
 
             # Set ADC map
             adc_map = '----------------------------------------------------------------'
@@ -175,13 +175,13 @@ class Backend(object):
 
             logging.info("Verifying ADC signals...please hold on")
             bit_ptp = self._adc_bit_ptp()
-            if bit_ptp < 1:
+            if bit_ptp < 2:
                 logging.info("FPGA <--> ADC sync OK (adc_bit_ptp reporting %3.1f)" % bit_ptp)
                 break
             logging.warning("FPGA <--> ADC sync NOT OK (adc_bit_ptp reporting %3.1f), retrying..." % bit_ptp)
 
         # Download calibration coefficients if required
-        if calibrate:
+        if equalize:
             self.load_calibration_coefficients(config_files.amp_eq_file, config_files.phase_eq_file)
 
         # Reset interface
