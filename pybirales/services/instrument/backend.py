@@ -93,8 +93,8 @@ class Backend(object):
             # Set number of antennas
             self._roach.write_int('n_ant', len(settings.beamformer.antenna_locations))
 
-            logging.info("Setting frequency channel to %d".format(settings.roach_observationp.freq_channel))
-            self._roach.write_int('channel1', settings.roach_observationp.freq_channel)
+            logging.info("Setting frequency channel to %d".format(settings.roach_observation.freq_channel))
+            self._roach.write_int('channel1', settings.roach_observation.freq_channel)
 
             # Set ADC map
             adc_map = '----------------------------------------------------------------'
