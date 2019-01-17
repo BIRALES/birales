@@ -5,6 +5,7 @@ ORIGINATOR = INAF
 {% for beam_id in beams %}
 META_START
 COMMENT Data from Beam {{ beam_id }}
+COMMENT Beam Noise {{ beam_noise[beam_id] }}
 TIME_SYSTEM = UTC
 START_TIME = {{ detection[detection['beam_id'] == beam_id]['time'].min().isoformat('T') }}
 STOP_TIME  = {{ detection[detection['beam_id'] == beam_id]['time'].max().isoformat('T') }}

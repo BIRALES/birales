@@ -158,6 +158,8 @@ class Pointing(object):
         try:
             if settings.beamformer.apply_calib_coeffs:
                 self._calib_coeffs = self._get_latest_calib_coeffs()
+            else:
+                log.warning('No calibration coefficients applied to this observation')
         except InvalidCalibrationCoefficientsException as e:
             log.warning("Could not load coefficients from TCPO directory. Reason: {}".format(e))
 

@@ -22,7 +22,7 @@ class TDMPersister(ProcessingModule):
         self._created_date_str = '{:%Y%m%d}'.format(self._created_date)
 
         self._filename_mask = 'BIRALES_OUT_{:%Y%m%d}_{:0>3}.tdm'
-        self._start_time = '{:%H%M%S}'.format(self._created_date)
+        self._start_time = '{}_{:%H%M%S}'.format(settings.observation.name, self._created_date)
 
         self._out_dir = os.path.join(os.environ['HOME'], '.birales/tdm/out', self._created_date_str, self._start_time)
         self._template_filepath = 'input_template.tdm'
@@ -72,8 +72,10 @@ class TDMPersister(ProcessingModule):
         """
 
         filepath = self._get_filename(sd_track, detection_num)
+        beam_noise = list(np.mean(obs_info['channel_noise'], axis=1))
         data = dict(
             filename=obs_name,
+            beam_noise=beam_noise,
             creation_date=datetime.utcnow().isoformat('T'),
             beams=np.unique(sd_track.data['beam_id']),
             detection=sd_track.reduce_data(remove_duplicate_epoch=True, remove_duplicate_channel=True),
