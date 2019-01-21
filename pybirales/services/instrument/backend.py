@@ -45,7 +45,7 @@ class Backend(object):
 
     def connect(self):
         if not self._roach.is_connected():
-            self._roach = corr.katcp_wrapper.FpgaClient(settings.feng_configurationp.roach_name)
+            self._roach = corr.katcp_wrapper.FpgaClient(settings.feng_configuration.roach_name)
             time.sleep(1)
 
     def start(self, program_fpga=True, equalize=True, calibrate=False):
