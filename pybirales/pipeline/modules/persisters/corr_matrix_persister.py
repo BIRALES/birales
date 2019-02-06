@@ -1,3 +1,4 @@
+import pytz
 import logging as log
 import os
 import pickle
@@ -21,9 +22,11 @@ def create_corr_matrix_filepath(timestamp):
     root_dir = settings.persisters.directory
     # if settings.observation.type == 'calibration':
     #     root_dir = os.path.join(os.environ['HOME'], settings.calibration.tmp_dir)
-
+    now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+    if timestamp:
+        now = timestamp
     # Create directory if it doesn't exist
-    directory = os.path.join(root_dir, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
+    directory = os.path.join(root_dir, '{:%Y_%m_%d}'.format(now),
                              settings.observation.name)
     filename = '{}_{}.h5'.format(settings.observation.name, settings.corrmatrixpersister.filename_suffix)
 

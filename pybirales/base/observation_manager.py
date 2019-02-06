@@ -11,7 +11,7 @@ from pybirales.pipeline.pipeline import get_builder_by_id, CorrelatorPipelineMan
 from pybirales.services.calibration.calibration import CalibrationFacade
 from pybirales.services.post_processing.processor import PostProcessor
 from pybirales.services.scheduler.exceptions import SchedulerException
-
+from pybirales.pipeline.modules.persisters.corr_matrix_persister import create_corr_matrix_filepath
 
 class ObservationManager:
 
@@ -208,8 +208,9 @@ class CalibrationObservationManager(ObservationManager):
         else:
             publish(ObservationFinishedEvent(observation.name, observation.pipeline_name))
 
-            return True
-        return False
+
+            return create_corr_matrix_filepath(observation.created_at)
+        return None
 
     def run(self, observation, corr_matrix_filepath=None):
         """
@@ -220,11 +221,11 @@ class CalibrationObservationManager(ObservationManager):
         """
         self.__pre_process(observation, corr_matrix_filepath)
 
-        success = True
+        corr_matrix_filepath = None
         if not corr_matrix_filepath:
-            success = self._run_corr_pipeline(observation)
+            corr_matrix_filepath = self._run_corr_pipeline(observation)
 
-        if success:
+        if corr_matrix_filepath:
             try:
                 # Use the correlation matrix to calibrate the system
                 self._calibrate(observation, corr_matrix_filepath)
