@@ -221,7 +221,6 @@ class CalibrationObservationManager(ObservationManager):
         """
         self.__pre_process(observation, corr_matrix_filepath)
 
-        corr_matrix_filepath = None
         if not corr_matrix_filepath:
             corr_matrix_filepath = self._run_corr_pipeline(observation)
 
