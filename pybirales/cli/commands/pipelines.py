@@ -95,6 +95,7 @@ def correlation_pipeline(ctx, config_file_path, pointing):
 @pipelines.command(short_help='Run the stand alone Pipeline')
 @click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
               help='The BIRALES configuration file', multiple=True)
+@click.pass_context
 def standalone_pipeline(ctx, config_file_path):
     """
     Run the Stand Alone Pipeline
@@ -115,6 +116,7 @@ def standalone_pipeline(ctx, config_file_path):
 @pipelines.command(short_help='Run the stand alone Pipeline')
 @click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
               help='The BIRALES configuration file', multiple=True)
+@click.pass_context
 def test_receiver_pipeline(ctx, config_file_path):
     """
     Run the Stand Alone Pipeline
@@ -125,6 +127,27 @@ def test_receiver_pipeline(ctx, config_file_path):
 
     observation = ScheduledObservation(name=ctx.obj['observation']['name'],
                                        pipeline_name='test_receiver_pipeline',
+                                       config_file=config_file_path,
+                                       config_parameters=ctx.obj)
+
+    om = ObservationManager()
+    om.run(observation)
+
+
+@pipelines.command(short_help='Run the dummy data Pipeline')
+@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+              help='The BIRALES configuration file', multiple=True)
+@click.pass_context
+def dummy_data_pipeline(ctx, config_file_path):
+    """
+    Run the Stand Alone Pipeline
+
+    :param config_file_path: The default configuration file to be used.
+    :return:
+    """
+
+    observation = ScheduledObservation(name=ctx.obj['observation']['name'],
+                                       pipeline_name='dummy_data_pipeline',
                                        config_file=config_file_path,
                                        config_parameters=ctx.obj)
 

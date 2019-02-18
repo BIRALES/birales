@@ -17,10 +17,11 @@ from pybirales.pipeline.modules.persisters.tdm_persister import TDMPersister
 from pybirales.pipeline.modules.readers.raw_data_reader import RawDataReader
 from pybirales.pipeline.modules.receivers.receiver import Receiver
 from pybirales.pipeline.modules.terminator import Terminator
+from pybirales.pipeline.modules.generator import DummyDataGenerator
 
 AVAILABLE_PIPELINES_BUILDERS = ['detection_pipeline',
                                 'correlation_pipeline',
-                                'standalone_pipeline', 'test_receiver_pipeline']
+                                'standalone_pipeline', 'test_receiver_pipeline', 'dummy_data_pipeline']
 
 
 def get_builder_by_id(builder_id):
@@ -43,6 +44,8 @@ def get_builder_by_id(builder_id):
         return CorrelatorPipelineManagerBuilder()
     elif builder_id == 'standalone_pipeline':
         return StandAlonePipelineMangerBuilder()
+    elif builder_id == 'dummy_data_pipeline':
+        return DummyDataPipelineMangerBuilder()
 
 
 class PipelineManagerBuilder:
@@ -76,7 +79,6 @@ class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
 l
         :return:
         """
-
 
         # import faulthandler
         # faulthandler.enable(all_threads=True)
@@ -240,3 +242,43 @@ class CorrelatorPipelineManagerBuilder(PipelineManagerBuilder):
         self.manager.add_module("receiver", receiver)
         self.manager.add_module("correlator", correlator)
         self.manager.add_module("persister", persister)
+
+
+class DummyDataPipelineMangerBuilder(PipelineManagerBuilder):
+    def __init__(self):
+        PipelineManagerBuilder.__init__(self)
+
+        self.manager.name = 'Test Receiver Pipeline'
+
+        self._id = 'test_receiver_pipeline_builder'
+
+    def build(self):
+        """
+        This script runs the test receiver pipeline,
+        using the specified CONFIGURATION.
+        """
+        # Generate and equal number of antennas and beams
+        scaling = 128
+
+        # Change the number of antennas
+        settings.generator.nants = scaling
+
+        # Change the number of beams
+        settings.beamformer.nbeams = scaling
+        settings.beamformer.pointings = []
+        for i in range(0, settings.beamformer.nbeams / 4):
+            for j in range(0, 4):
+                settings.beamformer.pointings.append([j, i, 0])
+                settings.beamformer.antenna_locations.append([j, i, 0])
+
+        # Initialise the modules
+        receiver = DummyDataGenerator(settings.generator)
+        beamformer = Beamformer(settings.beamformer, receiver.output_blob)
+        pfb = PFB(settings.channeliser, beamformer.output_blob)
+        terminator = Terminator(None, pfb.output_blob)
+
+        # Add modules to pipeline manager
+        self.manager.add_module("receiver", receiver)
+        self.manager.add_module("beamformer", beamformer)
+        self.manager.add_module("pfb", pfb)
+        self.manager.add_module("terminator", terminator)

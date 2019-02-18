@@ -27,6 +27,7 @@ class DummyDataGenerator(ProcessingModule):
         self._nbits = config.nbits
         self._complex = config.complex
 
+
         # Define data type
         if self._nbits == 64 and self._complex:
             self._datatype = np.complex64
@@ -63,24 +64,29 @@ class DummyDataGenerator(ProcessingModule):
 
         start = n / frame_rate * 1
 
-        ts = start + np.arange(n) / frame_rate
-        noise_power = 0.1 * frame_rate / 2
+        # ts = start + np.arange(n) / frame_rate
+        # noise_power = 0.1 * frame_rate / 2
+        #
+        # for i in range(self._nants):
+        #     output_data[:, :, :, i] = np.random.rand() * np.sin(2 ** np.logspace(0.0001, 4, num=self._nsamp, base=2))
 
-        f1 = 447.02233885
-        f2 = 200.605
-        for i in range(self._nants):
-            # f1 = np.random.uniform(445.02233885, 447.02233885)
-            # f2 = np.random.uniform(200.60375975, 201.60375975)
+        output_data[:] = np.ones((self._nsubs, self._nsamp, self._nants), dtype=self._datatype)
 
-            # Doppler shifted signal (from f1 to f2)
-            freq = np.linspace(f1, f2, len(ts))
-            ys = np.sin(2 * np.pi * freq * ts)
-
-            ys += 0.01 * np.random.normal(scale=np.sqrt(noise_power), size=ts.shape)
-
-            output_data[:, :, :, i] = ys
-            # output_data[:, :, :, i] = 10*np.sin(np.arange(self._nsamp) * 0.5)
-            # plotter.scatter(ys, ts, 'antenna_0_signal', True)
+        # f1 = 447.02233885
+        # f2 = 200.605
+        # for i in range(self._nants):
+        #     # f1 = np.random.uniform(445.02233885, 447.02233885)
+        #     # f2 = np.random.uniform(200.60375975, 201.60375975)
+        #
+        #     # Doppler shifted signal (from f1 to f2)
+        #     freq = np.linspace(f1, f2, len(ts))
+        #     ys = np.sin(2 * np.pi * freq * ts)
+        #
+        #     ys += 0.01 * np.random.normal(scale=np.sqrt(noise_power), size=ts.shape)
+        #
+        #     output_data[:, :, :, i] = ys
+        #     # output_data[:, :, :, i] = 10*np.sin(np.arange(self._nsamp) * 0.5)
+        #     # plotter.scatter(ys, ts, 'antenna_0_signal', True)
 
         self._counter += 1
 
