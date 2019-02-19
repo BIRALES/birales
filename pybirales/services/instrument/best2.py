@@ -122,10 +122,10 @@ class BEST2(object):
             logging.info("Stopping BEST-II server")
             self._socket.close()
             if self._best2_server is not None:
-                self._stop_server = True
-                while self._stop_server:
-                    logging.info("Waiting for BEST-II server to stop")
-                    time.sleep(1)
+                # self._stop_server = True
+                # while self._stop_server:
+                #     logging.info("Waiting for BEST-II server to stop")
+                #     time.sleep(1)
 
                 self._best2_server.server_close()
                 del self._best2_server
