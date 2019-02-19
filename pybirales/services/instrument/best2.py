@@ -107,6 +107,8 @@ class BEST2(object):
                 self._best2_server.handle_request()
         except socket.error:
             logging.exception('Socket Error in BEST-II server. Could not handle request.')
+        except AttributeError:
+            logging.warning('Could not handle request. BEST server offline.')
         finally:
             self._stop_server = False
             logging.info("BEST-II worker thread stopped")
@@ -122,7 +124,7 @@ class BEST2(object):
             logging.info("Stopping BEST-II server")
             self._socket.close()
             if self._best2_server is not None:
-                # self._stop_server = True
+                self._stop_server = True
                 # while self._stop_server:
                 #     logging.info("Waiting for BEST-II server to stop")
                 #     time.sleep(1)
