@@ -162,8 +162,9 @@ class ObservationsScheduler:
         # stop monitoring thread
         self._stop_event.set()
 
-        # for t in threading.enumerate():
-        #     print t.getName()
+        time.sleep(1)
+        for t in threading.enumerate():
+            log.debug('{} is still running'.format(t.getName()))
 
     def _add_observations(self, scheduled_observations):
         """
