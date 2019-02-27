@@ -248,9 +248,9 @@ class DummyDataPipelineMangerBuilder(PipelineManagerBuilder):
     def __init__(self):
         PipelineManagerBuilder.__init__(self)
 
-        self.manager.name = 'Test Receiver Pipeline'
+        self.manager.name = 'Dummy Data Pipeline'
 
-        self._id = 'test_receiver_pipeline_builder'
+        self._id = 'dummy_pipeline_builder'
 
     def build(self):
         """
