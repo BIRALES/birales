@@ -213,7 +213,7 @@ class BEST2(object):
 
         # Check if declination is valid
         if not -3.0 <= dec <= 90:
-            raise BEST2PointingException("BEST2: Declination %.2f is out of range. Range is -3 to 90" % dec)
+            raise BEST2PointingException("BEST2: Declination %s is out of range. Range is -3 to 90" % dec)
 
         # Check if we need to move at all
         if abs(self.current_pointing - dec) < self.DEC_ERROR_THOLD:
