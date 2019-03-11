@@ -16,10 +16,12 @@ class TransitSelect:
         self.source_transit_time = None
 
         self.h5_reader()
-        self.transit_peak_find()
-        print 'Transit peak search located transit at time sample ' + str(self.vis_peak) + ' at time: ' + str(self.source_transit_time)
+        # self.transit_peak_find()
+        # print 'Transit peak search located transit at time sample ' + str(self.vis_peak) +\
+        #       ' at time: ' + str(self.source_transit_time)
         self.transit_compute()
-        print 'Transit time computation located transit at time sample ' + str(self.vis_peak) + ' at time: ' + str(self.source_transit_time)
+        # print 'Transit time computation located transit at time sample ' + str(self.vis_peak) +\
+        #       ' at time: ' + str(self.source_transit_time)
         self.vis_in = self.visibilities[self.vis_peak, :]
 
     def h5_reader(self):
@@ -86,3 +88,4 @@ class TransitSelect:
         integration_time = self.cal_input['integration_time']
         utc_time = datetime.datetime.strptime(self.cal_input['obs_time'], '%Y-%m-%d %H:%M:%S.%f')
         self.source_transit_time = utc_time + datetime.timedelta(seconds=3600 + (integration_time*self.vis_peak))
+        self.source_transit_time -= datetime.timedelta(microseconds=self.source_transit_time.microsecond)

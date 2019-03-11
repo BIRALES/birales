@@ -36,18 +36,20 @@ class SourceDetail:
     def source_timing(self):
         hours_sidereal = 23. + (56./60) + (4.0905/3600)
         sidereal_day_delta = datetime.timedelta(hours=24. - hours_sidereal)
+        leap_year_multip = self.observation_start_time.year % 4 / 4.
+        leap_year_delta = datetime.timedelta(hours=(24. - hours_sidereal)*leap_year_multip)
         today = self.observation_start_time.date()
-        gst_0 = datetime.date(year=today.year, month=9, day=21)
+        gst_0 = datetime.date(year=today.year, month=9, day=20)
         if (today - gst_0).days >= 0:
-            gst_0 = datetime.date(year=today.year+1, month=9, day=21)
+            gst_0 = datetime.date(year=today.year+1, month=9, day=20)
         gst_today = np.abs((today - gst_0).days) * sidereal_day_delta
 
         longitudinal_delta = datetime.timedelta(hours=self.observing_longitude/360. * hours_sidereal)
-        lst_today = gst_today - longitudinal_delta - sidereal_day_delta
+        lst_today = gst_today - (longitudinal_delta + sidereal_day_delta + leap_year_delta)
 
         ha_source = (lst_today - self.source_right_ascension).seconds
         self.source_transit_time = datetime.datetime(year=self.observation_start_time.year,
                                                      month=self.observation_start_time.month,
                                                      day=self.observation_start_time.day,
                                                      hour=0, minute=0, second=0) + datetime.timedelta(seconds=ha_source)
-        self.source_transit_time = datetime.datetime(year=2019, month=2, day=15, hour=13, minute=56, second=41)
+        # self.source_transit_time = datetime.datetime(year=2019, month=2, day=15, hour=13, minute=56, second=41)
