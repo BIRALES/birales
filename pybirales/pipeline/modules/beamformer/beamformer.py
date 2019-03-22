@@ -118,6 +118,7 @@ class Beamformer(ProcessingModule):
         obs_info['nbeams'] = self._nbeams
         obs_info['pointings'] = self._config.pointings
         obs_info['beam_az_el'] = self._pointing.beam_az_el
+        obs_info['declination'] = self._pointing._reference_declination
 
         return obs_info
 
@@ -268,7 +269,7 @@ class Pointing(object):
         self.beam_az_el[beam] = beam_az.deg, beam_el.deg
 
         # Point beam to required ALT AZ
-        log.debug("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, ref_dec +
+        log.debug("LAT: {}, HA: {}, DEC: {}, EL: {}, AZ: {}".format(self._reference_location[1], ha.deg, ref_dec +
                                                                      delta_dec, beam_el.deg, beam_az.deg))
         self.point_array_static(beam, beam_el, beam_az)
 

@@ -1,5 +1,7 @@
 CCSDS_TDM_VERS = 1.0
 COMMENT {{ filename }}
+COMMENT Central Beam Pointing: {{ pointings['az_el'][15][0] }} AZ, {{ pointings['az_el'][15][1] }} EL
+COMMENT Central Beam DEC: {{ pointings['declination'] }}
 CREATION_DATE = {{ creation_date }}
 ORIGINATOR = INAF
 {% for beam_id in beams %}

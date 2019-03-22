@@ -83,7 +83,8 @@ class TDMPersister(ProcessingModule):
             tx=obs_info['transmitter_frequency'],
             pointings={
                 'ra_dec': obs_info['pointings'],
-                'az_el': obs_info['beam_az_el'].tolist()
+                'az_el': obs_info['beam_az_el'].tolist(),
+                'declination': obs_info['declination']
             },
             integration_interval=obs_info['sampling_time']
         )
