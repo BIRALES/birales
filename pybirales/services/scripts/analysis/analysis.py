@@ -1,4 +1,5 @@
 import seaborn as sns
+
 sns.set(color_codes=True)
 from itertools import cycle
 
@@ -8,7 +9,7 @@ from itertools import cycle
 sns.set_context("poster")
 
 # Set the font to be serif, rather than sans
-sns.set(font='serif')
+sns.set(font='serif', font_scale=1.5)
 
 # Make the background white, and specify the
 # specific font family
@@ -23,6 +24,7 @@ sns.set_style("ticks",
                'axes.spines.right': True,
                'axes.spines.top': True,
                'figure.facecolor': 'white',
+               'figure.figsize': (12, 7.416408),
                'font.family': ['serif'],
                'font.sans-serif': ['Arial',
                                    'DejaVu Sans',
@@ -48,39 +50,39 @@ sns.set_style("ticks",
               )
 
 COLORS = [
-        "#ba0c3f",
-        "#3cb44b",
-        '#4b6983',
-        "#ffe119",
-        "#0082c8",
-        "#f58231",
-        "#911eb4",
-        '#b39169',
-        "#46f0f0",
-        "#f032e6",
-        "#d2f53c",
-        "#cb9c9c",
-        '#663822',
-        "#008080",
-        '#eed680',
-        "#e6beff",
-        '#565248',
-        "#aa6e28",
-        '#267726',
-        "#ff5370",
-        "#800000",
-        "#aaffc3",
-        '#625b81',
-        '#c1665a',
-        '#314e6c',
-        '#d1940c',
-        "#808000",
-        "#000080",
-        '#df421e',
-        "#808080",
-        "#000000",
-        '#807d74',
-        '#c5d2c8']
+    "#ba0c3f",
+    "#3cb44b",
+    '#4b6983',
+    "#ffe119",
+    "#0082c8",
+    "#f58231",
+    "#911eb4",
+    '#b39169',
+    "#46f0f0",
+    "#f032e6",
+    "#d2f53c",
+    "#cb9c9c",
+    '#663822',
+    "#008080",
+    '#eed680',
+    "#e6beff",
+    '#565248',
+    "#aa6e28",
+    '#267726',
+    "#ff5370",
+    "#800000",
+    "#aaffc3",
+    '#625b81',
+    '#c1665a',
+    '#314e6c',
+    '#d1940c',
+    "#808000",
+    "#000080",
+    '#df421e',
+    "#808080",
+    "#000000",
+    '#807d74',
+    '#c5d2c8']
 
 BEAM_COLORS = {}
 
