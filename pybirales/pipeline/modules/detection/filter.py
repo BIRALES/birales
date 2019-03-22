@@ -3,11 +3,11 @@ from abc import abstractmethod
 
 import numpy as np
 from scipy.ndimage import binary_hit_or_miss
-from scipy import signal
+
+from pybirales import settings
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
-from pybirales import settings
-from pybirales.pipeline.base.timing import timeit
+
 
 class InputDataFilter:
     def __init__(self):
@@ -46,7 +46,6 @@ class RemoveBackgroundNoiseFilter(InputDataFilter):
 
         # re-shape threshold array so to make it compatible with the data
         t2 = np.expand_dims(t2, axis=2)
-
 
         data[data < t2] = 0.
 

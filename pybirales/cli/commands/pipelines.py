@@ -153,3 +153,25 @@ def dummy_data_pipeline(ctx, config_file_path):
 
     om = ObservationManager()
     om.run(observation)
+
+
+
+@pipelines.command(short_help='Run the RSO generator Pipeline')
+@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+              help='The BIRALES configuration file', multiple=True)
+@click.pass_context
+def rso_generator_pipeline(ctx, config_file_path):
+    """
+    Run the RSO generator Pipeline
+
+    :param config_file_path: The default configuration file to be used.
+    :return:
+    """
+
+    observation = ScheduledObservation(name=ctx.obj['observation']['name'],
+                                       pipeline_name='rso_generator_pipeline',
+                                       config_file=config_file_path,
+                                       config_parameters=ctx.obj)
+
+    om = ObservationManager()
+    om.run(observation)

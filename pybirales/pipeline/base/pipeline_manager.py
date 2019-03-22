@@ -112,7 +112,7 @@ class PipelineManager(object):
             self.wait_pipeline(duration=duration)
 
         except NoDataReaderException as exception:
-            logging.info('Data finished %s', exception.__class__.__name__)
+            logging.info('Data finished'.format(exception))
             self.stop_pipeline()
             observation.model.status = 'finished'
         except KeyboardInterrupt:

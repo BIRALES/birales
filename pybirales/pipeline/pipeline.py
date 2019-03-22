@@ -18,10 +18,12 @@ from pybirales.pipeline.modules.readers.raw_data_reader import RawDataReader
 from pybirales.pipeline.modules.receivers.receiver import Receiver
 from pybirales.pipeline.modules.terminator import Terminator
 from pybirales.pipeline.modules.generator import DummyDataGenerator
+from pybirales.pipeline.modules.rso_simulator import RSOGenerator
 
 AVAILABLE_PIPELINES_BUILDERS = ['detection_pipeline',
                                 'correlation_pipeline',
-                                'standalone_pipeline', 'test_receiver_pipeline', 'dummy_data_pipeline']
+                                'standalone_pipeline', 'test_receiver_pipeline', 'dummy_data_pipeline',
+                                'rso_generator_pipeline']
 
 
 def get_builder_by_id(builder_id):
@@ -46,6 +48,8 @@ def get_builder_by_id(builder_id):
         return StandAlonePipelineMangerBuilder()
     elif builder_id == 'dummy_data_pipeline':
         return DummyDataPipelineMangerBuilder()
+    elif builder_id == 'rso_generator_pipeline':
+        return RSOGeneratorPipelineMangerBuilder()
 
 
 class PipelineManagerBuilder:
@@ -281,4 +285,36 @@ class DummyDataPipelineMangerBuilder(PipelineManagerBuilder):
         self.manager.add_module("receiver", receiver)
         self.manager.add_module("beamformer", beamformer)
         self.manager.add_module("pfb", pfb)
+        self.manager.add_module("terminator", terminator)
+
+
+class RSOGeneratorPipelineMangerBuilder(PipelineManagerBuilder):
+    def __init__(self):
+        PipelineManagerBuilder.__init__(self)
+
+        self.manager.name = 'RSO Simulator Pipeline'
+
+        self._id = 'rso_generator_pipeline_builder'
+
+    def build(self):
+        """
+        This script runs the test receiver pipeline,
+        using the specified CONFIGURATION.
+        """
+        # Generate and equal number of antennas and beams
+
+        # Initialise the modules
+        receiver = RSOGenerator(settings.rso_generator)
+        beamformer = Beamformer(settings.beamformer, receiver.output_blob)
+        pfb = PFB(settings.channeliser, beamformer.output_blob)
+        preprocessor = PreProcessor(settings.detection, pfb.output_blob)
+        raw_fits_persister = RawDataFitsPersister(settings.fits_persister, preprocessor.output_blob)
+        terminator = Terminator(None, raw_fits_persister.output_blob)
+
+        # Add modules to pipeline manager
+        self.manager.add_module("receiver", receiver)
+        self.manager.add_module("beamformer", beamformer)
+        self.manager.add_module("pfb", pfb)
+        self.manager.add_module("preprocessor", preprocessor)
+        self.manager.add_module("raw_fits_persister", raw_fits_persister)
         self.manager.add_module("terminator", terminator)

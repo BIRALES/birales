@@ -31,6 +31,7 @@ scheduler = None
 roach_config_files = None
 feng_configuration = None
 generator = None
+rso_generator = None
 
 class receiver:
     backend_config_filepath = 'configuration/backend/roach_backend.ini'

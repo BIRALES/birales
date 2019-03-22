@@ -210,5 +210,6 @@ class BiralesConfig:
 
         :return:
         """
+
         return {section: settings.__dict__[section].__dict__ for section in settings.__dict__.keys() if
                 not section.startswith('__')}
