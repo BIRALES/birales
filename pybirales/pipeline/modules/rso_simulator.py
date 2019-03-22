@@ -226,6 +226,8 @@ class RSOGenerator(ProcessingModule):
         obs_info['transmitter_frequency'] = settings.observation.transmitter_frequency
         obs_info['start_center_frequency'] = settings.observation.start_center_frequency
 
+        obs_info['rso_tracks'] = self.rso_targets
+
         logging.debug("Input data: %s", np.sum(input_data))
         logging.debug("Output data: %s shape: %s", np.sum(output_data), output_data.shape)
 
