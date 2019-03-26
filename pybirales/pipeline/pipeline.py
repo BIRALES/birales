@@ -9,6 +9,7 @@ from pybirales.pipeline.modules.correlator import Correlator
 from pybirales.pipeline.modules.detection.detector import Detector
 from pybirales.pipeline.modules.detection.filter import Filter
 from pybirales.pipeline.modules.detection.preprocessor import PreProcessor
+from pybirales.pipeline.modules.generator import DummyDataGenerator
 from pybirales.pipeline.modules.persisters.beam_persister import BeamPersister
 from pybirales.pipeline.modules.persisters.corr_matrix_persister import CorrMatrixPersister
 from pybirales.pipeline.modules.persisters.fits_persister import RawDataFitsPersister, FilteredDataFitsPersister
@@ -16,14 +17,13 @@ from pybirales.pipeline.modules.persisters.raw_persister import RawPersister
 from pybirales.pipeline.modules.persisters.tdm_persister import TDMPersister
 from pybirales.pipeline.modules.readers.raw_data_reader import RawDataReader
 from pybirales.pipeline.modules.receivers.receiver import Receiver
-from pybirales.pipeline.modules.terminator import Terminator
-from pybirales.pipeline.modules.generator import DummyDataGenerator
 from pybirales.pipeline.modules.rso_simulator import RSOGenerator
+from pybirales.pipeline.modules.terminator import Terminator
 
 AVAILABLE_PIPELINES_BUILDERS = ['detection_pipeline',
                                 'correlation_pipeline',
                                 'standalone_pipeline', 'test_receiver_pipeline', 'dummy_data_pipeline',
-                                'rso_generator_pipeline']
+                                'rso_generator_pipeline', 'raw_data_truncator_pipeline']
 
 
 def get_builder_by_id(builder_id):
@@ -50,6 +50,8 @@ def get_builder_by_id(builder_id):
         return DummyDataPipelineMangerBuilder()
     elif builder_id == 'rso_generator_pipeline':
         return RSOGeneratorPipelineMangerBuilder()
+    elif builder_id == 'raw_data_truncator_pipeline':
+        return DataTruncatorPipelineMangerBuilder()
 
 
 class PipelineManagerBuilder:
@@ -309,7 +311,6 @@ class RSOGeneratorPipelineMangerBuilder(PipelineManagerBuilder):
         pfb = PFB(settings.channeliser, beamformer.output_blob)
         preprocessor = PreProcessor(settings.detection, pfb.output_blob)
         raw_fits_persister = RawDataFitsPersister(settings.fits_persister, preprocessor.output_blob)
-        terminator = Terminator(None, raw_fits_persister.output_blob)
 
         # Add modules to pipeline manager
         self.manager.add_module("receiver", receiver)
@@ -317,4 +318,43 @@ class RSOGeneratorPipelineMangerBuilder(PipelineManagerBuilder):
         self.manager.add_module("pfb", pfb)
         self.manager.add_module("preprocessor", preprocessor)
         self.manager.add_module("raw_fits_persister", raw_fits_persister)
+
+        if settings.manager.detector_enabled:
+            filtering = Filter(settings.detection, raw_fits_persister.output_blob)
+            detector = Detector(settings.detection, filtering.output_blob)
+            terminator = Terminator(None, detector.output_blob)
+
+            self.manager.add_module("filtering", filtering)
+            self.manager.add_module("detector", detector)
+        else:
+            terminator = Terminator(None, raw_fits_persister.output_blob)
+
+        self.manager.add_module("terminator", terminator)
+
+
+class DataTruncatorPipelineMangerBuilder(PipelineManagerBuilder):
+    def __init__(self):
+        PipelineManagerBuilder.__init__(self)
+
+        self.manager.name = 'Raw Data truncator Pipeline'
+
+        self._id = 'raw_data_truncator_pipeline_builder'
+
+    def build(self):
+        """
+        This script runs the test receiver pipeline,
+        using the specified CONFIGURATION.
+        """
+        # Generate and equal number of antennas and beams
+
+
+        receiver = RawDataReader(settings.rawdatareader)
+        self.manager.name += ' (Offline)'
+
+        persister = RawPersister(settings.rawpersister, receiver.output_blob)
+        terminator = Terminator(None, persister.output_blob)
+
+        # Add modules to pipeline manager
+        self.manager.add_module("receiver", receiver)
+        self.manager.add_module("persister", persister)
         self.manager.add_module("terminator", terminator)

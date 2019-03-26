@@ -48,7 +48,7 @@ class RawDataReader(ProcessingModule):
         # Load the data file
         try:
             self._f = open(self._filepath, 'rb')
-            # self._f.seek(self._nsamp * self._nants * 8 * 10)
+            # self._f.seek(self._nsamp * self._nants * 8 * 69)
             log.info('Using raw data in: {}'.format(self._filepath))
         except IOError:
             log.error('Data not found in %s. Exiting.', self._filepath)
@@ -94,6 +94,9 @@ class RawDataReader(ProcessingModule):
         :param output_data:
         :return:
         """
+
+        # if self._read_count == 20:
+        #     raise BIRALESObservationException("Observation finished")
 
         data = self._f.read(self._nsamp * self._nants * 8)
 

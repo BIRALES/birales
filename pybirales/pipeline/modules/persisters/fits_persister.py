@@ -81,6 +81,8 @@ class FitsPersister(ProcessingModule):
         if self._iter_count < 1:
             return
 
+        # print obs_info['start_center_frequency'], obs_info['start_center_frequency'] + obs_info['channel_bandwidth'] * 8192
+
         self._fits_filepath = self._get_filepath(int(np.floor(self._iter_count / self._chuck_size)))
 
         # Append data to the body of the fits file

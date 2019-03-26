@@ -175,3 +175,24 @@ def rso_generator_pipeline(ctx, config_file_path):
 
     om = ObservationManager()
     om.run(observation)
+
+
+@pipelines.command(short_help='Run the Data truncator Pipeline')
+@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+              help='The BIRALES configuration file', multiple=True)
+@click.pass_context
+def data_truncator_pipeline(ctx, config_file_path):
+    """
+    Run the Data truncator Pipeline
+
+    :param config_file_path: The default configuration file to be used.
+    :return:
+    """
+
+    observation = ScheduledObservation(name=ctx.obj['observation']['name'],
+                                       pipeline_name='raw_data_truncator_pipeline',
+                                       config_file=config_file_path,
+                                       config_parameters=ctx.obj)
+
+    om = ObservationManager()
+    om.run(observation)
