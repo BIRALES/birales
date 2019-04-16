@@ -78,8 +78,8 @@ class FitsPersister(ProcessingModule):
         """
 
         # Skip the first blob
-        if self._iter_count < 1:
-            return
+        # if self._iter_count < 1:
+        #     return
 
         # print obs_info['start_center_frequency'], obs_info['start_center_frequency'] + obs_info['channel_bandwidth'] * 8192
 
@@ -128,9 +128,9 @@ class FitsPersister(ProcessingModule):
         :return:
         """
         header = fits.Header()
-        header.set('OBSERVATION', observation_name)
-        header.set('START_FREQ', obs_info['start_center_frequency'])
-        header.set('CHANNEL_BANDWIDTH', obs_info['channel_bandwidth'])
+        header.set('OBS', observation_name)
+        header.set('S_FREQ', obs_info['start_center_frequency'])
+        header.set('CHL_BAND', obs_info['channel_bandwidth'])
         header.set('DATE', obs_info['timestamp'].isoformat())
         header.set('NSAMP', obs_info['nsamp'])
         header.set('TX', obs_info['transmitter_frequency'])

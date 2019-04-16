@@ -99,8 +99,8 @@ class DummyDataGenerator(ProcessingModule):
         obs_info['nsamp'] = self._nsamp
         obs_info['nants'] = self._nants
         obs_info['npols'] = self._npols
-        obs_info['channel_bandwidth'] = 0.1
-        obs_info['start_center_frequency'] = 400.
+        obs_info['start_center_frequency'] = settings.observation.start_center_frequency
+        obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
 
         logging.debug("Input data: %s", np.sum(input_data))
         logging.debug("Output data: %s shape: %s", np.sum(output_data), output_data.shape)

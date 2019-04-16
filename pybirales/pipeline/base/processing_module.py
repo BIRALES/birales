@@ -142,7 +142,7 @@ class ProcessingModule(Module):
 
     def __init__(self, config, input_blob):
         super(ProcessingModule, self).__init__(config, input_blob)
-        self._iter_count = 0
+        self._iter_count = 1
         logging.info('Initialised the %s module', self.__class__.__name__)
 
     @abstractmethod
