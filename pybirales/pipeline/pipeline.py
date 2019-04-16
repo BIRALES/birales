@@ -264,7 +264,7 @@ class DummyDataPipelineMangerBuilder(PipelineManagerBuilder):
         using the specified CONFIGURATION.
         """
         # Generate and equal number of antennas and beams
-        scaling = 128
+        scaling = 32
 
         # Change the number of antennas
         settings.generator.nants = scaling
