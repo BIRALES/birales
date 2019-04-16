@@ -91,7 +91,9 @@ class NotificationsListener(Listener):
     def handle(self, data):
         if data['type'] == 'message':
             # Send notifications to Slack
-            log.debug('{} listener received a message on #notifications'.format(self.name))
+            log.debug('{} listener received a message on #{}'.format(self.name, data['channel']))
+            if data['channel'] != 'slack_notifications':
+                log.warning('Received on %s', data['channel'])
             msg = self._get_message(data['data'])
 
             request_body = dict(channel=self.channel, text=self._format_msg(msg))

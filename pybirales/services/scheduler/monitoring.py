@@ -4,7 +4,7 @@ import sys
 from pybirales.events.events import InvalidObservationEvent, ObservationScheduledEvent, ObservationDeletedEvent, \
     SystemErrorEvent
 from pybirales.events.publisher import publish
-from pybirales.repository.message_broker import pub_sub
+from pybirales.repository.message_broker import pub_sub, broker
 from pybirales.repository.models import Observation
 from pybirales.services.scheduler.exceptions import InvalidObservationException
 
@@ -19,13 +19,16 @@ def obs_listener_worker(scheduler):
     :param scheduler:
     :return:
     """
-
+    pub_sub = broker.pubsub()
     # Subscribe to the observations channels (create and delete)
     channels = [OBS_CREATE_CHL, OBS_DEL_CHL]
     pub_sub.subscribe(channels)
 
     log.info('Scheduler listening on `{}` for new observations'.format(OBS_CREATE_CHL))
     for message in pub_sub.listen():
+        if message['channel'] not in channels:
+            continue
+
         if message['data'] == 'KILL':
             if message['channel'] in channels:
                 log.info('KILL Received. Scheduled observations listener un-subscribed from {}'.format(OBS_CREATE_CHL))

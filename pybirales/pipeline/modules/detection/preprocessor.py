@@ -17,9 +17,9 @@ class PreProcessor(ProcessingModule):
 
         self.counter = 0
 
-        self.channel_noise = np.empty(shape=(32, 8192, settings.detection.n_noise_samples)) * np.nan
+        self.channel_noise = np.zeros(shape=(32, 8192, settings.detection.n_noise_samples))
 
-        self.channel_noise_std = np.empty(shape=(32, 8192, settings.detection.n_noise_samples)) * np.nan
+        self.channel_noise_std = np.zeros(shape=(32, 8192, settings.detection.n_noise_samples))
 
         self._observation = None
 
@@ -31,7 +31,10 @@ class PreProcessor(ProcessingModule):
         self.name = "PreProcessor"
 
     def _get_noise_estimation(self, power_data, iter_count):
+        import warnings
+        # warnings.filterwarnings('error')
         if self.counter < settings.detection.n_noise_samples:
+
             self.channel_noise[:, :, iter_count] =  np.sqrt(np.mean(np.power(power_data,2), axis=2))
             self.channel_noise_std[:, :, iter_count] = np.std(self.channel_noise[:, :, iter_count])
 
@@ -48,8 +51,8 @@ class PreProcessor(ProcessingModule):
         """
 
         # Skip the first blob
-        if self._iter_count < 1:
-            return
+        # if self._iter_count < 1:
+        #     return
 
         # Process only 1 polarisation
         data = input_data[0, :, :, :]
@@ -90,17 +93,19 @@ class PreProcessor(ProcessingModule):
 
         return obs_info
 
-    @staticmethod
-    def _power(data):
+    # @staticmethod
+    def _power(self, data):
         """
         Calculate the power from the input data
         :param data:
         :return:
         """
-        power = np.power(np.abs(data), 2.0)
+        power = np.power(np.abs(data), 2.0) + 0.00000000000001
 
         # Convert to dB
         return 10*np.log10(power)
+
+
 
     @staticmethod
     def _rms(data):

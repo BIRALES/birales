@@ -123,8 +123,8 @@ class Beamformer(ProcessingModule):
         return obs_info
 
     def stop(self):
-        logging.info('Stopping %s module', self.name)
         self._stop.set()
+        logging.info('{} module stop flag set'.format(self.name))
 
 
 class Pointing(object):

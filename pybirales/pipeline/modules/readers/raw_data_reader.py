@@ -48,7 +48,7 @@ class RawDataReader(ProcessingModule):
         # Load the data file
         try:
             self._f = open(self._filepath, 'rb')
-            # self._f.seek(self._nsamp * self._nants * 8 * 69)
+            # self._f.seek(self._nsamp * self._nants * 8 * 100)
             log.info('Using raw data in: {}'.format(self._filepath))
         except IOError:
             log.error('Data not found in %s. Exiting.', self._filepath)
@@ -111,7 +111,8 @@ class RawDataReader(ProcessingModule):
         except ValueError:
             # Sleep the thread before calling a no data - wait for the other modules to finish
             # todo - this could be handled better
-            time.sleep(20)
+            # time.sleep(20)
+
             raise BIRALESObservationException("Observation finished")
 
         output_data[:] = data

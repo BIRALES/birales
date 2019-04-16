@@ -18,15 +18,24 @@ BIRALES_STATUS_CHL = 'birales_system_status'
 
 
 def pipeline_status_worker(kill_pill):
+    pub_sub = broker.pubsub()
     pub_sub.subscribe(PIPELINE_CTL_CHL)
     log.debug('Listening on #%s for messages', PIPELINE_CTL_CHL)
-    for message in pub_sub.listen():
-        if message['data'] == 'KILL' and message['channel'] == PIPELINE_CTL_CHL:
-            log.info('KILL received on #{}. Killing pipeline'.format(PIPELINE_CTL_CHL))
+
+    for item in pub_sub.listen():
+        if item['type'] == 'message':
+            if item['data'] == 'KILL':
+                log.info('KILL received on #{}. Killing pipeline'.format(PIPELINE_CTL_CHL))
+
+                pub_sub.unsubscribe(PIPELINE_CTL_CHL)
+        elif item['type'] == 'unsubscribe':
+            log.debug('Un-subscribed from #%s', item['channel'])
             kill_pill.set()
             break
-
-        # here you can add other functionality that controls the pipeline (such as reload config)
+        elif item['type'] == 'subscribe':
+            log.debug('Subscribed to #%s', item['channel'])
+        else:
+            log.warning('Could not handle the following message: %s', item)
 
     log.info('Pipeline status monitoring thread terminated')
 
@@ -112,17 +121,13 @@ class PipelineManager(object):
             self.wait_pipeline(duration=duration)
 
         except NoDataReaderException as exception:
-            logging.info('Data finished'.format(exception))
-            self.stop_pipeline()
+
             observation.model.status = 'finished'
         except KeyboardInterrupt:
             log.warning('Keyboard interrupt detected. Stopping the pipeline')
-            self.stop_pipeline()
             observation.model.status = 'stopped'
         except Exception as exception:
             logging.exception('Pipeline error: %s', exception.__class__.__name__)
-            # An error occurred, force stop all modules
-            self.stop_pipeline()
             observation.model.status = 'error'
         else:
             logging.info('Pipeline stopped without error')
@@ -130,6 +135,8 @@ class PipelineManager(object):
         finally:
             observation.model.date_time_end = datetime.datetime.utcnow()
             observation.save()
+
+            self.stop_pipeline()
 
     def stop_pipeline(self):
         """ Stop pipeline (one at a time) """
@@ -161,11 +168,13 @@ class PipelineManager(object):
             stats.save(profiling_file_path, type='callgrind')
 
         # kill listener thread
+        log.debug('trying to kill pipeline %s', PIPELINE_CTL_CHL)
         broker.publish(PIPELINE_CTL_CHL, 'KILL')
 
     def is_module_stopped(self):
         for module in self._modules:
             if module.is_stopped:
+                log.debug('Module {} has stopped'.format(module.name))
                 return True
         return False
 
@@ -200,17 +209,18 @@ class PipelineManager(object):
             # If one module stops without setting the stop bit (such as through a signal
             # handler, stop all the pipeline
             if self.is_module_stopped():
-                self.stop_pipeline()
+                # self.stop_pipeline()
                 break
 
             # If all modules have stopped, we are ready
             elif self.all_modules_stopped():
+                log.debug('All modules are stopped')
                 break
 
             # If the observation duration has elapsed stop pipeline
             elif duration and (now - start_time).seconds > duration:
                 logging.info("Observation run for the entire duration ({}s), stopping pipeline".format(duration))
-                self.stop_pipeline()
+                # self.stop_pipeline()
                 break
 
             else:
@@ -231,4 +241,4 @@ class PipelineManager(object):
                 # Suspend the loop for a short time
                 time.sleep(1)
 
-        self.stop_pipeline()
+        # self.stop_pipeline()

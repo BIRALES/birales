@@ -51,6 +51,12 @@ class Detector(ProcessingModule):
         :param obs_info:
         :return:
         """
+
+        # print obs_info['start_center_frequency']
+        # print obs_info['start_center_frequency'] + obs_info['channel_bandwidth'] * obs_info['nchans']
+        # print obs_info['channel_bandwidth']
+        # print obs_info['nchans']
+
         if self._doppler_mask is None:
             self.channels = np.arange(obs_info['start_center_frequency'],
                                       obs_info['start_center_frequency'] + obs_info['channel_bandwidth'] * obs_info[
@@ -231,6 +237,8 @@ class Detector(ProcessingModule):
 
         # Output a TDM for the tracks that have transitted outside the telescope's FoV
         obs_info['transitted_tracks'] = [c for c in candidates if c not in self._candidates]
+
+        # print 'Detector {:0.4f}'.format(obs_info['sampling_time'])
 
         return obs_info
 

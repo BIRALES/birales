@@ -196,11 +196,10 @@ class ProcessingModule(Module):
 
                 if res is not None:
                     obs_info = res
-            except NoDataReaderException:
-                logging.info("Data finished")
-                self.stop()
+            # except NoDataReaderException:
+            #     logging.info("Data finished")
+            #     self.stop()
             except BIRALESObservationException:
-                logging.info("Data finished")
                 self.stop()
             except OSError:
                 log.exception("An OS exception has occurred. Stopping the pipeline")
@@ -213,6 +212,7 @@ class ProcessingModule(Module):
             # Release reader lock
             if self._input is not None:
                 self._input.release_read()
+
 
             # A short sleep to force a context switch (since locks do not force one)
             time.sleep(0.001)
