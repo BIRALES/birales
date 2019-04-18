@@ -1,10 +1,11 @@
 import datetime
 import json
 import logging as log
+import os
 import signal
 import threading
 import time
-import os
+
 import humanize
 import pytz
 
@@ -16,10 +17,6 @@ from pybirales.services.scheduler.exceptions import IncorrectScheduleFormat, Inv
 from pybirales.services.scheduler.monitoring import obs_listener_worker
 from pybirales.services.scheduler.observation import ScheduledObservation, ScheduledCalibrationObservation
 from pybirales.services.scheduler.schedule import Schedule
-
-
-# from mem_top import mem_top
-# from pympler import tracker
 
 
 class ObservationsScheduler:
@@ -71,6 +68,13 @@ class ObservationsScheduler:
             raise IncorrectScheduleFormat(schedule_file_path)
 
     def _mock_obs(self):
+        """
+
+        :return:
+        """
+
+        log.info("injecting obs")
+        time.sleep(1)
 
         root_dir = os.path.join(os.environ['HOME'], '.birales')
         config_parameters = {
@@ -112,10 +116,6 @@ class ObservationsScheduler:
         # Start the monitoring thread
         self._obs_thread.start()
 
-        log.info("injecting obs")
-        time.sleep(1)
-        self._mock_obs()
-
         # Start the scheduler
         self.run()
 
@@ -154,11 +154,7 @@ class ObservationsScheduler:
 
                     else:
                         # Run the observation using the observation manager
-                        # self.tr.print_diff()
                         om.run(next_observation)
-                        # self.tr.print_diff()
-
-                    # log.debug(mem_top())  # Or just print().
 
             if counter % self.MONITORING_FREQ == 0:
                 self._monitoring_message(now, pending_observations)
@@ -185,7 +181,6 @@ class ObservationsScheduler:
     def _monitoring_message(self, now, pending_observations):
         if len(pending_observations) < 1:
             log.info('No queued observations.')
-            log.debug('Active threads {}'.format(self._get_active_threads()))
         else:
             log.info('There are %s observation queued. Next observation: %s', len(pending_observations),
                      pending_observations[0].name)
@@ -218,9 +213,10 @@ class ObservationsScheduler:
         # Stop listening for new observations
         broker.publish(self.OBSERVATIONS_CHL, 'KILL')
 
-        #
+        # Stop the Pipeline control thread
         broker.publish('birales_pipeline_control', 'KILL')
 
+        # Stop the slack notifications thread
         broker.publish('slack_notifications', 'KILL')
 
         # stop monitoring thread
