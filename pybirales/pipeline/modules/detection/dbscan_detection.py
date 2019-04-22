@@ -110,6 +110,7 @@ def partition_input_data(input_data, channel_noise, beam_id):
     # snr = 10 * np.log10(snr)
     snr[np.isnan(snr)] = 0.
 
+    # print 'SNR Shape:',np.shape(snr)
     # Select the data points that are non-zero
     ndx = np.where(snr > 0)
 
@@ -138,6 +139,7 @@ def dbscan_clustering(beam_ndx, snr_data):
 
     # Cluster mask to remove noise clusters
     denoise_mask = labelled_data[:, 2] > -1
+
 
     # Select only those labels which were not classified as noise was(-1)
     return labelled_data[denoise_mask], snr_data[denoise_mask]

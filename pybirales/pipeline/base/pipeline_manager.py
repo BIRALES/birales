@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 
 from pybirales import settings
 from pybirales.pipeline.base.definitions import NoDataReaderException
-from pybirales.repository.message_broker import pub_sub, broker
+from pybirales.repository.message_broker import broker
 
 PIPELINE_CTL_CHL = 'birales_pipeline_control'
 BIRALES_STATUS_CHL = 'birales_system_status'
@@ -121,7 +121,6 @@ class PipelineManager(object):
             self.wait_pipeline(duration=duration)
 
         except NoDataReaderException as exception:
-
             observation.model.status = 'finished'
         except KeyboardInterrupt:
             log.warning('Keyboard interrupt detected. Stopping the pipeline')
@@ -139,16 +138,25 @@ class PipelineManager(object):
             self.stop_pipeline()
 
     def stop_pipeline(self):
-        """ Stop pipeline (one at a time) """
+        """
+        Stop pipeline (one at a time)
+
+        :return:
+        """
+
         self._stop.set()
         # Loop over all modules
         for module in self._modules:
             # Stop module
             module.stop()
 
+            a_threads = []
             for t in threading.enumerate():
                 if t.isAlive():
-                    log.warning('Thread %s is alive', t.getName())
+                    a_threads.append(t.getName())
+
+            if a_threads:
+                log.warning('Running threads: %s', ', '.join(a_threads))
 
             # Try to kill it several time, otherwise skip (will be killed when main process exists)
             tries = 0

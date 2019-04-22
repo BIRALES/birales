@@ -20,8 +20,8 @@ class RSOSignature(object):
         self._start_freq = settings.observation.transmitter_frequency * 1e6 - doppler_shift
         self._end_freq = self._start_freq + doppler_gradient * track_length
 
-        # self._start_freq += 35500 +133+50
-        # self._end_freq += 35500 +133+50
+        self._start_freq += 35500 +133+50
+        self._end_freq += 35500 +133+50
 
         self.nsamp = settings.rso_generator.nsamp
 

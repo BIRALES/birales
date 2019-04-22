@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import datetime
 import logging as log
 
@@ -78,7 +80,7 @@ class SpaceDebrisTrack:
         self.data = pd.DataFrame(columns=['time_sample', 'channel_sample', 'time', 'channel', 'snr', 'beam_id'])
 
         # The median doppler shift and corresponding timestamp (to be used as reference)
-        self.ref_data = {'doppler': None, 'time': None}
+        self.ref_data = {'doppler': 0.0, 'time': None, 'gradient': 0.0, 'snr': 0.0}
 
         self.m_timestamp = None
 
@@ -149,9 +151,27 @@ class SpaceDebrisTrack:
 
         mid = self.data['channel'].size / 2
         self.ref_data['time'] = self.data.iloc[mid]['time']
+        self.ref_data['time_sample'] = self.data.iloc[mid]['time_sample']
+        self.ref_data['channel'] = self.data.iloc[mid]['channel']
+        self.ref_data['channel_sample'] = self.data.iloc[mid]['channel_sample']
         self.ref_data['doppler'] = (self.data.iloc[mid]['channel'] - self._obs_info['transmitter_frequency']) * 1e6
+        self.ref_data['gradient'] = 1e6 * (self.data['channel'].iloc[0] - self.data['channel'].iloc[-1]) / (
+                self.data['time'].iloc[0] - self.data['time'].iloc[-1]).total_seconds()
+        self.ref_data['snr'] = self.data.iloc[mid]['snr']
 
         self._to_save = True
+
+    def state_str(self):
+        return "df:{:3.5f} Hz, df/dt:{:3.5f} Hz/s at {:%y:%M:%d %H:%M:%S.%f} and SNR: {:2.3f} dB, " \
+               "(C: {}, T:{}, f:{:2.5f} MHz)".format(
+            self.ref_data['doppler'],
+            self.ref_data['gradient'],
+            self.ref_data['time'],
+            self.ref_data['snr'],
+            self.ref_data['channel_sample'],
+            self.ref_data['time_sample'],
+            self.ref_data['channel']
+        )
 
     def _fit(self, x, y):
         """
@@ -270,6 +290,8 @@ class SpaceDebrisTrack:
             'ref_data': {
                 'd': self.ref_data['doppler'],
                 't': self.ref_data['time'],
+                'g': self.ref_data['gradient'],
+                's': self.ref_data['snr'],
             },
             'data': {
                 'time': self.data['time'].tolist(),

@@ -67,7 +67,8 @@ class Detector(ProcessingModule):
             self._doppler_mask = np.bitwise_and(self.channels < b, self.channels > a)
 
             if settings.detection.enable_doppler_window:
-                self.channels = self.channels[self._doppler_mask]
+                # self.channels = self.channels[self._doppler_mask]
+                pass
             else:
                 # Select all channels
                 self._doppler_mask = False
@@ -156,6 +157,9 @@ class Detector(ProcessingModule):
         log.info('Result: {} tracks have transitted. {} tracks are currently in detection window.'.format(
             len(self._candidates) - len(temp_candidates), len(temp_candidates)))
 
+        for i, candidate in enumerate(self._candidates):
+            log.info("RSO %d: %s", i+1, candidate.state_str())
+
         return temp_candidates
 
     def _pre_process(self, input_data, obs_info):
@@ -168,15 +172,19 @@ class Detector(ProcessingModule):
         channels, doppler_mask = self._apply_doppler_mask(obs_info)
         channel_noise = obs_info['channel_noise']
 
+        # Ignore channels which are beyond the doppler window
         if settings.detection.enable_doppler_window:
-            input_data = input_data[:, doppler_mask, :]
-            channel_noise = channel_noise[:, doppler_mask]
+            input_data[:, ~doppler_mask, :] = 0
+            # channel_noise = channel_noise[:, doppler_mask]
 
-        log.info('Using {} out of {} channels ({:0.3f} MHz to {:0.3f} MHz).'.format(channel_noise.shape[1],
-                                                                                    obs_info['nchans'],
-                                                                                    channels[0],
-                                                                                    channels[-1]
-                                                                                    ))
+            # input_data = input_data[:, doppler_mask, :]
+            # channel_noise = channel_noise[:, doppler_mask]
+
+        # log.info('Using {} out of {} channels ({:0.3f} MHz to {:0.3f} MHz).'.format(channel_noise.shape[1],
+        #                                                                             obs_info['nchans'],
+        #                                                                             channels[0],
+        #                                                                             channels[-1]
+        #                                                                             ))
 
         return input_data, channels, channel_noise
 
