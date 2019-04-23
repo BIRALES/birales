@@ -12,29 +12,26 @@ from pybirales.pipeline.base.processing_module import ProcessingModule
 import datetime
 
 
-def create_corr_matrix_filepath(timestamp):
+def create_corr_matrix_filepath():
     """
     Return the file path of the persisted data
 
     :param timestamp:
     :return:
     """
-    root_dir = settings.persisters.directory
-    # if settings.observation.type == 'calibration':
-    #     root_dir = os.path.join(os.environ['HOME'], settings.calibration.tmp_dir)
-    now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
-    if timestamp:
-        now = timestamp
-    # Create directory if it doesn't exist
-    directory = os.path.join(root_dir, '{:%Y_%m_%d}'.format(now),
-                             settings.observation.name)
-    filename = '{}_{}.h5'.format(settings.observation.name, settings.corrmatrixpersister.filename_suffix)
 
-    # Create directory if it doesn't exist
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    if settings.corrmatrixpersister.corr_matrix_filepath:
+        corr_matrix_filepath = settings.corrmatrixpersister.corr_matrix_filepath
+    else:
+        now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+        basedir = os.path.join(settings.persisters.directory, '{:%Y_%m_%d}'.format(now),
+                               settings.observation.name)
+        corr_matrix_filepath = os.path.join(basedir, settings.observation.name + '__corr.h5')
 
-    return os.path.join(directory, filename)
+        if not os.path.exists(basedir):
+            os.makedirs(basedir)
+
+    return corr_matrix_filepath
 
 
 class CorrMatrixPersister(ProcessingModule):
@@ -140,7 +137,7 @@ class CorrMatrixPersister(ProcessingModule):
         # If first time running, create and initialise file
         if self._counter == 0:
             # Write the observation data file
-            self._filepath = create_corr_matrix_filepath(obs_info['timestamp'])
+            self._filepath = create_corr_matrix_filepath()
             self._create_hdf5_file(self._filepath, obs_info)
 
             # Write header file

@@ -1,5 +1,7 @@
 import logging as log
 import os
+
+from pybirales import settings
 from pybirales.base.controller import BackendController, InstrumentController
 from pybirales.birales_config import BiralesConfig
 from pybirales.events.events import ObservationStartedEvent, ObservationFinishedEvent, CalibrationRoutineStartedEvent, \
@@ -7,11 +9,14 @@ from pybirales.events.events import ObservationStartedEvent, ObservationFinished
 from pybirales.events.publisher import publish
 from pybirales.pipeline.base.definitions import CalibrationFailedException
 from pybirales.pipeline.base.definitions import PipelineError, BEST2PointingException
+from pybirales.pipeline.modules.persisters.corr_matrix_persister import create_corr_matrix_filepath
 from pybirales.pipeline.pipeline import get_builder_by_id, CorrelatorPipelineManagerBuilder
 from pybirales.services.calibration.calibration import CalibrationFacade
 from pybirales.services.post_processing.processor import PostProcessor
 from pybirales.services.scheduler.exceptions import SchedulerException
-from pybirales.pipeline.modules.persisters.corr_matrix_persister import create_corr_matrix_filepath
+import datetime
+import pytz
+
 
 class ObservationManager:
 
@@ -156,7 +161,16 @@ class CalibrationObservationManager(ObservationManager):
             self.calibration_dir = os.path.dirname(correlation_matrix_filepath)
             self.corr_matrix_filepath = correlation_matrix_filepath
         else:
-            self.calibration_dir, self.corr_matrix_filepath = self._calibration_facade.get_calibration_filepath()
+
+            if settings.manager.offline:
+                # if offline calibration
+                self.calibration_dir = os.path.dirname(settings.rawdatareader.filepath)
+                self.corr_matrix_filepath = os.path.join(self.calibration_dir, observation.name + '__corr.h5')
+            else:
+                # if online calibration
+
+                self.corr_matrix_filepath =  create_corr_matrix_filepath()
+                self.calibration_dir = os.path.dirname(self.corr_matrix_filepath)
 
         new_options = {'observation': {'type': 'calibration'}, 'corrmatrixpersister':
             {'corr_matrix_filepath': self.corr_matrix_filepath}}
@@ -208,8 +222,7 @@ class CalibrationObservationManager(ObservationManager):
         else:
             publish(ObservationFinishedEvent(observation.name, observation.pipeline_name))
 
-
-            return create_corr_matrix_filepath(observation.created_at)
+            return self.corr_matrix_filepath
         return None
 
     def run(self, observation, corr_matrix_filepath=None):
@@ -260,6 +273,8 @@ class CalibrationObservationManager(ObservationManager):
         try:
             real, imag, fringe_image = self._calibration_facade.calibrate(self.calibration_dir, corr_matrix_filepath)
         except IOError as e:
+            raise CalibrationFailedException(e)
+        except IndexError as e:
             raise CalibrationFailedException(e)
         else:
             observation.model.real = real.tolist()
