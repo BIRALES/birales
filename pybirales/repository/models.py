@@ -77,6 +77,7 @@ class CalibrationObservation(BIRALESObservation):
     type = StringField(default='calibration')
     real = ListField()
     imag = ListField()
+    fringe_image = StringField()
 
 
 class Observation(BIRALESObservation):

@@ -1,6 +1,7 @@
 import logging as log
 import json
 import socket
+import os
 
 STATUS_TYPE = [
     'info',
@@ -233,7 +234,7 @@ class CalibrationRoutineFinishedEvent(Event):
     channels = ['notifications', 'slack_notifications']
     description = 'Calibration coefficients generated'
 
-    def __init__(self, obs_name, coeffs_dir):
+    def __init__(self, obs, coeffs_dir):
         """
         :param coeffs_dir: The filepath were the calibration coefficients will be generated
         :param obs_name: The name of the observation
@@ -243,8 +244,13 @@ class CalibrationRoutineFinishedEvent(Event):
 
         Event.__init__(self)
 
-        msg = 'The `{}` observation\'s calibration coefficients were generated at {}'.format(obs_name, coeffs_dir)
+        msg = 'The `{}` observation\'s calibration coefficients were generated at {}'.format(obs.name, coeffs_dir)
         self.payload['body'] = msg
+
+        if obs.model.fringe_image:
+            if os.path.exists(obs.model.fringe_image):
+                attachments = [{"title": "Calibration validation", "filepath": obs.model.fringe_image}]
+                self.payload['images'] = attachments
 
         log.debug(self.payload['body'])
 
@@ -415,7 +421,6 @@ class TrackTransittedEvent(Event):
         log.info(self.payload['body'])
 
 
-
 class CalibrationObservationFailedEvent(Event):
     """
     Event representing a calibration observation that failed.
@@ -441,6 +446,7 @@ class CalibrationObservationFailedEvent(Event):
         self.payload['body'] = 'Calibration observation {} failed. {}'.format(observation.name, reason)
 
         log.exception(self.payload['body'])
+
 
 class TDMCreatedEvent(Event):
     """

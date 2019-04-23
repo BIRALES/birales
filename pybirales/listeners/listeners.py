@@ -76,6 +76,7 @@ class NotificationsListener(Listener):
 
         self._channels += ['slack_notifications']
         self.api_end_point = 'chat.postMessage'
+        self.api_end_point_upload = 'files.upload'
         self.channel = '#birales'
 
         try:
@@ -97,10 +98,22 @@ class NotificationsListener(Listener):
             msg = self._get_message(data['data'])
 
             request_body = dict(channel=self.channel, text=self._format_msg(msg))
+
             response = self.slack_client.api_call(
                 self.api_end_point,
                 **request_body
             )
+
+            if 'images' in msg:
+                for image in msg['images']:
+                    if os.path.exists(image['filepath']):
+                        with open(image['filepath']) as file_content:
+                            response = self.slack_client.api_call(
+                                self.api_end_point_upload,
+                                   channels=self.channel,
+                                    file=file_content,
+                                    title=image['title']
+                            )
 
             if response['ok']:
                 log.debug('Slack message was sent successfully')

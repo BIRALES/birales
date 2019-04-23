@@ -135,7 +135,7 @@ class CalibrationObservationManager(ObservationManager):
         """
 
         """
-        self._calibration_facade = None
+        self._calibration_facade = CalibrationFacade()
 
         ObservationManager.__init__(self)
 
@@ -150,7 +150,7 @@ class CalibrationObservationManager(ObservationManager):
         # Call the parent's pre_process function
         self._pre_process(observation)
 
-        self._calibration_facade = CalibrationFacade(correlation_matrix_filepath)
+        # self._calibration_facade = CalibrationFacade(correlation_matrix_filepath)
 
         if correlation_matrix_filepath:
             self.calibration_dir = os.path.dirname(correlation_matrix_filepath)
@@ -236,7 +236,7 @@ class CalibrationObservationManager(ObservationManager):
                 observation.model.status = 'finished'
                 observation.save()
 
-                publish(CalibrationRoutineFinishedEvent(observation.name, self.calibration_dir))
+                publish(CalibrationRoutineFinishedEvent(observation, self.calibration_dir))
         else:
             publish(CalibrationObservationFailedEvent(observation, "Correlation pipeline failed to "
                                                                    "generate a valid correlation matrix"))
@@ -258,10 +258,12 @@ class CalibrationObservationManager(ObservationManager):
 
         # Run the calibration routine
         try:
-            real, imag = self._calibration_facade.calibrate(self.calibration_dir, corr_matrix_filepath)
-        except IOError:
-            raise CalibrationFailedException('Calibration failed')
+            real, imag, fringe_image = self._calibration_facade.calibrate(self.calibration_dir, corr_matrix_filepath)
+        except IOError as e:
+            raise CalibrationFailedException(e)
         else:
             observation.model.real = real.tolist()
             observation.model.imag = imag.tolist()
+            observation.model.fringe_image = fringe_image
+
             observation.save()

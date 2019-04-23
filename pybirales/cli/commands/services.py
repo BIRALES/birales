@@ -6,9 +6,8 @@ import click
 from pybirales.base.observation_manager import CalibrationObservationManager
 from pybirales.birales import BiralesFacade
 from pybirales.birales_config import BiralesConfig
-from pybirales.cli.helpers import update_config
+from pybirales.cli.helpers import enable_notifications
 from pybirales.pipeline.base.definitions import BEST2PointingException
-from pybirales.pipeline.pipeline import CorrelatorPipelineManagerBuilder
 from pybirales.services.calibration.calibration import CalibrationFacade
 from pybirales.services.instrument.backend import Backend
 from pybirales.services.instrument.best2 import BEST2
@@ -32,6 +31,7 @@ def services(ctx):
 @click.option('--corr_matrix', 'corr_matrix_filepath', type=click.Path(exists=True),
               help='The filepath of the correlation matrix')
 @click.pass_context
+@enable_notifications
 def calibration(ctx, config_filepath, name, debug, duration, pointing, corr_matrix_filepath=None):
     if not name:
         name = 'Calibration_Observation'
@@ -57,7 +57,6 @@ def calibration(ctx, config_filepath, name, debug, duration, pointing, corr_matr
     om = CalibrationObservationManager()
 
     om.run(observation=calibration_obs, corr_matrix_filepath=corr_matrix_filepath)
-
 
 
 @services.command()

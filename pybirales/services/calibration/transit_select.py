@@ -32,7 +32,8 @@ class TransitSelect:
     def transit_compute(self):
 
         dec = self.cal_input['pointing_dec']
-        utc_time = datetime.datetime.strptime(self.cal_input['obs_time'], '%Y-%m-%d %H:%M:%S.%f')
+        # utc_time = datetime.datetime.strptime(self.cal_input['obs_time'], '%Y-%m-%d %H:%M:%S.%f')
+        utc_time = self.cal_input['obs_time']
         time = utc_time + datetime.timedelta(hours=1.)
         lat = self.cal_input['latitude']
         lon = self.cal_input['longitude']
@@ -86,6 +87,7 @@ class TransitSelect:
         # Take mean peak
         self.vis_peak = np.int(np.mean(all_peak))
         integration_time = self.cal_input['integration_time']
-        utc_time = datetime.datetime.strptime(self.cal_input['obs_time'], '%Y-%m-%d %H:%M:%S.%f')
-        self.source_transit_time = utc_time + datetime.timedelta(seconds=3600 + (integration_time*self.vis_peak))
+        # utc_time = datetime.datetime.strptime(self.cal_input['obs_time'], '%Y-%m-%d %H:%M:%S.%f')
+        utc_time = self.cal_input['obs_time']
+        self.source_transit_time = utc_time + datetime.timedelta(seconds=3600. + (integration_time*self.vis_peak))
         self.source_transit_time -= datetime.timedelta(microseconds=self.source_transit_time.microsecond)

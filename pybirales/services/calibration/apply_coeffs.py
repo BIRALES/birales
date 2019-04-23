@@ -104,7 +104,8 @@ class CoeffManager:
 
         fringes = fringe_image.FringeImager(transit_file, calib_check_path, no_of_antennas)
         self._logger.info('Plotting fringes before and after calibration')
-        fringes.plotter()
+
+        return fringes.plotter()
 
 
 class CoeffManagerRun:
@@ -130,12 +131,17 @@ class CoeffManagerRun:
         self.coeffs_manager.read_coeffs(coeffs_in)
         self.coeffs_manager.save_coeffs(self.__coeffs_filepath)
 
-        if self.__test_run_check is False:
-            if self.__transit_run is False:
-                self.coeffs_manager.coeffs_apply(vis_in, self.__baseline_no, self.__main_dir, 0)
+        self.__vis_in = vis_in
+
+    def check(self):
+        if not self.__test_run_check:
+            if not self.__transit_run:
+                self.coeffs_manager.coeffs_apply(self.__vis_in, self.__baseline_no, self.__main_dir, 0)
 
             if self.__transit_run is True:
                 self.coeffs_manager.coeffs_apply_transit(self.__obs_file, self.__baseline_no, self.__main_dir,
                                                          self.__calib_check_path, 0)
 
-                self.coeffs_manager.fringe_imager(self.__transit_file, self.__calib_check_path, self.__no_of_antennas)
+                return self.coeffs_manager.fringe_imager(self.__transit_file, self.__calib_check_path, self.__no_of_antennas)
+
+        return None

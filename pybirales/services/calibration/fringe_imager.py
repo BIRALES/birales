@@ -1,6 +1,7 @@
-from matplotlib import pyplot as plt
+import os
+
 import h5py
-import numpy as np
+import matplotlib.pyplot as plt
 
 
 class FringeImager:
@@ -10,6 +11,8 @@ class FringeImager:
         self.vis_original = vis_original
         self.vis_calib = vis_calib
         self.no_of_antennas = no_of_antennas
+
+        self.calibration_check_path = os.path.join(os.path.dirname(vis_calib), 'fringes_check.png')
 
     def plotter(self):
 
@@ -22,21 +25,24 @@ class FringeImager:
             data_calib = data[:]
 
         counter = 0
-        plt.rcParams['xtick.labelsize'] = 8
-        plt.rcParams['ytick.labelsize'] = 8
-        f, axes = plt.subplots(2, sharex='all')
+
+        plt.rcParams["figure.figsize"] = (12, 7.416408)
+        f, (ax1, ax2) = plt.subplots(2, 1, sharex='col')
+
         for i in range(self.no_of_antennas):
             for j in range(i + 1, self.no_of_antennas):
-                axes[0].plot(data_original[:, 0, counter, 0].real, linewidth=0.3)
-                axes[0].set_title('Visibilities Before (Top) and After (Bottom) Calibration')
-                axes[1].plot(data_calib[:, 0, counter, 0].real, linewidth=0.3)
-                axes[1].set_xlabel('Time (sample no. from observation start)', size=9)
-                axes[0].set_ylabel('Amplitude', size=9)
-                axes[1].set_ylabel('Amplitude', size=9)
-                axes[0].set_ylim([-1.0, 1.0])
-                axes[1].set_ylim([-1.0, 1.0])
-
+                ax1.plot(data_original[:, 0, counter, 0].real, linewidth=0.3)
+                ax2.plot(data_calib[:, 0, counter, 0].real, linewidth=0.3)
                 counter += 1
 
-        plt.show()
-        # plt.savefig(self.calib_check_path, dpi=600)
+        ax1.set_title('Uncalibrated')
+        ax1.set_ylabel('Amplitude')
+        ax2.set_title('Calibrated')
+        ax2.set_xlabel('Time sample')
+        ax2.set_ylabel('Amplitude')
+
+        plt.tight_layout()
+        # Save the calibration check image to disk
+        plt.savefig(self.calibration_check_path, dpi=300)
+
+        return self.calibration_check_path

@@ -267,7 +267,15 @@ class AntennaArray(object):
         self._n_antennas = len(positions)
 
         # Convert file data to astropy format, and store lat, lon and height for each antenna
-        self._x = [positions[str(i)][2][0] for i in range(len(positions))]
-        self._y = [positions[str(i)][2][1] for i in range(len(positions))]
-        self._z = [positions[str(i)][2][2] for i in range(len(positions))]
-        self._height = [0 for i in range(len(positions))]
+        positions = np.array(positions)
+        # self._x = [positions[str(i)][2][0] for i in range(len(positions))]
+        # self._y = [positions[str(i)][2][1] for i in range(len(positions))]
+        # self._z = [positions[str(i)][2][2] for i in range(len(positions))]
+        # self._height = [0 for i in range(self._n_antennas)]
+
+        self._x = positions[:, 0].tolist()
+        self._y = positions[:, 1].tolist()
+        self._z = positions[:, 2].tolist()
+        self._height = np.zeros(self._n_antennas).tolist()
+
+
