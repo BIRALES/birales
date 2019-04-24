@@ -20,8 +20,8 @@ class RSOSignature(object):
         self._start_freq = settings.observation.transmitter_frequency * 1e6 - doppler_shift
         self._end_freq = self._start_freq + doppler_gradient * track_length
 
-        self._start_freq += 35500 +133+50
-        self._end_freq += 35500 +133+50
+        self._start_freq += 35500 +133
+        self._end_freq += 35500 +133
 
         self.nsamp = settings.rso_generator.nsamp
 
@@ -39,11 +39,8 @@ class RSOSignature(object):
         self.signal = r + i
         # self.signal *= np.hanning(len(self.signal))
 
-
         self.ts = np.linspace(track_start, track_start + track_length, len(self.signal))
-        print 'ts', np.shape(self.ts), self.ts[1] - self.ts[0], np.shape(self.signal)
-
-
+        # print 'ts', np.shape(self.ts), self.ts[1] - self.ts[0], np.shape(self.signal)
 
         self._started = False
 
@@ -84,7 +81,7 @@ class RSOSignature(object):
 
     def get_signal(self, t0, t1):
 
-        print "Getting signal samples between {:0.3f}s and {:0.3f}s".format(t0, t1)
+        # print "Getting signal samples between {:0.3f}s and {:0.3f}s".format(t0, t1)
         # Get id of the time samples that fall within the t0 and t1. Ie. t0 <= self.ts <= t1
         i = np.where(np.bitwise_and(self.ts >= t0, self.ts <= t1))
 
@@ -98,8 +95,8 @@ class RSOSignature(object):
         n1 = np.max(i)
         min_t_sample = self.ts[n0]
         max_t_sample = self.ts[n1]
-        print "Found {} samples within range. From {} to {}. Time is {} to {}".format(np.shape(i)[1], n0, n1,
-                                                                                      min_t_sample, max_t_sample)
+        # print "Found {} samples within range. From {} to {}. Time is {} to {}".format(np.shape(i)[1], n0, n1,
+        #                                                                               min_t_sample, max_t_sample)
 
         if np.shape(i)[1] == 262144:
             case = 'A'
@@ -116,7 +113,7 @@ class RSOSignature(object):
             start = 0
             stop = np.shape(i)[1]
 
-        print "{}: Putting {} samples within the input blob. From {} to {}. Valid:{}".format(case,np.shape(i)[1], start, stop, (stop-start == np.shape(i)[1]))
+        # print "{}: Putting {} samples within the input blob. From {} to {}. Valid:{}".format(case,np.shape(i)[1], start, stop, (stop-start == np.shape(i)[1]))
         return start, stop, self.signal[i]
 
 
@@ -200,7 +197,7 @@ class RSOGenerator(ProcessingModule):
         if config.tx_snr > 0:
             # tx = RSOSignatureTransmitter(noise_std=mean_noise_power, track_start=3.35, track_length=2, snr=config.tx_snr)
 
-            tx = RSOSignature(noise_std=mean_noise_power, track_start=0, track_length=50, snr=config.tx_snr,
+            tx = RSOSignature(noise_std=mean_noise_power, track_start=0, track_length=150, snr=config.tx_snr,
                          # doppler_shift=42499.49999996261,
                               doppler_shift=0,
                          doppler_gradient=0, modulate=False)
@@ -244,7 +241,7 @@ class RSOGenerator(ProcessingModule):
             start, stop, signal = rso.get_signal(t0=t0, t1=t1)
 
             if np.any(signal):
-                print start, stop, np.shape(signal)
+                # print start, stop, np.shape(signal)
                 data[:, :, start:stop, 15] += signal
 
         output_data[:] = data + self.generate_noise(mean_noise_power=self.mean_noise_power)
@@ -266,7 +263,7 @@ class RSOGenerator(ProcessingModule):
 
         obs_info['rso_tracks'] = self.rso_targets
 
-        print 'RSO Generator {:0.10f} in iteration: {}'.format(obs_info['sampling_time'], self._iter_count)
+        # print 'RSO Generator {:0.10f} in iteration: {}'.format(obs_info['sampling_time'], self._iter_count)
 
         return obs_info
 
