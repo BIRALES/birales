@@ -189,8 +189,64 @@ class Detector(ProcessingModule):
         return input_data, channels, channel_noise
 
     @timeit
-    def _get_clusters(self, input_data, channels, channel_noise, obs_info, iter_counter):
+    def _get_clusters_hough(self, input_data, channels, channel_noise, obs_info, iter_counter):
         """
+        Hough feature detection
+
+        Clustering within the dataset are identified using the Hough transform
+
+        :param input_data:
+        :param channels:
+        :param channel_noise:
+        :param obs_info:
+        :param iter_counter:
+        :return:
+        """
+        pass
+
+    @timeit
+    def _get_clusters_astride(self, input_data, channels, channel_noise, obs_info, iter_counter):
+        """
+        ASTRIDE feature detection
+
+        Clustering within the dataset are identified using the ASTRIDE streak detection algorithm
+
+        :param input_data:
+        :param channels:
+        :param channel_noise:
+        :param obs_info:
+        :param iter_counter:
+        :return:
+        """
+        pass
+
+    @timeit
+    def _get_clusters_msds(self, input_data, channels, channel_noise, obs_info, iter_counter):
+        """
+        Multi-pixel streak detection strategy
+
+        Algorithm combines the beam data across the multi-pixel in order to increase SNR whilst
+        reducing the computational load. Data is transformed such that data points belonging
+        to the same streak, cluster around a common point.  Then, a noise-aware clustering algorithm,
+        such as DBSCAN, can be applied on the data points to identify the candidate tracks.
+
+        :param input_data:
+        :param channels:
+        :param channel_noise:
+        :param obs_info:
+        :param iter_counter:
+        :return:
+        """
+        pass
+
+    @timeit
+    def _get_clusters_naive(self, input_data, channels, channel_noise, obs_info, iter_counter):
+        """
+        Naive algorithm.
+
+        Algorithm uses the DBSCAN algorithm to identify clusters. It iterates over all the beams and considers
+        all the pixels that have a non-zero
+
 
         :param input_data:
         :param channels:
@@ -234,13 +290,13 @@ class Detector(ProcessingModule):
         # Pre-process the input data
         input_data, channels, channel_noise = self._pre_process(input_data, obs_info)
 
-        # Process the input data and identify the detection clusters
-        clusters = self._get_clusters(input_data, channels, channel_noise, obs_info, self._iter_count)
+        # [Feature Extraction] Process the input data and identify the detection clusters
+        clusters = self._get_clusters_naive(input_data, channels, channel_noise, obs_info, self._iter_count)
 
-        # Create new tracks from clusters or merge clusters into existing tracks
+        # [Track Association] Create new tracks from clusters or merge clusters into existing tracks
         candidates = self._aggregate_clusters(self._candidates, clusters, obs_info)
 
-        # Check each track and determine if the detection object has transitted outside FoV
+        # [Track Termination] Check each track and determine if the detection object has transitted outside FoV
         self._candidates = self._active_tracks(candidates, self._iter_count)
 
         # Output a TDM for the tracks that have transitted outside the telescope's FoV
