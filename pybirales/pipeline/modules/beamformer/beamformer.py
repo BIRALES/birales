@@ -145,6 +145,7 @@ class Pointing(object):
         self._start_center_frequency = settings.observation.start_center_frequency
         self._reference_location = config.reference_antenna_location
         self._reference_declination = config.reference_declination
+
         self._pointings = config.pointings
         self._bandwidth = settings.observation.channel_bandwidth
         self._nbeams = config.nbeams
@@ -216,7 +217,7 @@ class Pointing(object):
             self.weights[i, beam, :].real = real
             self.weights[i, beam, :].imag = imag
 
-            # Multiply generated weights with calibration coefficients 
+            # Multiply generated weights with calibration coefficients
             self.weights[i, beam, :] *= self._calib_coeffs
 
     def point_array_birales(self, beam, ref_dec, ha, delta_dec):

@@ -48,7 +48,7 @@ class RawDataReader(ProcessingModule):
         # Load the data file
         try:
             self._f = open(self._filepath, 'rb')
-            self._f.seek(self._nsamp * self._nants * 8 * 1000)
+            # self._f.seek(self._nsamp * self._nants * 8 * 1000)
             log.info('Using raw data in: {}'.format(self._filepath))
         except IOError:
             log.error('Data not found in %s. Exiting.', self._filepath)
@@ -57,6 +57,9 @@ class RawDataReader(ProcessingModule):
         # Load the PKL file
         try:
             self._config = pickle.load(open(self._filepath + config.config_ext, 'rb'))
+
+            # Use the declination that is in the PKL file
+            settings.beamformer.reference_declination = self._config['settings']['beamformer']['reference_declination']
         except IOError:
             log.error('Config PKL file was not found in %s. Exiting.', self._filepath + config.config_ext)
             raise BIRALESObservationException("Config PKL file was not found")
