@@ -174,7 +174,7 @@ class Detector(ProcessingModule):
 
         # Ignore channels which are beyond the doppler window
         if settings.detection.enable_doppler_window:
-            input_data[:, ~doppler_mask, :] = 0
+            input_data[:, ~doppler_mask, :] = -100
             # channel_noise = channel_noise[:, doppler_mask]
 
             # input_data = input_data[:, doppler_mask, :]
@@ -259,6 +259,7 @@ class Detector(ProcessingModule):
         t0 = np.datetime64(obs_info['timestamp'])
         td = np.timedelta64(int(obs_info['sampling_time'] * 1e9), 'ns')
 
+
         # todo - multi-processing is slower than single threaded equivalent
         if settings.detection.multi_proc:
             func = partial(detect, input_data, channels, t0, td, iter_counter, channel_noise)
@@ -284,8 +285,8 @@ class Detector(ProcessingModule):
         obs_info['transitted_tracks'] = []
 
         # Skip the first few blobs (to allow for an accurate noise estimation to be determined)
-        if self._iter_count < 5:
-            return
+        if self._iter_count < 2:
+            return obs_info
 
         # Pre-process the input data
         input_data, channels, channel_noise = self._pre_process(input_data, obs_info)

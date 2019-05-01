@@ -42,7 +42,7 @@ class RemoveBackgroundNoiseFilter(InputDataFilter):
         # threshold = self.std_threshold * std + mean
 
         # Calculate the threshold at which the noise will be clipped
-        t2 = 3 * obs_info['channel_noise_std'] + obs_info['channel_noise']
+        t2 = 2 * obs_info['channel_noise_std'] + obs_info['channel_noise']
 
         log.debug('Noise: {:0.2f} dB, Threshold: {:0.2f} dB'.format(np.mean(obs_info['channel_noise']), np.mean(t2)))
         # re-shape threshold array so to make it compatible with the data
@@ -51,7 +51,7 @@ class RemoveBackgroundNoiseFilter(InputDataFilter):
         t2 = np.expand_dims(t2, axis=2)
 
         # print np.shape(t2), data.shape
-        data[data <= t2] = 0.
+        data[data <= t2] = -100.
 
         # print np.min(data)
 
@@ -74,7 +74,7 @@ class PepperNoiseFilter(InputDataFilter):
         """
         # todo - can this for loop be eliminated?
         for beam_id in range(data.shape[0]):
-            data[beam_id, self._remove_pepper_noise(data[beam_id])] = 0.
+            data[beam_id, self._remove_pepper_noise(data[beam_id])] = -100
 
 
 class RemoveTransmitterChannelFilter(InputDataFilter):
@@ -98,7 +98,7 @@ class RemoveTransmitterChannelFilter(InputDataFilter):
         if settings.detection.filter_transmitter:
             summed = np.sum(data, axis=2)
             peaks_snr_i = np.unique(np.where(summed > np.mean(summed) + np.std(summed) * 5.0)[1])
-            data[:, peaks_snr_i, :] = 0.0
+            data[:, peaks_snr_i, :] = -100
             log.debug('Transmitter frequency filter applied')
 
 
@@ -113,7 +113,7 @@ class Filter(ProcessingModule):
         # The filters to be applied on the data. Filters will be applied in order.
         self._filters = [
             RemoveBackgroundNoiseFilter(std_threshold=4.),
-            RemoveTransmitterChannelFilter(),
+            # RemoveTransmitterChannelFilter(),
             PepperNoiseFilter(),
         ]
 

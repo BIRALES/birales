@@ -60,9 +60,20 @@ class PreProcessor(ProcessingModule):
 
         power_data = self._power(data)
 
-        # Estimate the noise from the data
+        # Estimate the noise from the data (in Watts)
+        channel_noise, channel_noise_std = self._get_noise_estimation(power_data, self.counter)
+
+        # Remove noise from power
+        # power_data = power_data - channel_noise[:, :, np.newaxis]
+
+        # Convert power data to dB
+        power_data = 10*np.log10(power_data)
+
+        # Recalculate channel noise in db
         obs_info['channel_noise'], obs_info['channel_noise_std'] = self._get_noise_estimation(power_data, self.counter)
         obs_info['mean_noise'] = np.mean(obs_info['channel_noise'])
+
+
 
         # print ('input', np.mean(obs_info['channel_noise']),  np.mean(obs_info['channel_noise_std']), np.mean(power_data))
 
@@ -100,6 +111,7 @@ class PreProcessor(ProcessingModule):
         """
         power = np.power(np.abs(data), 2.0) + 0.00000000000001
 
+        return power
         # Convert to dB
         return 10 * np.log10(power)
 
