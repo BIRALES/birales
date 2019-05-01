@@ -244,7 +244,7 @@ class RSOGenerator(ProcessingModule):
                 # print start, stop, np.shape(signal)
                 data[:, :, start:stop, 15] += signal
 
-        output_data[:] = data + self.generate_noise(mean_noise_power=self.mean_noise_power)
+        output_data[:] = data # + self.generate_noise(mean_noise_power=self.mean_noise_power)
 
         self._counter += 1
 

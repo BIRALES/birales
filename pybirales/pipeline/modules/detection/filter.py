@@ -42,12 +42,18 @@ class RemoveBackgroundNoiseFilter(InputDataFilter):
         # threshold = self.std_threshold * std + mean
 
         # Calculate the threshold at which the noise will be clipped
-        t2 = 5 * obs_info['channel_noise_std'] + obs_info['channel_noise']
+        t2 = 3 * obs_info['channel_noise_std'] + obs_info['channel_noise']
 
+        log.debug('Noise: {:0.2f} dB, Threshold: {:0.2f} dB'.format(np.mean(obs_info['channel_noise']), np.mean(t2)))
         # re-shape threshold array so to make it compatible with the data
+
+        # print np.shape(t2), data.shape
         t2 = np.expand_dims(t2, axis=2)
 
-        data[data < t2] = 0.
+        # print np.shape(t2), data.shape
+        data[data <= t2] = 0.
+
+        # print np.min(data)
 
 
 class PepperNoiseFilter(InputDataFilter):
@@ -102,6 +108,7 @@ class Filter(ProcessingModule):
     def __init__(self, config, input_blob=None):
         # Ensure that the input blob is of the expected format
         self._validate_data_blob(input_blob, valid_blobs=[ChannelisedBlob])
+
 
         # The filters to be applied on the data. Filters will be applied in order.
         self._filters = [

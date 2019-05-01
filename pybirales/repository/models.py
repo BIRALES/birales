@@ -33,7 +33,8 @@ class BIRALESObservation(Document):
     log_filepath = StringField()
 
     # These are updated during a detection observation
-    noise_stats = DynamicField()
+    noise_mean= FloatField()
+    noise_beams = ListField()
     sampling_time = FloatField()
 
     status = StringField()

@@ -31,13 +31,14 @@ class PreProcessor(ProcessingModule):
         self.name = "PreProcessor"
 
     def _get_noise_estimation(self, power_data, iter_count):
-        import warnings
-        # warnings.filterwarnings('error')
-        if self.counter < settings.detection.n_noise_samples:
 
-            self.channel_noise[:, :, iter_count] =  np.sqrt(np.mean(np.power(power_data,2), axis=2))
-            self.channel_noise_std[:, :, iter_count] = np.std(self.channel_noise[:, :, iter_count])
+        # if self.counter < settings.detection.n_noise_samples:
+            # self.channel_noise[:, :, iter_count] = np.sqrt(np.mean(np.power(power_data, 2), axis=2))
+            # self.channel_noise_std[:, :, iter_count] = np.std(self.channel_noise[:, :, iter_count])
+        # self.channel_noise[:, :, iter_count] = np.mean(power_data, axis=2)
+        # self.channel_noise_std[:, :, iter_count] = np.std(power_data, axis=2)
 
+        return np.mean(power_data, axis=2), np.std(power_data, axis=2)
         return np.nanmean(self.channel_noise, axis=2), np.nanmean(self.channel_noise_std, axis=2)
 
     def process(self, obs_info, input_data, output_data):
@@ -60,9 +61,8 @@ class PreProcessor(ProcessingModule):
         power_data = self._power(data)
 
         # Estimate the noise from the data
-        obs_info['channel_noise'], obs_info['channel_noise_std']  = self._get_noise_estimation(power_data, self.counter)
+        obs_info['channel_noise'], obs_info['channel_noise_std'] = self._get_noise_estimation(power_data, self.counter)
         obs_info['mean_noise'] = np.mean(obs_info['channel_noise'])
-
 
         # print ('input', np.mean(obs_info['channel_noise']),  np.mean(obs_info['channel_noise_std']), np.mean(power_data))
 
@@ -70,10 +70,8 @@ class PreProcessor(ProcessingModule):
         if not self._config_persisted and self.counter >= settings.detection.n_noise_samples:
             self._observation = Observation.objects.get(id=settings.observation.id)
 
-            self._observation.noise_stats = {
-                'mean_noise': obs_info['mean_noise'],
-                'beam_noise':  list(np.mean(obs_info['channel_noise'], axis=1)),
-            }
+            self._observation.noise_mean = float(obs_info['mean_noise'])
+            self._observation.noise_beams = np.mean(obs_info['channel_noise'], axis=1).tolist()
 
             self._observation.tx = obs_info['transmitter_frequency']
             self._observation.sampling_time = obs_info['sampling_time']
@@ -103,9 +101,7 @@ class PreProcessor(ProcessingModule):
         power = np.power(np.abs(data), 2.0) + 0.00000000000001
 
         # Convert to dB
-        return 10*np.log10(power)
-
-
+        return 10 * np.log10(power)
 
     @staticmethod
     def _rms(data):
