@@ -114,7 +114,7 @@ class Filter(ProcessingModule):
         self._filters = [
             RemoveBackgroundNoiseFilter(std_threshold=4.),
             # RemoveTransmitterChannelFilter(),
-            PepperNoiseFilter(),
+            # PepperNoiseFilter(),
         ]
 
         super(Filter, self).__init__(config, input_blob)

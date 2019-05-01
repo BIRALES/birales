@@ -100,27 +100,14 @@ def partition_input_data(input_data, channel_noise, beam_id):
 
     # Process part of the input_data
     beam_data = input_data[beam_id, :, :]
-
+    
     # Get the channel noise for this beam
     beam_noise = channel_noise[beam_id]
-    # print 'SNR Shape 1:', (beam_data > 0).sum()
-    # print beam_data[20:30, 2:10]
+
     # Calculate the SNR
     snr = beam_data - beam_noise[:, np.newaxis]
 
-    # print np.mean(beam_noise), np.mean(beam_data)
     # Ignore values where SNR < 0. Ie. where signal power is < than background noise
-    # snr[snr <= 0] = np.nan
-
-
-    # snr[np.isnan(snr)] = 0.
-
-    # print 'SNR Shape 2:', (snr > 0).sum()
-    # Select the data points that are non-zero
-    # ndx = np.where(snr > 0)
-
-    # Process all the values that are not NaN
-    ndx = ~np.isnan(snr)
     ndx = np.where(snr > 0.)
 
     # Transform them in a time (x), channel (y) nd-array and snr
