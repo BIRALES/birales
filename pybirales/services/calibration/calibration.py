@@ -98,4 +98,4 @@ class CalibrationFacade:
 
         fringe_image = coeff_manager.check()
 
-        return coeffs_no_geom.real, coeffs_no_geom.imag, fringe_image
+        return coeffs_no_geom.real.flatten(), coeffs_no_geom.imag.flatten(), fringe_image
