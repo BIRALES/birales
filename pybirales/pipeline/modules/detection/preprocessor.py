@@ -17,9 +17,11 @@ class PreProcessor(ProcessingModule):
 
         self.counter = 0
 
-        self.channel_noise = np.zeros(shape=(32, 8192, settings.detection.n_noise_samples))
+        self._moving_avg_period = settings.detection.n_noise_samples
 
-        self.channel_noise_std = np.zeros(shape=(32, 8192, settings.detection.n_noise_samples))
+        self.channel_noise = np.zeros(shape=(32, 8192, self._moving_avg_period))
+
+        self.channel_noise_std = np.zeros(shape=(32, 8192, self._moving_avg_period))
 
         self._observation = None
 
@@ -31,15 +33,22 @@ class PreProcessor(ProcessingModule):
         self.name = "PreProcessor"
 
     def _get_noise_estimation(self, power_data, iter_count):
+        """
 
-        # if self.counter < settings.detection.n_noise_samples:
-            # self.channel_noise[:, :, iter_count] = np.sqrt(np.mean(np.power(power_data, 2), axis=2))
-            # self.channel_noise_std[:, :, iter_count] = np.std(self.channel_noise[:, :, iter_count])
-        # self.channel_noise[:, :, iter_count] = np.mean(power_data, axis=2)
-        # self.channel_noise_std[:, :, iter_count] = np.std(power_data, axis=2)
+        :param power_data:
+        :param iter_count:
+        :return:
+        """
+        self.channel_noise[:, :, iter_count % self._moving_avg_period] = np.mean(power_data, axis=2)
+        self.channel_noise_std[:, :, iter_count % self._moving_avg_period] = np.std(power_data, axis=2)
 
-        return np.mean(power_data, axis=2), np.std(power_data, axis=2)
-        return np.nanmean(self.channel_noise, axis=2), np.nanmean(self.channel_noise_std, axis=2)
+        channel_noise = self.channel_noise
+        channel_noise_std = self.channel_noise_std
+        if self.counter < self._moving_avg_period:
+            channel_noise = self.channel_noise[:,:, :self.counter+1]
+            channel_noise_std = self.channel_noise_std[:,:, :self.counter+1]
+
+        return np.mean(channel_noise, axis=2), np.mean(channel_noise_std, axis=2)
 
     def process(self, obs_info, input_data, output_data):
         """
@@ -61,7 +70,7 @@ class PreProcessor(ProcessingModule):
         power_data = self._power(data)
 
         # Estimate the noise from the data (in Watts)
-        channel_noise, channel_noise_std = self._get_noise_estimation(power_data, self.counter)
+        # channel_noise, channel_noise_std = self._get_noise_estimation(power_data, self.counter)
 
         # Remove noise from power
         # power_data = power_data - channel_noise[:, :, np.newaxis]
