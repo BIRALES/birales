@@ -190,9 +190,9 @@ class ProcessingModule(Module):
                 tt = time.time() - s
 
                 if tt < settings.receiver.nsamp / settings.observation.samples_per_second:
-                    log.info('%s finished in %0.3f s', self.name, tt)
+                    log.info('[Iteration {}] {} finished in {:0.3f}s'.format(self._iter_count, self.name, tt))
                 else:
-                    log.warning('%s finished in %0.3f s', self.name, tt)
+                    log.warning('[Iteration {}] {} finished in {:0.3f}s'.format(self._iter_count, self.name, tt))
 
                 if res is not None:
                     obs_info = res
