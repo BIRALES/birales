@@ -34,8 +34,11 @@ class Detector(ProcessingModule):
 
         self.name = "Detector"
 
-        # A list of space debris tracks
+        # A list of space debris tracks currently in memory
         self._candidates = []
+
+        # Number of RSO tracks detected in this observation
+        self._n_rso = 0
 
     def _tear_down(self):
         """
@@ -149,16 +152,16 @@ class Detector(ProcessingModule):
                 else:
                     # Track has transitted outside the field of view of the instrument
                     publish(TrackTransittedEvent(candidate))
-
-                    # You can create the TDM for this candidate here
             else:
                 temp_candidates.append(candidate)
 
-        log.info('Result: {} tracks have transitted. {} tracks are currently in detection window.'.format(
-            len(self._candidates) - len(temp_candidates), len(temp_candidates)))
+        transitted = len(self._candidates) - len(temp_candidates)
+        self._n_rso += transitted
+        log.info('Result: {} tracks have transitted. {} tracks are currently in detection window.'.format(transitted,
+                                                                                                          len(temp_candidates)))
 
-        for i, candidate in enumerate(self._candidates):
-            log.info("RSO %d: %s", i+1, candidate.state_str())
+        for i, candidate in enumerate(temp_candidates):
+            log.info("RSO %d: %s", self._n_rso + i + 1, candidate.state_str())
 
         return temp_candidates
 
@@ -258,7 +261,6 @@ class Detector(ProcessingModule):
 
         t0 = np.datetime64(obs_info['timestamp'])
         td = np.timedelta64(int(obs_info['sampling_time'] * 1e9), 'ns')
-
 
         # todo - multi-processing is slower than single threaded equivalent
         if settings.detection.multi_proc:
