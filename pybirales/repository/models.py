@@ -37,6 +37,9 @@ class BIRALESObservation(Document):
     noise_beams = ListField()
     sampling_time = FloatField()
 
+    # Legacy code
+    noise_stats = DynamicField()
+
     status = StringField()
     created_at = DateTimeField(required=True, default=datetime.datetime.utcnow)
 
