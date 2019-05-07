@@ -5,9 +5,11 @@ import os
 import pandas as pd
 
 # Input arguments
-save_dir = "/home/denis/Desktop/"
-filepath = "/home/denis/Desktop/far_field_array_410MHz_0.1deg.txt"
-frequency = "array_410"
+save_dir = "/home/denis/Desktop/sim_3"
+# filepath = "/home/denis/Desktop/far_field_array_410MHz_0.1deg.txt"
+filepath = "/home/denis/Desktop/sim_3/farfield_410MHz_dipole_56.txt"
+frequency = "dipole_56_410"
+
 
 export_filepath_mask = os.path.join(save_dir, "far_field_{}MHz_dt={}_dp={}.csv")
 
