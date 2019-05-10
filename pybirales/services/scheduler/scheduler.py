@@ -5,7 +5,7 @@ import os
 import signal
 import threading
 import time
-
+import gc
 import humanize
 import pytz
 
@@ -131,12 +131,18 @@ class ObservationsScheduler:
 
         :return:
         """
-
+        from pympler import tracker
+        from pympler import summary, muppy
+        tr = tracker.SummaryTracker()
+        from mem_top import mem_top
+        from guppy import hpy
+        h = hpy()
         log.info('BIRALES Scheduler observation runner started')
         counter = 0
         processed_observations = []
         om = ObservationManager()
         com = CalibrationObservationManager()
+
         while not self._stop_event.is_set():
             now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
             pending_observations = self.schedule.pending_observations()
@@ -149,15 +155,25 @@ class ObservationsScheduler:
 
                     if isinstance(next_observation, ScheduledCalibrationObservation):
                         # Run the calibration observation using the observation manager
-
                         com.run(next_observation)
-
                     else:
                         # Run the observation using the observation manager
                         om.run(next_observation)
 
+                    om = ObservationManager()
+                    com = CalibrationObservationManager()
+                    gc.collect()
+
             if counter % self.MONITORING_FREQ == 0:
                 self._monitoring_message(now, pending_observations)
+                # all_objects = muppy.get_objects()
+                # sum1 = summary.summarize(all_objects)
+                # summary.print_(sum1)
+
+                # print mem_top()
+                # tr.print_diff()
+
+                # print h.heap()
 
             counter += 1
             time.sleep(1)
