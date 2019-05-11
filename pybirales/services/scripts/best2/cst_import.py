@@ -31,7 +31,7 @@ df = df.sort_values(by=['Theta', 'Phi'])
 export_filepath = export_filepath_mask.format(frequency, res_theta, res_phi)
 
 # Export it in a format that Matlab expects
-df[["Theta", "Phi", "Gain"]].to_csv(path_or_buf=export_filepath, header=False, index=False)
+df[["Phi", "Theta", "Gain"]].to_csv(path_or_buf=export_filepath, header=False, index=False)
 
 print('Imported CST file from {}.\nExported {} data points exported with Δθ={:2.1f}° and ΔФ={:2.1f}°. '
       '\nExported at: {}.'.format(
