@@ -133,8 +133,12 @@ class Receiver(Generator):
             if consumer_stopped != Result.Failure.value and receiver_stopped != Result.Failure.value:
                 roach = Backend.Instance().roach
 
+                logging.debug('ROACH is connected: {}. Disconnecting.'.format(roach.is_connected()))
+
                 if roach.is_connected():
                     roach.stop()
+
+                logging.debug('ROACH is connected: {}'.format(roach.is_connected()))
 
                 # Backend.Instance()._roach.disconnect()
                 self._stop.set()
