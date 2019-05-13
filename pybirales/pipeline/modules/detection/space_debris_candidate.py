@@ -163,14 +163,16 @@ class SpaceDebrisTrack:
 
     def state_str(self):
         return "df:{:3.5f} Hz, df/dt:{:3.5f} Hz/s at {:%y:%M:%d %H:%M:%S.%f} and SNR: {:2.3f} dB, " \
-               "(C: {}, T:{}, f:{:2.5f} MHz)".format(
+               "(C: {}, T:{}, f:{:2.5f} MHz, N:{}, B:{})".format(
             self.ref_data['doppler'],
             self.ref_data['gradient'],
             self.ref_data['time'],
             self.ref_data['snr'],
             self.ref_data['channel_sample'],
             self.ref_data['time_sample'],
-            self.ref_data['channel']
+            self.ref_data['channel'],
+            self.size,
+            self.activated_beams
         )
 
     def _fit(self, x, y):

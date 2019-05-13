@@ -104,6 +104,7 @@ def partition_input_data(input_data, channel_noise, beam_id):
     # Get the channel noise for this beam
     beam_noise = channel_noise[beam_id]
 
+    """
     # Calculate the SNR
     snr = beam_data - beam_noise[:, np.newaxis]
 
@@ -112,6 +113,29 @@ def partition_input_data(input_data, channel_noise, beam_id):
 
     # Transform them in a time (x), channel (y) nd-array and snr
     return np.column_stack(ndx), snr[ndx]
+    
+    """
+
+    # Remove filtered data from the calculation
+    snr_data = beam_data / beam_noise[:, np.newaxis]
+
+    # Remove filtered data from the calculation
+    ndx = np.where(snr_data > 0.)
+    snr_data = snr_data[ndx]
+
+    # Convert SNR to dB
+    snr_data = 10*np.log10(snr_data)
+
+    return np.column_stack(ndx), snr_data
+    #
+    # # Calculate the SNR
+    # snr = beam_data - beam_noise[:, np.newaxis]
+    #
+    # # Ignore values where SNR < 0. Ie. where signal power is < than background noise
+    # ndx = np.where(snr > 0.)
+    #
+    # # Transform them in a time (x), channel (y) nd-array and snr
+    # return np.column_stack(ndx), snr[ndx]
 
 
 def dbscan_clustering(beam_ndx, snr_data):

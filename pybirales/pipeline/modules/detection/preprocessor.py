@@ -76,7 +76,7 @@ class PreProcessor(ProcessingModule):
         # power_data = power_data - channel_noise[:, :, np.newaxis]
 
         # Convert power data to dB
-        power_data = 10*np.log10(power_data)
+        # power_data = 10*np.log10(power_data)
 
         # Recalculate channel noise in db
         obs_info['channel_noise'], obs_info['channel_noise_std'] = self._get_noise_estimation(power_data, self.counter)
@@ -121,8 +121,6 @@ class PreProcessor(ProcessingModule):
         power = np.power(np.abs(data), 2.0) + 0.00000000000001
 
         return power
-        # Convert to dB
-        return 10 * np.log10(power)
 
     @staticmethod
     def _rms(data):
