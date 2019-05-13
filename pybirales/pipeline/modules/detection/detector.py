@@ -287,7 +287,7 @@ class Detector(ProcessingModule):
         obs_info['transitted_tracks'] = []
 
         # Skip the first few blobs (to allow for an accurate noise estimation to be determined)
-        if self._iter_count < 2:
+        if self._iter_count < 3:
             return obs_info
 
         # Pre-process the input data

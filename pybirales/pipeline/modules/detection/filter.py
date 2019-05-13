@@ -132,7 +132,7 @@ class Filter(ProcessingModule):
         """
 
         # Skip the first blob
-        if self._iter_count < 1:
+        if self._iter_count < 3:
             return
 
         # Apply the filters on the data

@@ -61,8 +61,8 @@ class PreProcessor(ProcessingModule):
         """
 
         # Skip the first blob
-        # if self._iter_count < 1:
-        #     return
+        if self._iter_count < 3:
+            return
 
         # Process only 1 polarisation
         data = input_data[0, :, :, :]
