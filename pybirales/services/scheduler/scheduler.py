@@ -1,13 +1,15 @@
 import datetime
+import gc
 import json
 import logging as log
 import os
 import signal
 import threading
 import time
-import gc
+
 import humanize
 import pytz
+from pympler import tracker
 
 from pybirales.base.observation_manager import ObservationManager, CalibrationObservationManager
 from pybirales.events.events import InvalidObservationEvent
@@ -17,6 +19,7 @@ from pybirales.services.scheduler.exceptions import IncorrectScheduleFormat, Inv
 from pybirales.services.scheduler.monitoring import obs_listener_worker
 from pybirales.services.scheduler.observation import ScheduledObservation, ScheduledCalibrationObservation
 from pybirales.services.scheduler.schedule import Schedule
+from guppy import hpy
 
 
 class ObservationsScheduler:
@@ -40,8 +43,6 @@ class ObservationsScheduler:
         # Create an observations thread which listens for new observations (through pub-sub)
         self._obs_thread = threading.Thread(target=obs_listener_worker, args=(self,),
                                             name='Obs. Listener')
-
-        # self.tr = tracker.SummaryTracker()
 
     def load_from_file(self, schedule_file_path, file_format='json'):
         """
@@ -131,18 +132,16 @@ class ObservationsScheduler:
 
         :return:
         """
-        from pympler import tracker
-        from pympler import summary, muppy
+
         tr = tracker.SummaryTracker()
-        from mem_top import mem_top
-        from guppy import hpy
+
         h = hpy()
         log.info('BIRALES Scheduler observation runner started')
         counter = 0
         processed_observations = []
         om = ObservationManager()
         com = CalibrationObservationManager()
-
+        tr = tracker.SummaryTracker()
         while not self._stop_event.is_set():
             now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
             pending_observations = self.schedule.pending_observations()
@@ -160,10 +159,6 @@ class ObservationsScheduler:
                         # Run the observation using the observation manager
                         om.run(next_observation)
 
-                    om = ObservationManager()
-                    com = CalibrationObservationManager()
-                    gc.collect()
-
             if counter % self.MONITORING_FREQ == 0:
                 self._monitoring_message(now, pending_observations)
                 # all_objects = muppy.get_objects()
@@ -171,7 +166,7 @@ class ObservationsScheduler:
                 # summary.print_(sum1)
 
                 # print mem_top()
-                # tr.print_diff()
+                tr.print_diff()
 
                 # print h.heap()
 
