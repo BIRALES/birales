@@ -125,8 +125,12 @@ class Receiver(Generator):
 
         if self._daq:
             # print(self._daq.stopConsumer("birales"), Result.Failure.value, self._daq.stopReceiver())
-            if self._daq.stopConsumer(
-                    "birales") != Result.Failure.value and self._daq.stopReceiver() != Result.Failure.value:
+            consumer_stopped = self._daq.stopConsumer("birales")
+            receiver_stopped = self._daq.stopReceiver()
+
+            logging.debug('DAQ Birales consumer stopped: {}. DAQ Receiver stopped: {}'.format(consumer_stopped, receiver_stopped))
+
+            if consumer_stopped != Result.Failure.value and receiver_stopped != Result.Failure.value:
                 roach = Backend.Instance().roach
 
                 if roach.is_connected():
