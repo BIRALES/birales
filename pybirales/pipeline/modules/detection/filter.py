@@ -42,7 +42,7 @@ class RemoveBackgroundNoiseFilter(InputDataFilter):
         # threshold = self.std_threshold * std + mean
 
         # Calculate the threshold at which the noise will be clipped
-        t2 = 3 * obs_info['channel_noise_std'] + obs_info['channel_noise']
+        t2 = 4 * obs_info['channel_noise_std'] + obs_info['channel_noise']
 
         log.debug('Noise: {:0.2f}W, Threshold set at {:0.2f}W'.format(np.mean(obs_info['channel_noise']), np.mean(t2)))
         # re-shape threshold array so to make it compatible with the data

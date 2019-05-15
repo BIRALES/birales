@@ -3,6 +3,7 @@
 import datetime
 import logging as log
 
+import numpy as np
 import pandas as pd
 import scipy.spatial.distance as dist
 from mongoengine import *
@@ -60,7 +61,7 @@ class SpaceDebrisTrack:
         # The attributes of the linear model
         self.m = None
         self.intercept = None
-        self.r_value = None
+        self.r_value = 0
         self._prev_size = 0
 
         # The radar cross section of the track
@@ -162,17 +163,18 @@ class SpaceDebrisTrack:
         self._to_save = True
 
     def state_str(self):
-        return "df:{:3.5f} Hz, df/dt:{:3.5f} Hz/s at {:%y:%M:%d %H:%M:%S.%f} and SNR: {:2.3f} dB, " \
-               "(C: {}, T:{}, f:{:2.5f} MHz, N:{}, B:{})".format(
+        return "df:{:3.5f} Hz, df/dt:{:3.5f} Hz/s and SNR: {:2.3f} dB on {:%d.%m.%y @ %H:%M:%S} , " \
+               "(C: {}, T:{}, f:{:2.5f} MHz, N:{}, B:{}, S:{:2.2f})".format(
             self.ref_data['doppler'],
             self.ref_data['gradient'],
-            self.ref_data['time'],
             self.ref_data['snr'],
+            self.ref_data['time'],
             self.ref_data['channel_sample'],
             self.ref_data['time_sample'],
             self.ref_data['channel'],
             self.size,
-            self.activated_beams
+            self.activated_beams,
+            self.r_value
         )
 
     def _fit(self, x, y):
@@ -218,11 +220,17 @@ class SpaceDebrisTrack:
         try:
             is_valid, l_model = self._fit(tmp_merged_df['channel_sample'], tmp_merged_df['time_sample'])
         except TypeError:
+            print 'here'
             raise DetectionClusterIsNotValid(cluster_df)
 
         if is_valid:
             # Remove outliers from the merged df and update the track
             self._update(tmp_merged_df[l_model.inlier_mask_])
+
+            # Add the SD track if the valid
+            # if self.is_linear() and self.is_gradient_valid():
+            #     # return False, self._linear_model
+            #     return True, self._linear_model
         else:
             # If fitting failed, track data remains unchanged, and raise an exception
             raise DetectionClusterIsNotValid(cluster_df)
@@ -258,7 +266,22 @@ class SpaceDebrisTrack:
         if self.data['channel'].unique().size < 5 or self.data['time'].unique().size < 5:
             return False
 
+        if not self.is_linear():
+            return False
+
+        if not self.is_gradient_valid():
+            return False
+
         return True
+
+    def is_linear(self):
+        return np.abs(self.r_value) >= settings.detection.linearity_thold
+
+    def is_gradient_valid(self):
+        # print settings.detection.gradient_thold[0], self.ref_data['gradient'], settings.detection.gradient_thold[1],
+        # print settings.detection.gradient_thold[0] >= self.ref_data['gradient'] >= settings.detection.gradient_thold[1]
+        return settings.detection.gradient_thold[0] >= self.ref_data['gradient'] >= settings.detection.gradient_thold[
+            1]
 
     def is_parent_of(self, detection_cluster):
         """

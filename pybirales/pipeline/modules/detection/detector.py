@@ -144,24 +144,29 @@ class Detector(ProcessingModule):
         """
 
         temp_candidates = []
+        # Tracks that were deleted should not count as 'track transitted'
+        invalid_tracks = 0
         for candidate in candidates:
+            if not candidate.is_valid():
+                candidate.delete()
+
+                invalid_tracks += 1
+                continue
+
             if candidate.has_transitted(iter_count=iter_count):
                 # If the candidate is not valid delete it else it won't be added to the list
-                if not candidate.is_valid:
-                    candidate.delete()
-                else:
+                # if not candidate.is_valid:
+                #     candidate.delete()
+                # else:
                     # Track has transitted outside the field of view of the instrument
-                    publish(TrackTransittedEvent(candidate))
+                publish(TrackTransittedEvent(candidate))
             else:
                 temp_candidates.append(candidate)
 
-        transitted = len(self._candidates) - len(temp_candidates)
+        transitted = len(self._candidates) - len(temp_candidates) - invalid_tracks
         self._n_rso += transitted
         log.info('Result: {} tracks have transitted. {} tracks are currently in detection window.'.format(transitted,
                                                                                                           len(temp_candidates)))
-
-        for i, candidate in enumerate(temp_candidates):
-            log.info("RSO %d: %s", self._n_rso + i + 1, candidate.state_str())
 
         return temp_candidates
 
@@ -303,9 +308,10 @@ class Detector(ProcessingModule):
         self._candidates = self._active_tracks(candidates, self._iter_count)
 
         # Output a TDM for the tracks that have transitted outside the telescope's FoV
-        obs_info['transitted_tracks'] = [c for c in candidates if c not in self._candidates]
+        obs_info['transitted_tracks'] = [c for c in candidates if c not in self._candidates and c.is_valid()]
 
-        # print 'Detector {:0.4f}'.format(obs_info['sampling_time'])
+        for i, candidate in enumerate(self._candidates):
+            log.info("RSO %d: %s", self._n_rso + i + 1, candidate.state_str())
 
         return obs_info
 
