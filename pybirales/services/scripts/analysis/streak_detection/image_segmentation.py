@@ -20,6 +20,7 @@ from scipy.ndimage import binary_hit_or_miss, binary_opening
 from skimage.filters import *
 from skimage.measure import compare_ssim as ssim
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
+from filters import *
 
 plt.rcParams['figure.figsize'] = (12, 10)
 
@@ -105,7 +106,7 @@ def get_limits(image, tracks):
 
     # print x_start, x_end, y_start, y_end
 
-    # return 800, 875, 4190, 4268
+    return 800, 875, 4190, 4268
     return x_start, x_end, y_start, y_end
 
 
@@ -142,7 +143,7 @@ def create_test_img(filepath, nchans=192, nsamples=120):
     # n_samples = size[1] - nsamples
 
     test_img = fits_file[0].data[0][:nchans, :nsamples]
-    print 'Test Image of size {} was generated. Noise estimate at {}W'.format(test_img.shape, np.mean(test_img))
+    print 'Test Image of size {} was generated. Noise estimate at {:0.3f}W'.format(test_img.shape, np.mean(test_img))
 
     # return np.random.normal(0, 0.5, (nchans, nsamples))
     return test_img
@@ -176,8 +177,12 @@ def add_tracks(image, tracks, noise_mean, snr):
     return image
 
 
-def visualise_filter(data, mask, filter_str, tracks, filename=None):
+def visualise_filter(data, mask, tracks, f_name, snr, threshold=None):
     if VISUALISE:
+        filter_str = '{} at SNR {} dB.'.format(f_name, snr)
+        if threshold:
+            filter_str += 'Threshold at {:2.2f}W'.format(threshold)
+
         x_start, x_end, y_start, y_end = get_limits(data, tracks)
         ax = sns.heatmap(data[y_start:y_end, x_start:x_end], cbar_kws={'label': 'Power (dB)'},
                          xticklabels=25,
@@ -188,7 +193,7 @@ def visualise_filter(data, mask, filter_str, tracks, filename=None):
         ax.set(xlabel='Time sample', ylabel='Channel', title=filter_str)
         plt.show()
 
-    print filter_str
+        print 'Showing: ' + filter_str
 
 
 def evaluate_filter(truth_img, test_img, positives, exec_time, snr):
@@ -210,11 +215,17 @@ def evaluate_filter(truth_img, test_img, positives, exec_time, snr):
 
     ssim_score = ssim((truth).astype('float64'), (prediction).astype('float64'))
 
+    recall = recall_score(truth, prediction)
+    reduction = (1 - (np.sum(prediction) / np.prod(truth_img.shape)))
+
+    # harmonic mean of the recall and reduction rate
+    score = 2 * (recall * reduction) / (recall + reduction)
+
     return {
         # 'jaccard': jaccard_similarity_score(truth, prediction),
         'f1': f1_score(truth, prediction),
         'precision': precision_score(truth, prediction, average='binary'),
-        'recall': recall_score(truth, prediction),
+        'recall': recall,
         'accuracy': accuracy_score(truth, prediction),
         # 'mse': mean_squared_error(truth, prediction),
         'ssim': ssim_score,
@@ -222,219 +233,11 @@ def evaluate_filter(truth_img, test_img, positives, exec_time, snr):
         # 'nchans': truth_img.shape[0],
         # 'nsamples': truth_img.shape[1],
         'snr': snr,
+        'dx': TRACK_THICKNESS,
         'n_px': np.sum(prediction).astype(np.int),
-        'reduction':  (1 - (np.sum(prediction) / np.prod(truth_img.shape)) ) * 100.
+        'reduction': reduction * 100.,
+        'score': score
     }
-
-
-def global_thres(test_img, tracks, snr):
-    """
-    BF Global Filter
-    :param test_img:
-    :param true_img:
-    :param snr:
-    :return:
-    """
-
-    start = time.time()
-    channel_noise = np.mean(test_img)
-    std = np.std(test_img)
-
-    threshold = 4 * std + channel_noise
-    # threshold = 4.34
-
-    global_threshold_mask = test_img < threshold
-    end = time.time()
-
-    filter_str = 'Global Threshold Filter at SNR {} dB. Threshold at {:2.2f}W'.format(snr, threshold)
-    visualise_filter(test_img, global_threshold_mask, filter_str, tracks, 'global_threshold')
-
-    return global_threshold_mask, end - start
-
-
-def local_thres(test_img, tracks, snr):
-    """
-    BF Local Filter
-    :param test_img:
-    :param true_img:
-    :param snr:
-    :return:
-    """
-
-    start = time.time()
-    channel_noise = np.mean(test_img, axis=1)
-    std = np.std(test_img, axis=1)
-
-    threshold = 4 * std + channel_noise
-
-    local_threshold_mask = test_img < np.expand_dims(threshold, axis=1)
-    end = time.time()
-
-    filter_str = 'Local Threshold Filter at SNR {} dB. Threshold at {:2.2f}W'.format(snr, np.mean(threshold))
-    visualise_filter(test_img, local_threshold_mask, filter_str, tracks, 'local_threshold')
-
-    return local_threshold_mask, end - start
-
-
-def otsu_thres(test_img, tracks, snr):
-    """
-    Otsu Filter
-    :param test_img:
-    :param true_img:
-    :param snr:
-    :return:
-    """
-
-    start = time.time()
-    global_thresh = threshold_otsu(test_img)
-    global_filter_mask = test_img < global_thresh
-    end = time.time()
-
-    filter_str = 'Global Otsu filter at SNR {} dB. Threshold at {:2.2f}W'.format(snr, global_thresh)
-    visualise_filter(test_img, global_filter_mask, filter_str, tracks, 'global_otsu')
-
-    return global_filter_mask, end - start
-
-
-def adaptive(test_img, tracks, snr):
-    """
-    Adaptive Threshold filter
-    :param test_img:
-    :param true_img:
-    :param snr:
-    :return:
-    """
-
-    start = time.time()
-    block_size = 151
-    local_thresh = threshold_local(test_img, block_size=block_size)
-    local_filter_mask = test_img < local_thresh
-    end = time.time()
-
-    filter_str = 'Local Adaptive Filter at SNR {} dB. Threshold at {:2.2f}W'.format(snr, np.mean(local_thresh))
-    visualise_filter(test_img, local_filter_mask, filter_str, tracks, 'local_adaptive')
-
-    return local_filter_mask, end - start
-
-
-def yen(test_img, tracks, snr):
-    start = time.time()
-
-    local_thresh = threshold_yen(test_img, nbins=1024)
-    local_filter_mask = test_img < local_thresh
-    end = time.time()
-    # print local_thresh
-    filter_str = 'Yen Filter at SNR {} dB. Threshold at {:2.2f}W'.format(snr, np.mean(local_thresh))
-    visualise_filter(test_img, local_filter_mask, filter_str, tracks, 'local_adaptive')
-
-    return local_filter_mask, end - start
-
-
-def minimum(test_img, tracks, snr):
-    start = time.time()
-    local_thresh = threshold_minimum(test_img, nbins=1024)
-    local_filter_mask = test_img < local_thresh
-    end = time.time()
-    filter_str = 'Minimum Filter at SNR {} dB. Threshold at {:2.2f}W'.format(snr, np.mean(local_thresh))
-    visualise_filter(test_img, local_filter_mask, filter_str, tracks, 'minimum')
-
-    return local_filter_mask, end - start
-
-
-def triangle(test_img, tracks, snr):
-    start = time.time()
-    local_thresh = threshold_triangle(test_img, nbins=1024)
-    local_filter_mask = test_img < local_thresh
-    end = time.time()
-    filter_str = 'threshold_triangle at SNR {} dB. Threshold at {:2.2f}W'.format(snr, np.mean(local_thresh))
-    visualise_filter(test_img, local_filter_mask, filter_str, tracks, 'threshold_triangle')
-
-    return local_filter_mask, end - start
-
-
-def isodata(test_img, tracks, snr):
-    start = time.time()
-    local_thresh = threshold_isodata(test_img, nbins=1024)
-    local_filter_mask = test_img < local_thresh
-    end = time.time()
-    filter_str = 'ISOData Threshold at SNR {} dB. Threshold at {:2.2f}W'.format(snr, np.mean(local_thresh))
-    visualise_filter(test_img, local_filter_mask, filter_str, tracks, 'threshold_isodata')
-
-    return local_filter_mask, end - start
-
-
-def hit_and_miss(data, test_img, f_name, mask):
-    structure = np.zeros((5, 5))
-    structure[2, 2] = 1
-
-    start = time.time()
-    mask += binary_hit_or_miss(data, structure1=structure)
-    end = time.time()
-
-    data[~mask] = test_img[~mask]
-    visualise_filter(data, mask, 'Hit and Miss filter after ' + f_name, tracks, 'hit_and_miss')
-
-    return mask, end - start
-
-
-def morph_opening(data, test_img, f_name, mask):
-    start = time.time()
-    tmp = binary_opening(data, structure=np.ones((2, 2))).astype(np.int)
-    mask += tmp < 1
-    end = time.time()
-
-    data[~mask] = test_img[~mask]
-
-    visualise_filter(data, mask, 'M Opening remove filter after ' + f_name, tracks, 'morph_opening')
-
-    return mask, end - start
-
-
-def kittler(test_img, tracks, snr):
-    start = time.time()
-    h, g = np.histogram(test_img.ravel(), bins=1024)
-    h = h.astype(np.float) +0.00001
-    g = g.astype(np.float)+0.0001
-
-    g = g[:-1]
-    c = np.cumsum(h)
-    m = np.cumsum(h * g)
-    s = np.cumsum(h * g ** 2)
-    sigma_f = np.sqrt(s / c - (m / c) ** 2)
-    cb = c[-1] - c
-    mb = m[-1] - m
-    sb = s[-1] - s
-    sigma_b = np.sqrt(sb / cb - (mb / cb) ** 2)
-    p = c / c[-1]
-    v = p * np.log(sigma_f) + (1 - p) * np.log(sigma_b) - p * np.log(p) - (1 - p) * np.log(1 - p)
-    v[~np.isfinite(v)] = np.inf
-    idx = np.argmin(v)
-    t = g[idx]
-
-    mask = data <= t
-
-    end = time.time()
-
-    filter_str = 'Kittler Filter at SNR {} dB. Threshold at {:2.2f}W'.format(snr, np.mean(t))
-    visualise_filter(test_img, mask, filter_str, tracks, 'kittler')
-
-    # out[:, :] = 0
-    # out[data >= t] = 255
-
-    return mask, end - start
-
-
-def rfi_filter(test_img):
-    summed = np.sum(test_img, axis=1)
-    peaks_snr_i = np.unique(np.where(summed > np.mean(summed) + np.std(summed) * 5.0))
-
-    # Estimate the noise
-    noise_mean = np.mean(test_img)
-
-    # Replace the high-peaks channels with the mean noise value
-    test_img[peaks_snr_i, :] = noise_mean
-
-    return test_img
 
 
 # Plot the metrics
@@ -453,11 +256,11 @@ if __name__ == '__main__':
     F = (1. / TD) / (1. / CD)
     GRADIENT_RANGE = np.array([-0.57, -50.47]) / F
     TRACK_LENGTH_RANGE = np.array([5, 15]) / TD  # in seconds
-    TRACK_THICKNESS = 2
+    TRACK_THICKNESS = 1
     # FITS_FILE = "norad_1328/norad_1328_raw_0.fits"
     FITS_FILE = "filter_test/filter_test_raw_0.fits"
     FITS_FILE = "Observation_2019-05-17T1202/Observation_2019-05-17T1202_raw_1.fits"
-    VISUALISE = True
+    VISUALISE = False
     SAVE_FIGURES = False
     SEED = 56789
     np.random.seed(SEED)
@@ -468,15 +271,17 @@ if __name__ == '__main__':
     metrics = {}
     metrics_df = pd.DataFrame()
     filters = [
-        # ('Global Filter', global_thres),
-        # ('Local Filter', local_thres),
-        # ('Otsu Filter', otsu_thres),
-        # ('Adaptive Filter', adaptive),
-        # ('Kittler', kittler),
-        # ('yen', yen),
-        # ('iso_data', isodata),
+        ('Global Filter', global_thres),
+        ## ('Local Filter', local_thres),
+        ('Global Filter (R)', global_thres_running),
+        ('Local Filter (R)', local_thres_running),
+        ('Otsu Filter', otsu_thres),
+        ## ('Adaptive Filter', adaptive),
+        ('Kittler', kittler),
+        ('yen', yen),
+        ('iso_data', isodata),
         ('triangle', triangle),
-        # ('minimum', minimum),
+        ('minimum', minimum),
     ]
 
     for s in snr:
@@ -486,7 +291,7 @@ if __name__ == '__main__':
         metrics_tmp_df = pd.DataFrame()
         print "\nEvaluating filters with tracks at SNR {:0.2f}W".format(s)
         # Create image from real data
-        test_img = create_test_img(os.path.join(ROOT, FITS_FILE), nchans=8192, nsamples=320)
+        test_img = create_test_img(os.path.join(ROOT, FITS_FILE), nchans=8192, nsamples=1024)
 
         # Remove channels with RFI
         test_img = rfi_filter(test_img)
@@ -505,35 +310,32 @@ if __name__ == '__main__':
         # Add tracks to the simulated data
         test_img = add_tracks(test_img, tracks, noise_mean, s)
 
-        # visualise_image(test_img, 'Test Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks)
+        visualise_image(test_img, 'Test Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks)
 
         # visualise_image(true_image, 'Truth Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks)
 
         # Filter the data in generate metrics
-        for f_name, func in filters:
+        for f_name, filter_func in filters:
             data = test_img.copy()
-            mask, timing = func(data, tracks, s)
+
+            # split data in chunks
+            start = time.time()
+            mask, threshold = chunked_filtering(data, filter_func)
+            # mask, threshold = filter_func(data)
+            timing = time.time() - start
+
+            # Visualise filter output
             metrics[s][f_name] = evaluate_filter(true_image, data, ~mask, timing, s)
+            visualise_filter(test_img, mask, tracks, f_name, s, threshold)
 
-            # mask, timing = hit_and_miss(data, test_img, f_name, mask)
-            # metrics[s][f_name + '_hm'] = evaluate_filter(true_image, data, ~mask, timing, s)
+            # Filter post-processor
+            # mask, timing = morph_opening(data, test_img, mask)
+            mask, timing = hit_and_miss(data, test_img, mask)
+            f_name += '_pp'
+            metrics[s][f_name] = evaluate_filter(true_image, data, ~mask, timing, s)
+            visualise_filter(test_img, mask, tracks, f_name, s, threshold=None)
 
-            mask, timing = morph_opening(data, test_img, f_name, mask)
-            metrics[s][f_name + '_mo'] = evaluate_filter(true_image, data, ~mask, timing, s)
-
-            # feature extraction algorithm
-
-            # dbscan (naive)
-
-            # hough transform
-
-            # edge detectors
-
-            # blob detection
-
-            # astride
-
-            # transform + clustering
+            # feature extraction algorithms
 
         metrics_tmp_df = metrics_tmp_df.from_dict(metrics[s], orient='index')
         metrics_df = metrics_df.append(metrics_tmp_df)
