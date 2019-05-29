@@ -4,7 +4,6 @@ from abc import abstractmethod
 import numpy as np
 from scipy.ndimage import binary_hit_or_miss
 
-from pybirales import settings
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 
@@ -95,11 +94,9 @@ class RemoveTransmitterChannelFilter(InputDataFilter):
         # data[peaks_snr_i] = data[peaks_snr_i] - np.mean(data[peaks_snr_i], axis=1, keepdims=True)
         # data[data < 0.0] = 0.
 
-        if settings.detection.filter_transmitter:
-            summed = np.sum(data, axis=2)
-            peaks_snr_i = np.unique(np.where(summed > np.mean(summed) + np.std(summed) * 5.0)[1])
-            data[:, peaks_snr_i, :] = -100
-            log.debug('Transmitter frequency filter applied')
+        summed = np.sum(data, axis=2)
+        peaks_snr_i = np.unique(np.where(summed > np.mean(summed) + np.std(summed) * 5.0)[1])
+        data[:, peaks_snr_i, :] = -100
 
 
 class Filter(ProcessingModule):
@@ -109,11 +106,10 @@ class Filter(ProcessingModule):
         # Ensure that the input blob is of the expected format
         self._validate_data_blob(input_blob, valid_blobs=[ChannelisedBlob])
 
-
         # The filters to be applied on the data. Filters will be applied in order.
         self._filters = [
+            RemoveTransmitterChannelFilter(),
             RemoveBackgroundNoiseFilter(std_threshold=4.),
-            # RemoveTransmitterChannelFilter(),
             # PepperNoiseFilter(),
         ]
 
