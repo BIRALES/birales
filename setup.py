@@ -8,7 +8,7 @@ from setuptools.command.install import install
 distutils.log.set_verbosity(distutils.log.info)
 
 HOME = os.environ['HOME']
-CONFIG_PATH = 'configuration'
+CONFIG_PATH = 'configuration.py'
 TEMPLATES = os.path.join(CONFIG_PATH, 'templates')
 DEPENDENCIES = ['configparser', 'futures', 'enum34', 'numpy', 'scipy', 'astropy==2.*', 'astroplan', 'matplotlib', 'numba',
                 'pymongo', 'scikit-learn', 'ephem>=3.7.6.0', 'h5py', 'click', 'flask', 'flask-compress',
@@ -45,9 +45,9 @@ class InstallWrapperCommand(install):
     LOCAL_DIRS = [
         '/var/log/birales',
         os.path.join(HOME, '.birales'),
-        os.path.join(HOME, '.birales/configuration/templates/dev'),
-        os.path.join(HOME, '.birales/configuration/templates/prod'),
-        os.path.join(HOME, '.birales/configuration/uploads'),
+        os.path.join(HOME, '.birales/configuration.py/templates/dev'),
+        os.path.join(HOME, '.birales/configuration.py/templates/prod'),
+        os.path.join(HOME, '.birales/configuration.py/uploads'),
         os.path.join(HOME, '.birales/schedules'),
         os.path.join(HOME, '.birales/visualisation/fits'),
         os.path.join(HOME, '.birales/tdm/out'),
@@ -99,7 +99,7 @@ setup(
         (os.path.join(HOME, '.birales', TEMPLATES, 'dev'), list_dir(os.path.join('pybirales', TEMPLATES, 'dev'))),
         (os.path.join(HOME, '.birales', TEMPLATES, 'prod'), list_dir(os.path.join('pybirales', TEMPLATES, 'prod'))),
         (os.path.join(HOME, '.birales/fits'), []),
-        (os.path.join(HOME, '.birales/configuration/uploaded'), []),
+        (os.path.join(HOME, '.birales/configuration.py/uploaded'), []),
     ],
     entry_points={
         'console_scripts': [

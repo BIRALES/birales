@@ -3,13 +3,7 @@ from scipy.ndimage import binary_hit_or_miss, binary_opening
 from skimage.filters import *
 
 
-def moving_average(a, n=3):
-    ret = np.cumsum(a, dtype=float)
-    ret[n:] = ret[n:] - ret[:-n]
-    return ret[n - 1:] / n
-
-
-def get_moving_average(chunked_data, iter, n=3):
+def get_moving_average(chunked_data, iter, n=5):
     n_mean = np.array([np.mean(c) for c in chunked_data[:iter+1]])
     n_std = np.array([np.std(c) for c in chunked_data[:iter+1]])
 
@@ -18,10 +12,10 @@ def get_moving_average(chunked_data, iter, n=3):
     if s < 0:
         s = 0
 
-    return np.mean(n_mean[s:]), np.std(n_std[s:])
+    return np.mean(n_mean[s:]), np.mean(n_std[s:])
 
 
-def get_moving_average_local(chunked_data, iter, n=3):
+def get_moving_average_local(chunked_data, iter, n=5):
     n_mean = np.array([np.mean(c, axis=1) for c in chunked_data[:iter+1]])
     n_std = np.array([np.std(c, axis=1) for c in chunked_data[:iter+1]])
 
@@ -30,7 +24,7 @@ def get_moving_average_local(chunked_data, iter, n=3):
     if s < 0:
         s = 0
 
-    return np.mean(n_mean[s:], axis=0), np.std(n_std[s:], axis=0)
+    return np.mean(n_mean[s:], axis=0), np.mean(n_std[s:], axis=0)
 
 
 def chunked_filtering(test_img, filter_func):
@@ -67,8 +61,17 @@ def global_thres(test_img):
     threshold = 4 * std + channel_noise
     global_threshold_mask = test_img < threshold
 
+    # print 'Global Noise', np.mean(channel_noise), np.mean(std)
+
     return global_threshold_mask, threshold
 
+def global_thres_running(test_img, channel_noise, std):
+    threshold = 4 * std + channel_noise
+    global_threshold_mask = test_img < threshold
+
+    # print 'Global Noise (R)', np.mean(channel_noise), np.mean(std)
+
+    return global_threshold_mask, threshold
 
 def local_thres(test_img):
     channel_noise = np.mean(test_img, axis=1)
@@ -76,23 +79,18 @@ def local_thres(test_img):
 
     threshold = 4 * std + channel_noise
 
-    # print 'Local', np.max(threshold), np.min(threshold), np.std(threshold)
+    # print 'Local Noise', np.mean(channel_noise), np.mean(threshold)
+
     local_threshold_mask = test_img < np.expand_dims(threshold, axis=1)
 
     return local_threshold_mask, np.mean(threshold)
 
-
-def global_thres_running(test_img, channel_noise, std):
-    threshold = 5 * std + channel_noise
-    global_threshold_mask = test_img < threshold
-
-    return global_threshold_mask, threshold
-
-
 def local_thres_running(test_img, channel_noise, std):
-    threshold = 5 * std + channel_noise
+    threshold = 4 * std + channel_noise
 
     local_threshold_mask = test_img < np.expand_dims(threshold, axis=1)
+
+    # print 'Local Noise (R)', np.mean(channel_noise), np.mean(std)
 
     # print 'Running', np.mean(threshold), np.shape(threshold), np.mean(channel_noise), np.mean(std)
     return local_threshold_mask, np.mean(threshold)
