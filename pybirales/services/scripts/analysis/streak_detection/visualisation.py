@@ -3,8 +3,10 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+from matplotlib.patches import Rectangle
 
 plt.rcParams['figure.figsize'] = (12, 10)
+
 
 def save_figure(filename, out_dir, obs_name, save=False):
     if save:
@@ -85,3 +87,30 @@ def visualise_filter(data, mask, tracks, f_name, snr, threshold=None, visualise=
         plt.show()
 
         print 'Showing: ' + filter_str
+
+
+def visualise_detector(data, candidates, tracks, d_name, snr, visualise=False):
+    if visualise:
+        title = '{} at SNR {} dB.'.format(d_name, snr)
+        x_start, x_end, y_start, y_end = get_limits(data, tracks)
+
+        ax = plt.axes()
+        for t in tracks:
+            x, y = t
+            ax.scatter(x, y, c='black', marker='s')
+
+
+        for c in candidates:
+            channel = c[:, 0].astype(int)
+            time = c[:, 1].astype(int)
+
+            if np.any(channel) and np.any(time):
+                ax.scatter(time, channel)
+
+        ax.invert_yaxis()
+        ax.set(ylim=(y_start, y_end), xlim=(x_start, x_end))
+        ax.set(xlabel='Time sample', ylabel='Channel', title=title)
+        ax.legend()
+        plt.show()
+
+        print 'Showing: ' + title

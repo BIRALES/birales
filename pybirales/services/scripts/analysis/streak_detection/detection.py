@@ -4,7 +4,6 @@ space debris tracks from the filtered data
 
 """
 
-import os
 import time
 
 import pandas as pd
@@ -15,6 +14,8 @@ from evaluation import *
 from filters import *
 from receiver import *
 from visualisation import *
+from skimage.transform import hough_line, hough_line_peaks, probabilistic_hough_line
+import matplotlib.pyplot as plt
 
 
 def hough_transform(test_image):
@@ -25,7 +26,15 @@ def hough_transform(test_image):
 
     :return:
     """
-    pass
+
+    # Classic straight-line Hough transform
+    h, theta, d = hough_line(test_image)
+
+    x = d * np.cos(theta)
+    y = d * np.sin(theta)
+
+    plt.plot(x, y)
+    plt.show()
 
 
 def astride(test_image):
@@ -68,6 +77,9 @@ def naive_dbscan(test_image):
     # Split the data into clusters
     clusters = np.split(de_noised_data, cluster_ids[1])
 
+    # remove empty clusters
+    clusters = [x for x in clusters if np.any(x)]
+
     return clusters
 
 
@@ -89,13 +101,13 @@ if __name__ == '__main__':
 
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
     # snr = [2, 55]
-    snr = [5]
+    snr = [10]
     metrics = {}
     metrics_df = pd.DataFrame()
 
     detectors = [
-        ('Naive DBSCAN', naive_dbscan),
-        # ('Hough Transform', hough_transform),
+        # ('Naive DBSCAN', naive_dbscan),
+        ('Hough Transform', hough_transform),
         # ('MSDS', msds),
         # ('Astride', astride),
     ]
@@ -109,7 +121,7 @@ if __name__ == '__main__':
         metrics_tmp_df = pd.DataFrame()
         print "\nEvaluating filters with tracks at SNR {:0.2f}W".format(s)
         # Create image from real data
-        test_img = create_test_img(os.path.join(ROOT, FITS_FILE), nchans=4096, nsamples=256)
+        test_img = create_test_img(os.path.join(ROOT, FITS_FILE), nchans=4096, nsamples=512)
 
         # Remove channels with RFI
         test_img = rfi_filter(test_img)
@@ -128,7 +140,7 @@ if __name__ == '__main__':
         # Add tracks to the simulated data
         test_img = add_tracks(test_img, tracks, noise_mean, s)
 
-        visualise_image(test_img, 'Test Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks)
+        # visualise_image(test_img, 'Test Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks)
 
         # visualise_image(true_image, 'Truth Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks)
 
@@ -141,24 +153,26 @@ if __name__ == '__main__':
         mask, threshold = chunked_filtering(data, filter_func)
         mask, _ = hit_and_miss(data, test_img, mask)
         timing = time.time() - start
+        print "The {} filtering algorithm, finished in {:2.3f}s".format(f_name, timing)
 
-        # Visualise filter output
+        visualise_filter(test_img, mask, tracks, f_name, s, threshold, visualise=True)
         metrics[s][f_name] = evaluate_filter(true_image, data, ~mask, timing, s, TRACK_THICKNESS)
-        visualise_filter(test_img, mask, tracks, f_name, s, threshold, visualise=False)
-
-        metrics_tmp_df = metrics_tmp_df.from_dict(metrics[s], orient='index')
-        metrics_df = metrics_df.append(metrics_tmp_df)
-
         # feature extraction - detection
-        for d_name, d in detectors:
-            candidates = d(data)
-
-            print "The {} algorithm, found {} candidates".format(d_name, len(candidates))
+        for d_name, detect in detectors:
+            print "Running {} algorithm".format(d_name)
+            start = time.time()
+            data[mask] = -100
+            candidates = detect(data)
+            timing = time.time() - start
+            print "The {} algorithm, found {} candidates in {:2.3f}s".format(d_name, len(candidates), timing)
 
             # visualise candidates
+            visualise_detector(data, candidates, tracks, d_name, s, visualise=True)
 
             # evaluation
+            metrics[s][d_name] = evaluate_detector(true_image, test_img, candidates, timing, s, TRACK_THICKNESS)
 
+        metrics_df = metrics_df.append(pd.DataFrame.from_dict(metrics[s], orient='index'))
         # data association
 
     print metrics_df.sort_values(by=['score'], ascending=False)
