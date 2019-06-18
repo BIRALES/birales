@@ -3,7 +3,7 @@ import datetime
 import json
 import logging
 import os
-
+import sys
 import numpy as np
 from enum import Enum
 
@@ -14,7 +14,7 @@ from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
 from pybirales.repository.message_broker import broker
 from pybirales.services.instrument.backend import Backend
 
-np.set_printoptions(threshold=np.nan)
+np.set_printoptions(threshold=sys.maxsize)
 
 
 class Complex64t(ctypes.Structure):
@@ -327,6 +327,7 @@ if __name__ == "__main__":
     from psutil import virtual_memory
     import time
 
+
     def run(r, i):
         print 'Start receiver', i, virtual_memory().total
         r.start_generator()
@@ -340,7 +341,7 @@ if __name__ == "__main__":
         time.sleep(3)
 
 
-    class sss:
+    class config:
         class receiver:
             nsamp = 262144
             nants = 32
@@ -350,7 +351,7 @@ if __name__ == "__main__":
             complex = True
 
 
-    r = Receiver(config=sss.receiver)
+    r = Receiver(config=config.receiver)
 
     run(r, 1)
 
