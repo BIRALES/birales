@@ -2,8 +2,8 @@ import ctypes
 import datetime
 import json
 import logging
-import os
 import sys
+
 import numpy as np
 from enum import Enum
 
@@ -341,17 +341,18 @@ if __name__ == "__main__":
         time.sleep(3)
 
 
-    class config:
-        class receiver:
-            nsamp = 262144
-            nants = 32
-            nsubs = 1
-            nbits = 64
-            npols = 1
-            complex = True
+    from pybirales.birales_config import BiralesConfig
+    import os
+
+    # Load the BIRALES configuration from file
+    config = BiralesConfig(os.path.join(os.environ['HOME'],'.birales/configuration/birales.ini'), {})
+
+    config.load()
+    # # Initialise the Birales Facade (BOSS)
+    # bf = BiralesFacade(configuration=config)
 
 
-    r = Receiver(config=config.receiver)
+    r = Receiver(config=settings.receiver)
 
     run(r, 1)
 
