@@ -345,7 +345,7 @@ if __name__ == "__main__":
     import os
 
     # Load the BIRALES configuration from file
-    config = BiralesConfig(os.path.join(os.environ['HOME'],'.birales/configuration/birales.ini'), {})
+    config = BiralesConfig([os.path.join(os.environ['HOME'],'.birales/configuration/birales.ini')], {})
 
     config.load()
     # # Initialise the Birales Facade (BOSS)
