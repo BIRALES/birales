@@ -24,13 +24,13 @@ if __name__ == '__main__':
 
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
     # snr = [2, 55]
-    snr = [5]
+    snr = [50]
     metrics = {}
     metrics_detector = {}
     metrics_df = pd.DataFrame()
     metrics_detector_df = pd.DataFrame()
     filters = [
-        ('Global Filter', global_thres),
+        # ('Global Filter', global_thres),
         # ('Local Filter', local_thres),
         # ('Global Filter (R)', global_thres_running),
         # ('Local Filter (R)', local_thres_running),
@@ -41,6 +41,8 @@ if __name__ == '__main__':
         # ('iso_data', isodata),
         # ('triangle', triangle),
         # ('minimum', minimum),
+        # ('Canny', canny_filter),
+        ('CFAR', cfar),
     ]
 
     for s in snr:
@@ -48,7 +50,7 @@ if __name__ == '__main__':
         metrics_tmp_df = pd.DataFrame()
         print "\nEvaluating filters with tracks at SNR {:0.2f}W".format(s)
         # Create image from real data
-        test_img = create_test_img(os.path.join(ROOT, FITS_FILE), nchans=8192, nsamples=512)
+        test_img = create_test_img(os.path.join(ROOT, FITS_FILE), nchans=4096, nsamples=256)
 
         # Remove channels with RFI
         test_img = rfi_filter(test_img)
@@ -67,7 +69,7 @@ if __name__ == '__main__':
         # Add tracks to the simulated data
         test_img = add_tracks(test_img, tracks, noise_mean, s)
 
-        visualise_image(test_img, 'Test Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks)
+        visualise_image(test_img, 'Test Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks, True)
 
         # visualise_image(true_image, 'Truth Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks)
 

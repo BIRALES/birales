@@ -1,4 +1,27 @@
 import numpy as np
+from logging.config import dictConfig
+import logging as log
+
+DEBUG = True
+LOGGING_CONFIG = dict(
+    version=1,
+    disable_existing_loggers=True,
+    formatters={
+        'custom_formatting': {'format': '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'}
+    },
+    handlers={
+        'stream_handler': {'class': 'logging.StreamHandler',
+                           'formatter': 'custom_formatting',
+                           'level': DEBUG}
+    },
+    root={
+        'handlers': ['stream_handler'],
+        'level': DEBUG,
+        "propagate": "False"
+    },
+)
+
+log.config.dictConfig(LOGGING_CONFIG)
 
 ROOT = "/home/denis/.birales/visualisation/fits"
 OUT_DIR = "/home/denis/.birales/visualisation/analysis"

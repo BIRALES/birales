@@ -2,6 +2,47 @@ import numpy as np
 from astropy.io import fits
 
 
+def generate_line(x1, y1, x2, y2, limits=None):
+    """Brensenham line algorithm"""
+
+    steep = 0
+    coords = []
+    dx = abs(x2 - x1)
+    if (x2 - x1) > 0:
+        sx = 1
+    else:
+        sx = -1
+    dy = abs(y2 - y1)
+    if (y2 - y1) > 0:
+        sy = 1
+    else:
+        sy = -1
+
+    if dy > dx:
+        steep = 1
+        x1,y1 = y1,x1
+        dx,dy = dy,dx
+        sx,sy = sy,sx
+    d = (2 * dy) - dx
+    for i in range(0,dx):
+        if steep:
+            coords.append((y1,x1))
+        else:
+            coords.append((x1,y1))
+        while d >= 0:
+            y1 = y1 + sy
+            d = d - (2 * dx)
+        x1 = x1 + sx
+        d = d + (2 * dy)
+    coords.append((x2,y2))
+
+    coords = np.array(coords)
+
+    coords[:,[0, 1]] = coords[:,[1, 0]]
+
+    return coords
+
+
 def calculate_amplitude(noise_avg, snr):
     """
 

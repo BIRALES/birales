@@ -62,7 +62,7 @@ def visualise_image(image, title, tracks, visualise=False):
         ax.invert_yaxis()
         # ax.set(ylim=(y_start, y_end), xlim=(x_start, x_end))
 
-        ax.set(xlabel='Time sample', ylabel='Channel', title=title)
+        ax.set(xlabel='Time sample', ylabel='Channel')
         # a[np.nonzero(a)].mean()
         a = image[y_start:y_end, x_start:x_end]
         # print "mean:", a[np.nonzero(a)].max()

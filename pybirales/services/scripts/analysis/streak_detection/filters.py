@@ -1,7 +1,8 @@
 import numpy as np
 from scipy.ndimage import binary_hit_or_miss, binary_opening
 from skimage.filters import *
-
+from skimage.feature import canny
+from scipy.signal import find_peaks_cwt
 
 def get_moving_average(chunked_data, iter, n=5):
     n_mean = np.array([np.mean(c) for c in chunked_data[:iter+1]])
@@ -53,6 +54,8 @@ def chunked_filtering(test_img, filter_func):
 
     return result_mask, threshold
 
+def no_filter(test_img):
+    return np.zeros(test_img.shape, dtype=bool), None
 
 def global_thres(test_img):
     channel_noise = np.mean(test_img)
@@ -109,6 +112,9 @@ def otsu_thres(test_img):
     global_filter_mask = test_img < global_thresh
 
     return global_filter_mask, global_thresh
+
+def canny_filter(test_img):
+    return canny(test_img, 2), None
 
 
 def adaptive(test_img):
@@ -210,3 +216,66 @@ def rfi_filter(test_img):
     test_img[peaks_snr_i, :] = noise_mean
 
     return test_img
+
+
+def cfar(test_image):
+    """
+        Detect peaks with CFAR algorithm.
+
+        num_train: Number of training cells.
+        num_guard: Number of guard cells.
+        rate_fa: False alarm rate.
+        """
+
+
+    def cfar_1d(x):
+        # x = np.ones(shape=(100,))
+        # x[10:20] = 5
+        num_train = 10
+        num_guard = 5
+        rate_fa = 0.9
+        num_cells = x.size
+
+        num_train_half = int(round(num_train / 2))
+        num_guard_half = int(round(num_guard / 2))
+        num_side = int(num_train_half + num_guard_half)
+
+        alpha = num_train * (rate_fa ** (-1. / num_train) - 1)  # threshold factor
+        peak_idx = []
+
+        for i in range(num_side, num_cells - num_side):
+
+            if i != i - num_side + np.argmax(x[i - num_side:i + num_side + 1]):
+                continue
+
+            sum1 = np.sum(x[i - num_side:i + num_side + 1])
+            sum2 = np.sum(x[i - num_guard_half:i + num_guard_half + 1])
+            p_noise = (sum1 - sum2) / num_train
+            threshold = alpha * p_noise
+            # print threshold, alpha, p_noise, sum1, sum2, num_train
+            if x[i] > threshold:
+                peak_idx.append(i)
+
+            # print threshold
+
+        peak_idx = np.array(peak_idx, dtype=int)
+        # print peak_idx
+        y = np.ones(shape=num_cells, dtype=bool)
+        y[~peak_idx] = False
+
+        # print y
+
+        # print peak_idx, threshold
+        peak_idx = find_peaks_cwt(x, np.arange(1,5) )
+
+        # peak_idx = np.array(peak_idx, dtype=int)
+        # print peak_idx
+        y = np.ones(shape=num_cells, dtype=bool)
+        y[~peak_idx] = False
+
+        return y
+
+    # print 'Test image', np.mean(test_image)
+    mask = np.apply_along_axis(cfar_1d, 1, test_image)
+    # print 'Mask', np.mean(mask)
+    return mask, None
