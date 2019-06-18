@@ -8,7 +8,7 @@ from setuptools.command.install import install
 distutils.log.set_verbosity(distutils.log.info)
 
 HOME = os.environ['HOME']
-CONFIG_PATH = 'configuration.py'
+CONFIG_PATH = 'configuration'
 TEMPLATES = os.path.join(CONFIG_PATH, 'templates')
 DEPENDENCIES = ['configparser', 'futures', 'enum34', 'numpy', 'scipy', 'astropy==2.*', 'astroplan', 'matplotlib', 'numba',
                 'pymongo', 'scikit-learn', 'ephem>=3.7.6.0', 'h5py', 'click', 'flask', 'flask-compress',
