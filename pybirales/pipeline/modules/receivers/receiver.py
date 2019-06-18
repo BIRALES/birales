@@ -329,15 +329,15 @@ if __name__ == "__main__":
 
 
     def run(r, i):
-        print 'Start receiver', i, virtual_memory().total
+        print 'Start receiver', i, virtual_memory().total >> 20, ' MB'
         r.start_generator()
         time.sleep(2)
 
-        print 'Receiver', i, ' started', virtual_memory().total
+        print 'Receiver', i, ' started', virtual_memory().total >> 20, ' MB'
         time.sleep(2)
 
         r.stop()
-        print 'Stop receiver', i, virtual_memory().total
+        print 'Stop receiver', i, virtual_memory().total >> 20, ' MB'
         time.sleep(3)
 
 
@@ -351,6 +351,12 @@ if __name__ == "__main__":
     # # Initialise the Birales Facade (BOSS)
     # bf = BiralesFacade(configuration=config)
 
+    # Initialise the roach
+    print "Start backend"
+    backend = Backend.Instance()
+    time.sleep(2)
+    backend.start()
+    print "Backend Started"
 
     r = Receiver(config=settings.receiver)
 
