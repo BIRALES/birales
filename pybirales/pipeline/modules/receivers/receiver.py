@@ -128,7 +128,8 @@ class Receiver(Generator):
             consumer_stopped = self._daq.stopConsumer("birales")
             receiver_stopped = self._daq.stopReceiver()
 
-            logging.debug('DAQ Birales consumer stopped: {}. DAQ Receiver stopped: {}'.format(consumer_stopped, receiver_stopped))
+            logging.debug(
+                'DAQ Birales consumer stopped: {}. DAQ Receiver stopped: {}'.format(consumer_stopped, receiver_stopped))
 
             if consumer_stopped != Result.Failure.value and receiver_stopped != Result.Failure.value:
                 roach = Backend.Instance().roach
@@ -320,3 +321,39 @@ class Receiver(Generator):
 
             logging.debug('Delay between server and roach is ~ {:0.2f} seconds'.format(
                 (datetime.datetime.utcnow() - obs_info['timestamp']).total_seconds()))
+
+
+if __name__ == "__main__":
+    from psutil import virtual_memory
+    import time
+
+    def run(r, i):
+        print 'Start receiver', i, virtual_memory().total
+        r.start_generator()
+        time.sleep(2)
+
+        print 'Receiver', i, ' started', virtual_memory().total
+        time.sleep(2)
+
+        r.stop()
+        print 'Stop receiver', i, virtual_memory().total
+        time.sleep(3)
+
+
+    class sss:
+        class receiver:
+            nsamp = 262144
+            nants = 32
+            nsubs = 1
+            nbits = 64
+            npols = 1
+            complex = True
+
+
+    r = Receiver(config=sss.receiver)
+
+    run(r, 1)
+
+    run(r, 2)
+
+    run(r, 3)
