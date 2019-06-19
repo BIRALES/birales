@@ -337,17 +337,17 @@ if __name__ == "__main__":
             return memory >> 20
 
         m1 = memory()
-        print 'Start receiver', i, m1, ' MB Diff:', m1 - m1, ' MB'
+        print 'Start receiver. Memory Total:', i, m1, ' MB Diff:', m1 - m1, 'MB'
         r.start_generator()
         time.sleep(2)
 
         m2 = memory()
-        print 'Receiver', i, ' started', m2, ' MB Diff:', m1 - m2, ' MB'
+        print 'Receiver', i, ' started. Memory Total:', m2, 'MB Diff:', m2 - m1, 'MB'
         time.sleep(2)
 
         r.stop()
         m3 = memory()
-        print 'Stop receiver', i, m3, ' MB Diff:', m2 - m3, ' MB'
+        print 'Stop receiver. Memory Total:', i, m3, 'MB Diff:', m3 - m2, 'MB'
         time.sleep(3)
 
 
