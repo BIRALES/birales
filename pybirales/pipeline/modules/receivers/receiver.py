@@ -2,12 +2,14 @@ import ctypes
 import datetime
 import json
 import logging
+import os
 import sys
 
 import numpy as np
 from enum import Enum
 
 from pybirales import settings
+from pybirales.birales_config import BiralesConfig
 from pybirales.pipeline.base.definitions import PipelineError, ObservationInfo
 from pybirales.pipeline.base.processing_module import Generator
 from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
@@ -341,11 +343,8 @@ if __name__ == "__main__":
         time.sleep(3)
 
 
-    from pybirales.birales_config import BiralesConfig
-    import os
-
     # Load the BIRALES configuration from file
-    config = BiralesConfig([os.path.join(os.environ['HOME'],'.birales/configuration/birales.ini')], {})
+    config = BiralesConfig([os.path.join(os.environ['HOME'], '.birales/configuration/birales.ini')], {})
 
     config.load()
     # # Initialise the Birales Facade (BOSS)
