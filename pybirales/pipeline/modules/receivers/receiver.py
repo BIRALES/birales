@@ -326,20 +326,28 @@ class Receiver(Generator):
 
 
 if __name__ == "__main__":
-    from psutil import virtual_memory
+    import psutil
     import time
 
-
     def run(r, i):
-        print 'Start receiver', i, virtual_memory().total >> 20, ' MB'
+        def memory():
+            process = psutil.Process(os.getpid())
+            memory = process.memory_info()[0]
+
+            return memory >> 20
+
+        m1 = memory()
+        print 'Start receiver', i, m1, ' MB Diff:', m1 - m1, ' MB'
         r.start_generator()
         time.sleep(2)
 
-        print 'Receiver', i, ' started', virtual_memory().total >> 20, ' MB'
+        m2 = memory()
+        print 'Receiver', i, ' started', m2, ' MB Diff:', m1 - m2, ' MB'
         time.sleep(2)
 
         r.stop()
-        print 'Stop receiver', i, virtual_memory().total >> 20, ' MB'
+        m3 = memory()
+        print 'Stop receiver', i, m3, ' MB Diff:', m2 - m3, ' MB'
         time.sleep(3)
 
 
