@@ -336,7 +336,7 @@ if __name__ == "__main__":
 
             return memory >> 20
 
-        logging.info('Starting test ', i)
+        logging.info('Starting test %d', i)
 
         m1 = memory()
         logging.info('Starting receiver %d. Memory Total: %f MB Diff: %f MB', i, m1, m1 - m1)
@@ -361,11 +361,11 @@ if __name__ == "__main__":
     # bf = BiralesFacade(configuration=config)
 
     # Initialise the roach
-    logging.info('Starting backend')
-    backend = Backend.Instance()
-    time.sleep(2)
-    backend.start()
-    logging.info('Backend started')
+    # logging.info('Starting backend')
+    # backend = Backend.Instance()
+    # time.sleep(2)
+    # backend.start()
+    # logging.info('Backend started')
 
     r = Receiver(config=settings.receiver)
 
