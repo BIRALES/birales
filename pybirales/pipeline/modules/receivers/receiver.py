@@ -336,18 +336,20 @@ if __name__ == "__main__":
 
             return memory >> 20
 
+        logging.info('Starting test ', i)
+
         m1 = memory()
-        print 'Start receiver. Memory Total:', i, m1, ' MB Diff:', m1 - m1, 'MB'
+        logging.info('Start receiver. Memory Total:', i, m1, ' MB Diff:', m1 - m1, 'MB')
         r.start_generator()
         time.sleep(2)
 
         m2 = memory()
-        print 'Receiver', i, ' started. Memory Total:', m2, 'MB Diff:', m2 - m1, 'MB'
+        logging.info('Start receiver. Memory Total:', i, m1, ' MB Diff:', m2 - m1, 'MB')
         time.sleep(2)
 
         r.stop()
         m3 = memory()
-        print 'Stop receiver. Memory Total:', i, m3, 'MB Diff:', m3 - m2, 'MB'
+        logging.info('Start receiver. Memory Total:', i, m1, ' MB Diff:', m3 - m2, 'MB')
         time.sleep(3)
 
 
@@ -359,11 +361,11 @@ if __name__ == "__main__":
     # bf = BiralesFacade(configuration=config)
 
     # Initialise the roach
-    print "Start backend"
+    logging.info('Starting backend')
     backend = Backend.Instance()
     time.sleep(2)
     backend.start()
-    print "Backend Started"
+    logging.info('Backend started')
 
     r = Receiver(config=settings.receiver)
 
@@ -372,3 +374,7 @@ if __name__ == "__main__":
     run(r, 2)
 
     run(r, 3)
+
+    run(r, 4)
+
+    run(r, 5)
