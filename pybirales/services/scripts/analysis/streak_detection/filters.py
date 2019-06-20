@@ -4,9 +4,10 @@ from skimage.filters import *
 from skimage.feature import canny
 from scipy.signal import find_peaks_cwt
 
+
 def get_moving_average(chunked_data, iter, n=5):
-    n_mean = np.array([np.mean(c) for c in chunked_data[:iter+1]])
-    n_std = np.array([np.std(c) for c in chunked_data[:iter+1]])
+    n_mean = np.array([np.mean(c) for c in chunked_data[:iter + 1]])
+    n_std = np.array([np.std(c) for c in chunked_data[:iter + 1]])
 
     s = len(n_mean) - n
 
@@ -17,8 +18,8 @@ def get_moving_average(chunked_data, iter, n=5):
 
 
 def get_moving_average_local(chunked_data, iter, n=5):
-    n_mean = np.array([np.mean(c, axis=1) for c in chunked_data[:iter+1]])
-    n_std = np.array([np.std(c, axis=1) for c in chunked_data[:iter+1]])
+    n_mean = np.array([np.mean(c, axis=1) for c in chunked_data[:iter + 1]])
+    n_std = np.array([np.std(c, axis=1) for c in chunked_data[:iter + 1]])
 
     s = len(n_mean) - n
 
@@ -54,8 +55,10 @@ def chunked_filtering(test_img, filter_func):
 
     return result_mask, threshold
 
+
 def no_filter(test_img):
     return np.zeros(test_img.shape, dtype=bool), None
+
 
 def global_thres(test_img):
     channel_noise = np.mean(test_img)
@@ -68,6 +71,7 @@ def global_thres(test_img):
 
     return global_threshold_mask, threshold
 
+
 def global_thres_running(test_img, channel_noise, std):
     threshold = 4 * std + channel_noise
     global_threshold_mask = test_img < threshold
@@ -75,6 +79,7 @@ def global_thres_running(test_img, channel_noise, std):
     # print 'Global Noise (R)', np.mean(channel_noise), np.mean(std)
 
     return global_threshold_mask, threshold
+
 
 def local_thres(test_img):
     channel_noise = np.mean(test_img, axis=1)
@@ -87,6 +92,7 @@ def local_thres(test_img):
     local_threshold_mask = test_img < np.expand_dims(threshold, axis=1)
 
     return local_threshold_mask, np.mean(threshold)
+
 
 def local_thres_running(test_img, channel_noise, std):
     threshold = 4 * std + channel_noise
@@ -112,6 +118,7 @@ def otsu_thres(test_img):
     global_filter_mask = test_img < global_thresh
 
     return global_filter_mask, global_thresh
+
 
 def canny_filter(test_img):
     return canny(test_img, 2), None
@@ -227,13 +234,10 @@ def cfar(test_image):
         rate_fa: False alarm rate.
         """
 
-
     def cfar_1d(x):
-        # x = np.ones(shape=(100,))
-        # x[10:20] = 5
         num_train = 10
-        num_guard = 5
-        rate_fa = 0.9
+        num_guard = 2
+        rate_fa = 1e-3
         num_cells = x.size
 
         num_train_half = int(round(num_train / 2))
@@ -242,7 +246,7 @@ def cfar(test_image):
 
         alpha = num_train * (rate_fa ** (-1. / num_train) - 1)  # threshold factor
         peak_idx = []
-
+        c = 0
         for i in range(num_side, num_cells - num_side):
 
             if i != i - num_side + np.argmax(x[i - num_side:i + num_side + 1]):
@@ -252,30 +256,18 @@ def cfar(test_image):
             sum2 = np.sum(x[i - num_guard_half:i + num_guard_half + 1])
             p_noise = (sum1 - sum2) / num_train
             threshold = alpha * p_noise
-            # print threshold, alpha, p_noise, sum1, sum2, num_train
+
             if x[i] > threshold:
+                c += 1
                 peak_idx.append(i)
 
-            # print threshold
-
         peak_idx = np.array(peak_idx, dtype=int)
-        # print peak_idx
-        y = np.ones(shape=num_cells, dtype=bool)
-        y[~peak_idx] = False
 
-        # print y
-
-        # print peak_idx, threshold
-        peak_idx = find_peaks_cwt(x, np.arange(1,5) )
-
-        # peak_idx = np.array(peak_idx, dtype=int)
-        # print peak_idx
         y = np.ones(shape=num_cells, dtype=bool)
         y[~peak_idx] = False
 
         return y
 
-    # print 'Test image', np.mean(test_image)
-    mask = np.apply_along_axis(cfar_1d, 1, test_image)
-    # print 'Mask', np.mean(mask)
-    return mask, None
+    mask = np.apply_along_axis(cfar_1d, 0, test_image)
+
+    return np.flipud(mask), None

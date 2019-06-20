@@ -141,7 +141,7 @@ if __name__ == '__main__':
         # ('Naive DBSCAN', naive_dbscan, global_thres),
         # ('Hough Transform', hough_transform, global_thres),
         # ('MSDS', msds, global_thres),
-        # ('Astride', astride, ('No Filter', no_filter)),
+        ('Astride', astride, ('No Filter', no_filter)),
         # ('CFAR', None, ('No Filter', cfar)),
     ]
 

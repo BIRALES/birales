@@ -27,7 +27,7 @@ ROOT = "/home/denis/.birales/visualisation/fits"
 OUT_DIR = "/home/denis/.birales/visualisation/analysis"
 
 OBS_NAME = "NORAD_1328"
-N_TRACKS = 20
+N_TRACKS = 1
 TD = 262144 / 78125 / 32.
 CD = 78125 / 8192.
 F = (1. / TD) / (1. / CD)

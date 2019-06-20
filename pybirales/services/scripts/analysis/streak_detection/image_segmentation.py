@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
     # snr = [2, 55]
-    snr = [50]
+    snr = [5]
     metrics = {}
     metrics_detector = {}
     metrics_df = pd.DataFrame()
@@ -50,7 +50,7 @@ if __name__ == '__main__':
         metrics_tmp_df = pd.DataFrame()
         print "\nEvaluating filters with tracks at SNR {:0.2f}W".format(s)
         # Create image from real data
-        test_img = create_test_img(os.path.join(ROOT, FITS_FILE), nchans=4096, nsamples=256)
+        test_img = create_test_img(os.path.join(ROOT, FITS_FILE), nchans=512, nsamples=256)
 
         # Remove channels with RFI
         test_img = rfi_filter(test_img)
@@ -79,8 +79,8 @@ if __name__ == '__main__':
 
             # split data in chunks
             start = time.time()
-            mask, threshold = chunked_filtering(data, filter_func)
-            # mask, threshold = filter_func(data)
+            # mask, threshold = chunked_filtering(data, filter_func)
+            mask, threshold = filter_func(data)
             timing = time.time() - start
 
             # Visualise filter output
