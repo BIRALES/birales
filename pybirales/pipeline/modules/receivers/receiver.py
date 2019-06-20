@@ -339,18 +339,18 @@ if __name__ == "__main__":
         logging.info('Starting test ', i)
 
         m1 = memory()
-        logging.info('Start receiver. Memory Total:', i, m1, ' MB Diff:', m1 - m1, 'MB')
+        logging.info('Starting receiver %d. Memory Total: %f MB Diff: %f MB', i, m1, m1 - m1)
         r.start_generator()
         time.sleep(2)
 
         m2 = memory()
-        logging.info('Start receiver. Memory Total:', i, m1, ' MB Diff:', m2 - m1, 'MB')
-        time.sleep(2)
+        logging.info('Receiver %d started. Memory Total: %f MB Diff: %f MB', i, m1, m2 - m1)
 
         r.stop()
-        m3 = memory()
-        logging.info('Start receiver. Memory Total:', i, m1, ' MB Diff:', m3 - m2, 'MB')
         time.sleep(3)
+
+        m3 = memory()
+        logging.info('Receiver %d stopped. Memory Total: %f MB Diff: %f MB', i, m1, m3 - m2)
 
 
     # Load the BIRALES configuration from file
