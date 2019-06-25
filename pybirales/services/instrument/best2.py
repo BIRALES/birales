@@ -192,6 +192,9 @@ class BEST2(object):
             raise BEST2PointingException("BEST: Could not get current declination (got `%s`)" % data)
 
         try:
+            if data.startswith("ONSOURCE"):
+                data = re.findall("[-+]?[0-9]*\.?[0-9]+", data)[0]
+
             # print repr(data)
             self.current_pointing = float(data)
         except IndexError:
