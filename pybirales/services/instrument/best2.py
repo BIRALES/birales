@@ -105,7 +105,7 @@ class BEST2(object):
             exit()        
         """
         self.current_pointing =  self.get_current_declination()
-        log.info("Current pointing is {} DEG".format(self.current_pointing))
+        logging.info("Current pointing is {} DEG".format(self.current_pointing))
         # print 'ccurnrrent', self.current_pointing
         # Keep track of current pointing
         # self.current_pointing = self.get_current_declination()

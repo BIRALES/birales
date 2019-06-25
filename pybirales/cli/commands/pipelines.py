@@ -31,8 +31,8 @@ def pipelines(ctx, name, debug, duration):
 @pipelines.command(short_help='Run the Detection Pipeline')
 @click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
               help='The BIRALES configuration file', multiple=True)
-@click.option('--tx', 'tx', help='The transmission frequency in MHz')
-@click.option('--pointing', 'pointing', help='Reference Declination of the Beam Former')
+@click.option('--tx', 'tx', type=float, help='The transmission frequency in MHz')
+@click.option('--pointing', 'pointing', type=float, help='Reference Declination of the Beam Former')
 @click.pass_context
 @enable_notifications
 def detection_pipeline(ctx, config_file_path, tx, pointing):
