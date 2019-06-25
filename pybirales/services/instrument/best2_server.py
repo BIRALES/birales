@@ -77,14 +77,18 @@ ERR02 = "\tETH-RS232 CMD echo is not equal to the CMD sent"
 class Pointing:
     def __init__(self, ip="192.168.30.134", port=5002):
         self._conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._conn.settimeout(5)
+        self._conn.settimeout(10)
+        self.connected = False
         try:
             self._conn.connect((ip, port))
+            self.connected = True
         except:
-            pass
-        self._conn.settimeout(1)
+            logging.error(ERR01)
+            return None
+        # self._conn.settimeout(1)
         self.waiting = 1
         self.moving = 0
+        self.buff_len = BUFF_LEN
 
     def _readLine(self):
         line = ''
@@ -106,6 +110,8 @@ class Pointing:
     def get_dec(self):
         self._conn.send(ASK_STATUS)
         time.sleep(0.5)
+        _ = self._readLine()
+        
         self.waiting = 0
         while not self.waiting:
             try:
@@ -150,6 +156,7 @@ class Pointing:
         try:
             if self._send_cmd(ASK_STATUS):
                 ans = self._readLine()
+                # print ans
                 return ans
             else:
                 return ERR02

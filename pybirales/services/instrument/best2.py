@@ -5,7 +5,7 @@ import threading
 import time
 
 from pybirales.pipeline.base.definitions import BEST2PointingException
-from pybirales.services.instrument.best2_server import SdebTCPServer
+from best2_server import SdebTCPServer, Pointing
 from pybirales.utilities.singleton import Singleton
 
 # Delay in seconds
@@ -35,9 +35,10 @@ class BEST2(object):
     # The acceptable error between desired and current pointing
     DEC_ERROR_THOLD = 0.75
 
-    def __init__(self, ip="127.0.0.1", port=7200):
+    def __init__(self, ip="192.168.30.134", port=5002):
         """ Class constructor """
-
+        ip = "127.0.0.1"
+        port = 7200
         self._zenith = 44.52
         self._buffer_size = 1024
         self._port = port
@@ -60,11 +61,12 @@ class BEST2(object):
         tries += 1
         if tries > 3:
             raise BEST2PointingException("Could not connect to antenna server. Number of tries exceeded")
-
+        
+        
         try:
             # Check if server is already running
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._socket.settimeout(10)
+            self._socket.settimeout(20)
             self._socket.connect((self._ip, self._port))
         except socket.timeout:
             # If not launch server in a separate thread
@@ -82,10 +84,31 @@ class BEST2(object):
             self.connect(tries)
         else:
             self._connected = True
-            logging.info("Connected to existing BEST antenna server")
+            logging.info("Connected to the BEST antenna server")
+        """
+        ANTENNA_IP = "192.168.30.134"  # ETH-RS232 Adapter IP connected to COM2 of Antenna
+        ANTENNA_IP = "127.0.0.1"
+        ANTENNA_PORT = 5002 
+        antenna = Pointing(ip=ANTENNA_IP, port=ANTENNA_PORT)
+        try:
+            if not antenna == None and antenna.connected:
+	            print("Antenna connection established!")
+            else:
+                raise IndexError()
+            # print '>', antenna.get_status_string()
+            # print antenna.get_dec()
 
+
+        except IndexError:
+            print "Index Error quitting"
+            self.stop_best2_server()
+            exit()        
+        """
+        self.current_pointing =  self.get_current_declination()
+        log.info("Current pointing is {} DEG".format(self.current_pointing))
+        # print 'ccurnrrent', self.current_pointing
         # Keep track of current pointing
-        self.current_pointing = self.get_current_declination()
+        # self.current_pointing = self.get_current_declination()
 
     def _launch_new_server(self):
         logging.warning("BEST antenna server is not available. Launching new BEST antenna server")
@@ -149,8 +172,9 @@ class BEST2(object):
             raise BEST2PointingException(
                 "Could not retrieve current declination. BEST2 antenna server is not connected")
 
+       
         data = None
-        for i in range(3):
+        for _ in range(3):
             time.sleep(1)
 
             self._socket_send("best")
@@ -163,14 +187,15 @@ class BEST2(object):
             if re.search("[0-9]+", data) is not None:
                 break
 
-        # Ensure that the returned declination is a float
+        # Ensure that the returned declination is a float        
         if re.search("[0-9]+", data) is None:
-            raise BEST2PointingException("BEST: Could not get current declination (got %s)" % data)
+            raise BEST2PointingException("BEST: Could not get current declination (got `%s`)" % data)
 
         try:
-            self.current_pointing = float(re.findall(r'[-+]?\d*\.\d+|\d+', data)[0])
+            # print repr(data)
+            self.current_pointing = float(data)
         except IndexError:
-            raise BEST2PointingException("BEST: Could not get current declination (got %s)" % data)
+            raise BEST2PointingException("BEST: Could not get current declination (got `%s`)" % data)
 
         return self.current_pointing
 
@@ -243,7 +268,7 @@ class BEST2(object):
         :return:
         """
         # Issue command
-        self._socket.sendall("best %.2f" % dec)
+        self._socket.sendall("best %.2f \r" % dec)
         time.sleep(2)
         data = self._socket.recv(self._buffer_size)
 
@@ -258,9 +283,13 @@ class BEST2(object):
         while not self._stop_server:
             self._socket.sendall("progress")
             data = self._socket.recv(self._buffer_size)
-            parsed_msg = data.split("   ")
-            try:
-                current_dec = float(parsed_msg[2])
+            
+            # parsed_msg = data.split("   ")
+            try:               
+                parsed_msg = re.findall("[-+]?[0-9]*\.?[0-9]+", data)
+
+                if isinstance(parsed_msg, (list,)):                     
+                    current_dec = float(parsed_msg[1])
             except IndexError:
                 logging.warning('BEST2: Server returned: {}'.format(data))
 
@@ -275,26 +304,30 @@ class BEST2(object):
                 tries += 1
             else:
                 self.current_pointing = current_dec
+                
                 logging.info("Current pointing: {:0.2f}".format(self.current_pointing))
-
+                
                 if abs(current_dec - dec) < self.DEC_ERROR_THOLD:
-                    logging.info("Antenna in position. DEC: {:0.2f}".format(current_dec))
+                    logging.info("Antenna in position. DEC: {:0.2f}".format(current_dec))          
+                    
+                    return True
 
-                    time.sleep(2)
-                    break
+                time.sleep(2)    
+
 
         # Check if pointing was successful
-        curr_declination = self.get_current_declination()
-        if type(curr_declination) is not float:
-            logging.warning("BEST2: Could not validate BEST2 movement")
-            return False
+        # curr_declination = self.get_current_declination()
+        # if type(curr_declination) is not float:
+        #     logging.warning("BEST2: Could not validate BEST2 movement")
+        #     return False
 
-        if abs(curr_declination - dec) > self.DEC_ERROR_THOLD:
-            logging.warning("BEST2: Failed to reach requested declination of DEC: {:0.2f}".format(dec))
+        # if abs(curr_declination - dec) > self.DEC_ERROR_THOLD:
+        #     print curr_declination ,  dec ,self.DEC_ERROR_THOLD
+        #     logging.warning("BEST2: Failed to reach requested declination of DEC: {:0.2f}".format(dec))
 
-            return False
+        #     return False
 
-        return True
+        return False
 
 
 if __name__ == "__main__":
@@ -310,16 +343,20 @@ if __name__ == "__main__":
     ch.setFormatter(str_format)
     log.addHandler(ch)
 
+    # best2 = BEST2.Instance()
+
+    # best2.connect()
+
+    # best2.stop_best2_server()
+
     best2 = BEST2.Instance()
 
     best2.connect()
 
-    best2.stop_best2_server()
+    best2.move_to_declination(40)
+    time.sleep(2)
+    best2.move_to_declination(46)
 
-    best2 = BEST2.Instance()
-
-    best2.connect()
-
-    best2.move_to_declination(30)
+    # best2.move_to_declination(42)
 
     best2.stop_best2_server()
