@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
     # snr = [2, 55]
-    snr = [5]
+    snr = [10]
     metrics = {}
     metrics_detector = {}
     metrics_df = pd.DataFrame()
@@ -42,7 +42,9 @@ if __name__ == '__main__':
         # ('triangle', triangle),
         # ('minimum', minimum),
         # ('Canny', canny_filter),
-        ('CFAR', cfar),
+        # ('CFAR', cfar),
+        # ('sigma_clip', sigma_clipping),
+        ('sigma_clip_map', sigma_clipping_map),
     ]
 
     for s in snr:
@@ -69,7 +71,7 @@ if __name__ == '__main__':
         # Add tracks to the simulated data
         test_img = add_tracks(test_img, tracks, noise_mean, s)
 
-        visualise_image(test_img, 'Test Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks, True)
+        visualise_image(test_img, 'Test Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks, False)
 
         # visualise_image(true_image, 'Truth Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks)
 
@@ -89,7 +91,9 @@ if __name__ == '__main__':
 
             # Filter post-processor
             # mask, timing = morph_opening(data, test_img, mask)
-            mask, timing = hit_and_miss(data, test_img, mask)
+            start = time.time()
+            mask, _ = hit_and_miss(data, test_img, mask)
+            timing = time.time() - start
             f_name += '_pp'
             metrics[s][f_name] = evaluate_filter(true_image, data, ~mask, timing, s, TRACK_THICKNESS)
             visualise_filter(test_img, mask, tracks, f_name, s, threshold=None)

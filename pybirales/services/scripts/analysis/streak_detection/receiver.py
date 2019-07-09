@@ -99,6 +99,7 @@ def get_test_tracks(n_tracks, gradient, track_length, image_shape, thickness):
     tracks = []
 
     for i in range(0, n_tracks):
+
         m = np.random.uniform(gradient[0], gradient[1])
         start = np.random.randint(low=0, high=image_shape[1] / 3.)
         end = np.random.randint(low=start + track_length[0], high=start + track_length[1])
@@ -112,6 +113,7 @@ def get_test_tracks(n_tracks, gradient, track_length, image_shape, thickness):
 
         tracks.append((x, y))
     print 'Created {} tracks'.format(n_tracks)
+    # print np.mean(np.arctan(x /  (4096.-y)))
     return tracks
 
 
