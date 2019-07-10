@@ -4,28 +4,21 @@ from matplotlib.path import Path
 from scipy.spatial import KDTree
 from scipy.stats import linregress, pearsonr
 from sklearn.metrics.pairwise import cosine_similarity
-
+from scipy.cluster.hierarchy import fclusterdata
+from numba import njit
 from visualisation import *
 
-
+# np.seterr(all='raise')
+# @profile
+@njit(fastmath = True)
 def mydist(p1, p2):
-    diff = p1 - p2
-    x1 = p1[1]
-    x2 = p2[1]
-    y1 = p1[0]
-    y2 = p2[0]
+    diff = p1 - p2  # dx = p1[1] - p2[1],  dy = p1[0] - p2[0]
 
-    dx = x1 - x2
-    dy = y1 - y2
+    if diff[1]:  # if dx and dy are not 0.
+        if np.arctan(diff[0] / diff[1]) > 0:
+            return 1000.
 
-    # print p1 , p2
-    if dx != 0 and dy != 0:
-        theta = np.rad2deg(np.arctan(dy / dx))
-
-        if theta > 0:
-            return 1000
-
-    return np.vdot(diff[:2], diff[:2]) ** 0.5
+    return np.vdot(diff, diff) ** 0.5
 
 
 def traverse(root, x1, x2, y1, y2):
@@ -59,6 +52,9 @@ def traverse(root, x1, x2, y1, y2):
             d = root.children / ((x2 - x1) * (y2 - y1))
             rectangles.append((d > 0.069, None, x1, x2, y1, y2, root.children))
             leaves.append((d > 0.069, None, x1, x2, y1, y2, root.children))
+
+            # cc = np.column_stack((np.arange(0, 10), np.arange(0, 10)))
+            # fclusterdata(cc, 100.0, criterion='distance')
 
             # print 'Density', d, d > 0.069, 'Area:', ((x2 - x1) * (y2 - y1)), root.children
     return rectangles, leaves
@@ -97,6 +93,7 @@ def nearest(m1, c1, m2, c2, x, y):
     d1 = np.hypot(line1_y - y, line1_x - x)
     d2 = np.hypot(line2_y - y, line2_x - x)
     t = d1 + d2
+    # print m1, c1, m2, c2, x, y, d1, d2, t
     if d1 < d2:
         return 1, 1. - (d1 / t)
     return 2, 1. - (d2 / t)
@@ -135,7 +132,7 @@ def __inertia_ratio(x, y, i=0):
     pa1n = 1.
     pa2n = 1.
     for x_, y_ in zip(x, y):
-        line, d = nearest(m1, 0, m2, 0, x_, y_)
+        line, d = nearest(m1, 0.000001, m2, 0.000001, x_, y_)
         if line == 1:
             pa1n += d
         else:

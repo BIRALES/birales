@@ -277,7 +277,7 @@ def cfar(test_image):
 
 
 def sigma_clipping(test_img):
-    s_clip = SigmaClip(sigma=4, cenfunc=mean, iters=None)
+    s_clip = SigmaClip(sigma=3, cenfunc=mean, iters=None)
     mask = s_clip(test_img)
 
     return ~mask.mask, None

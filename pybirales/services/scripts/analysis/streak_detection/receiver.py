@@ -111,6 +111,10 @@ def get_test_tracks(n_tracks, gradient, track_length, image_shape, thickness):
         # print 'Created track with m={:0.2f}, c={:0.1f}, of {}px at ({},{}) to ({},{})'.format(m, c, (
         #         max(x) - start), start, max(y), end, min(y))
 
+        print "\nTest track ", i
+        print "ax.set_ylim({}, {})".format(min(y),max(y))
+        print "ax.set_xlim({}, {})".format(start,end)
+
         tracks.append((x, y))
     print 'Created {} tracks'.format(n_tracks)
     # print np.mean(np.arctan(x /  (4096.-y)))

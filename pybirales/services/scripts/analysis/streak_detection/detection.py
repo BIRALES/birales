@@ -64,7 +64,8 @@ def astride(test_image):
     edge.quantify()
 
     # Filter the edges, so only streak remains.
-    # edge.filter_edges()
+    edge.filter_edges()
+
     edge.connect_edges()
 
     streaks = edge.get_edges()
@@ -227,29 +228,37 @@ def msds_c(test_image, unfiltered_image=None):
 
     # Convert back the data points
 
+def _viz_cluster(bb, fclust1):
+    for b, g in zip(bb, fclust1):
+        print b[0], b[1], b[2], g
 
+# @profile
 def msds_q(test_image):
     # Coordinate transform channel, time coordinates into rho, theta
-
+    vis = False
     # Build quad/nd tree that spans all the data points
+    t0 = time.time()
     ndx = np.column_stack(np.where(test_image > 0.))
     ndx = np.append(ndx, np.expand_dims(test_image[test_image > 0.], axis=1), axis=1)
+    print 'Data prepared in', time.time() - t0, ' seconds'
 
     t1 = time.time()
     ktree = KDTree(ndx, 30)
     print 'Tree built in ', time.time() - t1, ' seconds'
 
-    t1 = time.time()
+    t4 = time.time()
     r, leaves = traverse(ktree.tree, 0, 256, 0, 4096)
-    print 'Tree traversed in ', time.time() - t1, ' seconds'
+    print 'Tree traversed in ', time.time() - t4, ' seconds'
 
     fig, ax = plt.subplots(1)
-    ax.plot(ndx[:, 1], ndx[:, 0], '.')
+    if vis:
+        ax.plot(ndx[:, 1], ndx[:, 0], '.')
 
     clusters = []
-    t1 = time.time()
-    n_leaves = len(leaves)
     candidates = []
+
+    t5 = time.time()
+    vf = np.vectorize(mydist)
     for i, rectangle in enumerate(leaves):
         a, b, x1, x2, y1, y2, n = rectangle
 
@@ -258,10 +267,11 @@ def msds_q(test_image):
         aa = ndx[np.logical_and(ys >= y1, ys <= y2)]
         bb = aa[np.logical_and(aa[:, 1] >= x1, aa[:, 1] <= x2)]
 
-        if not np.any(bb):
+        if not np.any(bb)or len(bb) < 2:
             continue
 
-        fclust1 = fclusterdata(bb, 5.0, metric=mydist, criterion='distance')
+        # print len(bb)
+        fclust1 = fclusterdata(bb, 2.0, metric=mydist, criterion='distance')
 
         best = None
         best_r = 0
@@ -272,9 +282,12 @@ def msds_q(test_image):
         best_gs = []
         for g in u_groups:
             c = bb[np.where(fclust1 == g)]
+
+            if len(np.unique(c[:,0])) < 2 or len(np.unique(c[:,1])) < 2:
+                continue
             pear = pearsonr(c[:, 0], c[:, 1])
-            # if i == 364:
-            #     print g, len(c), pear[0], pear[1]
+            if i == 1342:
+                print g, len(c), pear[0], pear[1]
 
             if pear[0] < best_r and pear[1] < 0.05 and len(c) > 2:
                 # s_best = best
@@ -299,29 +312,38 @@ def msds_q(test_image):
 
         n = len(cluster[:, 0])
         if n < 3:
-            __plot_leave(ax, x1, y1, x2, y2, i, score='N < 3', positive=False)
+            if vis:
+                __plot_leave(ax, x1, y1, x2, y2, i, score='N < 3', positive=False)
             continue
 
         ratio = __inertia_ratio(cluster[:, 1], cluster[:, 0], i)
-        condition = ratio < 0.2 and len(cluster[:, 1]) > 3
+        condition = ratio < 0.1 and len(cluster[:, 1]) > 3
         m, c, r_value, _, _ = linregress(cluster[:, 0], cluster[:, 1])
 
         score = 'I:{:0.3f}\nM:{:0.3f}\nC:{:0.3f}\nR:{:0.3f}'.format(ratio, m, c, r_value)
 
         if condition:
-            __plot_leave(ax, x1, y1, x2, y2, i, score=score, positive=True, cluster=cluster, noise=noise)
+            if vis:
+                __plot_leave(ax, x1, y1, x2, y2, i, score=score, positive=True, cluster=cluster, noise=noise)
             cluster = np.append(cluster, np.expand_dims(np.full(shape=len(cluster), fill_value=i), axis=1), axis=1)
 
             clusters.append(cluster)
 
-        __plot_leave(ax, x1, y1, x2, y2, i, score=score, positive=False)
+        if vis:
+            __plot_leave(ax, x1, y1, x2, y2, i, score=score, positive=False)
 
+    print '{} Clusters generated in {:0.2f} seconds'.format(len(clusters), time.time() - t5)
+
+    t3 = time.time()
     cc = np.vstack(clusters)
     fclust1 = fclusterdata(cc, 100.0, metric=mydist, criterion='distance')
 
     u, c = np.unique(fclust1, return_counts=True)
     u_groups = u[c > 2]
     ransac = linear_model.RANSACRegressor(residual_threshold=5)
+
+    print '2nd Pass Clustering finished in {:0.2f} seconds'.format(time.time() - t3)
+
     t2 = time.time()
     for g in u_groups:
         c = cc[np.where(fclust1 == g)]
@@ -369,23 +391,59 @@ def msds_q(test_image):
             continue
 
     n_clusters = len(clusters)
-    print 'found {} clusters from {} leaves in {:0.3f} seconds'.format(n_clusters, n_leaves, time.time() - t1)
 
-    print 'Merged {} clusters into {} candidates'.format(n_clusters, len(candidates), time.time() - t2)
-
-    __plot_candidates(ax, candidates)
-
-    # ax.set_ylim(-5, 70)
-    # ax.set_xlim(-5, 70)
-    # ax.set_ylim(1085, 1209)
-    # ax.set_xlim(0, 256)
-
-
-    ax.set_ylim(1114.0, 1179.0)
-    ax.set_xlim(72.0, 232.0)
-
-    plt.show()
+    print 'Merged {} clusters into {} candidates in {:0.3f} seconds'.format(n_clusters, len(candidates), time.time() - t2)
     print 'Clustering finished in ', time.time() - t1, ' seconds'
+
+    if vis:
+        __plot_candidates(ax, candidates)
+
+        ax.grid(color='gray', linestyle='-', linewidth=1, which='minor', alpha=0.2)
+        ax.grid(which='minor', alpha=0.2)
+        ax.set_xticks(np.arange(75, 231), minor=True)
+        ax.set_yticks(np.arange(1116, 1178), minor=True)
+
+        # # Test track 0
+        ax.set_ylim(1116, 1178)
+        ax.set_xlim(75, 231)
+
+        # Test track  1 (poor detection)
+        # ax.set_ylim(2008, 2045)
+        # ax.set_xlim(76, 157)
+
+        # Test track  2
+        # ax.set_ylim(3087, 3099)
+        # ax.set_xlim(27, 180)
+        #
+        # Test track  3
+        # ax.set_ylim(63, 107)
+        # ax.set_xlim(2, 142)
+        #
+        # Test track  4
+        # ax.set_ylim(2729, 2775)
+        # ax.set_xlim(32, 144)
+        #
+        # Test track  5
+        # ax.set_ylim(996, 1005)
+        # ax.set_xlim(4, 111)
+        #
+        # Test track  6
+        # ax.set_ylim(3574, 3579)
+        # ax.set_xlim(14, 114)
+        #
+        # Test track  7
+        # ax.set_ylim(2431, 2500)
+        # ax.set_xlim(30, 189)
+
+        # Test track  8
+        # ax.set_ylim(3385, 3414)
+        # ax.set_xlim(11, 141)
+        #
+        # Test track  9
+        # ax.set_ylim(3775, 3785)
+        # ax.set_xlim(25, 79)
+        plt.show()
+
     return candidates
 
 
@@ -394,7 +452,7 @@ if __name__ == '__main__':
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
     # snr = [2, 55]
     snr = [5]
-    N_TRACKS = 10
+    N_TRACKS = 1
     N_CHANS = 4096
     N_SAMPLES = 256
     metrics = {}
@@ -406,7 +464,7 @@ if __name__ == '__main__':
         ('msds_q', msds_q, ('Filter', sigma_clipping)),
         # ('Hough Transform', hough_transform, ('Filter', global_thres)),
         # ('Astride', astride, ('No Filter', no_filter)),
-        ('Old Astride', astride_old, ('No Filter', no_filter)),
+        # ('Old Astride', astride_old, ('No Filter', no_filter)),
         # ('CFAR', None, ('No Filter', cfar)),
     ]
 
