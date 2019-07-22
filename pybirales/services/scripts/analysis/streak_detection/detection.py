@@ -14,11 +14,12 @@ from skimage import measure
 from skimage.transform import probabilistic_hough_line
 from sklearn import linear_model
 from sklearn.cluster import DBSCAN
-
+import seaborn as sns
 from configuration import *
 from evaluation import *
 from filters import *
-from msds import __inertia_ratio, traverse, mydist, __plot_leave, __plot_candidates
+from msds import __inertia_ratio, traverse, mydist, __plot_leave, __plot_candidate, h_cluster, __plot_track, \
+    __plot_clusters, h_cluster2, similar, cluster_merge, fill, fit, cluster_merge_pd
 from receiver import *
 from util import get_clusters
 from visualisation import *
@@ -161,81 +162,60 @@ def naive_dbscan(test_image):
     return clusters
 
 
-def msds_c(test_image, unfiltered_image=None):
-    """
-    Multi-pixel streak detection strategy
-
-    Algorithm combines the beam data across the multi-pixel in order to increase SNR whilst
-    reducing the computational load. Data is transformed such that data points belonging
-    to the same streak, cluster around a common point.  Then, a noise-aware clustering algorithm,
-    such as DBSCAN, can be applied on the data points to identify the candidate tracks.
-
-    :return:
-    """
-
-    db_scan = DBSCAN(eps=3, min_samples=5, algorithm='kd_tree', n_jobs=-1)
-
-    ndx = np.column_stack(np.where(test_image > 0.))
-
-    ndx = np.append(ndx, np.expand_dims(test_image[test_image > 0.], axis=1), axis=1)
-
-    # Coordinate transform into rho, theta
-    # theta
-    t = np.arctan(ndx[:, 1] / (4096 - ndx[:, 0]))
-
-    # rho
-    r = ndx[:, 0] / np.cos(t)
-
-    tr = np.column_stack((t, r, test_image[test_image > 0.]))
-
-    ndx = np.append(ndx, np.expand_dims(t, axis=1), axis=1)
-
-    # ndx = np.append(ndx, np.expand_dims(r, axis=1), axis=1)
-
-    # ndx = np.append(ndx, np.expand_dims(t, axis=1), axis=1)
-
-    # plt.plot(ndx[:,1], t, '.')
-    # plt.show()
-
-    # DBSCAN and generate clusters
-    try:
-        # Perform (2D) clustering on the data and returns cluster labels the points are associated with
-        c_labels = db_scan.fit_predict(ndx)
-    except ValueError:
-        return []
-
-    if len(c_labels) < 1:
-        return []
-
-    # Add cluster labels to the data
-    labelled_data = np.append(ndx, np.expand_dims(c_labels, axis=1), axis=1)
-
-    # Cluster mask to remove noise clusters
-    de_noised_data = labelled_data[labelled_data[:, 3] > -1]
-
-    de_noised_data = de_noised_data[de_noised_data[:, 3].argsort()]
-
-    # Return the location at which clusters where identified
-    cluster_ids = np.unique(de_noised_data[:, 3], return_index=True)
-
-    # Split the data into clusters
-    clusters = np.split(de_noised_data, cluster_ids[1])
-
-    # remove empty clusters
-    clusters = [x for x in clusters if np.any(x)]
-
-    return clusters
-
-    # Convert back the data points
-
 def _viz_cluster(bb, fclust1):
     for b, g in zip(bb, fclust1):
         print b[0], b[1], b[2], g
 
-# @profile
+
+def __best_group(fclust1, bb, i):
+    u, c = np.unique(fclust1, return_counts=True)
+    u_groups = u[c > 2]
+
+    group_score = np.zeros(shape=(len(u_groups), 2))
+    group_score[:, 0] = u_groups
+    for j, g in enumerate(u_groups):
+        c = bb[np.where(fclust1 == g)]
+
+        if len(c) >= 20:
+            ratio = 0.19
+        elif len(np.unique(c[:, 0])) < 2 or len(np.unique(c[:, 1])) < 2:
+            ratio = 0.21
+        else:
+            ratio = __inertia_ratio(c[:, 1], c[:, 0], i)
+        group_score[j, 1] = ratio
+
+    best_groups = group_score[group_score[:, 1] < 0.2][:, 0]
+
+    if len(best_groups) < 1:
+        return np.nan, []
+
+    best_ratio = np.min(group_score[:, 1])
+
+    if len(best_groups) > 1:
+
+        c = bb[np.in1d(fclust1, best_groups)]
+        ratio_combined = __inertia_ratio(c[:, 1], c[:, 0], i)
+
+        if ratio_combined < best_ratio:
+            return ratio_combined, best_groups
+
+    return best_ratio, best_groups
+
+
 def msds_q(test_image):
+    t1 = time.time()
+    candidates = __msds_q(test_image, clustering_thres=2.0, vis=False)
+
+    print 'MSDS found {} Clusters in {:0.2f} seconds'.format(len(candidates), time.time() - t1)
+
+    return candidates
+
+
+# @profile
+def __msds_q(test_image, clustering_thres=2.0, vis=False):
     # Coordinate transform channel, time coordinates into rho, theta
-    vis = False
+
+    ransac = linear_model.RANSACRegressor(residual_threshold=5)
     # Build quad/nd tree that spans all the data points
     t0 = time.time()
     ndx = np.column_stack(np.where(test_image > 0.))
@@ -247,7 +227,7 @@ def msds_q(test_image):
     print 'Tree built in ', time.time() - t1, ' seconds'
 
     t4 = time.time()
-    r, leaves = traverse(ktree.tree, 0, 256, 0, 4096)
+    r, leaves = traverse(ktree.tree, ndx, 0, 256, 0, 4096)
     print 'Tree traversed in ', time.time() - t4, ' seconds'
 
     fig, ax = plt.subplots(1)
@@ -258,193 +238,219 @@ def msds_q(test_image):
     candidates = []
 
     t5 = time.time()
-    vf = np.vectorize(mydist)
-    for i, rectangle in enumerate(leaves):
-        a, b, x1, x2, y1, y2, n = rectangle
+    for i, leave in enumerate(leaves):
+        data, x1, x2, y1, y2, n = leave
 
-        ys = ndx[:, 0]
+        fclust1 = fclusterdata(data, 2.0, metric=mydist, criterion='distance')
+        ratio, best_gs = __best_group(fclust1, data, i)
 
-        aa = ndx[np.logical_and(ys >= y1, ys <= y2)]
-        bb = aa[np.logical_and(aa[:, 1] >= x1, aa[:, 1] <= x2)]
-
-        if not np.any(bb)or len(bb) < 2:
+        if len(best_gs) == 0:
+            if vis:
+                __plot_leave(ax, x1, y1, x2, y2, i, score='No G', positive=False)
             continue
 
-        # print len(bb)
-        fclust1 = fclusterdata(bb, 2.0, metric=mydist, criterion='distance')
+        if ratio == 0.2:
+            if vis:
+                __plot_leave(ax, x1, y1, x2, y2, i, score='Ratio 101', positive=False)
+            continue
 
-        best = None
-        best_r = 0
-        u, c = np.unique(fclust1, return_counts=True)
-        u_groups = u[c > 2]
+        cluster = data[np.in1d(fclust1, best_gs)]
+        noise = data[np.in1d(fclust1, best_gs, invert=True)]
 
-        # s_best = None
-        best_gs = []
-        for g in u_groups:
-            c = bb[np.where(fclust1 == g)]
-
-            if len(np.unique(c[:,0])) < 2 or len(np.unique(c[:,1])) < 2:
-                continue
-            pear = pearsonr(c[:, 0], c[:, 1])
-            if i == 1342:
-                print g, len(c), pear[0], pear[1]
-
-            if pear[0] < best_r and pear[1] < 0.05 and len(c) > 2:
-                # s_best = best
-                best_r = pear[0]
-                best = g
-
-            if pear[0] < -0.85 and pear[1] < 0.05 and len(c) > 2:
-                best_gs.append(g)
-
-        if len(best_gs) > 1:
-            tmp_cluster = bb[np.in1d(fclust1, best_gs)]
-            tmp_noise = bb[np.in1d(fclust1, best_gs, invert=True)]
-            pear = pearsonr(tmp_cluster[:, 0], tmp_cluster[:, 1])
-            if pear[0] < best_r and pear[1] < 0.05:
-                cluster = tmp_cluster
-                noise = tmp_noise
-            else:
-                continue
-        else:
-            cluster = bb[np.where(fclust1 == best)]
-            noise = bb[np.where(fclust1 != best)]
-
+        # ratio passed. Check it is long enough
         n = len(cluster[:, 0])
         if n < 3:
             if vis:
-                __plot_leave(ax, x1, y1, x2, y2, i, score='N < 3', positive=False)
+                __plot_leave(ax, x1, y1, x2, y2, i, score='N < 3', positive=False, cluster=cluster, noise=noise)
             continue
 
-        ratio = __inertia_ratio(cluster[:, 1], cluster[:, 0], i)
-        condition = ratio < 0.1 and len(cluster[:, 1]) > 3
-        m, c, r_value, _, _ = linregress(cluster[:, 0], cluster[:, 1])
+        # Now test for correlation
 
-        score = 'I:{:0.3f}\nM:{:0.3f}\nC:{:0.3f}\nR:{:0.3f}'.format(ratio, m, c, r_value)
+        if len(np.unique(cluster[:, 0])) == 1:
+            pear = [1., 0.05]
+        elif len(np.unique(cluster[:, 1])) == 1:
+            pear = [1., 0.05]
+        else:
+            pear = pearsonr(cluster[:, 0], cluster[:, 1])
 
-        if condition:
+        if pear[1] > 0.05 and n <= 20:
+            # if pear[0] > -0.80 or pear[1] > 0.05:
             if vis:
-                __plot_leave(ax, x1, y1, x2, y2, i, score=score, positive=True, cluster=cluster, noise=noise)
-            cluster = np.append(cluster, np.expand_dims(np.full(shape=len(cluster), fill_value=i), axis=1), axis=1)
+                d = n / (max(cluster[:, 1]) - min(cluster[:, 1])) * (max(cluster[:, 0]) - min(cluster[:, 0]))
+                score = 'Low C:{:0.3f}\nS:{:0.3f}\nN:{}\nD:{:0.3f}'.format(pear[0], pear[1], n, d)
+                __plot_leave(ax, x1, y1, x2, y2, i, score=score, positive=False, cluster=cluster, noise=noise)
+            continue
 
-            clusters.append(cluster)
+        # streak is correlated AND with a low inertia -> add to the list of possible clusters
+        cluster = np.append(cluster, np.expand_dims(np.full(shape=n, fill_value=i), axis=1), axis=1)
+
+        clusters.append(cluster)
 
         if vis:
-            __plot_leave(ax, x1, y1, x2, y2, i, score=score, positive=False)
+            positive = True
+            m, c, r_value, _, _ = linregress(cluster[:, 0], cluster[:, 1])
+            score = 'I:{:0.3f}\nM:{:0.3f}\nC:{:0.3f}\nR:{:0.3f}'.format(ratio, m, c, r_value)
+            __plot_leave(ax, x1, y1, x2, y2, i, score=score, positive=positive, cluster=cluster, noise=noise)
 
     print '{} Clusters generated in {:0.2f} seconds'.format(len(clusters), time.time() - t5)
 
     t3 = time.time()
     cc = np.vstack(clusters)
-    fclust1 = fclusterdata(cc, 100.0, metric=mydist, criterion='distance')
 
-    u, c = np.unique(fclust1, return_counts=True)
-    u_groups = u[c > 2]
-    ransac = linear_model.RANSACRegressor(residual_threshold=5)
+    df = pd.DataFrame({'channel': cc[:, 0], 'sample': cc[:, 1], 'snr': cc[:, 2], 'group': cc[:, 3]})
 
-    print '2nd Pass Clustering finished in {:0.2f} seconds'.format(time.time() - t3)
+    fclust1, u_groups = h_cluster2(X=df, threshold=20.)
+    df['group_2'] = fclust1
+
+    print '2nd Pass Clustering finished in {:0.2f} seconds. Found {} groups.'.format(time.time() - t3, len(u_groups))
+
+    for g in u_groups:
+        data = df[df['group_2'] == g]
+        ax = sns.scatterplot(data=data, x='sample', y='channel')
+        ax.annotate(g, (np.mean(data['sample']), np.mean(data['channel'])))
+    ax.figure.savefig("before_ransac.png")
+
+    for g in u_groups:
+        c = df[df['group_2'] == g]
+
+        if len(c) < 2:
+            continue
+
+        ransac.fit(c['channel'].reshape(-1, 1), c['sample'])
+        cluster, valid = fit(c, ransac.inlier_mask_)
+
+        if valid:
+            # e = fill(test_img, cluster, ransac)
+            candidates.append(cluster)
+
+    for i, c in enumerate(candidates):
+        plt.clf()
+        ax = sns.scatterplot(c['sample'], c['channel'])
+        ratio = __inertia_ratio(c['sample'], c['channel'], i)
+
+        m, intercept, r_value, p, e = linregress(c['sample'], c['channel'])
+        score = 'I:{:0.3f}\nM:{:0.3f}\nC:{:0.3f}\nR:{:0.3f}'.format(ratio, m, intercept, r_value)
+
+        print c['group_2'].iloc[0], ratio, r_value, len(c), p, e
+        ax.annotate(score, (np.mean(c['sample']), np.mean(c['channel'])))
+        ax.figure.savefig("after_ransac" + str(c['group_2'].iloc[0]) + ".png")
+
+
+    candidates2 = []
+    for i, c in enumerate(candidates):
+        m, intercept, r_value, p, e = linregress(c['sample'], c['channel'])
+
+        if e < 0.02:
+            ax = sns.scatterplot(c['sample'], c['channel'])
+            candidates2.append(c)
+        ax.figure.savefig("after_ransac_all.png")
+
+    ptracks = []
+    for j, candidate in enumerate(candidates2):
+        for i, track in enumerate(ptracks):
+            # If beam candidate is similar to candidate, merge it.
+            if similar(track, candidate, i, j):
+                c = cluster_merge_pd(track, candidate)
+
+                ransac.fit(c['channel'].reshape(-1, 1), c['sample'])
+                candidate, valid = fit(c, ransac.inlier_mask_)
+
+                ptracks[i] = fill(test_img, candidate, ransac)
+
+                break
+        else:
+            ransac.fit(candidate['channel'].reshape(-1, 1), candidate['sample'])
+            candidate, valid = fit(candidate, ransac.inlier_mask_)
+
+            candidate = fill(test_img, candidate, ransac)
+            ptracks.append(candidate)
+
+    plt.clf()
+    for i, c in enumerate(ptracks):
+        m, intercept, r_value, p, e = linregress(c['sample'], c['channel'])
+
+        if e < 0.02:
+
+            ax = sns.scatterplot(c['sample'], c['channel'])
+    ax.figure.savefig("after_ransac_all_merged.png")
+
+    return ptracks
+
+    ptracks = []
+    for j, candidate in enumerate(candidates):
+        for i, track in enumerate(ptracks):
+            # If beam candidate is similar to candidate, merge it.
+            if similar(track, candidate, i, j):
+                c = cluster_merge(track, candidate)
+                candidate, ransac, valid = fit(c, ransac)
+                ptracks[i] = fill(test_img, candidate, ransac)
+
+                break
+        else:
+            ptracks.append(candidate)
+
+    for c in candidates:
+        ax = sns.scatterplot(c[:, 1], c[:, 0])
+
+    for t in tracks:
+        x, y = t
+        ax = sns.scatterplot(x, y)
+
+    plt.show()
+
+    return ptracks
 
     t2 = time.time()
     for g in u_groups:
         c = cc[np.where(fclust1 == g)]
 
-        ransac.fit(c[:, 0].reshape(-1, 1), c[:, 1])
-        inlier_mask = ransac.inlier_mask_
-        # outlier_mask = np.logical_not(inlier_mask)
+        cluster, ransac, valid = fit(c, ransac)
 
-        d = c[inlier_mask]
-
-        pear = pearsonr(d[:, 0], d[:, 1])
-        if pear[0] < -0.9 and pear[1] < 0.05 and len(d) > 10:
-            # print g, len(d), len(c), pear[0], pear[1]
-            X = np.arange(min(d[:, 0]), max(d[:, 0]))
-            missing = np.setxor1d(X, d[:, 0])
-            if len(missing) > len(d):
-                # candidates.append(d)
-                continue
-
-            missing_y = np.setxor1d(np.arange(min(d[:, 1]), max(d[:, 1])), d[:, 1])
-            missing_x = (missing_y - ransac.estimator_.intercept_)/ransac.estimator_.coef_[0]
-            missing_x = missing_x.astype(int)
-
-            y = ransac.predict(missing.reshape(-1, 1))
-
-            y = np.concatenate([y, missing_y])
-            missing = np.concatenate([missing, missing_x])
-
-
-            m = np.column_stack((missing, y)).astype(int)
-
-            p  = test_image[m[:, 0], m[:, 1]]
-
-            m = np.append(m, np.expand_dims(p, axis=1), axis=1)
-            m = np.append(m, np.expand_dims(np.full(shape=len(m), fill_value=g), axis=1), axis=1)
-
-            e = np.concatenate([d, m], axis=0)
+        if valid:
+            e = fill(test_img, cluster, ransac)
             candidates.append(e)
 
-            # print g, len(e), min(e[:, 0]), max(e[:, 0]), min(e[:, 1]), max(e[:, 1])
-
-            # print 'added ', len(m), ' data points to cluster', g
-        else:
-            # print 'dropped cluster', g, 'of length', len(c), pear[0], pear[1]
-            continue
+    # ax.set_ylim(1100, 1200)
+    # ax.set_xlim(70, 250)
+    #
+    # plt.show()
 
     n_clusters = len(clusters)
 
-    print 'Merged {} clusters into {} candidates in {:0.3f} seconds'.format(n_clusters, len(candidates), time.time() - t2)
-    print 'Clustering finished in ', time.time() - t1, ' seconds'
+    print 'Merged {} clusters into {} candidates in {:0.3f} seconds'.format(n_clusters, len(candidates),
+                                                                            time.time() - t2)
+    print 'Clustering finished in {:0.3f} seconds'.format(time.time() - t1)
 
-    if vis:
-        __plot_candidates(ax, candidates)
+    ptracks = []
+    for j, candidate in enumerate(candidates):
+        for i, track in enumerate(ptracks):
+            # If beam candidate is similar to candidate, merge it.
+            if similar(track, candidate, i, j):
+                c = cluster_merge(track, candidate)
+                candidate, ransac, valid = fit(c, ransac)
+                ptracks[i] = fill(test_img, candidate, ransac)
 
-        ax.grid(color='gray', linestyle='-', linewidth=1, which='minor', alpha=0.2)
-        ax.grid(which='minor', alpha=0.2)
-        ax.set_xticks(np.arange(75, 231), minor=True)
-        ax.set_yticks(np.arange(1116, 1178), minor=True)
+                break
+        else:
+            ptracks.append(candidate)
 
-        # # Test track 0
-        ax.set_ylim(1116, 1178)
-        ax.set_xlim(75, 231)
+    ax.plot(cc[:, 1], cc[:, 0], '.', zorder=2)
 
-        # Test track  1 (poor detection)
-        # ax.set_ylim(2008, 2045)
-        # ax.set_xlim(76, 157)
+    for i, (track_x, track_y) in enumerate(tracks):
+        ax.plot(track_x, track_y, '.', color='k', zorder=1)
 
-        # Test track  2
-        # ax.set_ylim(3087, 3099)
-        # ax.set_xlim(27, 180)
-        #
-        # Test track  3
-        # ax.set_ylim(63, 107)
-        # ax.set_xlim(2, 142)
-        #
-        # Test track  4
-        # ax.set_ylim(2729, 2775)
-        # ax.set_xlim(32, 144)
-        #
-        # Test track  5
-        # ax.set_ylim(996, 1005)
-        # ax.set_xlim(4, 111)
-        #
-        # Test track  6
-        # ax.set_ylim(3574, 3579)
-        # ax.set_xlim(14, 114)
-        #
-        # Test track  7
-        # ax.set_ylim(2431, 2500)
-        # ax.set_xlim(30, 189)
+    for i, ptrack in enumerate(ptracks):
+        # print i, np.unique(ptrack[:, 4])
+        ax.plot(ptrack[:, 1], ptrack[:, 0], 'o', zorder=0)
+        # ax.text(max(ptrack[:, 1]) * 1.051, max(ptrack[:, 0]) * 1.051, i, color='k', fontsize=12, va="top", ha="right")
+        title = '{} -> {}'.format(np.unique(ptrack[:, 4]), i)
+        ax.text(np.mean(ptrack[:, 1]) * 1.06, max(ptrack[:, 0]) * 1.06, title, color='b', fontsize=14, va="top",
+                ha="right")
+    # ax.set_ylim(0, 200)
+    plt.show()
 
-        # Test track  8
-        # ax.set_ylim(3385, 3414)
-        # ax.set_xlim(11, 141)
-        #
-        # Test track  9
-        # ax.set_ylim(3775, 3785)
-        # ax.set_xlim(25, 79)
-        plt.show()
-
-    return candidates
+    print '{} candidates were merged in {} tracks'.format(len(candidates), len(ptracks))
+    return ptracks
 
 
 if __name__ == '__main__':
@@ -452,9 +458,10 @@ if __name__ == '__main__':
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
     # snr = [2, 55]
     snr = [5]
-    N_TRACKS = 1
+    N_TRACKS = 15
     N_CHANS = 4096
     N_SAMPLES = 256
+    TRACK_THICKNESS = 1
     metrics = {}
     metrics_df = pd.DataFrame()
 
@@ -496,7 +503,7 @@ if __name__ == '__main__':
             # Add tracks to the simulated data
             data = add_tracks(data, tracks, noise_mean, s)
 
-            # visualise_image(data, 'Test Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks)
+            # visualise_image(data, 'Test Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks, visualise=True )
 
             # visualise_image(true_image, 'Truth Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks)
 
@@ -507,7 +514,7 @@ if __name__ == '__main__':
                 # Split data in chunks
                 start = time.time()
                 mask, threshold = chunked_filtering(data, filter_func)
-                mask, _ = hit_and_miss(data, test_img, mask)
+                # mask, _ = hit_and_miss(data, test_img, mask)
                 timing = time.time() - start
                 print "The {} filtering algorithm, finished in {:2.3f}s".format(f_name, timing)
 
@@ -519,6 +526,9 @@ if __name__ == '__main__':
                 # data[~mask] = True
                 data[mask] = -100
 
+                # print np.mean(mask), s, threshold
+                # continue
+            # continue
             # feature extraction - detection
             print "Running {} algorithm".format(d_name)
             start = time.time()
@@ -535,4 +545,4 @@ if __name__ == '__main__':
             metrics_df = metrics_df.append(pd.DataFrame.from_dict(metrics[s], orient='index'))
         # data association
 
-    print metrics_df[['f1', 'sensitivity', 'specificity', 'reduction', 'dt', 'score']].sort_values(by=['score'], )
+    print metrics_df[['snr', 'sensitivity', 'specificity', 'dt', 'precision', 'score']].sort_values(by=['score'], )

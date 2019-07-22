@@ -4,6 +4,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_sc
     jaccard_similarity_score, mean_squared_error
 import time
 
+
 def evaluate_filter(truth_img, test_img, positives, exec_time, snr, thickness):
     """
 
@@ -27,8 +28,6 @@ def evaluate_filter(truth_img, test_img, positives, exec_time, snr, thickness):
     prediction = prediction.ravel()
 
     ssim_score = ssim((truth).astype('float64'), (prediction).astype('float64'))
-
-
 
     recall = recall_score(truth, prediction)
     reduction = (1 - (np.sum(prediction) / np.prod(truth_img.shape)))
@@ -69,7 +68,9 @@ def evaluate_detector(truth_img, test_img, candidates, exec_time, snr, thickness
     truth = truth_img.ravel().astype('bool')
 
     prediction = np.zeros(shape=test_img.shape)
-    pos = np.vstack(candidates)
+    pos = prediction
+    if candidates:
+        pos = np.vstack(candidates)
     # positives = pos[:,0:1]
     prediction[pos[:, :2].astype(int)] = True
     prediction = prediction.ravel()
@@ -92,7 +93,8 @@ def evaluate_detector(truth_img, test_img, candidates, exec_time, snr, thickness
     return {
         'jaccard': jaccard_similarity_score(truth, prediction),
         'f1': f1_score(truth, prediction),
-        'precision': precision_score(truth, prediction, average='binary'),
+        # 'precision': precision_score(truth, prediction, average='binary'),
+        'precision': tp / (tp + fp),
         'recall': recall,
         'accuracy': accuracy_score(truth, prediction),
         'mse': mean_squared_error(truth, prediction),
@@ -107,4 +109,3 @@ def evaluate_detector(truth_img, test_img, candidates, exec_time, snr, thickness
         'reduction': reduction * 100.,
         'score': score
     }
-
