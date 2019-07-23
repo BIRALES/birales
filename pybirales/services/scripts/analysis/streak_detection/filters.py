@@ -1,8 +1,11 @@
 import numpy as np
+from astropy.stats import sigma_clipped_stats
+from photutils import Background2D, MedianBackground
 from scipy.ndimage import binary_hit_or_miss, binary_opening
-from skimage.filters import *
 from skimage.feature import canny
-from scipy.signal import find_peaks_cwt
+from skimage.filters import *
+from astropy.stats import SigmaClip
+from numpy import mean
 
 
 def get_moving_average(chunked_data, iter, n=5):
@@ -271,3 +274,25 @@ def cfar(test_image):
     mask = np.apply_along_axis(cfar_1d, 0, test_image)
 
     return np.flipud(mask), None
+
+
+def sigma_clipping(test_img):
+    s_clip = SigmaClip(sigma=3., cenfunc=mean, iters=5, sigma_upper=3., sigma_lower=60.)
+
+    # print np.mean(test_img) - 3.*np.std(test_img), np.mean(test_img)+ 60.*np.std(test_img), np.max(test_img)
+    mask = s_clip(test_img)
+
+    return ~mask.mask, None
+
+
+def sigma_clipping_map(test_img):
+    # from:  https://photutils.readthedocs.io/en/stable/segmentation.html#centroids-photometry-and-morphological-properties
+    sigma_clip = SigmaClip(sigma=3., cenfunc=mean, iters=3)
+    bkg_estimator = MedianBackground()
+    bkg = Background2D(test_img, (50, 50), filter_size=(30, 30), sigma_clip=sigma_clip, bkg_estimator=bkg_estimator)
+
+    threshold = bkg.background + (3. * bkg.background_rms)
+
+    mask = test_img <= threshold
+
+    return mask, np.mean(threshold)
