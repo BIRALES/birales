@@ -244,7 +244,7 @@ class CalibrationObservationManager(ObservationManager):
             except CalibrationFailedException:
                 observation.model.status = 'failed'
                 observation.save()
-                publish(CalibrationObservationFailedEvent(observation, "An IO error has occurred"))
+                publish(CalibrationObservationFailedEvent(observation, "Calibration observation failed"))
             else:
                 observation.model.status = 'finished'
                 observation.save()

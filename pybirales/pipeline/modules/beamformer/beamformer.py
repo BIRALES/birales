@@ -212,7 +212,7 @@ class Pointing(object):
             frequency = Quantity(self._start_center_frequency + (i * self._bandwidth / self._nsubs), u.MHz)
             real, imag = self._phaseshifts_from_altitude_azimuth(altitude.rad, azimuth.rad, frequency,
                                                                  self._vectors_enu)
-
+            # print frequency, self._nsubs
             # Apply to weights
             self.weights[i, beam, :].real = real
             self.weights[i, beam, :].imag = imag
