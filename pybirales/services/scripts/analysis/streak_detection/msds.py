@@ -542,23 +542,6 @@ def fill2(test_image, cluster, ransac):
 
     return np.concatenate([cluster, m], axis=0)
 
-
-def fit2(cluster, ransac):
-    ransac.fit(cluster[:, 1].reshape(-1, 1), cluster[:, 0])
-
-    d = cluster[ransac.inlier_mask_]
-
-    if len(np.unique(d[:, 0])) == 1 or len(np.unique(d[:, 1])) == 1:
-        return cluster, ransac, False
-
-    pear = pearsonr(d[:, 0], d[:, 1])
-
-    if pear[1] < 0.05 and pear[0] < -0.9 and len(d) >= 10:
-        return d, ransac, True
-
-    return cluster, ransac, False
-
-
 def fit(cluster, inliers):
     d = cluster[inliers]
 

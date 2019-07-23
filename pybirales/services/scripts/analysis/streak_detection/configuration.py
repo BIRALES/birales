@@ -32,6 +32,7 @@ TD = 262144 / 78125 / 32.
 CD = 78125 / 8192.
 F = (1. / TD) / (1. / CD)
 GRADIENT_RANGE = np.array([-0.57, -50.47]) / F
+# GRADIENT_RANGE = np.array([-0.057, -500.47]) / F
 TRACK_LENGTH_RANGE = np.array([5, 15]) / TD  # in seconds
 TRACK_THICKNESS = 1
 # FITS_FILE = "norad_1328/norad_1328_raw_0.fits"

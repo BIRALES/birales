@@ -73,8 +73,14 @@ def astride(test_image):
 
     clusters = []
     for i, streak in enumerate(streaks):
-        cluster = np.column_stack([streak['y'], streak['x'], np.full(len(streak['x']), i)])
-        clusters.append(cluster)
+        # cluster = np.column_stack([streak['y'], streak['x'], np.full(len(streak['x']), i)])
+
+        cluster_df = pd.DataFrame(columns=['channel', 'sample', 'snr'])
+        cluster_df['channel'] = streak['y']
+        cluster_df['sample'] = streak['x']
+        cluster_df['snr'] = 1
+
+        clusters.append(cluster_df)
 
     return clusters
 
@@ -211,6 +217,10 @@ def msds_q(test_image):
     return candidates
 
 
+def _td(t1):
+    return time.time() - t1
+
+
 # @profile
 def __msds_q(test_image, clustering_thres=2.0, vis=False):
     # Coordinate transform channel, time coordinates into rho, theta
@@ -220,15 +230,15 @@ def __msds_q(test_image, clustering_thres=2.0, vis=False):
     t0 = time.time()
     ndx = np.column_stack(np.where(test_image > 0.))
     ndx = np.append(ndx, np.expand_dims(test_image[test_image > 0.], axis=1), axis=1)
-    print 'Data prepared in', time.time() - t0, ' seconds'
+    print 'Data prepared in {:0.3f} seconds'.format(_td(t0))
 
     t1 = time.time()
     ktree = KDTree(ndx, 30)
-    print 'Tree built in ', time.time() - t1, ' seconds'
+    print 'Tree built in {:0.3f} seconds'.format(_td(t1))
 
     t4 = time.time()
     r, leaves = traverse(ktree.tree, ndx, 0, 256, 0, 4096)
-    print 'Tree traversed in ', time.time() - t4, ' seconds'
+    print 'Tree traversed in {:0.3f} seconds. Found {} leaves'.format(_td(t4), len(leaves))
 
     fig, ax = plt.subplots(1)
     if vis:
@@ -292,7 +302,7 @@ def __msds_q(test_image, clustering_thres=2.0, vis=False):
             score = 'I:{:0.3f}\nM:{:0.3f}\nC:{:0.3f}\nR:{:0.3f}'.format(ratio, m, c, r_value)
             __plot_leave(ax, x1, y1, x2, y2, i, score=score, positive=positive, cluster=cluster, noise=noise)
 
-    print '{} Clusters generated in {:0.2f} seconds'.format(len(clusters), time.time() - t5)
+    print '{} Clusters generated in {:0.3f} seconds'.format(len(clusters), time.time() - t5)
 
     t3 = time.time()
     cc = np.vstack(clusters)
@@ -303,162 +313,104 @@ def __msds_q(test_image, clustering_thres=2.0, vis=False):
     df['group_2'] = fclust1
 
     print '2nd Pass Clustering finished in {:0.2f} seconds. Found {} groups.'.format(time.time() - t3, len(u_groups))
-
+    plt.clf()
     for g in u_groups:
         data = df[df['group_2'] == g]
         ax = sns.scatterplot(data=data, x='sample', y='channel')
         ax.annotate(g, (np.mean(data['sample']), np.mean(data['channel'])))
     ax.figure.savefig("before_ransac.png")
 
+    # ransac = linear_model.RANSACRegressor(residual_threshold=10)
+    t1 = time.time()
+    plt.clf()
     for g in u_groups:
         c = df[df['group_2'] == g]
 
         if len(c) < 2:
             continue
 
-        ransac.fit(c['channel'].reshape(-1, 1), c['sample'])
-        cluster, valid = fit(c, ransac.inlier_mask_)
+        m, intercept, r_value, p, e = linregress(c['sample'], c['channel'])
 
-        if valid:
+        ratio = __inertia_ratio(c['sample'], c['channel'], g)
+
+        if p < 0.05 and e < 0.1 and ratio < 0.021:
+            print g, 'R:{:0.5f} P:{:0.5f} E:{:0.5f} I:{:0.5f}'.format(r_value, p, e, ratio)
             # e = fill(test_img, cluster, ransac)
-            candidates.append(cluster)
-
-    for i, c in enumerate(candidates):
-        plt.clf()
-        ax = sns.scatterplot(c['sample'], c['channel'])
-        ratio = __inertia_ratio(c['sample'], c['channel'], i)
-
-        m, intercept, r_value, p, e = linregress(c['sample'], c['channel'])
-        score = 'I:{:0.3f}\nM:{:0.3f}\nC:{:0.3f}\nR:{:0.3f}'.format(ratio, m, intercept, r_value)
-
-        print c['group_2'].iloc[0], ratio, r_value, len(c), p, e
-        ax.annotate(score, (np.mean(c['sample']), np.mean(c['channel'])))
-        ax.figure.savefig("after_ransac" + str(c['group_2'].iloc[0]) + ".png")
-
-
-    candidates2 = []
-    for i, c in enumerate(candidates):
-        m, intercept, r_value, p, e = linregress(c['sample'], c['channel'])
-
-        if e < 0.02:
             ax = sns.scatterplot(c['sample'], c['channel'])
-            candidates2.append(c)
-        ax.figure.savefig("after_ransac_all.png")
+            ax.annotate(g, (np.mean(c['sample']), np.mean(c['channel'])))
+            candidates.append(c)
+    ax.figure.savefig("after_ransac_all.png")
+    print '{} Groups reduced to {} candidates after filtering 1. Time taken: {:0.3f} seconds'.format(len(u_groups),
+                                                                                                     len(candidates),
+                                                                                                     _td(t1))
 
+    t3 = time.time()
     ptracks = []
-    for j, candidate in enumerate(candidates2):
+    for j, candidate in enumerate(candidates):
         for i, track in enumerate(ptracks):
             # If beam candidate is similar to candidate, merge it.
             if similar(track, candidate, i, j):
                 c = cluster_merge_pd(track, candidate)
 
-                ransac.fit(c['channel'].reshape(-1, 1), c['sample'])
+                ransac.fit(c['channel'].values.reshape(-1, 1), c['sample'])
                 candidate, valid = fit(c, ransac.inlier_mask_)
 
                 ptracks[i] = fill(test_img, candidate, ransac)
 
                 break
         else:
-            ransac.fit(candidate['channel'].reshape(-1, 1), candidate['sample'])
+            ransac.fit(candidate['channel'].values.reshape(-1, 1), candidate['sample'])
             candidate, valid = fit(candidate, ransac.inlier_mask_)
 
             candidate = fill(test_img, candidate, ransac)
+
             ptracks.append(candidate)
 
-    plt.clf()
+    print '{} candidates merged into {} candidates after similarity check. Time taken: {:0.3f} seconds'.format(
+        len(candidates),
+        len(ptracks),
+        _td(t3))
+
+    t4 = time.time()
+    c2 = []
     for i, c in enumerate(ptracks):
         m, intercept, r_value, p, e = linregress(c['sample'], c['channel'])
+        print i, 'R:{:0.5f} P:{:0.5f} E:{:0.5f} I:{:0.5f}'.format(r_value, p, e, 0.0)
+        if r_value < -0.95 and e < 0.01:
+            c2.append(c)
 
-        if e < 0.02:
+    print '{} candidates merged into {} candidates after last sanity check. Time taken: {:0.3f} seconds'.format(
+        len(ptracks),
+        len(c2),
+        _td(t4))
 
-            ax = sns.scatterplot(c['sample'], c['channel'])
+    plt.clf()
+    for i, c in enumerate(c2):
+        m, intercept, r_value, p, e = linregress(c['sample'], c['channel'])
+
+        ratio = __inertia_ratio(c['sample'], c['channel'], i)
+        x = c['sample'].mean()
+        y = c['channel'].mean()
+
+        print i, 'R:{:0.5f} P:{:0.5f} E:{:0.5f} I:{:0.5f}'.format(r_value, p, e, ratio)
+        ax.annotate(i, (x, y))
+        ax = sns.scatterplot(c['sample'], c['channel'], marker=".")
+
     ax.figure.savefig("after_ransac_all_merged.png")
 
-    return ptracks
-
-    ptracks = []
-    for j, candidate in enumerate(candidates):
-        for i, track in enumerate(ptracks):
-            # If beam candidate is similar to candidate, merge it.
-            if similar(track, candidate, i, j):
-                c = cluster_merge(track, candidate)
-                candidate, ransac, valid = fit(c, ransac)
-                ptracks[i] = fill(test_img, candidate, ransac)
-
-                break
-        else:
-            ptracks.append(candidate)
-
-    for c in candidates:
-        ax = sns.scatterplot(c[:, 1], c[:, 0])
-
-    for t in tracks:
-        x, y = t
-        ax = sns.scatterplot(x, y)
-
-    plt.show()
-
-    return ptracks
-
-    t2 = time.time()
-    for g in u_groups:
-        c = cc[np.where(fclust1 == g)]
-
-        cluster, ransac, valid = fit(c, ransac)
-
-        if valid:
-            e = fill(test_img, cluster, ransac)
-            candidates.append(e)
-
-    # ax.set_ylim(1100, 1200)
-    # ax.set_xlim(70, 250)
-    #
-    # plt.show()
-
-    n_clusters = len(clusters)
-
-    print 'Merged {} clusters into {} candidates in {:0.3f} seconds'.format(n_clusters, len(candidates),
-                                                                            time.time() - t2)
-    print 'Clustering finished in {:0.3f} seconds'.format(time.time() - t1)
-
-    ptracks = []
-    for j, candidate in enumerate(candidates):
-        for i, track in enumerate(ptracks):
-            # If beam candidate is similar to candidate, merge it.
-            if similar(track, candidate, i, j):
-                c = cluster_merge(track, candidate)
-                candidate, ransac, valid = fit(c, ransac)
-                ptracks[i] = fill(test_img, candidate, ransac)
-
-                break
-        else:
-            ptracks.append(candidate)
-
-    ax.plot(cc[:, 1], cc[:, 0], '.', zorder=2)
-
     for i, (track_x, track_y) in enumerate(tracks):
-        ax.plot(track_x, track_y, '.', color='k', zorder=1)
+        ax.plot(track_x, track_y, 'o', color='k', zorder=-1)
+    ax.figure.savefig("after_ransac_all_merged_with_tracks.png")
 
-    for i, ptrack in enumerate(ptracks):
-        # print i, np.unique(ptrack[:, 4])
-        ax.plot(ptrack[:, 1], ptrack[:, 0], 'o', zorder=0)
-        # ax.text(max(ptrack[:, 1]) * 1.051, max(ptrack[:, 0]) * 1.051, i, color='k', fontsize=12, va="top", ha="right")
-        title = '{} -> {}'.format(np.unique(ptrack[:, 4]), i)
-        ax.text(np.mean(ptrack[:, 1]) * 1.06, max(ptrack[:, 0]) * 1.06, title, color='b', fontsize=14, va="top",
-                ha="right")
-    # ax.set_ylim(0, 200)
-    plt.show()
-
-    print '{} candidates were merged in {} tracks'.format(len(candidates), len(ptracks))
-    return ptracks
+    return c2
 
 
 if __name__ == '__main__':
 
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
     # snr = [2, 55]
-    snr = [5]
-    N_TRACKS = 15
+    snr = [5, 10, 15]
+    N_TRACKS = 10
     N_CHANS = 4096
     N_SAMPLES = 256
     TRACK_THICKNESS = 1
@@ -520,7 +472,7 @@ if __name__ == '__main__':
 
                 visualise_filter(data, mask, tracks, f_name, s, threshold, visualise=False)
 
-                metrics[s][f_name] = evaluate_filter(true_image, data, ~mask, timing, s, TRACK_THICKNESS)
+                # metrics[s][f_name] = evaluate_filter(true_image, data, ~mask, timing, s, TRACK_THICKNESS)
 
                 # data[:] = False
                 # data[~mask] = True
@@ -545,4 +497,4 @@ if __name__ == '__main__':
             metrics_df = metrics_df.append(pd.DataFrame.from_dict(metrics[s], orient='index'))
         # data association
 
-    print metrics_df[['snr', 'sensitivity', 'specificity', 'dt', 'precision', 'score']].sort_values(by=['score'], )
+    print metrics_df[['snr', 'sensitivity', 'specificity', 'dt', 'precision', 'recall']].sort_values(by=['precision'], )

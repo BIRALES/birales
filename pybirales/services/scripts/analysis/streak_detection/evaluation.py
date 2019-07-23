@@ -68,17 +68,13 @@ def evaluate_detector(truth_img, test_img, candidates, exec_time, snr, thickness
     truth = truth_img.ravel().astype('bool')
 
     prediction = np.zeros(shape=test_img.shape)
-    pos = prediction
-    if candidates:
-        pos = np.vstack(candidates)
-    # positives = pos[:,0:1]
-    prediction[pos[:, :2].astype(int)] = True
-    prediction = prediction.ravel()
 
-    # test_img[:] = False
-    # for p in positives:
-    #     test_img[p[:, 0].astype(int), p[:, 1].astype(int)] = True
-    # prediction = test_img.ravel()
+    if candidates:
+        for c in candidates:
+            prediction[c['channel'].astype(int), c['sample'].astype(int)] = True
+    # positives = pos[:,0:1]
+    # prediction[pos[:, :2].astype(int)] = True
+    prediction = prediction.ravel()
 
     recall = recall_score(truth, prediction)
     reduction = (1 - (np.sum(prediction) / np.prod(truth_img.shape)))
