@@ -1,6 +1,8 @@
 import numpy as np
 import datetime
 from pybirales.pipeline.base.definitions import CalibrationFailedException
+import logging as log
+
 
 class SourceDetail:
 
@@ -19,35 +21,43 @@ class SourceDetail:
     def source_acknowledge(self):
         # Cassiopeia A, right ascension 23h23m24s
         if np.abs(self.source_declination - 59.) < 1.:
-            self.source_right_ascension = datetime.timedelta(hours=(23. + (23./60) + (24./3600)))
+            log.info("Selected Cassiopeia A, right ascension 23h23m24s")
+            self.source_right_ascension = datetime.timedelta(hours=(23. + (23. / 60) + (24. / 3600)))
 
         # Taurus A, right ascension 05h34m32s
         elif np.abs(self.source_declination - 22.) < 1.:
-            self.source_right_ascension = datetime.timedelta(hours=(5. + (34./60) + (32./3600)))
+            log.info("Selected Taurus A, right ascension 05h34m32s")
+            self.source_right_ascension = datetime.timedelta(hours=(5. + (34. / 60) + (32. / 3600)))
 
         # Virgo A, right ascension 12h30m49s
         elif np.abs(self.source_declination - 12.) < 1.:
-            self.source_right_ascension = datetime.timedelta(hours=(12. + (30./60) + (49./3600)))
+            log.info("Selected Virgo A, right ascension 12h30m49s")
+            self.source_right_ascension = datetime.timedelta(hours=(12. + (30. / 60) + (49. / 3600)))
 
         # Cygnus A, right ascension 19h59m28s
         elif np.abs(self.source_declination - 40.) < 1.:
-            self.source_right_ascension = datetime.timedelta(hours=(19. + (59./60) + (28./3600)))
+            log.info("Selected Cygnus A, right ascension 19h59m28s")
+            self.source_right_ascension = datetime.timedelta(hours=(19. + (59. / 60) + (28. / 3600)))
 
         else:
-            raise CalibrationFailedException("No Calibration Source could be acknowledged at the specified declination: {:0.2f}".format(self.source_declination))
+            raise CalibrationFailedException(
+                "No Calibration Source could be acknowledged at the specified declination: {:0.2f}".format(
+                    self.source_declination))
 
     def source_timing(self):
-        hours_sidereal = 23. + (56./60) + (4.0905/3600)
+        hours_sidereal = 23. + (56. / 60) + (4.0905 / 3600)
         sidereal_day_delta = datetime.timedelta(hours=24. - hours_sidereal)
         leap_year_multip = self.observation_start_time.year % 4 / 4.
-        leap_year_delta = datetime.timedelta(hours=(24. - hours_sidereal)*leap_year_multip)
+        leap_year_delta = datetime.timedelta(hours=(24. - hours_sidereal) * leap_year_multip)
         today = self.observation_start_time.date()
         gst_0 = datetime.date(year=today.year, month=9, day=20)
+
         if (today - gst_0).days >= 0:
-            gst_0 = datetime.date(year=today.year+1, month=9, day=20)
+            gst_0 = datetime.date(year=today.year + 1, month=9, day=20)
+
         gst_today = np.abs((today - gst_0).days) * sidereal_day_delta
 
-        longitudinal_delta = datetime.timedelta(hours=self.observing_longitude/360. * hours_sidereal)
+        longitudinal_delta = datetime.timedelta(hours=self.observing_longitude / 360. * hours_sidereal)
         lst_today = gst_today - (longitudinal_delta + sidereal_day_delta + leap_year_delta)
 
         ha_source = (lst_today - self.source_right_ascension).seconds
