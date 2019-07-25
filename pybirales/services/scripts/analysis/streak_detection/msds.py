@@ -197,11 +197,29 @@ def nearest(m1, c1, m2, c2, x, y, i=None):
     return 2, 1. - (d2 / t)
 
 
-def __inertia_ratio(x, y, i=0):
-    if i == 0:
-        return 3
-    x = x - np.mean(x)
-    y = y - np.mean(y)
+def __inertia_ratio(sample, channel, snr, ii=0, g=0):
+    # if i == 0:
+    #     return 3
+    x = sample - np.mean(sample)
+    y = channel - np.mean(channel)
+    n = len(sample)
+    df = pd.DataFrame(columns=['channel', 'sample', 'vector', 'distance', 'ratio', 'ratio_n', 'group', 'snr'])
+    df['sample'] = sample
+    df['channel'] = channel
+    df['group'] = g
+    df['x'] = x
+    df['y'] = y
+    df['snr'] = snr
+
+    if n >= 20:
+        df['ratio'] = 0.019
+        df['ratio_n'] = 0.019
+        return 0.019, df
+    elif len(np.unique(sample)) < 2 or len(np.unique(channel)) < 2:
+        df['ratio'] = 0.21
+        df['ratio_n'] = 1
+        return 0.21, df
+
     coords = np.vstack([x, y])
 
     cov = np.cov(coords)
@@ -227,21 +245,145 @@ def __inertia_ratio(x, y, i=0):
     v2_1 = np.array([x_v2 * -scale, y_v2 * -scale])
     v2_2 = np.array([x_v2 * scale, y_v2 * scale])
 
-    # if v1_1[0] + v1_2[0] == 0.:
-    #     m1, c1 = 10, 0.
-    #
-    #     if pa1 == 0:
-    #         pa1 += 0.0000001
-    #
-    #     # return 0.169
-    # else:
-    #     m1, c1 = get_line_eq(v1_1, v1_2)
+    m1, c1 = get_line_eq(v1_1, v1_2)
+
+    m2, c2 = get_line_eq(v2_1, v2_2)
+    pa1n = 1.
+    pa2n = 1.
+
+    if m1 == 0. and m2 == np.inf:
+        df['ratio'] = 10.
+        df['ratio_n'] = 10.
+        return 10., df
+
+    # line is oriented in the incorrectly
+    # if pa1 > pa2:
+    #     df['ratio'] = 20.
+    #     df['ratio_n'] = 20.
+    #     return 20., df
+
+    # df['vector'], df['distance'] = zip(
+    #     *df.apply(lambda x: nearest2(m1, 0.000001, m2, 0.000001, x['x'], x['y']), axis=1))
+    lines = []
+    ds = []
+    for i, (x_, y_) in enumerate(zip(x, y)):
+        line, d = nearest2(m1, 0, m2, 0, x_, y_)
+        lines.append(line)
+        ds.append(d)
+
+    df['vector'] = np.array(lines)
+    df['distance'] = np.array(ds)
+
+    # print i, g
+    # ratio = __ir(df['sample'], df['channel'])
+    s = df[df['distance'] > .7]
+
+    if len(s) < 3:
+        df['ratio'] = 30.
+        df['ratio_n'] = 30.
+        return 3, df
+
+    # try:
+    ratio2 = __ir(s['sample'], s['channel'])
+    # except Exception:
+    #     print ss
+    #     print i, m1, m2, pa1, pa2, len(df)
+
+    df['ratio'] = ratio2
+    df['ratio_n'] = ratio2 / len(s)
+
+    # if ii == 1957 or ii == 1934:
+    #     print ii, m1, m2, pa1, pa2, len(df)
+    #     print df
+    #     print s
+
+    if ii == 19570:
+        scale = 6
+        fig, ax = plt.subplots(1)
+        plt.plot([x_v1 * -scale * 2, x_v1 * scale * 2],
+                 [y_v1 * -scale * 2, y_v1 * scale * 2], color='black')
+        plt.plot([x_v2 * -scale, x_v2 * scale],
+                 [y_v2 * -scale, y_v2 * scale], color='blue')
+
+        plt.plot(x, y, '.')
+        plt.plot(v1_1[0], v1_1[1], '+', color='red', markersize=16)
+        plt.plot(v1_2[0], v1_2[1], 'x', color='red', markersize=16)
+
+        plt.plot(v2_1[0], v2_1[1], '+', color='g', markersize=16)
+        plt.plot(v2_2[0], v2_2[1], 'x', color='g', markersize=16)
+
+        # plt.plot(x_v1, y_v1, 'x', color='g', markersize=16)
+        # plt.plot(x_v2, y_v2, 'o', color='g', markersize=16)
+
+        m1, c1 = get_line_eq(v1_1, v1_2)
+        m2, c2 = get_line_eq(v2_1, v2_2)
+
+        print ii, m1, m2, pa1, pa2, ratio2, len(s)
+
+        pa1n = 1
+        pa2n = 1
+        for x_, y_ in zip(x, y):
+            line, d = nearest2(m1, 0, m2, 0, x_, y_)
+            if d <= .7:
+                plt.plot(x_, y_, 'o', color='r', markersize=10)
+            else:
+                if line == 1:
+                    pa1n += d
+                    plt.plot(x_, y_, 'o', color='k', markersize=10)
+                else:
+                    pa2n += d
+                    plt.plot(x_, y_, 'o', color='b', markersize=10)
+            ax.text(x_ + 0.5, y_ + 0.5, round(d, 2), color='k', weight='bold',
+                    fontsize=12, ha='center', va='center')
+
+        ax.text(np.median(x), np.max(y) * 1.5,
+                'Group: {}\nRatio: {:0.5f}\nRatio2: {:0.5f}'.format(g, (pa2n / pa1n * pa2 / pa1), ratio2),
+                color='k',
+                weight='bold', fontsize=15, ha='center', va='center')
+
+        plt.show()
+
+    return ratio2, df[df['distance'] > .7]
+
+
+def __ir(sample, channel, i=0, g=0):
+    x = sample - np.mean(sample)
+    y = channel - np.mean(channel)
+    coords = np.vstack([x, y])
+
+    cov = np.cov(coords)
+    evals, evecs = np.linalg.eig(cov)
+
+    sort_indices = np.argsort(evals)[::-1]
+    x_v1, y_v1 = evecs[:, sort_indices[0]]  # Eigenvector with largest eigenvalue
+    x_v2, y_v2 = evecs[:, sort_indices[1]]
+
+    p1 = np.array([x_v1 * -1 * 1, y_v2 * -1 * 1])
+    p2 = np.array([x_v1 * 1 * 1, y_v2 * 1 * 1])
+    diff = p1 - p2
+
+    pa1 = np.vdot(diff, diff) ** 0.5 + 0.00001
+    p1 = np.array([x_v2 * -1 * 1, y_v1 * 1 * 1])
+    p2 = np.array([x_v2 * 1 * 1, y_v1 * -1 * 1])
+    diff = p1 - p2
+    pa2 = np.vdot(diff, diff) ** 0.5 + 0.00001
+
+    scale = 6
+    v1_1 = np.array([x_v1 * -scale * 2, y_v1 * -scale * 2])
+    v1_2 = np.array([x_v1 * scale * 2, y_v1 * scale * 2])
+
+    v2_1 = np.array([x_v2 * -scale, y_v2 * -scale])
+    v2_2 = np.array([x_v2 * scale, y_v2 * scale])
 
     m1, c1 = get_line_eq(v1_1, v1_2)
 
     m2, c2 = get_line_eq(v2_1, v2_2)
     pa1n = 1.
     pa2n = 1.
+
+    if m1 == 0. and m2 == np.inf:
+        return 10.
+
     for z, (x_, y_) in enumerate(zip(x, y)):
 
         line, d = nearest2(m1, 0.000001, m2, 0.000001, x_, y_, i)
@@ -250,48 +392,7 @@ def __inertia_ratio(x, y, i=0):
         else:
             pa2n += d
 
-    # if i == 4:
-    #     scale = 6
-    #     fig, ax = plt.subplots(1)
-    #     plt.plot([x_v1 * -scale * 2, x_v1 * scale * 2],
-    #              [y_v1 * -scale * 2, y_v1 * scale * 2], color='black')
-    #     plt.plot([x_v2 * -scale, x_v2 * scale],
-    #              [y_v2 * -scale, y_v2 * scale], color='blue')
-    #
-    #     plt.plot(x, y, '.')
-    #     plt.plot(v1_1[0], v1_1[1], '+', color='red', markersize=16)
-    #     plt.plot(v1_2[0], v1_2[1], 'x', color='red', markersize=16)
-    #
-    #     plt.plot(v2_1[0], v2_1[1], '+', color='g', markersize=16)
-    #     plt.plot(v2_2[0], v2_2[1], 'x', color='g', markersize=16)
-    #
-    #     # plt.plot(x_v1, y_v1, 'x', color='g', markersize=16)
-    #     # plt.plot(x_v2, y_v2, 'o', color='g', markersize=16)
-    #
-    #     m1, c1 = get_line_eq(v1_1, v1_2)
-    #     m2, c2 = get_line_eq(v2_1, v2_2)
-    #     pa1n = 1
-    #     pa2n = 1
-    #     plt.show()
-    #     for x_, y_ in zip(x, y):
-    #         line, d = nearest2(m1, 0, m2, 0, x_, y_)
-    #         if line == 1:
-    #             pa1n += d
-    #             plt.plot(x_, y_, 'o', color='k', markersize=10)
-    #         else:
-    #             pa2n += d
-    #             plt.plot(x_, y_, 'o', color='b', markersize=10)
-    #         ax.text(x_ + 0.5, y_ + 0.5, round(d, 2), color='k', weight='bold',
-    #                 fontsize=8, ha='center', va='center')
-    #     # ax.text(v1_1[0]+0.5, v1_1[1]+0.5, i+','+j, color='k', weight='bold',
-    #     #         fontsize=12, ha='center', va='center')
-    #
-    #     plt.show()
-    # # print i, evecs[1, sort_indices[0]]/evecs[0, sort_indices[0]], pa2 / pa1, (pa2n / pa1n * pa2/pa1)
-    # if i > 1360 and i < 1380:
-    #     print i, (pa2n / pa1n * pa2 / pa1), np.abs(evecs[1, sort_indices[0]] / evecs[0, sort_indices[0]])
     return (pa2n / pa1n * pa2 / pa1)
-    # return np.abs(evecs[1, sort_indices[0]] / evecs[0, sort_indices[0]])
 
 
 def __get_shape_factor(x, y):
@@ -347,8 +448,9 @@ def __plot_leave(ax, x1, y1, x2, y2, i, score, positive, cluster=None, noise=Non
         zorder = 2
         lw = 2
     if np.any(cluster):
-        ax.plot(cluster[:, 1], cluster[:, 0], 'g.', zorder=3)
-        ax.plot(noise[:, 1], noise[:, 0], 'r.', zorder=3)
+        ax.plot(cluster['sample'], cluster['channel'], 'g.', zorder=3)
+    if np.any(noise):
+        ax.plot(noise['sample'], noise['channel'], 'r.', zorder=3)
     rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=lw, edgecolor=color, facecolor='none',
                              zorder=zorder)
 
@@ -373,10 +475,9 @@ def cluster_merge(cluster1, cluster2):
 
     return merged
 
+
 def cluster_merge_pd(cluster1, cluster2):
-
     return pd.concat([cluster1, cluster2])
-
 
 
 def __plot_candidate(ndx, candidate, i):
@@ -542,6 +643,7 @@ def fill2(test_image, cluster, ransac):
 
     return np.concatenate([cluster, m], axis=0)
 
+
 def fit(cluster, inliers):
     d = cluster[inliers]
 
@@ -572,8 +674,8 @@ def similar(candidate, cluster2, i=None, j=None):
     if dist.cosine([cluster_m1, cluster_c1], [cluster_m2, cluster_c2]) < 1e-8:
         tmp_candidate = cluster_merge_pd(candidate, cluster2)
 
-        ratio_old = __inertia_ratio(candidate['channel'], candidate['sample'])
-        ratio = __inertia_ratio(tmp_candidate['channel'], tmp_candidate['sample'])
+        # ratio_old = __inertia_ratio(candidate['channel'], candidate['sample'])
+        # ratio = __inertia_ratio(tmp_candidate['channel'], tmp_candidate['sample'])
 
         # if ratio <= ratio_old:
         #     return True

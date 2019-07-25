@@ -19,7 +19,7 @@ from configuration import *
 from evaluation import *
 from filters import *
 from msds import __inertia_ratio, traverse, mydist, __plot_leave, __plot_candidate, h_cluster, __plot_track, \
-    __plot_clusters, h_cluster2, similar, cluster_merge, fill, fit, cluster_merge_pd
+    __plot_clusters, h_cluster2, similar, cluster_merge, fill, fit, cluster_merge_pd, mydist2
 from receiver import *
 from util import get_clusters
 from visualisation import *
@@ -177,40 +177,111 @@ def __best_group(fclust1, bb, i):
     u, c = np.unique(fclust1, return_counts=True)
     u_groups = u[c > 2]
 
-    group_score = np.zeros(shape=(len(u_groups), 2))
+    group_score = np.zeros(shape=(len(u_groups), 3))
     group_score[:, 0] = u_groups
+    df1 = pd.DataFrame()
     for j, g in enumerate(u_groups):
         c = bb[np.where(fclust1 == g)]
+        ratio, c2 = __inertia_ratio(c[:, 1], c[:, 0], c[:, 2], i, g)
+        if i == 140:
+            print i, ratio, len(c2)
+            _viz_cluster(bb, fclust1)
 
-        if len(c) >= 20:
+        if ratio / len(c2) < 0.2:
+            # print 'x'
+            df1 = df1.append(c2)
+    # if i == 1957:
+    #     print i, len(df1), df1
+    if len(df1) < 1:
+        return np.nan, -1, []
+
+    if len(df1['group'].unique()) < 1:
+        return np.nan, -2, []
+
+    valid = df1[df1['ratio_n'] < 0.1]
+    if len(valid) < 1:
+        return np.nan, -3, []
+
+    # best = valid.loc[valid['ratio_n'].idxmax()]  # gets best groups
+    best = valid.iloc[valid['ratio_n'].values.argmin()]
+
+    best_group = np.reshape(best['group'], 1)
+    best_ratio = best['ratio_n']
+
+    # todo - merge best groups
+
+    return best_ratio, best_group, valid
+
+
+def __best_group2(fclust1, bb, i):
+    u, c = np.unique(fclust1, return_counts=True)
+    u_groups = u[c > 2]
+
+    group_score = np.zeros(shape=(len(u_groups), 3))
+    group_score[:, 0] = u_groups
+    df1 = pd.DataFrame()
+    for j, g in enumerate(u_groups):
+        c = bb[np.where(fclust1 == g)]
+        n = len(c)
+        if n >= 20:
             ratio = 0.19
         elif len(np.unique(c[:, 0])) < 2 or len(np.unique(c[:, 1])) < 2:
             ratio = 0.21
         else:
-            ratio = __inertia_ratio(c[:, 1], c[:, 0], i)
+            ratio, c = __inertia_ratio(c[:, 1], c[:, 0], i, g)
+
+            df1.append(c)
         group_score[j, 1] = ratio
 
-    best_groups = group_score[group_score[:, 1] < 0.2][:, 0]
+        group_score[j, 2] = ratio / n
+
+    # best_groups = group_score[group_score[:, 1] < 0.25][:, 0]
+    best_groups = group_score[group_score[:, 2] < 0.1]
 
     if len(best_groups) < 1:
         return np.nan, []
 
-    best_ratio = np.min(group_score[:, 1])
+    best_ratio = best_groups[np.argmin(best_groups[:, 2])][1]
+    best_group = np.reshape(best_groups[np.argmin(best_groups[:, 2])][0], 1)
 
+    # if i in [1957]:
+    #     print '\n', i
+    #     _viz_cluster(bb, fclust1)
+    #     print group_score
+    #     print best_groups
+    #     print best_ratio, best_group
+
+    return best_ratio, best_group
+
+    ## weighted check of ratio
+    # best_ratio = np.min(best_groups[:, 1])
+    # best_ratio = best_groups[np.argmin(best_groups[:, 2])][1]
+    # best_group = np.reshape(best_groups[np.argmin(best_groups[:, 2])][0], 1)
+    # if len(best_groups) > 1:
+    #
+    #     c = bb[np.in1d(fclust1, best_groups[:, 0])]
+    #     ratio_combined = __inertia_ratio(c[:, 1], c[:, 0], i)
+    #
+    #     if ratio_combined < best_ratio:
+    #         return ratio_combined, best_groups[:, 0]
+
+    ## unweighted check
+    best_ratio = best_groups[np.argmin(best_groups[:, 1])][1]
+    best_group = np.reshape(best_groups[np.argmin(best_groups[:, 1])][0], 1)
     if len(best_groups) > 1:
 
-        c = bb[np.in1d(fclust1, best_groups)]
+        c = bb[np.in1d(fclust1, best_groups[:, 0])]
         ratio_combined = __inertia_ratio(c[:, 1], c[:, 0], i)
 
         if ratio_combined < best_ratio:
-            return ratio_combined, best_groups
+            return ratio_combined, best_groups[:, 0]
 
-    return best_ratio, best_groups
+    return best_ratio, best_group
 
 
 def msds_q(test_image):
     t1 = time.time()
-    candidates = __msds_q(test_image, clustering_thres=2.0, vis=False)
+    candidates = __msds_q(test_image, clustering_thres=2.0, vis=True)
 
     print 'MSDS found {} Clusters in {:0.2f} seconds'.format(len(candidates), time.time() - t1)
 
@@ -246,29 +317,31 @@ def __msds_q(test_image, clustering_thres=2.0, vis=False):
 
     clusters = []
     candidates = []
-
+    clusters = pd.DataFrame()
     t5 = time.time()
-    for i, leave in enumerate(leaves):
+    for i, leave in enumerate(leaves[1100:1400]):
+        # i += 1900
         data, x1, x2, y1, y2, n = leave
 
-        fclust1 = fclusterdata(data, 2.0, metric=mydist, criterion='distance')
-        ratio, best_gs = __best_group(fclust1, data, i)
-
-        if len(best_gs) == 0:
+        fclust1 = fclusterdata(data, 3.0, metric=mydist2, criterion='distance')
+        ratio, best_gs, cluster = __best_group(fclust1, data, i)
+        # print  ratio, best_gs, data
+        if best_gs < 0:
             if vis:
-                __plot_leave(ax, x1, y1, x2, y2, i, score='No G', positive=False)
+                __plot_leave(ax, x1, y1, x2, y2, i, score='No G. R:{:0.3f}'.format(ratio), positive=False)
             continue
 
-        if ratio == 0.2:
+        if ratio == 0.2 or ratio == 0.:
             if vis:
                 __plot_leave(ax, x1, y1, x2, y2, i, score='Ratio 101', positive=False)
             continue
 
-        cluster = data[np.in1d(fclust1, best_gs)]
-        noise = data[np.in1d(fclust1, best_gs, invert=True)]
+        # cluster = data
+        # noise = data[np.in1d(fclust1, best_gs, invert=True)]
 
+        noise = None
         # ratio passed. Check it is long enough
-        n = len(cluster[:, 0])
+        n = len(cluster)
         if n < 3:
             if vis:
                 __plot_leave(ax, x1, y1, x2, y2, i, score='N < 3', positive=False, cluster=cluster, noise=noise)
@@ -276,38 +349,43 @@ def __msds_q(test_image, clustering_thres=2.0, vis=False):
 
         # Now test for correlation
 
-        if len(np.unique(cluster[:, 0])) == 1:
+        if len(np.unique(cluster['sample'])) == 1:
             pear = [1., 0.05]
-        elif len(np.unique(cluster[:, 1])) == 1:
+        elif len(np.unique(cluster['channel'])) == 1:
             pear = [1., 0.05]
         else:
-            pear = pearsonr(cluster[:, 0], cluster[:, 1])
+            pear = pearsonr(cluster['sample'], cluster['channel'])
 
         if pear[1] > 0.05 and n <= 20:
             # if pear[0] > -0.80 or pear[1] > 0.05:
             if vis:
-                d = n / (max(cluster[:, 1]) - min(cluster[:, 1])) * (max(cluster[:, 0]) - min(cluster[:, 0]))
+                d = n / (max(cluster['channel']) - min(cluster['channel'])) * (
+                        max(cluster['sample']) - min(cluster['sample']))
                 score = 'Low C:{:0.3f}\nS:{:0.3f}\nN:{}\nD:{:0.3f}'.format(pear[0], pear[1], n, d)
                 __plot_leave(ax, x1, y1, x2, y2, i, score=score, positive=False, cluster=cluster, noise=noise)
             continue
 
         # streak is correlated AND with a low inertia -> add to the list of possible clusters
-        cluster = np.append(cluster, np.expand_dims(np.full(shape=n, fill_value=i), axis=1), axis=1)
-
-        clusters.append(cluster)
+        # cluster = np.append(cluster, np.expand_dims(np.full(shape=n, fill_value=i), axis=1), axis=1)
+        cluster['leave_id'] = i
+        clusters = clusters.append(cluster)
 
         if vis:
             positive = True
-            m, c, r_value, _, _ = linregress(cluster[:, 0], cluster[:, 1])
+            m, c, r_value, _, _ = linregress(cluster['sample'], cluster['channel'])
             score = 'I:{:0.3f}\nM:{:0.3f}\nC:{:0.3f}\nR:{:0.3f}'.format(ratio, m, c, r_value)
             __plot_leave(ax, x1, y1, x2, y2, i, score=score, positive=positive, cluster=cluster, noise=noise)
 
     print '{} Clusters generated in {:0.3f} seconds'.format(len(clusters), time.time() - t5)
 
     t3 = time.time()
-    cc = np.vstack(clusters)
+    # cc = np.vstack(clusters)
+    df = clusters
+    ax.set_ylim(1117, 1178)
+    ax.set_xlim(75, 231)
+    plt.show()
 
-    df = pd.DataFrame({'channel': cc[:, 0], 'sample': cc[:, 1], 'snr': cc[:, 2], 'group': cc[:, 3]})
+    # df = pd.DataFrame({'channel': cc[:, 0], 'sample': cc[:, 1], 'snr': cc[:, 2], 'group': cc[:, 3]})
 
     fclust1, u_groups = h_cluster2(X=df, threshold=20.)
     df['group_2'] = fclust1
@@ -325,15 +403,16 @@ def __msds_q(test_image, clustering_thres=2.0, vis=False):
     plt.clf()
     for g in u_groups:
         c = df[df['group_2'] == g]
-
+        leave_id = c['leave_id'].iloc[0]
         if len(c) < 2:
             continue
 
         m, intercept, r_value, p, e = linregress(c['sample'], c['channel'])
 
-        ratio = __inertia_ratio(c['sample'], c['channel'], g)
-
-        if p < 0.05 and e < 0.1 and ratio < 0.021:
+        ratio, c2 = __inertia_ratio(c['sample'], c['channel'], c['snr'], g)
+        print g, 'R:{:0.5f} P:{:0.5f} E:{:0.5f} I:{:0.5f}'.format(r_value, p, e, ratio)
+        # if p < 0.05 and e < 0.1 and ratio < 0.021:
+        if p < 0.05 and e < 0.1 and ratio < 0.3:
             print g, 'R:{:0.5f} P:{:0.5f} E:{:0.5f} I:{:0.5f}'.format(r_value, p, e, ratio)
             # e = fill(test_img, cluster, ransac)
             ax = sns.scatterplot(c['sample'], c['channel'])
@@ -375,9 +454,10 @@ def __msds_q(test_image, clustering_thres=2.0, vis=False):
     c2 = []
     for i, c in enumerate(ptracks):
         m, intercept, r_value, p, e = linregress(c['sample'], c['channel'])
-        print i, 'R:{:0.5f} P:{:0.5f} E:{:0.5f} I:{:0.5f}'.format(r_value, p, e, 0.0)
-        if r_value < -0.95 and e < 0.01:
-            c2.append(c)
+        ratio, c3 = __inertia_ratio(c['sample'], c['channel'], c['snr'], g)
+        print i, 'R:{:0.5f} P:{:0.5f} E:{:0.5f} I:{:0.5f}'.format(r_value, p, e, ratio)
+        if r_value < -0.95 and e < 0.01 and ratio < 0.20:
+            c2.append(c3)
 
     print '{} candidates merged into {} candidates after last sanity check. Time taken: {:0.3f} seconds'.format(
         len(ptracks),
@@ -388,7 +468,7 @@ def __msds_q(test_image, clustering_thres=2.0, vis=False):
     for i, c in enumerate(c2):
         m, intercept, r_value, p, e = linregress(c['sample'], c['channel'])
 
-        ratio = __inertia_ratio(c['sample'], c['channel'], i)
+        ratio, c4 = __inertia_ratio(c['sample'], c['channel'], c['snr'], i)
         x = c['sample'].mean()
         y = c['channel'].mean()
 
@@ -409,8 +489,8 @@ if __name__ == '__main__':
 
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
     # snr = [2, 55]
-    snr = [5, 10, 15]
-    N_TRACKS = 10
+    snr = [5]
+    N_TRACKS = 2
     N_CHANS = 4096
     N_SAMPLES = 256
     TRACK_THICKNESS = 1

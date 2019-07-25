@@ -111,9 +111,10 @@ def get_test_tracks(n_tracks, gradient, track_length, image_shape, thickness):
         # print 'Created track with m={:0.2f}, c={:0.1f}, of {}px at ({},{}) to ({},{})'.format(m, c, (
         #         max(x) - start), start, max(y), end, min(y))
 
-        # print "\nTest track ", i, 'Gradient: {:0.3f}, Intercept: {:0.3f}'.format(m, c)
-        # print "ax.set_ylim({}, {})".format(min(y),max(y))
-        # print "ax.set_xlim({}, {})".format(start,end)
+        if n_tracks < 3:
+            print "\nTest track ", i, 'Gradient: {:0.3f}, Intercept: {:0.3f}'.format(m, c)
+            print "ax.set_ylim({}, {})".format(min(y),max(y))
+            print "ax.set_xlim({}, {})".format(start,end)
 
         # if i == 8 or 13:
         #     for i,j in zip(x,y):
