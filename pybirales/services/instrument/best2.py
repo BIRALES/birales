@@ -240,7 +240,7 @@ class BEST2(object):
             raise BEST2PointingException("Could not move to declination. BEST2 antenna server is not connected")
 
         # Check if declination is valid
-        if not -3.0 <= dec <= 90:
+        if not -10.0 <= dec <= 100:
             raise BEST2PointingException("BEST2: Declination %s is out of range. Range is -3 to 90" % dec)
 
         # Check if we need to move at all
