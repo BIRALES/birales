@@ -115,12 +115,22 @@ def get_test_tracks(n_tracks, gradient, track_length, image_shape, thickness):
             print "\nTest track ", i, 'Gradient: {:0.3f}, Intercept: {:0.3f}'.format(m, c)
             print "ax.set_ylim({}, {})".format(min(y),max(y))
             print "ax.set_xlim({}, {})".format(start,end)
-
+            print start, end, c, m
         # if i == 8 or 13:
         #     for i,j in zip(x,y):
         #         print i, j
         #
         tracks.append((x, y))
+
+    # tracks = []
+    # x, y = create_track(np.arange(50, 166), -0.7, 208, image_shape, thickness)
+    # tracks.append((x, y))
+    #
+    #
+    # x, y = create_track(np.arange(28, 156), -0.15, 150, image_shape, thickness)
+    # tracks.append((x, y))
+
+
     print 'Created {} tracks'.format(n_tracks)
     # print np.mean(np.arctan(x /  (4096.-y)))
     return tracks

@@ -3,7 +3,7 @@ from skimage.measure import compare_ssim as ssim
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score, confusion_matrix, \
     jaccard_similarity_score, mean_squared_error
 import time
-
+import pandas as pd
 
 def evaluate_filter(truth_img, test_img, positives, exec_time, snr, thickness):
     """
@@ -71,7 +71,10 @@ def evaluate_detector(truth_img, test_img, candidates, exec_time, snr, thickness
 
     if candidates:
         for c in candidates:
-            prediction[c['channel'].astype(int), c['sample'].astype(int)] = True
+            if isinstance(c, pd.DataFrame):
+                prediction[c['channel'].astype(int), c['sample'].astype(int)] = True
+            else:
+                prediction[c[:, 0].astype(int), c[:, 1].astype(int)] = True
     # positives = pos[:,0:1]
     # prediction[pos[:, :2].astype(int)] = True
     prediction = prediction.ravel()

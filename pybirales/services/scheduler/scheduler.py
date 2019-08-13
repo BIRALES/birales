@@ -295,7 +295,6 @@ class ObservationsScheduler:
                                                      model_id=_id)
             else:
                 raise InvalidObservationException('Observation type is not valid.')
-
         except KeyError:
             log.exception('Incorrect/missing parameter in observation %s', obs)
             log.warning('Observation %s was not added to the schedule', obs)
