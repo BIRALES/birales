@@ -138,7 +138,7 @@ def get_test_tracks(n_tracks, gradient, track_length, image_shape, thickness):
 
 def add_tracks(image, tracks, noise_mean, snr):
     power = calculate_amplitude(noise_mean, snr=snr)
-
+    print power
     for track in tracks:
         image[track[1], track[0]] += power
     return image
