@@ -40,7 +40,7 @@ class TransitSelect:
         dec = self.cal_input['pointing_dec']
         # utc_time = datetime.datetime.strptime(self.cal_input['obs_time'], '%Y-%m-%d %H:%M:%S.%f')
         utc_time = self.cal_input['obs_time']
-        time = utc_time + datetime.timedelta(hours=1.)
+        time = utc_time
         lat = self.cal_input['latitude']
         lon = self.cal_input['longitude']
         integration_time = self.cal_input['integration_time']
