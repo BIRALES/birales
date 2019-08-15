@@ -171,9 +171,10 @@ def _viz_cluster(bb, fclust1):
 
 
 # @profile
-def msds_q(test_image, u_test_image):
+def msds_q(test_image):
     limits = get_limits(test_image, true_tracks)
     limits = (100, 200, 7000, 7300)
+    limits = (40, 150, 6000, 6500)
     limits = None
     # Pre-process the input data
     ndx = pre_process_data(test_image)
@@ -184,18 +185,22 @@ def msds_q(test_image, u_test_image):
     visualise_filtered_data(ndx, true_tracks, '1_filtered_data', limits=limits, debug=debug, vis=vis)
 
     # Traverse the tree and identify valid linear streaks
-    rectangles, leaves = traverse(k_tree.tree, ndx, 0, test_image.shape[1], 0, test_image.shape[0])
+    rectangles, leaves = traverse(k_tree.tree, ndx,
+                                  bbox=(0, test_image.shape[1], 0, test_image.shape[0]),
+                                  distance_thold=3., min_length=2., cluster_size_thold=10.)
 
     visualise_tree_traversal(ndx, true_tracks, leaves, rectangles, '2_tree_traversal.png', limits, vis=vis)
 
     # Cluster the leaves based on their vicinity to each other
-    cluster_labels, unique_labels, cluster_data = cluster_leaves(leaves)
+    cluster_labels, unique_labels, cluster_data = cluster_leaves(leaves, distance_thold=30.)
 
     visualise_clusters(cluster_data, cluster_labels, unique_labels, true_tracks, filename='3_clusters.png',
+                       limits=limits,
                        debug=debug)
 
     # Filter invalid clusters
-    valid_clusters = validate_clusters(cluster_data, labelled_clusters=cluster_labels, unique_labels=unique_labels)
+    valid_clusters = validate_clusters(cluster_data, labelled_clusters=cluster_labels, unique_labels=unique_labels,
+                                       e_thold=0.2, min_length=4.)
 
     visualise_candidates(valid_clusters, true_tracks, '4_candidates.png', limits=limits, debug=debug)
 
@@ -205,7 +210,7 @@ def msds_q(test_image, u_test_image):
     visualise_tracks(tracks, true_tracks, '5_tracks.png', limits=limits, debug=debug)
 
     # Fill any missing data
-    valid_tracks = fill_clusters(tracks, test_image, u_test_image)
+    valid_tracks = fill_clusters(tracks, test_image, missing_thold=0.40, r_thold=-0.95, min_span_thold=15)
 
     visualise_post_processed_tracks(valid_tracks, true_tracks, '6_post-processed-tracks.png', limits=limits,
                                     debug=debug)
@@ -217,7 +222,8 @@ if __name__ == '__main__':
     debug = False
     vis = False
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
-    snr = [5,20]
+    snr = [3, 5]
+    # snr = [2, 3, 5, 10, 15, 20, 25]
     # snr = [3]
     N_TRACKS = 15
     N_CHANS = 8192
@@ -298,7 +304,7 @@ if __name__ == '__main__':
             # feature extraction - detection
             print "Running {} algorithm".format(d_name)
             start = time.time()
-            candidates = detect(data, filtered_test_img)
+            candidates = detect(data)
             timing = time.time() - start
             print "The {} detection algorithm, found {} candidates in {:2.3f}s".format(d_name, len(candidates), timing)
 

@@ -362,7 +362,7 @@ def visualise_filtered_data(ndx, true_tracks, filename, limits=None, debug=False
         if limits:
             x_start, x_end, y_start, y_end = limits
             ndx = _partition(ndx, x_start, x_end, y_start, y_end)
-        ax.plot(ndx[:, 1], ndx[:, 0], '.', 'r')
+        ax.plot(ndx[:, 1], ndx[:, 0], '.', 'r', zorder=-3)
 
         ax = visualise_true_tracks(ax, true_tracks)
         ax.set(xlabel='Sample', ylabel='Channel')

@@ -21,8 +21,8 @@ def mydist2(p1, p2):
     return np.vdot(diff, diff) ** 0.5
 
 
-def h_cluster(X, dis_threshold, min_length=2):
-    cluster_labels = fclusterdata(X, dis_threshold, metric=mydist2, criterion='distance')
+def h_cluster(X, distance_thold, min_length=2):
+    cluster_labels = fclusterdata(X, distance_thold, metric=mydist2, criterion='distance')
 
     u, c = np.unique(cluster_labels, return_counts=True)
     unique_groups = u[c > min_length]
@@ -30,14 +30,15 @@ def h_cluster(X, dis_threshold, min_length=2):
     return cluster_labels, unique_groups
 
 
-def h_cluster_euclidean(X, dis_threshold):
-    cluster_labels = fclusterdata(X[:, 2:4], dis_threshold, metric='euclidean', criterion='distance')
+def h_cluster_euclidean(X, distance_thold):
+    cluster_labels = fclusterdata(X[:, 2:4], distance_thold, metric='euclidean', criterion='distance')
 
     u, c = np.unique(cluster_labels, return_counts=True)
+    unique_groups = u[c > 1]
+    return cluster_labels, unique_groups
 
-    return cluster_labels, u
 
-
+# @njit
 def _partition(data, x1, x2, y1, y2):
     ys = data[:, 0]
     partition_y = data[np.logical_and(ys >= y1, ys <= y2)]
@@ -46,21 +47,33 @@ def _partition(data, x1, x2, y1, y2):
 
 # @profile
 # @timeit
-def traverse(root, ndx, x1, x2, y1, y2):
+def traverse(root, ndx, bbox, distance_thold=3.0, min_length=2, cluster_size_thold=10):
+    """
+
+    :param root: The tree node
+    :param ndx:
+    :param bbox: The bounding box of the partition
+    :param distance_thold:
+    :param min_length:
+    :param cluster_size_thold:
+    :return:
+    """
     rectangles = []
     leaves = []
+    x1, x2, y1, y2 = bbox
     if root:
         if not isinstance(root, KDTree.leafnode):
             # rectangles.append((root.split_dim, root.split, x1, x2, y1, y2, root.children))
 
-            _x1, _x2, _y1, _y2 = x1, x2, y1, y2
+            _x1, _x2, _y1, _y2 = bbox
             if root.split_dim == 0:
                 _y1, _y2 = y1, root.split
             if root.split_dim == 1:
                 _x1, _x2 = x1, root.split
 
             partition = _partition(ndx, _x1, _x2, _y1, _y2)
-            left, ll = traverse(root.less, partition, _x1, _x2, _y1, _y2)
+            left, ll = traverse(root.less, partition, (_x1, _x2, _y1, _y2), distance_thold, min_length,
+                                cluster_size_thold)
 
             if root.split_dim == 0:
                 _y1, _y2 = root.split, y2
@@ -69,7 +82,8 @@ def traverse(root, ndx, x1, x2, y1, y2):
 
             partition = _partition(ndx, _x1, _x2, _y1, _y2)
 
-            right, lr = traverse(root.greater, partition, _x1, _x2, _y1, _y2)
+            right, lr = traverse(root.greater, partition, (_x1, _x2, _y1, _y2), distance_thold, min_length,
+                                 cluster_size_thold)
             rectangles = rectangles + left
             rectangles = rectangles + right
 
@@ -78,28 +92,22 @@ def traverse(root, ndx, x1, x2, y1, y2):
 
         else:
             if root.children > 3:
-                labels, _ = h_cluster(ndx, dis_threshold=3.0, min_length=2)
-                ratio, best_gs, cluster, rejected_data = __best_group(labels, ndx, bbox=(x1, x2, y1, y2))
+                labels, _ = h_cluster(ndx, distance_thold)
+                ratio, best_gs, cluster, rejected_data = __best_group(labels, ndx, bbox=bbox)
                 n = len(cluster)
+
                 mesg = 'B:{}\n N:{}\nI:{:0.3f}'.format(best_gs, n, ratio)
 
                 if best_gs > 0:
-                    if n >= 10:
+                    pear = pearsonr(cluster[:, 1], cluster[:, 0])
+
+                    if n >= cluster_size_thold or pear[1] <= 0.05:
                         leaves.append(
                             (cluster, best_gs, mesg, x1, x2, y1, y2, n, np.mean([x1, x2]), np.mean([y1, y2]),
                              np.mean(cluster[:, 2])))
                     else:
-                        # if len(np.unique(cluster[:, 0])) > 1 and len(np.unique(cluster[:, 1])) > 1:
-                        pear = pearsonr(cluster[:, 1], cluster[:, 0])
-
-                        if pear[1] <= 0.05:
-                            leaves.append(
-                                (cluster, best_gs, mesg, x1, x2, y1, y2, n, np.mean([x1, x2]), np.mean([y1, y2]),
-                                 np.mean(cluster[:, 2])))
-                            # print len(leaves), n, pear
-                        else:
-                            mesg += '\nS:{:0.3f}'.format(pear[1])
-                            rectangles.append((cluster, rejected_data, best_gs, mesg, x1, x2, y1, y2, n))
+                        mesg += '\nS:{:0.3f}'.format(pear[1])
+                        rectangles.append((cluster, rejected_data, best_gs, mesg, x1, x2, y1, y2, n))
                 else:
                     mesg += '\nG:{}'.format(best_gs)
                     rectangles.append((cluster, rejected_data, best_gs, mesg, x1, x2, y1, y2, n))
@@ -117,17 +125,16 @@ def __best_group(fclust1, bb, bbox=None, i=None):
     best_data = None
     rejected_data = []
     x1, x2, y1, y2 = bbox
-    bbox_area = (x2 - x1) * (y2 - y1)
+    # bbox_area = (x2 - x1) * (y2 - y1)
     for j, g in enumerate(u_groups):
         c = bb[np.where(fclust1 == g)]
         ratio, c2 = __inertia_ratio(c, i, g)
-        cluster_area = (max(c2[:, 0]) - min(c2[:, 0])) * (max(c2[:, 1]) - min(c2[:, 1]))
-        thres = len(bb) / bbox_area * cluster_area
+        # cluster_area = (max(c2[:, 0]) - min(c2[:, 0])) * (max(c2[:, 1]) - min(c2[:, 1]))
+        # thres = len(bb) / bbox_area * cluster_area
         if ratio < best_ratio:
             best_ratio = ratio
             best_group = g
             best_data = c2
-        # elif len(c2) > 0.5
         else:
             rejected_data.append((c2, ratio))
 
@@ -153,7 +160,7 @@ def PreorderTraversal(root):
 
 # @profile
 # @njit
-def nearest4(m1, m2, x, y, i=None):
+def nearest4(m1, m2, x, y, i=None, membership_ratio=0.7):
     d1, d2 = nearest(m1, m2, x, y)
     t = d1 + d2 + 0.000000000001
 
@@ -162,7 +169,8 @@ def nearest4(m1, m2, x, y, i=None):
     a = 1. - (d2 / t)
     a[mask] = (1. - (d1 / t))[mask]
 
-    return a > 0.7
+    # Select those points that are near to either of the two line by 70%
+    return a > membership_ratio
 
 
 def nearest(m1, m2, x, y, i=None):
@@ -213,7 +221,7 @@ def __inertia_ratio(data, ii=0, g=0, visualise=None):
 
     m2 = y_v2 / x_v2
 
-    s = nearest4(m1, m2, coords[0, :], coords[1, :])
+    s = nearest4(m1, m2, coords[0, :], coords[1, :], membership_ratio=0.7)
 
     subset = data[s, :]
 
@@ -298,21 +306,15 @@ def thicken(sample, channel, slope, c, offset_sample, offset_channel):
     return filled.astype(int)
 
 
-def fill(test_image, cluster, ransac, u_test_image, fill_thickness=False):
-    channel_width = estimate_thickness(cluster, axis=1)
-    sample_width = estimate_thickness(cluster, axis=0)
-
-    add_missing = channel_width > 1 and sample_width > 1
-
-    # if not add_missing:
-    #     return cluster
-
+def fill(test_image, cluster, fill_thickness=False):
+    ransac = linear_model.RANSACRegressor(residual_threshold=5)
+    ransac = ransac.fit(cluster[:, 0].reshape(-1, 1), cluster[:, 1])
     sample = cluster[:, 1]
     channel = cluster[:, 0]
     missing_channels = np.setxor1d(np.arange(min(channel), max(channel)), channel)
     n = len(missing_channels)
-    if n > len(cluster):
-        return cluster
+    # if n > len(cluster):
+    #     return cluster
 
     sample_gaps = np.arange(min(sample), max(sample))
     missing_samples = np.setxor1d(sample_gaps, sample)
@@ -331,6 +333,8 @@ def fill(test_image, cluster, ransac, u_test_image, fill_thickness=False):
 
     # Thickening functionality (axis should be inverse)
     if fill_thickness:
+        channel_width = estimate_thickness(cluster, axis=1)
+        sample_width = estimate_thickness(cluster, axis=0)
         filled_in_thick = thicken(new_samples, new_channels, ransac.estimator_.coef_[0],
                                   ransac.estimator_.intercept_,
                                   sample_width,
@@ -350,21 +354,15 @@ def fill(test_image, cluster, ransac, u_test_image, fill_thickness=False):
     # Remove duplicate rows with the same value and channel
     combined = combined[i]
 
-    # filter false positives
+    # filter false positives - based on their SNR values
+    t = np.median(cluster[:, 2]) - np.std(cluster[:, 2]) * 2
 
-    n = np.mean(u_test_image)
-    s = np.std(u_test_image)
-    t = n + 5 * s
+    # print t, np.mean(test_image[test_image > 0]) * 0.5
 
-    t = np.mean(test_image[test_image > 0])
-
-    print t, np.mean(test_image[test_image > 0]) * 0.5
-    # combined = combined[combined[:, 3] < 0][combined[:, 2] > n]
-
-    return combined[np.logical_or(combined[:, 3] > -2, combined[:, 2] > t)]
+    return combined[combined[:, 2] > t]
 
 
-def fit(cluster, in_liers):
+def fit(cluster, in_liers, r_thold=-0.9, min_length=10):
     d = cluster[in_liers]
 
     if len(np.unique(d[:, 1])) == 1 or len(np.unique(d[:, 0])) == 1:
@@ -372,7 +370,7 @@ def fit(cluster, in_liers):
 
     pear = pearsonr(d[:, 1], d[:, 0])
 
-    if pear[1] < 0.05 and pear[0] < -0.9 and len(d) >= 10:
+    if pear[1] < 0.05 and pear[0] < r_thold and len(d) >= min_length:
         return d, True
 
     return cluster, False
@@ -382,7 +380,6 @@ def similar(candidate, cluster2, i=None, j=None):
     c1_m = np.array([np.mean(candidate[:, 0]), np.mean(candidate[:, 1])])
     c2_m = np.array([np.mean(cluster2[:, 0]), np.mean(cluster2[:, 1])])
 
-    # print i, j, '=>', mydist2(c1_m, c2_m)
     cluster_dist = mydist2(c1_m, c2_m)
     if cluster_dist > 1000:
         return False
@@ -408,10 +405,7 @@ def similar(candidate, cluster2, i=None, j=None):
     r1 = __ir(candidate[:, :2])
     r2 = __ir(tmp_candidate[:, :2])
 
-    if r2 < r1:
-        return True
-
-    return False
+    return r2 < r1
 
 
 def split(ransac, candidate, candidates, ptracks, g):
@@ -424,15 +418,12 @@ def split(ransac, candidate, candidates, ptracks, g):
         candidate_1, valid_1 = fit(split_candidate_1, ransac.inlier_mask_)
 
         if valid_1:
-            # print 'Sub-candidate 1/{} added to candidates'.format(g1)
             candidates.append(candidate_1)
 
         ransac.fit(split_candidate_2[:, 0].reshape(-1, 1), split_candidate_2[:, 1])
         candidates_2, valid_2 = fit(split_candidate_2, ransac.inlier_mask_)
 
         if valid_2:
-            # print 'Sub-candidate 2/{} added to candidates'.format(g1)
-
             candidates.append(candidates_2)
 
         if not valid_1 and not valid_2:
@@ -440,39 +431,32 @@ def split(ransac, candidate, candidates, ptracks, g):
             candidate, valid = fit(candidate, ransac.inlier_mask_)
 
             if valid:
-                # candidate = fill(test_img, candidate, ransac)
-
                 ptracks.append(candidate)
     else:
         candidate, valid = fit(candidate, ransac.inlier_mask_)
 
         if valid:
-            # candidate = fill(test_img, candidate, ransac)
-
             ptracks.append(candidate)
-            # print 'Candidate {} added to tracks'.format(g1)
-        # else:
-        #     print 'Candidate {} dropped'.format(g1)
 
     return candidates, ptracks
 
 
 @timeit
-def validate_clusters(data, labelled_clusters, unique_labels):
+def validate_clusters(data, labelled_clusters, unique_labels, e_thold, min_length):
     candidates = []
     for g in unique_labels:
         c = np.vstack(data[labelled_clusters == g, 0])
 
         m, intercept, r_value, p, e = linregress(c[:, 1], c[:, 0])
 
-        if p < 0.05 and e < 0.1 and len(c) > 4:
+        # if len(c) <= min_length:
+        #     print 'not significant'
+
+        if p < 0.05 and e < e_thold and len(c) > min_length:
             c = np.append(c, np.expand_dims(np.full(len(c), g), axis=1), axis=1)
             candidates.append(c)
 
     return candidates
-    # print '{} Groups reduced to {} candidates after filtering 1. Time taken: {:0.3f} seconds'.format(len(u_groups),
-    #                                                                                                  len(candidates),
-    #                                                                                                  _td(t1))
 
 
 @timeit
@@ -483,7 +467,6 @@ def merge_clusters(clusters):
         g = candidate[:, 3][0]
         for i, track in enumerate(tracks):
             # If beam candidate is similar to candidate, merge it.
-            # print 'Comparing candidate {} with track {}'.format(g, i)
             if similar(track, candidate, g, track[:, 3][0]):
                 c = np.concatenate([track, candidate])
 
@@ -492,7 +475,6 @@ def merge_clusters(clusters):
                 tracks[i] = candidate
                 break
         else:
-            # print 'Candidate {} is unique'.format(g)
             ransac.fit(candidate[:, 0].reshape(-1, 1), candidate[:, 1])
 
             candidates, tracks = split(ransac, candidate, clusters, tracks, g)
@@ -501,38 +483,32 @@ def merge_clusters(clusters):
 
 
 @timeit
-def fill_clusters(tracks, test_img, u_test_image):
+def fill_clusters(tracks, test_img, missing_thold, r_thold, min_span_thold):
     filled_tracks = []
-    ransac = linear_model.RANSACRegressor(residual_threshold=5)
+
     for i, c in enumerate(tracks):
-        m, intercept, r_value, p, e = linregress(c[:, 1], c[:, 0])
-        ratio = __ir(c[:, :2])
-
-        time_span = len(np.unique(c[:, 1]))
-        # print i, c[:, 3][0], 'R:{:0.5f} P:{:0.5f} E:{:0.5f} I:{:0.5f} T:{}'.format(r_value, p, e, ratio, time_span)
-
+        group = c[c[:, 3] > 0][:, 3][0]
         missing_channels = np.setxor1d(np.arange(min(c[:, 0]), max(c[:, 0])),
                                        c[:, 0])
 
         r = len(missing_channels) / float(len(missing_channels) + len(c))
-        if r >= 0.45:
+        if r >= missing_thold:
             continue
 
-        if r_value < -0.95 and time_span > 15:
-            ransac = ransac.fit(c[:, 0].reshape(-1, 1), c[:, 1])
-            c3 = fill(test_img, c, ransac, u_test_image)
-            filled_tracks.append(c3)
-            # print 'Track ', i, 'power', np.mean(c[:, 2])
+        m, intercept, r_value, p, e = linregress(c[:, 1], c[:, 0])
 
+        if r_value < r_thold and len(np.unique(c[:, 1])) > min_span_thold:
+            c3 = fill(test_img, c)
+            filled_tracks.append(c3)
     return filled_tracks
 
 
 @timeit
-def cluster_leaves(leaves):
+def cluster_leaves(leaves, distance_thold=30.):
     cluster_data = np.vstack(
         [(cluster, i, x, y, p) for i, (cluster, best_gs, ratio, x1, x2, y1, y2, n, x, y, p) in enumerate(leaves)])
 
-    cluster_labels, unique_labels = h_cluster_euclidean(X=cluster_data, dis_threshold=30.)
+    cluster_labels, unique_labels = h_cluster_euclidean(cluster_data, distance_thold)
 
     return cluster_labels, unique_labels, cluster_data
 
