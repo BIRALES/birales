@@ -1,5 +1,6 @@
+import time
+
 import numpy as np
-from scipy.spatial import KDTree, Rectangle
 
 
 def get_clusters(ndx, c_labels):
@@ -21,3 +22,35 @@ def get_clusters(ndx, c_labels):
     clusters = [x for x in clusters if np.any(x)]
 
     return clusters
+
+
+def _td(t1):
+    return time.time() - t1
+
+
+def timeit(method):
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+        print '{} finished in {:2.4f} seconds'.format(method.__name__, (te - ts))
+
+        return result
+
+    return timed
+
+
+def get_line_eq(p1, p2):
+    if p1[0] == p2[0]:
+        return np.inf, 0.
+
+    if p1[1] == p2[1]:
+        return 0., 0.
+
+    x1, y1 = p1[0], p1[1]
+    x2, y2 = p2[0], p2[1]
+
+    m = (y2 - y1) / (x2 - x1)
+    c = y1 - m * x1
+
+    return m, c
