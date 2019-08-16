@@ -317,4 +317,4 @@ if __name__ == '__main__':
             metrics_df = metrics_df.append(pd.DataFrame.from_dict(metrics[s], orient='index'))
         # data association
 
-    print metrics_df[['snr', 'sensitivity', 'specificity', 'dt', 'precision', 'recall']].sort_values(by=['precision'], )
+    print metrics_df[['snr', 'f1', 'specificity', 'dt', 'precision', 'recall']].sort_values(by=['precision'], )
