@@ -39,7 +39,7 @@ def h_cluster_euclidean(X, distance_thold):
 
 
 # @njit
-def __ir(data, i=0, g=0):
+def __ir2(data, i=0, g=0):
     coords = np.flip(np.swapaxes(data - np.mean(data, axis=0), 0, -1), 0)
     cov = np.cov(coords)
 
@@ -86,7 +86,7 @@ def eigen_vectors(data):
     return x_v1, y_v1, x_v2, y_v2
 
 
-def __ir2(data, i=0, g=0):
+def __ir(data, i=0, g=0):
     x_v1, y_v1, x_v2, y_v2 = eigen_vectors(data)
 
     if x_v1 == 0. or x_v2 == 0.:
@@ -97,6 +97,18 @@ def __ir2(data, i=0, g=0):
 
     diff2 = np.array([-2 * x_v2, 2 * y_v1])
     pa2 = np.vdot(diff2, diff2) ** 0.5
+
+    ev_1, ev_2 = ((-x_v1, -y_v1), (x_v1, y_v1)), ((-x_v2, -y_v2), (x_v2, y_v2))
+    d1 = dist_to_line(data, ev_1)
+
+    d2 = dist_to_line(data, ev_2)
+
+    # d1, d2 = nearest(m1, m2, coords[0, :], coords[1, :])
+
+    pa1n = np.sum(d1 < d2) + 1.
+    pa2n = np.sum(d1 >= d2) + 1.
+
+    return pa2n / pa1n * pa2 / pa1
 
     return pa2 / pa1
 
@@ -234,7 +246,7 @@ def nearest2(x0, y0, x1, y1, x2, y2):
 
 def dist_to_line(point, line):
     vertex_1, vertex_2 = line
-    x0, y0 = point[:, 1] - np.mean(point[:, 1]), point[:, 0]- np.mean(point[:, 0])
+    x0, y0 = point[:, 1] - np.mean(point[:, 1]), point[:, 0] - np.mean(point[:, 0])
     x1, y1 = vertex_1
     x2, y2 = vertex_2
     num = np.abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1)
@@ -248,7 +260,7 @@ def membership(line_1, line_2, data, membership_ratio=0.7):
 
     d_line2 = dist_to_line(data, line_2)
 
-    t = d_line1 + d_line2
+    t = (d_line1 + d_line2) + 0.000000000001
 
     mask = d_line1 < d_line2
 
@@ -322,6 +334,7 @@ def __inertia_ratio(data, j=0, g=0, visualise=None):
 
     return ratio2, subset
 
+
 def __inertia_ratio2(data, j=0, g=0, visualise=None):
     n = data.shape[0]
 
@@ -343,7 +356,6 @@ def __inertia_ratio2(data, j=0, g=0, visualise=None):
         return 20., data
 
     m = membership(ev_1, ev_2, data, membership_ratio=0.7)
-
 
     subset = data[m, :]
 
