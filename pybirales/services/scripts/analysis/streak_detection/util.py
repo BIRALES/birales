@@ -54,3 +54,4 @@ def get_line_eq(p1, p2):
     c = y1 - m * x1
 
     return m, c
+

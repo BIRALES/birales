@@ -222,7 +222,7 @@ if __name__ == '__main__':
     debug = False
     vis = False
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
-    snr = [3, 5]
+    snr = [5]
     # snr = [2, 3, 5, 10, 15, 20, 25]
     # snr = [3]
     N_TRACKS = 15
@@ -231,6 +231,7 @@ if __name__ == '__main__':
     TRACK_THICKNESS = 1
     metrics = {}
     metrics_df = pd.DataFrame()
+
 
     detectors = [
         # ('Naive DBSCAN', naive_dbscan, ('Filter', sigma_clipping)),
