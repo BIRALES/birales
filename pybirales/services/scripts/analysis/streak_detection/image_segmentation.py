@@ -24,7 +24,11 @@ if __name__ == '__main__':
 
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
     # snr = [2, 55]
-    snr = [10]
+    TRACK_THICKNESS = 2
+    N_CHANS = 8192
+    N_SAMPLES = 256
+    N_TRACKS = 15
+    snr = [3]
     metrics = {}
     metrics_detector = {}
     metrics_df = pd.DataFrame()
@@ -35,8 +39,8 @@ if __name__ == '__main__':
         # ('Global Filter (R)', global_thres_running),
         # ('Local Filter (R)', local_thres_running),
         # ('Otsu Filter', otsu_thres),
-        # ## ('Adaptive Filter', adaptive),
-        # ('Kittler', kittler),
+        # # ('Adaptive Filter', adaptive),
+        ('Kittler', kittler),
         # ('yen', yen),
         # ('iso_data', isodata),
         # ('triangle', triangle),
@@ -44,15 +48,16 @@ if __name__ == '__main__':
         # ('Canny', canny_filter),
         # ('CFAR', cfar),
         # ('sigma_clip', sigma_clipping),
-        ('sigma_clip_map', sigma_clipping_map),
+        # ('sigma_clip_map', sigma_clipping_map),
     ]
 
     for s in snr:
+        np.random.seed(SEED)
         metrics[s] = {}
         metrics_tmp_df = pd.DataFrame()
         print "\nEvaluating filters with tracks at SNR {:0.2f}W".format(s)
         # Create image from real data
-        test_img = create_test_img(os.path.join(ROOT, FITS_FILE), nchans=512, nsamples=256)
+        test_img = create_test_img(os.path.join(ROOT, FITS_FILE), nchans=N_CHANS, nsamples=N_SAMPLES)
 
         # Remove channels with RFI
         test_img = rfi_filter(test_img)
@@ -71,7 +76,7 @@ if __name__ == '__main__':
         # Add tracks to the simulated data
         test_img = add_tracks(test_img, tracks, noise_mean, s)
 
-        visualise_image(test_img, 'Test Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks, False)
+        # visualise_image(test_img, 'Test Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks, False)
 
         # visualise_image(true_image, 'Truth Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks)
 
@@ -81,13 +86,13 @@ if __name__ == '__main__':
 
             # split data in chunks
             start = time.time()
-            # mask, threshold = chunked_filtering(data, filter_func)
-            mask, threshold = filter_func(data)
+            mask, threshold = chunked_filtering(data, filter_func)
+            # mask, threshold = filter_func(data)
             timing = time.time() - start
 
             # Visualise filter output
             metrics[s][f_name] = evaluate_filter(true_image, data, ~mask, timing, s, TRACK_THICKNESS)
-            visualise_filter(test_img, mask, tracks, f_name, s, threshold, visualise=True)
+            visualise_filter(test_img, mask, tracks, f_name, s, threshold, visualise=False)
 
             # Filter post-processor
             # mask, timing = morph_opening(data, test_img, mask)
@@ -101,4 +106,4 @@ if __name__ == '__main__':
         metrics_tmp_df = metrics_tmp_df.from_dict(metrics[s], orient='index')
         metrics_df = metrics_df.append(metrics_tmp_df)
 
-    print metrics_df.sort_values(by=['score'], ascending=False)
+    print metrics_df[['snr', 'reduction', 'dt', 'precision', 'recall']].sort_values(by=['recall', 'reduction'], ascending=False)

@@ -222,13 +222,13 @@ if __name__ == '__main__':
     debug = False
     vis = False
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
-    snr = [5]
-    # snr = [2, 3, 5, 10, 15, 20, 25]
+    snr = [3]
+    snr = [2, 3, 5, 10, 15, 20, 25]
     # snr = [3]
     N_TRACKS = 15
     N_CHANS = 8192
     N_SAMPLES = 256
-    TRACK_THICKNESS = 1
+    TRACK_THICKNESS = 2
     metrics = {}
     metrics_df = pd.DataFrame()
 

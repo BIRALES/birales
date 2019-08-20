@@ -5,15 +5,15 @@ from scipy.cluster.hierarchy import fclusterdata
 from scipy.spatial import KDTree
 from scipy.stats import linregress, pearsonr
 from sklearn import linear_model
-import matplotlib.pyplot as plt
-from util import timeit, get_line_eq
+
+from util import timeit
 
 
 # @profile
-@njit(fastmath=True)
+@njit(["float64(float64[:],float64[:])"], fastmath=True)
 def mydist2(p1, p2):
     diff = p1[:3] - p2[:3]  # dx = p1[1] - p2[1],  dy = p1[0] - p2[0]
-    # print p1, p2
+
     if diff[1]:  # if dx and dy are not 0.
         if np.arctan(diff[0] / diff[1]) > 0:
             return 10000.
@@ -38,41 +38,6 @@ def h_cluster_euclidean(X, distance_thold):
     return cluster_labels, unique_groups
 
 
-# @njit
-def __ir2(data, i=0, g=0):
-    coords = np.flip(np.swapaxes(data - np.mean(data, axis=0), 0, -1), 0)
-    cov = np.cov(coords)
-
-    evals, evecs = np.linalg.eig(cov)
-
-    sort_indices = np.argsort(evals)[::-1]
-    x_v1, y_v1 = evecs[:, sort_indices[0]]  # Eigenvector with largest eigenvalue
-    x_v2, y_v2 = evecs[:, sort_indices[1]]
-
-    if x_v1 == 0. or x_v2 == 0.:
-        return 1
-
-    p1 = np.array([-x_v1, y_v2])
-    p2 = np.array([x_v1, y_v2])
-    diff1 = p1 - p2
-    pa1 = np.vdot(diff1, diff1) ** 0.5 + 0.0000000001
-
-    p1 = np.array([-x_v2, y_v1])
-    p2 = np.array([x_v2, -y_v1])
-    diff2 = p1 - p2
-    pa2 = np.vdot(diff2, diff2) ** 0.5 + 0.0000000001
-
-    m1 = y_v1 / x_v1
-    m2 = y_v2 / x_v2
-
-    d1, d2 = nearest(m1, m2, coords[0, :], coords[1, :])
-
-    pa1n = np.sum(d1 < d2) + 1.
-    pa2n = np.sum(d1 >= d2) + 1.
-
-    return pa2n / pa1n * pa2 / pa1
-
-
 def eigen_vectors(data):
     coords = np.flip(np.swapaxes(data[:, :2] - np.mean(data[:, :2], axis=0), 0, -1), 0)
 
@@ -90,7 +55,7 @@ def __ir(data, i=0, g=0):
     x_v1, y_v1, x_v2, y_v2 = eigen_vectors(data)
 
     if x_v1 == 0. or x_v2 == 0.:
-        return 1
+        return 10
 
     diff1 = np.array([-2 * x_v1, 0])
     pa1 = np.vdot(diff1, diff1) ** 0.5
@@ -98,10 +63,10 @@ def __ir(data, i=0, g=0):
     diff2 = np.array([-2 * x_v2, 2 * y_v1])
     pa2 = np.vdot(diff2, diff2) ** 0.5
 
-    ev_1, ev_2 = ((-x_v1, -y_v1), (x_v1, y_v1)), ((-x_v2, -y_v2), (x_v2, y_v2))
-    d1 = dist_to_line(data, ev_1)
+    # ev_1, ev_2 = ((-x_v1, -y_v1), (x_v1, y_v1)), ((-x_v2, -y_v2), (x_v2, y_v2))
+    d1 = dist_to_line(data, x_v1, y_v1)
 
-    d2 = dist_to_line(data, ev_2)
+    d2 = dist_to_line(data, x_v2, y_v2)
 
     # d1, d2 = nearest(m1, m2, coords[0, :], coords[1, :])
 
@@ -110,7 +75,7 @@ def __ir(data, i=0, g=0):
 
     return pa2n / pa1n * pa2 / pa1
 
-    return pa2 / pa1
+    # return pa2 / pa1
 
 
 # @njit
@@ -203,7 +168,7 @@ def __best_group(fclust1, bb, bbox=None, i=None):
     # bbox_area = (x2 - x1) * (y2 - y1)
     for j, g in enumerate(u_groups):
         c = bb[np.where(fclust1 == g)]
-        ratio, c2 = __inertia_ratio2(c, j, g)
+        ratio, c2 = __inertia_ratio(c, j, g)
         # _, _ = __inertia_ratio2(c, j, g)
         # print
         # cluster_area = (max(c2[:, 0]) - min(c2[:, 0])) * (max(c2[:, 1]) - min(c2[:, 1]))
@@ -222,43 +187,24 @@ def __best_group(fclust1, bb, bbox=None, i=None):
     return best_ratio, best_group, best_data, rejected_data
 
 
-# @profile
-# @njit
-def nearest4(m1, m2, x, y, i=None, membership_ratio=0.7):
-    d1, d2 = nearest(m1, m2, x, y)
-    t = d1 + d2 + 0.000000000001
+def dist_to_line(points, x, y):
+    x0, y0 = points[:, 1] - np.mean(points[:, 1]), points[:, 0] - np.mean(points[:, 0])
+    x1, y1 = -x, -y
+    x2, y2 = x, y
 
-    mask = d1 < d2
-
-    a = 1. - (d2 / t)
-    a[mask] = (1. - (d1 / t))[mask]
-
-    # Select those points that are near to either of the two line by 70%
-    return a > membership_ratio
-
-
-def nearest2(x0, y0, x1, y1, x2, y2):
     num = np.abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1)
-    denom = np.sqrt((y2 - y1) ** 2 + (x2 - x1) ** 2)
+    den = np.sqrt((y2 - y1) ** 2 + (x2 - x1) ** 2)
 
-    return num / denom
-
-
-def dist_to_line(point, line):
-    vertex_1, vertex_2 = line
-    x0, y0 = point[:, 1] - np.mean(point[:, 1]), point[:, 0] - np.mean(point[:, 0])
-    x1, y1 = vertex_1
-    x2, y2 = vertex_2
-    num = np.abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1)
-    denom = np.sqrt((y2 - y1) ** 2 + (x2 - x1) ** 2)
-
-    return num / denom
+    return num / den
 
 
-def membership(line_1, line_2, data, membership_ratio=0.7):
-    d_line1 = dist_to_line(data, line_1)
+def membership(ev_1_vertices, ev_2_vertices, points, membership_ratio=0.7):
+    x_v1, y_v1 = ev_1_vertices
+    x_v2, y_v2 = ev_2_vertices
 
-    d_line2 = dist_to_line(data, line_2)
+    d_line1 = dist_to_line(points, x_v1, y_v1)
+
+    d_line2 = dist_to_line(points, x_v2, y_v2)
 
     t = (d_line1 + d_line2) + 0.000000000001
 
@@ -289,53 +235,7 @@ def nearest(m1, m2, x, y, i=None):
     return np.hypot(line1_y - y, line1_x - x), np.hypot(line2_y - y, line2_x - x)
 
 
-# @profile
-# @njit
 def __inertia_ratio(data, j=0, g=0, visualise=None):
-    n = data.shape[0]
-
-    if n >= 10:
-        return 0.19, data
-
-    if np.unique(data[:, 1]).shape[0] < 2 or np.unique(data[:, 0]).shape[0] < 2:
-        return 0.21, data
-
-    coords = np.flip(np.swapaxes(data[:, :2] - np.mean(data[:, :2], axis=0), 0, -1), 0)
-
-    cov = np.cov(coords)
-    evals, evecs = np.linalg.eig(cov)
-
-    sort_indices = np.argsort(evals)[::-1]
-    x_v1, y_v1 = evecs[:, sort_indices[0]]  # Eigenvector with largest eigenvalue
-    x_v2, y_v2 = evecs[:, sort_indices[1]]  # Eigenvector with the second largest eigenvalue
-
-    if x_v1 == 0. or x_v2 == 0.:
-        return 0.21, data
-
-    m1 = y_v1 / x_v1
-
-    if m1 > 0:
-        return 20., data
-
-    m2 = y_v2 / x_v2
-    s = nearest4(m1, m2, coords[0, :], coords[1, :], membership_ratio=0.7)
-
-    subset = data[s, :]
-    print j, len(subset)
-    if len(subset) < 3:
-        return 30., data
-
-    ratio2 = __ir(subset[:, :2])
-
-    # print g, j, n
-    # if g == 7 and j == 1 and n == 9:
-    #     print m1, m2
-    #     visualise_ir(data, g, ratio2)
-
-    return ratio2, subset
-
-
-def __inertia_ratio2(data, j=0, g=0, visualise=None):
     n = data.shape[0]
 
     if n >= 10:
@@ -346,8 +246,6 @@ def __inertia_ratio2(data, j=0, g=0, visualise=None):
 
     x_v1, y_v1, x_v2, y_v2 = eigen_vectors(data)
 
-    ev_1, ev_2 = ((-x_v1, -y_v1), (x_v1, y_v1)), ((-x_v2, -y_v2), (x_v2, y_v2))
-
     if x_v1 == 0. or x_v2 == 0.:
         return 20, data
 
@@ -355,33 +253,25 @@ def __inertia_ratio2(data, j=0, g=0, visualise=None):
     if y_v1 / x_v1 > 0:
         return 20., data
 
-    m = membership(ev_1, ev_2, data, membership_ratio=0.7)
+    m = membership(ev_1_vertices=(x_v1, y_v1), ev_2_vertices=(x_v2, y_v2), points=data, membership_ratio=0.7)
 
     subset = data[m, :]
 
     if len(subset) < 3:
         return 30., data
 
-    ratio2 = __ir(subset[:, :2])
+    ir = __ir(subset[:, :2])
 
     # if g == 7 and j == 1 and n == 9:
     #     print j, len(subset)
-    #     visualise_ir(data, g, ratio2)
+    #     visualise_ir(data, g, ir)
 
-    return ratio2, subset
+    return ir, subset
 
 
 def estimate_thickness(cluster, axis=0):
     _, c = np.unique(cluster[:, axis], return_counts=True)
     return np.median(c)
-
-
-def predict_y(x, slope, c, offset):
-    return np.column_stack([slope * x + (c + offset), x])
-
-
-def predict_x(y, slope, c, offset):
-    return np.column_stack([(y - (c + offset)) / slope, y])
 
 
 def thicken(sample, channel, slope, c, offset_sample, offset_channel):
@@ -641,6 +531,12 @@ def build_tree(ndx, leave_size=30, n_axis=2):
 
 
 def visualise_ir(data, group, ratio2):
+    def nearest2(x0, y0, x1, y1, x2, y2):
+        num = np.abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1)
+        denom = np.sqrt((y2 - y1) ** 2 + (x2 - x1) ** 2)
+
+        return num / denom
+
     sample = data[:, 1]
     channel = data[:, 0]
 
@@ -708,9 +604,9 @@ def visualise_ir(data, group, ratio2):
             horizontalalignment='left',
             verticalalignment='center', transform=ax.transAxes)
 
-    line_1 = (x1, y1), (x2, y2)
-    line_2 = (x12, y12), (x22, y22)
+    # line_1 = (x1, y1), (x2, y2)
+    # line_2 = (x12, y12), (x22, y22)
 
-    print data[membership(line_1, line_2, data, membership_ratio=0.7), :].shape
+    # print data[membership(line_1, line_2, data, membership_ratio=0.7), :].shape
 
     plt.show()
