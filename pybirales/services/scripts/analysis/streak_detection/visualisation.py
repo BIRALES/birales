@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 from scipy.stats import linregress
+from msds import __ir, _partition
 
 plt.rcParams['figure.figsize'] = (12, 10)
 
@@ -126,8 +127,12 @@ def __plot_leave(ax, x1, y1, x2, y2, i, score, positive, positives=None, negativ
         color = 'g'
         zorder = 2
         lw = 2
+
+        # Plot mean cluster
+        ax.plot(np.mean(positives[:, 1]), np.mean(positives[:, 0]), '*', zorder=10, color='k')
     if np.any(positives):
         ax.plot(positives[:, 1], positives[:, 0], 'g.', zorder=3)
+
     colors = cycle(['b', 'm', 'c', 'y', 'g', 'orange', 'indianred', 'aqua', 'darkcyan', 'mediumpurple'])
 
     if negatives > 0:
@@ -143,6 +148,8 @@ def __plot_leave(ax, x1, y1, x2, y2, i, score, positive, positives=None, negativ
             ax.plot(n[:, 1], n[:, 0], '.', zorder=5, color=next(colors))
             scores += '{}: {:0.3f}\n'.format(j, ratio)
         ax.text(x1 * 1.01, y1 + 0.95 * (y2 - y1), scores, color='k', fontsize=10, va='top')
+
+
 
     rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=lw, edgecolor=color, facecolor='none',
                              zorder=zorder)
@@ -280,16 +287,16 @@ def visualise_tree_traversal(ndx, true_tracks, leaves, rectangles, filename, lim
         if limits:
             x_start, x_end, y_start, y_end = limits
             ndx = _partition(ndx, x_start, x_end, y_start, y_end)
-        ax.plot(ndx[:, 1], ndx[:, 0], '.', 'r')
+        ax.plot(ndx[:, 1], ndx[:, 0], 'r.')
         ax = set_limits(ax, limits)
 
-        for i, (cluster, rejected, best_gs, msg, x1, x2, y1, y2, n) in enumerate(rectangles):
+        for i, (cluster, rejected, best_gs, msg, x1, x2, y1, y2, n, j) in enumerate(rectangles):
             if x_start <= x1 <= x_end and y_start <= y1 <= y_end:
-                __plot_leave(ax, x1, y1, x2, y2, i, msg, False, positives=cluster, negatives=rejected)
+                __plot_leave(ax, x1, y1, x2, y2, j, msg, False, positives=cluster, negatives=rejected)
 
-        for i, (cluster, best_gs, msg, x1, x2, y1, y2, n, _, _, _) in enumerate(leaves):
+        for i, (cluster, best_gs, msg, x1, x2, y1, y2, n, _, _, _, j) in enumerate(leaves):
             if x_start <= x1 <= x_end and y_start <= y1 <= y_end:
-                __plot_leave(ax, x1, y1, x2, y2, i, msg, True, positives=cluster, negatives=None)
+                __plot_leave(ax, x1, y1, x2, y2, j, msg, True, positives=cluster, negatives=None)
 
         ax = visualise_true_tracks(ax, true_tracks)
         ax.set(xlabel='Sample', ylabel='Channel')

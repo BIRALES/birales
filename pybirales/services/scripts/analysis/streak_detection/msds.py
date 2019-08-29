@@ -7,22 +7,33 @@ from scipy.stats import linregress, pearsonr
 from sklearn import linear_model
 
 from util import timeit
+from sklearn import preprocessing
 
 
 # @profile
 @njit(["float64(float64[:],float64[:])"], fastmath=True)
 def mydist2(p1, p2):
-    diff = p1[:3] - p2[:3]  # dx = p1[1] - p2[1],  dy = p1[0] - p2[0]
+    diff = p1 - p2 + 1e-6
 
-    if diff[1]:  # if dx and dy are not 0.
-        if np.arctan(diff[0] / diff[1]) > 0:
-            return 10000.
+    if (diff[0] / diff[1]) > 0:
+        return 10000.
 
     return np.vdot(diff, diff) ** 0.5
 
 
-def h_cluster(X, distance_thold, min_length=2):
-    cluster_labels = fclusterdata(X, distance_thold, metric=mydist2, criterion='distance')
+@njit(["float64(float64[:],float64[:])"], fastmath=True)
+def mydist3(p1, p2):
+    diff = p1 - p2 + 1e-6  # dx = p1[1] - p2[1],  dy = p1[0] - p2[0]
+
+    # if -0.987 <= diff[1] / diff[0] <= -0.0056:
+    if -1 <= diff[1] / diff[0] <= 0:
+        return np.vdot(diff, diff) ** 0.5
+    return 10000.
+
+
+def h_cluster(X, distance_thold, min_length=2, i=None):
+    # Y = preprocessing.scale(X)
+    cluster_labels = fclusterdata(X, 3, metric=mydist2, criterion='distance')
 
     u, c = np.unique(cluster_labels, return_counts=True)
     unique_groups = u[c > min_length]
@@ -31,51 +42,11 @@ def h_cluster(X, distance_thold, min_length=2):
 
 
 def h_cluster_euclidean(X, distance_thold):
-    cluster_labels = fclusterdata(X[:, 2:4], distance_thold, metric='euclidean', criterion='distance')
+    cluster_labels = fclusterdata(X[:, 2:4], distance_thold, metric=mydist3, criterion='distance')
 
     u, c = np.unique(cluster_labels, return_counts=True)
     unique_groups = u[c > 1]
     return cluster_labels, unique_groups
-
-
-def eigen_vectors(data):
-    coords = np.flip(np.swapaxes(data[:, :2] - np.mean(data[:, :2], axis=0), 0, -1), 0)
-
-    cov = np.cov(coords)
-    evals, evecs = np.linalg.eig(cov)
-
-    sort_indices = np.argsort(evals)[::-1]
-    x_v1, y_v1 = evecs[:, sort_indices[0]]  # Eigenvector with largest eigenvalue
-    x_v2, y_v2 = evecs[:, sort_indices[1]]  # Eigenvector with the second largest eigenvalue
-
-    return x_v1, y_v1, x_v2, y_v2
-
-
-def __ir(data, i=0, g=0):
-    x_v1, y_v1, x_v2, y_v2 = eigen_vectors(data)
-
-    if x_v1 == 0. or x_v2 == 0.:
-        return 10
-
-    diff1 = np.array([-2 * x_v1, 0])
-    pa1 = np.vdot(diff1, diff1) ** 0.5
-
-    diff2 = np.array([-2 * x_v2, 2 * y_v1])
-    pa2 = np.vdot(diff2, diff2) ** 0.5
-
-    # ev_1, ev_2 = ((-x_v1, -y_v1), (x_v1, y_v1)), ((-x_v2, -y_v2), (x_v2, y_v2))
-    d1 = dist_to_line(data, x_v1, y_v1)
-
-    d2 = dist_to_line(data, x_v2, y_v2)
-
-    # d1, d2 = nearest(m1, m2, coords[0, :], coords[1, :])
-
-    pa1n = np.sum(d1 < d2) + 1.
-    pa2n = np.sum(d1 >= d2) + 1.
-
-    return pa2n / pa1n * pa2 / pa1
-
-    # return pa2 / pa1
 
 
 # @njit
@@ -132,59 +103,196 @@ def traverse(root, ndx, bbox, distance_thold=3.0, min_length=2, cluster_size_tho
 
         else:
             if root.children > 3:
-                labels, _ = h_cluster(ndx, distance_thold)
-                ratio, best_gs, cluster, rejected_data = __best_group(labels, ndx, bbox=bbox)
-                n = len(cluster)
-
-                mesg = 'B:{}\n N:{}\nI:{:0.3f}'.format(best_gs, n, ratio)
-
-                if best_gs > 0:
-                    pear = pearsonr(cluster[:, 1], cluster[:, 0])
-
-                    if n >= cluster_size_thold or pear[1] <= 0.05:
-                        leaves.append(
-                            (cluster, best_gs, mesg, x1, x2, y1, y2, n, np.mean([x1, x2]), np.mean([y1, y2]),
-                             np.mean(cluster[:, 2])))
-                    else:
-                        mesg += '\nS:{:0.3f}'.format(pear[1])
-                        rectangles.append((cluster, rejected_data, best_gs, mesg, x1, x2, y1, y2, n))
-                else:
-                    mesg += '\nG:{}'.format(best_gs)
-                    rectangles.append((cluster, rejected_data, best_gs, mesg, x1, x2, y1, y2, n))
+                leaves.append((ndx, bbox))
 
     return rectangles, leaves
+
+
+def process_leave(ndx, bbox, distance_thold, cluster_size_thold, i=None):
+    leave = ()
+    rejected = ()
+    x1, x2, y1, y2 = bbox
+    labels, _ = h_cluster(ndx, distance_thold, min_length=2, i=i)
+    ratio, best_gs, cluster, rejected_data = __best_group(labels, ndx, bbox=bbox, i=i)
+    n = len(cluster)
+
+    mesg = 'B:{}\n N:{}\nI:{:0.3f}'.format(best_gs, n, ratio)
+
+    if best_gs > 0:
+        pear = pearsonr(cluster[:, 1], cluster[:, 0])
+
+        if n >= cluster_size_thold or pear[1] <= 0.1:
+            ms = np.mean(cluster[:, 1])
+            mc = np.mean(cluster[:, 0])
+            msnr = np.mean(cluster[:, 2])
+            leave = (cluster, best_gs, mesg, x1, x2, y1, y2, n, ms, mc, msnr, i)
+
+            diff = np.array([x1, y1]) - np.array([x2, y2])
+            bs = np.vdot(diff, diff) ** 0.5
+            if i == 3410 or i == 3412 or i == 3409:
+                print bs, i, np.mean([x1, x2]), np.mean([y1, y2]), ms, mc, msnr
+
+        else:
+            mesg += '\nS:{:0.3f}'.format(pear[1])
+            rejected = (cluster, rejected_data, best_gs, mesg, x1, x2, y1, y2, n, i)
+    else:
+        mesg += '\nG:{}'.format(best_gs)
+        rejected = (cluster, rejected_data, best_gs, mesg, x1, x2, y1, y2, n, i)
+
+    return rejected, leave
+
+
+def eu(x1, x2, y1, y2):
+    diff = np.array([x1, y1]) - np.array([x2, y2])
+
+    return np.vdot(diff, diff) ** 0.5
+
+
+@timeit
+def process_leaves(leaves, distance_thold, cluster_size_thold):
+    rejected = []
+    clusters = []
+    for i, leave in enumerate(leaves):
+        ndx, bbox = leave
+        r, l = process_leave(ndx, bbox, distance_thold, cluster_size_thold, i)
+
+        if r:
+            rejected.append(r)
+        else:
+            clusters.append(l)
+
+    print len(clusters), len(rejected)
+
+    print  getl(clusters)
+    print getl(rejected, 1)
+
+    return rejected, clusters, 23.434 + 4.5705087
+
+
+def getl(clusters, shift=0):
+    m = []
+    # (cluster, best_gs, mesg, x1, x2, y1, y2, n, ms, mc, msnr, i)
+    # (cluster, rejected_data, best_gs, mesg, x1, x2, y1, y2, n, i)
+
+    for c in clusters:
+        # line length
+        x1, x2 = np.min(c[0][:, 1]), np.max(c[0][:, 1])
+        y1, y2 = np.min(c[0][:, 0]), np.max(c[0][:, 0])
+        diff = np.array([x1, y1]) - np.array([x2, y2])
+        bs = np.vdot(diff, diff) ** 0.5
+
+        # bounding box
+        x1, x2 = c[3 + shift], c[4 + shift]
+        y1, y2 = c[5 + shift], c[6 + shift]
+        diff = np.array([x1, y1]) - np.array([x2, y2])
+        bs2 = np.vdot(diff, diff) ** 0.5
+
+        m.append([bs, bs2])
+
+    return np.mean(np.array(m), axis=0), np.std(np.array(m), axis=0)
+
+
+# @profile
+# @njit
+def __ir2(data, i=None):
+    if len(data) >= 10:
+        return 0., 0., data
+    # print data
+    # line is horizontal
+    if len(np.unique(data[:, 0])) == 1:
+        return -0.09, -1, -1
+
+    # coords = np.flip(np.swapaxes(data[:, :2] - np.mean(data[:, :2], axis=0), 0, -1), 0)
+    b = data[:, :2] - np.mean(data[:, :2], axis=0)
+    coords = np.flip(b.T, axis=0)
+    eigen_values, eigen_vectors = np.linalg.eig(np.cov(coords))
+    sort_indices = np.argsort(eigen_values)[::-1]
+
+    # print('Eigen values', eigen_values[sort_indices[0]], eigen_values[sort_indices[1]] )
+    # print('Eigen vectors', eigen_vectors[sort_indices[0]], eigen_vectors[sort_indices[1]] )
+    p_v1 = eigen_vectors[sort_indices[0]]
+
+    # primary eigenvector is perfectly horizontal or perfectly vertical
+    if p_v1[0] == 0 or p_v1[1] == 0:
+        return +1, 0, 0
+
+    # Gradient of 1st eigenvector
+    m1 = -1 * p_v1[1] / p_v1[0]
+
+    # Gradient of 1st eigenvector (in degrees)
+    m2 = -1 * np.arctan2(p_v1[1], p_v1[0])
+
+    return np.abs(eigen_values[sort_indices[1]] / eigen_values[sort_indices[0]]) * np.sign(m1), np.rad2deg(m2), m1
 
 
 # @profile
 def __best_group(fclust1, bb, bbox=None, i=None):
     u, c = np.unique(fclust1, return_counts=True)
-    u_groups = u[c > 2]
+    u_groups = u[c > 3]
 
-    best_ratio = 0.2
+    best_ratio = -0.1
     best_group = None
-    best_data = None
+    best_data = []
     rejected_data = []
-    x1, x2, y1, y2 = bbox
     # bbox_area = (x2 - x1) * (y2 - y1)
-    for j, g in enumerate(u_groups):
+
+    # start with the smallest grouping
+    sorted_groups = u_groups[np.argsort(c[c > 3])]
+    for j, g in enumerate(sorted_groups):
         c = bb[np.where(fclust1 == g)]
-        ratio, c2 = __inertia_ratio(c, j, g)
-        # _, _ = __inertia_ratio2(c, j, g)
-        # print
-        # cluster_area = (max(c2[:, 0]) - min(c2[:, 0])) * (max(c2[:, 1]) - min(c2[:, 1]))
-        # thres = len(bb) / bbox_area * cluster_area
-        if ratio < best_ratio:
+        ratio, _, _ = __ir2(c, i)
+
+        if 0. >= ratio >= best_ratio:
             best_ratio = ratio
             best_group = g
-            best_data = c2
+            best_data = c
         else:
-            rejected_data.append((c2, ratio))
+            rejected_data.append((c, ratio))
 
     if not best_group:
         return best_ratio, -1, bb, rejected_data
-    # todo - merge best groups
 
     return best_ratio, best_group, best_data, rejected_data
+
+
+def eigen_vectors(data):
+    coords = np.flip(np.swapaxes(data[:, :2] - np.mean(data[:, :2], axis=0), 0, -1), 0)
+
+    cov = np.cov(coords)
+    evals, evecs = np.linalg.eig(cov)
+
+    sort_indices = np.argsort(evals)[::-1]
+    x_v1, y_v1 = evecs[:, sort_indices[0]]  # Eigenvector with largest eigenvalue
+    x_v2, y_v2 = evecs[:, sort_indices[1]]  # Eigenvector with the second largest eigenvalue
+
+    return x_v1, y_v1, x_v2, y_v2
+
+
+def __ir(data, i=0, g=0):
+    x_v1, y_v1, x_v2, y_v2 = eigen_vectors(data)
+
+    if x_v1 == 0. or x_v2 == 0.:
+        return 10
+
+    diff1 = np.array([-2 * x_v1, 0])
+    pa1 = np.vdot(diff1, diff1) ** 0.5
+
+    diff2 = np.array([-2 * x_v2, 2 * y_v1])
+    pa2 = np.vdot(diff2, diff2) ** 0.5
+
+    # ev_1, ev_2 = ((-x_v1, -y_v1), (x_v1, y_v1)), ((-x_v2, -y_v2), (x_v2, y_v2))
+    d1 = dist_to_line(data, x_v1, y_v1)
+
+    d2 = dist_to_line(data, x_v2, y_v2)
+
+    # d1, d2 = nearest(m1, m2, coords[0, :], coords[1, :])
+
+    pa1n = np.sum(d1 < d2) + 1.
+    pa2n = np.sum(d1 >= d2) + 1.
+
+    return pa2n / pa1n * pa2 / pa1
+
+    # return pa2 / pa1
 
 
 def dist_to_line(points, x, y):
@@ -260,7 +368,7 @@ def __inertia_ratio(data, j=0, g=0, visualise=None):
     if len(subset) < 3:
         return 30., data
 
-    ir = __ir(subset[:, :2])
+    ir = __ir(subset[:, :2], j, g)
 
     # if g == 7 and j == 1 and n == 9:
     #     print j, len(subset)
@@ -317,6 +425,10 @@ def fill(test_image, cluster, fill_thickness=False):
 
     predicted_samples = ransac.predict(missing_channels.reshape(-1, 1))
 
+    m = predicted_samples < test_image.shape[1]
+    predicted_samples = predicted_samples[m]
+    missing_channels = missing_channels[m]
+
     new_samples = np.concatenate([predicted_samples, missing_samples]).astype(int)
     new_channels = np.concatenate([missing_channels, predicted_channel]).astype(int)
 
@@ -352,7 +464,6 @@ def fill(test_image, cluster, fill_thickness=False):
     t = np.median(cluster[:, 2]) - np.std(cluster[:, 2]) * 2
 
     # print t, np.mean(test_image[test_image > 0]) * 0.5
-
     return combined[combined[:, 2] > t]
 
 
@@ -375,11 +486,14 @@ def similar(candidate, cluster2, i=None, j=None):
     c2_m = np.array([np.mean(cluster2[:, 0]), np.mean(cluster2[:, 1])])
 
     cluster_dist = mydist2(c1_m, c2_m)
-    if cluster_dist > 1000:
+    if cluster_dist >= 1000:
         return False
 
     if cluster_dist < 10:
         return True
+
+    if cluster_dist >= 35:
+        return False
 
     tmp_candidate = np.concatenate([candidate, cluster2])
 
@@ -396,10 +510,10 @@ def similar(candidate, cluster2, i=None, j=None):
     if pear[0] <= pear_old[0] and (pear[1] <= pear_old[1]):
         return True
 
-    r1 = __ir(candidate[:, :2])
-    r2 = __ir(tmp_candidate[:, :2])
+    r1 = __ir2(candidate[:, :2])
+    r2 = __ir2(tmp_candidate[:, :2])
 
-    return r2 < r1
+    return r2[0] > r1[0]
 
 
 def split(ransac, candidate, candidates, ptracks, g):
@@ -443,10 +557,7 @@ def validate_clusters(data, labelled_clusters, unique_labels, e_thold, min_lengt
 
         m, intercept, r_value, p, e = linregress(c[:, 1], c[:, 0])
 
-        # if len(c) <= min_length:
-        #     print 'not significant'
-
-        if p < 0.05 and e < e_thold and len(c) > min_length:
+        if p < 0.05 and e < e_thold:
             c = np.append(c, np.expand_dims(np.full(len(c), g), axis=1), axis=1)
             candidates.append(c)
 
@@ -500,7 +611,7 @@ def fill_clusters(tracks, test_img, missing_thold, r_thold, min_span_thold):
 @timeit
 def cluster_leaves(leaves, distance_thold=30.):
     cluster_data = np.vstack(
-        [(cluster, i, x, y, p) for i, (cluster, best_gs, ratio, x1, x2, y1, y2, n, x, y, p) in enumerate(leaves)])
+        [(cluster, j, x, y, p) for i, (cluster, best_gs, ratio, x1, x2, y1, y2, n, x, y, p, j) in enumerate(leaves)])
 
     cluster_labels, unique_labels = h_cluster_euclidean(cluster_data, distance_thold)
 
@@ -566,7 +677,7 @@ def visualise_ir(data, group, ratio2):
     x1, y1, x2, y2 = x_v1 * -scale * 1 + ms, y_v1 * -scale * 1 + mc, x_v1 * scale * 1 + ms, y_v1 * scale * 1 + mc
     x12, y12, x22, y22 = x_v2 * -scale * 1 + ms, y_v2 * -scale * 1 + mc, x_v2 * scale * 1 + ms, y_v2 * scale * 1 + mc
     mem = []
-    print
+
     for point in data:
         x_, y_ = point[1], point[0]
         d1, d2 = nearest2(x_, y_, x1, y1, x2, y2), nearest2(x_, y_, x12, y12, x22, y22)
@@ -599,6 +710,44 @@ def visualise_ir(data, group, ratio2):
 
     ax.text(0.05, 0.95,
             'Group: {}\nRatio: {:0.5f}\nCalculated Ratio: {:0.5f}'.format(group, ratio, ratio2), color='k',
+            weight='bold',
+            fontsize=15,
+            horizontalalignment='left',
+            verticalalignment='center', transform=ax.transAxes)
+
+    # line_1 = (x1, y1), (x2, y2)
+    # line_2 = (x12, y12), (x22, y22)
+
+    # print data[membership(line_1, line_2, data, membership_ratio=0.7), :].shape
+
+    plt.show()
+
+
+def visualise_ir2(data, group, ratio2):
+    if len(data) >= 10:
+        return 0., 0., data
+
+    ms, mc = np.mean(data[:, 1]), np.mean(data[:, 0])
+    coords = np.flip(np.swapaxes(data[:, :2] - np.mean(data[:, :2], axis=0), 0, -1), 0)
+    eigen_values, eigen_vectors = np.linalg.eig(np.cov(coords))
+    sort_indices = np.argsort(eigen_values)[::-1]
+
+    x_v1, y_v1 = eigen_vectors[:, sort_indices[0]]  # Eigenvector with largest eigenvalue
+    x_v2, y_v2 = eigen_vectors[:, sort_indices[1]]  # Eigenvector with the second largest eigenvalue
+
+    scale = 6
+
+    ax = plt.axes()
+    plt.plot([x_v1 * -scale * 1 + ms, x_v1 * scale * 1 + ms],
+             [y_v1 * -scale * 1 + mc, y_v1 * scale * 1 + mc], color='black')
+    plt.plot([x_v2 * -scale + ms, x_v2 * scale + ms],
+             [y_v2 * -scale + mc, y_v2 * scale + mc], color='blue')
+
+    plt.plot(data[:, 1], data[:, 0], '.', markersize=12, zorder=1)
+    ratio, _, _ = __ir2(data)
+    print ratio, len(data)
+    ax.text(0.05, 0.95,
+            'Group: {}\nRatio: {:0.5f}'.format(group, ratio), color='k',
             weight='bold',
             fontsize=15,
             horizontalalignment='left',
