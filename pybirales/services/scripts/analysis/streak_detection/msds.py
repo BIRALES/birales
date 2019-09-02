@@ -6,8 +6,17 @@ from scipy.spatial import KDTree
 from scipy.stats import linregress, pearsonr
 from sklearn import linear_model
 
-from util import timeit
+from util import timeit, __ir2
 from sklearn import preprocessing
+from visualisation import visualise_post_processed_tracks, visualise_tree_traversal, visualise_candidates, \
+    visualise_tracks, visualise_clusters, visualise_filtered_data
+from sklearn.preprocessing import MinMaxScaler
+from scipy.stats import binned_statistic
+
+from functools import partial
+# from multiprocessing import Pool
+import multiprocessing
+import os
 
 
 # @profile
@@ -33,10 +42,17 @@ def mydist3(p1, p2):
 
 def h_cluster(X, distance_thold, min_length=2, i=None):
     # Y = preprocessing.scale(X)
+    # a = preprocessing.normalize(X)
+    # scaler = MinMaxScaler()
+    # sx = scaler.fit(X).transform(X)
+
+    # Y = X.copy()
+    # Y[:, 2] = binned_statistic(Y[:, 2], Y[:, 2], bins=10, range=(0, 500))[2]
+
     cluster_labels = fclusterdata(X, 3, metric=mydist2, criterion='distance')
 
     u, c = np.unique(cluster_labels, return_counts=True)
-    unique_groups = u[c > min_length]
+    unique_groups = u[c > 2]
 
     return cluster_labels, unique_groups
 
@@ -122,16 +138,8 @@ def process_leave(ndx, bbox, distance_thold, cluster_size_thold, i=None):
         pear = pearsonr(cluster[:, 1], cluster[:, 0])
 
         if n >= cluster_size_thold or pear[1] <= 0.1:
-            ms = np.mean(cluster[:, 1])
-            mc = np.mean(cluster[:, 0])
-            msnr = np.mean(cluster[:, 2])
+            mc, ms, msnr = np.mean(cluster, axis=0)
             leave = (cluster, best_gs, mesg, x1, x2, y1, y2, n, ms, mc, msnr, i)
-
-            diff = np.array([x1, y1]) - np.array([x2, y2])
-            bs = np.vdot(diff, diff) ** 0.5
-            if i == 3410 or i == 3412 or i == 3409:
-                print bs, i, np.mean([x1, x2]), np.mean([y1, y2]), ms, mc, msnr
-
         else:
             mesg += '\nS:{:0.3f}'.format(pear[1])
             rejected = (cluster, rejected_data, best_gs, mesg, x1, x2, y1, y2, n, i)
@@ -149,13 +157,34 @@ def eu(x1, x2, y1, y2):
 
 
 @timeit
-def process_leaves(leaves, distance_thold, cluster_size_thold):
+def process_leaves(leaves, distance_thold, cluster_size_thold, ndx, true_tracks, limits, visualisation=False):
     rejected = []
     clusters = []
-    for i, leave in enumerate(leaves):
-        ndx, bbox = leave
-        r, l = process_leave(ndx, bbox, distance_thold, cluster_size_thold, i)
 
+    for i, leave in enumerate(leaves):
+        r, l = process_leave(ndx=leave[0], bbox=leave[1], distance_thold=distance_thold,
+                             cluster_size_thold=cluster_size_thold, i=i)
+        if r:
+            rejected.append(r)
+        else:
+            clusters.append(l)
+
+    return rejected, clusters, estimate_leave_eps(clusters)
+
+
+@timeit
+def __m_process_leaves(leaves, distance_thold, cluster_size_thold, ndx, true_tracks, limits, index, a,
+                       visualisation=False):
+    rejected = []
+    clusters = []
+
+    print os.getpid(), 'processing', index, np.shape(leaves), 'from', len(leaves)
+    for i, leave in enumerate(leaves):
+        r, l = process_leave(ndx=leave[0], bbox=leave[1], distance_thold=distance_thold,
+                             cluster_size_thold=cluster_size_thold, i=i)
+
+        # rejected.extend(r)
+        # clusters.extend(l)
         if r:
             rejected.append(r)
         else:
@@ -163,10 +192,45 @@ def process_leaves(leaves, distance_thold, cluster_size_thold):
 
     print len(clusters), len(rejected)
 
-    print  getl(clusters)
+    print getl(clusters)
     print getl(rejected, 1)
 
-    return rejected, clusters, 23.434 + 4.5705087
+    # visualise_tree_traversal(ndx, true_tracks, clusters, rejected, '2_tree_traversal.png', limits, vis=visualisation)
+    a[index] = (rejected, clusters, 23.434 + 4.5705087)
+    return a
+
+
+def m_process_leaves(leaves, distance_thold, cluster_size_thold, ndx, true_tracks, limits, visualisation=False):
+    manager = multiprocessing.Manager()
+    a = manager.dict()
+
+    n = len(leaves) / 2
+    subset = leaves[0:n]
+
+    p1 = multiprocessing.Process(target=__m_process_leaves, args=(
+        subset, distance_thold, cluster_size_thold, ndx, true_tracks, limits, 0, a, visualisation))
+
+    subset = leaves[n:len(leaves)]
+    p2 = multiprocessing.Process(target=__m_process_leaves, args=(
+        subset, distance_thold, cluster_size_thold, ndx, true_tracks, limits, 1, a, visualisation))
+
+    p1.start()
+
+    p2.start()
+
+    p1.join()
+
+    p2.join()
+
+    # pool = Pool(2)
+
+    # func = partial(process_leaves, leaves, distance_thold=distance_thold, cluster_size_thold=cluster_size_thold,
+    #                ndx=ndx,
+    #                true_tracks=true_tracks, limits=limits,
+    #                visualisation=visualisation)
+    # rejected, clusters, thres = pool.map(func, range(0, 2))
+
+    return a[0][0] + a[1][0], a[0][1] + a[1][1], a[0][2] + a[1][2]
 
 
 def getl(clusters, shift=0):
@@ -192,37 +256,16 @@ def getl(clusters, shift=0):
     return np.mean(np.array(m), axis=0), np.std(np.array(m), axis=0)
 
 
+def estimate_leave_eps(clusters):
+    subset = np.array(clusters)[:, 3:7].astype(float)
+    diff = subset[:, [0, 2]] - subset[:, [1, 3]]
+    mean_leave_size = np.mean(diff, axis=0)
+
+    return np.vdot(mean_leave_size, mean_leave_size) ** 0.5 + np.std(diff)
+
+
 # @profile
 # @njit
-def __ir2(data, i=None):
-    if len(data) >= 10:
-        return 0., 0., data
-    # print data
-    # line is horizontal
-    if len(np.unique(data[:, 0])) == 1:
-        return -0.09, -1, -1
-
-    # coords = np.flip(np.swapaxes(data[:, :2] - np.mean(data[:, :2], axis=0), 0, -1), 0)
-    b = data[:, :2] - np.mean(data[:, :2], axis=0)
-    coords = np.flip(b.T, axis=0)
-    eigen_values, eigen_vectors = np.linalg.eig(np.cov(coords))
-    sort_indices = np.argsort(eigen_values)[::-1]
-
-    # print('Eigen values', eigen_values[sort_indices[0]], eigen_values[sort_indices[1]] )
-    # print('Eigen vectors', eigen_vectors[sort_indices[0]], eigen_vectors[sort_indices[1]] )
-    p_v1 = eigen_vectors[sort_indices[0]]
-
-    # primary eigenvector is perfectly horizontal or perfectly vertical
-    if p_v1[0] == 0 or p_v1[1] == 0:
-        return +1, 0, 0
-
-    # Gradient of 1st eigenvector
-    m1 = -1 * p_v1[1] / p_v1[0]
-
-    # Gradient of 1st eigenvector (in degrees)
-    m2 = -1 * np.arctan2(p_v1[1], p_v1[0])
-
-    return np.abs(eigen_values[sort_indices[1]] / eigen_values[sort_indices[0]]) * np.sign(m1), np.rad2deg(m2), m1
 
 
 # @profile
@@ -466,14 +509,16 @@ def fill(test_image, cluster, fill_thickness=False):
     # print t, np.mean(test_image[test_image > 0]) * 0.5
     return combined[combined[:, 2] > t]
 
-
-def fit(cluster, in_liers, r_thold=-0.9, min_length=10):
+def fit(cluster, in_liers, r_thold=-0.9, min_length=10, min_span_thold=1):
     d = cluster[in_liers]
 
     if len(np.unique(d[:, 1])) == 1 or len(np.unique(d[:, 0])) == 1:
         return cluster, False
 
     pear = pearsonr(d[:, 1], d[:, 0])
+
+    if len(np.unique(d[:, 1])) < min_span_thold:
+        return cluster, False
 
     if pear[1] < 0.05 and pear[0] < r_thold and len(d) >= min_length:
         return d, True
@@ -549,9 +594,32 @@ def split(ransac, candidate, candidates, ptracks, g):
     return candidates, ptracks
 
 
-@timeit
-def validate_clusters(data, labelled_clusters, unique_labels, e_thold, min_length):
+def split2(ransac, candidate):
     candidates = []
+    ransac.fit(candidate[:, 0].reshape(-1, 1), candidate[:, 1])
+    if np.sum(~ransac.inlier_mask_) > 0.2 * len(candidate):
+        split_candidate_1 = candidate[ransac.inlier_mask_]
+        split_candidate_2 = candidate[~ransac.inlier_mask_]
+
+        ransac.fit(split_candidate_1[:, 0].reshape(-1, 1), split_candidate_1[:, 1])
+        candidate_1, valid_1 = fit(split_candidate_1, ransac.inlier_mask_)
+
+        if valid_1:
+            candidates.append(candidate_1)
+
+        ransac.fit(split_candidate_2[:, 0].reshape(-1, 1), split_candidate_2[:, 1])
+        candidate_2, valid_2 = fit(split_candidate_2, ransac.inlier_mask_)
+
+        if valid_2:
+            candidates.append(candidate_2)
+
+    return candidates
+
+
+@timeit
+def validate_clusters(data, labelled_clusters, unique_labels, e_thold, true_tracks, limits, visualisation=False):
+    candidates = []
+
     for g in unique_labels:
         c = np.vstack(data[labelled_clusters == g, 0])
 
@@ -561,13 +629,56 @@ def validate_clusters(data, labelled_clusters, unique_labels, e_thold, min_lengt
             c = np.append(c, np.expand_dims(np.full(len(c), g), axis=1), axis=1)
             candidates.append(c)
 
+    visualise_candidates(candidates, true_tracks, '4_candidates.png', limits=limits, debug=visualisation)
+
+    print 'Validation removed', len(unique_labels) - len(candidates), 'candidates from', len(unique_labels)
+
     return candidates
 
 
+def add_group(candidate, group):
+    return np.append(candidate, np.expand_dims(np.full(len(candidate), group), axis=1), axis=1)
+
+
 @timeit
-def merge_clusters(clusters):
+def validate_clusters2(data, labelled_clusters, unique_labels, e_thold, true_tracks, limits, visualisation=False):
     ransac = linear_model.RANSACRegressor(residual_threshold=5)
     tracks = []
+
+    candidates = [np.vstack(data[labelled_clusters == g, 0]) for g in unique_labels]
+    for g, candidate in enumerate(candidates):
+        ransac.fit(candidate[:, 0].reshape(-1, 1), candidate[:, 1])
+        candidate_, valid = fit(candidate, ransac.inlier_mask_, min_span_thold=15)
+
+        tmp = [candidate_]
+        if not valid:
+            tmp = split2(ransac, candidate)
+
+        for c in tmp:
+            missing_channels = np.setxor1d(np.arange(min(c[:, 0]), max(c[:, 0])),
+                                           c[:, 0])
+
+            r = len(missing_channels) / float(len(missing_channels) + len(c))
+            if r >= 0.40:
+                continue
+
+            m, intercept, r_value, p, e = linregress(c[:, 1], c[:, 0])
+
+            if r_value < -0.99 and len(np.unique(c[:, 1])) > 15:
+                candidate = add_group(c, g)
+                tracks.append(candidate)
+
+    print 'Reduced', len(candidates) - len(tracks), 'candidates to', len(tracks), 'tracks in validation'
+
+    visualise_tracks(tracks, true_tracks, '5_tracks.png', limits=limits, debug=visualisation)
+
+    return tracks
+
+
+def merge_clusters(clusters, true_tracks, limits, visualisation):
+    ransac = linear_model.RANSACRegressor(residual_threshold=5)
+    tracks = []
+    n_merged = 0
     for j, candidate in enumerate(clusters):
         g = candidate[:, 3][0]
         for i, track in enumerate(tracks):
@@ -578,21 +689,26 @@ def merge_clusters(clusters):
                 ransac.fit(c[:, 0].reshape(-1, 1), c[:, 1])
                 candidate, valid = fit(c, ransac.inlier_mask_)
                 tracks[i] = candidate
+                n_merged += 1
                 break
         else:
             ransac.fit(candidate[:, 0].reshape(-1, 1), candidate[:, 1])
 
             candidates, tracks = split(ransac, candidate, clusters, tracks, g)
 
+    print 'Merged', len(clusters), 'candidates in', len(tracks), n_merged, 'tracks'
+
+    visualise_tracks(tracks, true_tracks, '5_tracks.png', limits=limits, debug=visualisation)
+
     return tracks
 
 
 @timeit
-def fill_clusters(tracks, test_img, missing_thold, r_thold, min_span_thold):
+def fill_clusters(tracks, test_img, missing_thold, r_thold, min_span_thold, true_tracks, limits, visualisation=False):
     filled_tracks = []
 
     for i, c in enumerate(tracks):
-        group = c[c[:, 3] > 0][:, 3][0]
+        # group = c[c[:, 3] > 0][:, 3][0]
         missing_channels = np.setxor1d(np.arange(min(c[:, 0]), max(c[:, 0])),
                                        c[:, 0])
 
@@ -603,30 +719,61 @@ def fill_clusters(tracks, test_img, missing_thold, r_thold, min_span_thold):
         m, intercept, r_value, p, e = linregress(c[:, 1], c[:, 0])
 
         if r_value < r_thold and len(np.unique(c[:, 1])) > min_span_thold:
+            # if r_value < r_thold:
             c3 = fill(test_img, c)
             filled_tracks.append(c3)
+        else:
+            group = c[:, 3][0]
+            print 'eliminating', group, 'because', r_value < r_thold, len(np.unique(c[:, 1])) > min_span_thold
+
+    visualise_post_processed_tracks(filled_tracks, true_tracks, '6_post-processed-tracks.png', limits=None,
+                                    debug=visualisation)
+
+    print 'Last validation removed', len(tracks) - len(filled_tracks), 'tracks from', len(tracks)
+
     return filled_tracks
 
 
 @timeit
-def cluster_leaves(leaves, distance_thold=30.):
+def fill_clusters2(tracks, test_img, true_tracks, visualisation=False):
+    filled_tracks = [fill(test_img, t) for t in tracks]
+
+    visualise_post_processed_tracks(filled_tracks, true_tracks, '6_post-processed-tracks.png', limits=None,
+                                    debug=visualisation)
+
+    print 'Last validation removed', len(tracks) - len(filled_tracks), 'tracks from', len(tracks)
+
+    return filled_tracks
+
+
+@timeit
+def cluster_leaves(leaves, distance_thold, true_tracks, limits, visualisation=False):
     cluster_data = np.vstack(
         [(cluster, j, x, y, p) for i, (cluster, best_gs, ratio, x1, x2, y1, y2, n, x, y, p, j) in enumerate(leaves)])
 
     cluster_labels, unique_labels = h_cluster_euclidean(cluster_data, distance_thold)
 
+    visualise_clusters(cluster_data, cluster_labels, unique_labels, true_tracks, filename='3_clusters.png',
+                       limits=limits,
+                       debug=visualisation)
+
     return cluster_labels, unique_labels, cluster_data
 
 
 @timeit
-def pre_process_data(test_image):
+def pre_process_data(test_image, noise_estimate):
     ndx = np.column_stack(np.where(test_image > 0.))
-    ndx = np.append(ndx, np.expand_dims(test_image[test_image > 0.], axis=1), axis=1)
+
+    power = test_image[test_image > 0.]
+
+    snr = 10 * np.log10(power / noise_estimate)
+    ndx = np.append(ndx, np.expand_dims(snr, axis=1), axis=1)
+    # ndx = np.append(ndx, np.expand_dims(power, axis=1), axis=1)
     return ndx
 
 
 @timeit
-def build_tree(ndx, leave_size=30, n_axis=2):
+def build_tree(ndx, leave_size, n_axis, true_tracks, limits, debug=False, visualisation=False):
     """
     Build a 2D or 3D kd tree.
 
@@ -637,6 +784,8 @@ def build_tree(ndx, leave_size=30, n_axis=2):
     :param n_axis:
     :return:
     """
+
+    visualise_filtered_data(ndx, true_tracks, '1_filtered_data', limits=limits, debug=debug, vis=visualisation)
 
     return KDTree(ndx[:, :n_axis], leave_size)
 

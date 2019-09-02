@@ -6,9 +6,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 from scipy.stats import linregress
-from msds import __ir, _partition
+
+from util import _partition, __ir2
 
 plt.rcParams['figure.figsize'] = (12, 10)
+
 
 def save_figure(filename, out_dir, obs_name, save=False):
     if save:
@@ -70,8 +72,6 @@ def visualise_image(image, title, tracks, visualise=False):
         # print "mean:", a[np.nonzero(a)].max()
 
         plt.show()
-
-
 
 
 def visualise_filter(data, mask, tracks, f_name, snr, threshold=None, visualise=False):
@@ -148,8 +148,6 @@ def __plot_leave(ax, x1, y1, x2, y2, i, score, positive, positives=None, negativ
             ax.plot(n[:, 1], n[:, 0], '.', zorder=5, color=next(colors))
             scores += '{}: {:0.3f}\n'.format(j, ratio)
         ax.text(x1 * 1.01, y1 + 0.95 * (y2 - y1), scores, color='k', fontsize=10, va='top')
-
-
 
     rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=lw, edgecolor=color, facecolor='none',
                              zorder=zorder)
@@ -235,14 +233,17 @@ def visualise_post_processed_tracks(tracks, true_tracks, filename, limits=None, 
         plt.clf()
         fig, ax = plt.subplots(1)
         for i, c in enumerate(tracks):
+            # if not np.any(c):
+            #     continue
             m, intercept, r_value, p, e = linregress(c[:, 1], c[:, 0])
-            group = c[c[:, 3] > 0][:, 3][0]
-            ratio = __ir(c[:, :2], group)
+            group = c[:, 3][0]
+            # group = i
+            ratio = __ir2(c[:, :2], group)
             x = c[:, 1].mean()
             y = c[:, 0].mean()
 
             print group, 'R:{:0.5f} P:{:0.5f} E:{:0.5f} I:{:0.5f} N:{} M:{:0.4f} C:{:0.4f} X:{:0.4f} Y:{:0.4f}' \
-                .format(r_value, p, e, ratio, len(c), m, intercept, x, y)
+                .format(r_value, p, e, ratio[0], len(c), m, intercept, x, y)
 
             missing = c[c[:, 3] == -2]
             thickened = c[c[:, 3] == -3]
