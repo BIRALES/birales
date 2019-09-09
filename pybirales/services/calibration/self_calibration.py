@@ -303,7 +303,12 @@ class SelfCal(object):
         """
 
         # Save Calibration Coefficients
-        self.coeffs_out = main_dir + '/coeffs_.txt'
+        if self.coeff_type == "calib_geom":
+          self.coeffs_out = main_dir + '/coeffs_raw.txt'
+        if self.coeff_type == "no_geom":
+          self.coeffs_out = main_dir + '/coeffs_no_geom.txt'
+        if self.coeff_type == "pointing_geom":
+          self.coeffs_out = main_dir + '/coeffs_pointed.txt'
         text_file = open(self.coeffs_out, 'w')
 
         for pol in range(coeffs.shape[1]):
@@ -464,7 +469,7 @@ class SelfCalRun:
         self.selfcal.geometric_removal(self._vis_in, self._no_of_antennas, self._calibration_dec,
                                        self._antennas, self._longitude, self._latitude, self._frequency,
                                        self._bandwidth)
-        self.selfcal.coeffs_no_geom = self.selfcal.latest_coeffs
+        #self.selfcal.coeffs_no_geom = self.selfcal.latest_coeffs
         self.selfcal.test_save_coeffs(self.selfcal.coeffs_no_geom, self._main_dir)
         self.selfcal.geometric_addition(self._vis_in, self._no_of_antennas, self._pointing_dec,
                                         self._antennas, self._longitude, self._latitude, self._frequency,

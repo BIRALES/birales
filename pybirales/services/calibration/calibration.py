@@ -92,10 +92,14 @@ class CalibrationFacade:
         calib_run = self_calibration.SelfCalRun(cal_input, transit_sel.vis_in)
 
         coeffs_no_geom = np.array(calib_run.selfcal.coeffs_no_geom)
-
+        
         # Generate the visibilities (before and after) plot to check the calibration coefficients
-        coeff_manager = apply_coeffs.CoeffManagerRun(cal_input, transit_sel.vis_in, calib_run.selfcal.coeffs_no_geom)
+        coeff_manager = apply_coeffs.CoeffManagerRun(cal_input, transit_sel.vis_in, calib_run.selfcal.latest_coeffs)
+        # coeff_manager = apply_coeffs.CoeffManagerRun(cal_input, transit_sel.vis_in, giuseppe_coeffs)
 
         fringe_image = coeff_manager.check()
+        
+        # print coeffs_no_geom
 
         return coeffs_no_geom.real.flatten(), coeffs_no_geom.imag.flatten(), fringe_image
+
