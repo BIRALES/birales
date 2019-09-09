@@ -1,5 +1,4 @@
 import datetime
-import gc
 import json
 import logging as log
 import os
@@ -9,7 +8,6 @@ import time
 
 import humanize
 import pytz
-from pympler import tracker
 
 from pybirales.base.observation_manager import ObservationManager, CalibrationObservationManager
 from pybirales.events.events import InvalidObservationEvent
@@ -19,7 +17,6 @@ from pybirales.services.scheduler.exceptions import IncorrectScheduleFormat, Inv
 from pybirales.services.scheduler.monitoring import obs_listener_worker
 from pybirales.services.scheduler.observation import ScheduledObservation, ScheduledCalibrationObservation
 from pybirales.services.scheduler.schedule import Schedule
-from guppy import hpy
 
 
 class ObservationsScheduler:
@@ -133,15 +130,12 @@ class ObservationsScheduler:
         :return:
         """
 
-        tr = tracker.SummaryTracker()
-
-        h = hpy()
         log.info('BIRALES Scheduler observation runner started')
         counter = 0
         processed_observations = []
         om = ObservationManager()
         com = CalibrationObservationManager()
-        tr = tracker.SummaryTracker()
+
         while not self._stop_event.is_set():
             now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
             pending_observations = self.schedule.pending_observations()
@@ -166,7 +160,7 @@ class ObservationsScheduler:
                 # summary.print_(sum1)
 
                 # print mem_top()
-                tr.print_diff()
+                # tr.print_diff()
 
                 # print h.heap()
 

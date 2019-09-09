@@ -146,6 +146,7 @@ class Detector(ProcessingModule):
         temp_candidates = []
         # Tracks that were deleted should not count as 'track transitted'
         invalid_tracks = 0
+        transitted = 0
         for candidate in candidates:
             if not candidate.is_valid():
                 candidate.delete()
@@ -160,10 +161,11 @@ class Detector(ProcessingModule):
                 # else:
                     # Track has transitted outside the field of view of the instrument
                 publish(TrackTransittedEvent(candidate))
+                transitted += 1
             else:
                 temp_candidates.append(candidate)
 
-        transitted = len(self._candidates) - len(temp_candidates) - invalid_tracks
+        # transitted = len(self._candidates) - len(temp_candidates) - invalid_tracks
         self._n_rso += transitted
         log.info('Result: {} tracks have transitted. {} tracks are currently in detection window.'.format(transitted,
                                                                                                           len(temp_candidates)))
@@ -288,6 +290,7 @@ class Detector(ProcessingModule):
         :param output_data:
         :return:
         """
+
         obs_info['iter_count'] = self._iter_count
         obs_info['transitted_tracks'] = []
 
