@@ -199,8 +199,7 @@ def msds_q(test_image):
                                                                  visualisation=debug)
 
     # Filter invalid clusters
-    valid_clusters = validate_clusters2(cluster_data, labelled_clusters=cluster_labels, unique_labels=unique_labels,
-                                        e_thold=0.2, true_tracks=true_tracks, limits=limits, visualisation=debug)
+    valid_clusters = validate_clusters2(cluster_data, labelled_clusters=cluster_labels, unique_labels=unique_labels, true_tracks=true_tracks, limits=limits, visualisation=debug)
 
     # Fill any missing data (increase recall)
     valid_tracks = fill_clusters2(valid_clusters, test_image, true_tracks=true_tracks, visualisation=debug)
@@ -212,8 +211,8 @@ if __name__ == '__main__':
     debug = False
     vis = False
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
-    # snr = [25]
-    snr = [2, 3, 5, 10, 15, 20, 25]
+    snr = [25]
+    # snr = [2, 3, 5, 10, 15, 20, 25]
     # snr = [3]
     N_TRACKS = 15
     N_CHANS = 8192

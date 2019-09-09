@@ -1,7 +1,7 @@
 import time
 
 import numpy as np
-
+from numba import njit
 
 def get_clusters(ndx, c_labels):
     # Add cluster labels to the data
@@ -61,23 +61,19 @@ def _partition(data, x1, x2, y1, y2):
     partition_y = data[np.logical_and(ys >= y1, ys <= y2)]
     return partition_y[np.logical_and(partition_y[:, 1] >= x1, partition_y[:, 1] <= x2)]
 
-
 def __ir2(data, i=None):
     if len(data) >= 10:
         return 0., 0., 1
-    # print data
+
     # line is horizontal
     if len(np.unique(data[:, 0])) == 1:
         return -0.09, -1, -1
 
-    # coords = np.flip(np.swapaxes(data[:, :2] - np.mean(data[:, :2], axis=0), 0, -1), 0)
     b = data[:, :2] - np.mean(data[:, :2], axis=0)
     coords = np.flip(b.T, axis=0)
     eigen_values, eigen_vectors = np.linalg.eig(np.cov(coords))
     sort_indices = np.argsort(eigen_values)[::-1]
 
-    # print('Eigen values', eigen_values[sort_indices[0]], eigen_values[sort_indices[1]] )
-    # print('Eigen vectors', eigen_vectors[sort_indices[0]], eigen_vectors[sort_indices[1]] )
     p_v1 = eigen_vectors[sort_indices[0]]
 
     # primary eigenvector is perfectly horizontal or perfectly vertical
