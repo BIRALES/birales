@@ -106,5 +106,6 @@ def evaluate_detector(truth_img, test_img, candidates, exec_time, snr, thickness
         'specificity': specificity,
         'n_px': np.sum(prediction).astype(np.int),
         'reduction': reduction * 100.,
-        'score': score
+        'score': score,
+        'N': len(candidates)
     }

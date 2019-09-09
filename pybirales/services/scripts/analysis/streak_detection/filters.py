@@ -67,7 +67,7 @@ def global_thres(test_img):
     channel_noise = np.mean(test_img)
     std = np.std(test_img)
 
-    threshold = 4 * std + channel_noise
+    threshold = 3 * std + channel_noise
     global_threshold_mask = test_img < threshold
 
     # print 'Global Noise', np.mean(channel_noise), np.mean(std)
@@ -76,7 +76,7 @@ def global_thres(test_img):
 
 
 def global_thres_running(test_img, channel_noise, std):
-    threshold = 4 * std + channel_noise
+    threshold = 3 * std + channel_noise
     global_threshold_mask = test_img < threshold
 
     # print 'Global Noise (R)', np.mean(channel_noise), np.mean(std)
@@ -88,7 +88,7 @@ def local_thres(test_img):
     channel_noise = np.mean(test_img, axis=1)
     std = np.std(test_img, axis=1)
 
-    threshold = 4 * std + channel_noise
+    threshold = 3 * std + channel_noise
 
     # print 'Local Noise', np.mean(channel_noise), np.mean(threshold)
 
@@ -98,7 +98,7 @@ def local_thres(test_img):
 
 
 def local_thres_running(test_img, channel_noise, std):
-    threshold = 4 * std + channel_noise
+    threshold = 3 * std + channel_noise
 
     local_threshold_mask = test_img < np.expand_dims(threshold, axis=1)
 
@@ -199,11 +199,11 @@ def kittler(test_img):
     c = np.cumsum(h)
     m = np.cumsum(h * g)
     s = np.cumsum(h * g ** 2)
-    sigma_f = np.sqrt(s / c - (m / c) ** 2)
-    cb = c[-1] - c
-    mb = m[-1] - m
-    sb = s[-1] - s
-    sigma_b = np.sqrt(sb / cb - (mb / cb) ** 2)
+    sigma_f = np.sqrt(s / c - (m / c) ** 2) + 1e-6
+    cb = c[-1] - c + 1e-6
+    mb = m[-1] - m + 1e-6
+    sb = s[-1] - s + 1e-6
+    sigma_b = np.sqrt(sb / cb - (mb / cb) ** 2) + 1e-6
     p = c / c[-1]
     v = p * np.log(sigma_f) + (1 - p) * np.log(sigma_b) - p * np.log(p) - (1 - p) * np.log(1 - p)
     v[~np.isfinite(v)] = np.inf

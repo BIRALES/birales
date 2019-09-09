@@ -4,8 +4,6 @@ space debris tracks from the filtered data
 
 """
 
-import copy
-
 from astride import Streak
 from astride.utils.edge import EDGE
 from skimage import measure
@@ -15,8 +13,8 @@ from sklearn.cluster import DBSCAN
 from configuration import *
 from evaluation import *
 from filters import *
-from msds import traverse, cluster_leaves, validate_clusters, fill_clusters, merge_clusters, pre_process_data, \
-    build_tree
+from msds import traverse, cluster_leaves, pre_process_data, \
+    build_tree, validate_clusters2, fill_clusters2, m_process_leaves, process_leaves
 from receiver import *
 from util import get_clusters
 from visualisation import *
@@ -171,44 +169,41 @@ def _viz_cluster(bb, fclust1):
 
 
 # @profile
-def msds_q(test_image, u_test_image):
+def msds_q(test_image):
     limits = get_limits(test_image, true_tracks)
-    limits = (100, 200, 7000, 7300)
+    limits = (50, 150, 6000, 6500)
+    # limits = (40, 200, 500, 1000)
+    limits = (50, 175, 4000, 7100)
     limits = None
+
     # Pre-process the input data
-    ndx = pre_process_data(test_image)
+    ndx = pre_process_data(test_image, noise_estimate=0.93711)
 
     # Build quad/nd tree that spans all the data points
-    k_tree = build_tree(ndx, leave_size=30, n_axis=2)
-
-    visualise_filtered_data(ndx, true_tracks, '1_filtered_data', limits=limits, debug=debug, vis=vis)
+    k_tree = build_tree(ndx, leave_size=30, n_axis=2, true_tracks=true_tracks, limits=limits, debug=debug,
+                        visualisation=vis)
 
     # Traverse the tree and identify valid linear streaks
-    rectangles, leaves = traverse(k_tree.tree, ndx, 0, test_image.shape[1], 0, test_image.shape[0])
+    rectangles, leaves = traverse(k_tree.tree, ndx,
+                                  bbox=(0, test_image.shape[1], 0, test_image.shape[0]),
+                                  distance_thold=3., min_length=2., cluster_size_thold=10.)
 
-    visualise_tree_traversal(ndx, true_tracks, leaves, rectangles, '2_tree_traversal.png', limits, vis=vis)
+    rejected, clusters, thres = process_leaves(leaves, distance_thold=3., cluster_size_thold=10.,
+                                               ndx=ndx,
+                                               true_tracks=true_tracks, limits=limits,
+                                               visualisation=vis)
 
     # Cluster the leaves based on their vicinity to each other
-    cluster_labels, unique_labels, cluster_data = cluster_leaves(leaves)
-
-    visualise_clusters(cluster_data, cluster_labels, unique_labels, true_tracks, filename='3_clusters.png',
-                       debug=debug)
+    cluster_labels, unique_labels, cluster_data = cluster_leaves(clusters, distance_thold=thres,
+                                                                 true_tracks=true_tracks, limits=limits,
+                                                                 visualisation=debug)
 
     # Filter invalid clusters
-    valid_clusters = validate_clusters(cluster_data, labelled_clusters=cluster_labels, unique_labels=unique_labels)
+    valid_clusters = validate_clusters2(cluster_data, labelled_clusters=cluster_labels, unique_labels=unique_labels,
+                                        e_thold=0.2, true_tracks=true_tracks, limits=limits, visualisation=debug)
 
-    visualise_candidates(valid_clusters, true_tracks, '4_candidates.png', limits=limits, debug=debug)
-
-    # Merge clusters that are similar and near to each other
-    tracks = merge_clusters(valid_clusters)
-
-    visualise_tracks(tracks, true_tracks, '5_tracks.png', limits=limits, debug=debug)
-
-    # Fill any missing data
-    valid_tracks = fill_clusters(tracks, test_image, u_test_image)
-
-    visualise_post_processed_tracks(valid_tracks, true_tracks, '6_post-processed-tracks.png', limits=limits,
-                                    debug=debug)
+    # Fill any missing data (increase recall)
+    valid_tracks = fill_clusters2(valid_clusters, test_image, true_tracks=true_tracks, visualisation=debug)
 
     return valid_tracks
 
@@ -217,7 +212,8 @@ if __name__ == '__main__':
     debug = False
     vis = False
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
-    snr = [5,20]
+    # snr = [25]
+    snr = [2, 3, 5, 10, 15, 20, 25]
     # snr = [3]
     N_TRACKS = 15
     N_CHANS = 8192
@@ -252,6 +248,8 @@ if __name__ == '__main__':
 
     # Estimate the noise
     noise_mean = np.mean(test_img)
+
+    print 'Mean power (noise): ', noise_mean
 
     for d_name, detect, (f_name, filter_func) in detectors:
         # filtering_algorithm = ('Filter', filter_func)
@@ -298,7 +296,7 @@ if __name__ == '__main__':
             # feature extraction - detection
             print "Running {} algorithm".format(d_name)
             start = time.time()
-            candidates = detect(data, filtered_test_img)
+            candidates = detect(data)
             timing = time.time() - start
             print "The {} detection algorithm, found {} candidates in {:2.3f}s".format(d_name, len(candidates), timing)
 
@@ -311,4 +309,4 @@ if __name__ == '__main__':
             metrics_df = metrics_df.append(pd.DataFrame.from_dict(metrics[s], orient='index'))
         # data association
 
-    print metrics_df[['snr', 'sensitivity', 'specificity', 'dt', 'precision', 'recall']].sort_values(by=['precision'], )
+    print metrics_df[['snr', 'f1', 'N', 'dt', 'precision', 'recall']].sort_values(by=['precision'], )

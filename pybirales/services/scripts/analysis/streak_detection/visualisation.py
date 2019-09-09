@@ -7,8 +7,9 @@ import numpy as np
 import seaborn as sns
 from scipy.stats import linregress
 
+from util import _partition, __ir2
+
 plt.rcParams['figure.figsize'] = (12, 10)
-from msds import __ir, _partition
 
 
 def save_figure(filename, out_dir, obs_name, save=False):
@@ -73,104 +74,6 @@ def visualise_image(image, title, tracks, visualise=False):
         plt.show()
 
 
-# def visualise_ir(sample, channel, snr, group):
-#     x = sample - np.mean(sample)
-#     y = channel - np.mean(channel)
-#     n = len(sample)
-#     df = pd.DataFrame(columns=['channel', 'sample', 'vector', 'distance', 'ratio', 'ratio_n', 'group', 'snr'])
-#     df['sample'] = sample
-#     df['channel'] = channel
-#     df['group'] = group
-#     df['x'] = x
-#     df['y'] = y
-#     df['snr'] = snr
-#
-#     coords = np.vstack([x, y])
-#
-#     cov = np.cov(coords)
-#     evals, evecs = np.linalg.eig(cov)
-#
-#     sort_indices = np.argsort(evals)[::-1]
-#     x_v1, y_v1 = evecs[:, sort_indices[0]]  # Eigenvector with largest eigenvalue
-#     x_v2, y_v2 = evecs[:, sort_indices[1]]
-#
-#     p1 = np.array([x_v1 * -1 * 1, y_v2 * -1 * 1])
-#     p2 = np.array([x_v1 * 1 * 1, y_v2 * 1 * 1])
-#     diff = p1 - p2
-#
-#     pa1 = np.vdot(diff, diff) ** 0.5 + 0.00001
-#     p1 = np.array([x_v2 * -1 * 1, y_v1 * 1 * 1])
-#     p2 = np.array([x_v2 * 1 * 1, y_v1 * -1 * 1])
-#     diff = p1 - p2
-#     pa2 = np.vdot(diff, diff) ** 0.5 + 0.00001
-#     scale = 6
-#     v1_1 = np.array([x_v1 * -scale * 2, y_v1 * -scale * 2])
-#     v1_2 = np.array([x_v1 * scale * 2, y_v1 * scale * 2])
-#
-#     v2_1 = np.array([x_v2 * -scale, y_v2 * -scale])
-#     v2_2 = np.array([x_v2 * scale, y_v2 * scale])
-#
-#     m1, c1 = get_line_eq(v1_1, v1_2)
-#
-#     m2, c2 = get_line_eq(v2_1, v2_2)
-#
-#     lines = []
-#     ds = []
-#     for i, (x_, y_) in enumerate(zip(x, y)):
-#         line, d = nearest2(m1, 0, m2, 0, x_, y_)
-#         lines.append(line)
-#         ds.append(d)
-#
-#     df['vector'] = np.array(lines)
-#     df['distance'] = np.array(ds)
-#     s = df[df['distance'] > .7]
-#
-#     ratio2 = __ir(s['sample'], s['channel'])
-#
-#     scale = 6
-#     fig, ax = plt.subplots(1)
-#     plt.plot([x_v1 * -scale * 2, x_v1 * scale * 2],
-#              [y_v1 * -scale * 2, y_v1 * scale * 2], color='black')
-#     plt.plot([x_v2 * -scale, x_v2 * scale],
-#              [y_v2 * -scale, y_v2 * scale], color='blue')
-#
-#     plt.plot(x, y, '.')
-#     plt.plot(v1_1[0], v1_1[1], '+', color='red', markersize=16)
-#     plt.plot(v1_2[0], v1_2[1], 'x', color='red', markersize=16)
-#
-#     plt.plot(v2_1[0], v2_1[1], '+', color='g', markersize=16)
-#     plt.plot(v2_2[0], v2_2[1], 'x', color='g', markersize=16)
-#
-#     m1, c1 = get_line_eq(v1_1, v1_2)
-#     m2, c2 = get_line_eq(v2_1, v2_2)
-#
-#     pa1n = 1
-#     pa2n = 1
-#     for x_, y_ in zip(x, y):
-#         line, d = nearest2(m1, 0, m2, 0, x_, y_)
-#         if d <= .7:
-#             plt.plot(x_, y_, 'o', color='r', markersize=10)
-#         else:
-#             if line == 1:
-#                 pa1n += d
-#                 plt.plot(x_, y_, 'o', color='k', markersize=10)
-#             else:
-#                 pa2n += d
-#                 plt.plot(x_, y_, 'o', color='b', markersize=10)
-#         ax.text(x_ + 0.5, y_ + 0.5, round(d, 2), color='k', weight='bold',
-#                 fontsize=12, ha='center', va='center')
-#
-#     ratio1 = (pa2n / pa1n * pa2 / pa1)
-#     ax.text(np.median(x), np.max(y) * 1.5,
-#             'Group: {}\nRatio: {:0.5f}\nRatio2: {:0.5f}'.format(group, ratio1, ratio2),
-#             color='k',
-#             weight='bold', fontsize=15, ha='center', va='center')
-#
-#     print group, m1, m2, pa1, pa2, ratio2, len(s), n, ratio1
-#
-#     plt.show()
-
-
 def visualise_filter(data, mask, tracks, f_name, snr, threshold=None, visualise=False):
     if visualise:
         filter_str = '{} at SNR {} dB.'.format(f_name, snr)
@@ -224,8 +127,12 @@ def __plot_leave(ax, x1, y1, x2, y2, i, score, positive, positives=None, negativ
         color = 'g'
         zorder = 2
         lw = 2
+
+        # Plot mean cluster
+        ax.plot(np.mean(positives[:, 1]), np.mean(positives[:, 0]), '*', zorder=10, color='k')
     if np.any(positives):
         ax.plot(positives[:, 1], positives[:, 0], 'g.', zorder=3)
+
     colors = cycle(['b', 'm', 'c', 'y', 'g', 'orange', 'indianred', 'aqua', 'darkcyan', 'mediumpurple'])
 
     if negatives > 0:
@@ -326,14 +233,17 @@ def visualise_post_processed_tracks(tracks, true_tracks, filename, limits=None, 
         plt.clf()
         fig, ax = plt.subplots(1)
         for i, c in enumerate(tracks):
+            # if not np.any(c):
+            #     continue
             m, intercept, r_value, p, e = linregress(c[:, 1], c[:, 0])
-            group = c[c[:, 3] > 0][:, 3][0]
-            ratio = __ir(c[:, :2], group)
+            group = c[:, 3][0]
+            # group = i
+            ratio = __ir2(c[:, :2], group)
             x = c[:, 1].mean()
             y = c[:, 0].mean()
 
             print group, 'R:{:0.5f} P:{:0.5f} E:{:0.5f} I:{:0.5f} N:{} M:{:0.4f} C:{:0.4f} X:{:0.4f} Y:{:0.4f}' \
-                .format(r_value, p, e, ratio, len(c), m, intercept, x, y)
+                .format(r_value, p, e, ratio[0], len(c), m, intercept, x, y)
 
             missing = c[c[:, 3] == -2]
             thickened = c[c[:, 3] == -3]
@@ -362,7 +272,7 @@ def visualise_filtered_data(ndx, true_tracks, filename, limits=None, debug=False
         if limits:
             x_start, x_end, y_start, y_end = limits
             ndx = _partition(ndx, x_start, x_end, y_start, y_end)
-        ax.plot(ndx[:, 1], ndx[:, 0], '.', 'r')
+        ax.plot(ndx[:, 1], ndx[:, 0], '.', 'r', zorder=-3)
 
         ax = visualise_true_tracks(ax, true_tracks)
         ax.set(xlabel='Sample', ylabel='Channel')
@@ -378,16 +288,16 @@ def visualise_tree_traversal(ndx, true_tracks, leaves, rectangles, filename, lim
         if limits:
             x_start, x_end, y_start, y_end = limits
             ndx = _partition(ndx, x_start, x_end, y_start, y_end)
-        ax.plot(ndx[:, 1], ndx[:, 0], '.', 'r')
+        ax.plot(ndx[:, 1], ndx[:, 0], 'r.')
         ax = set_limits(ax, limits)
 
-        for i, (cluster, rejected, best_gs, msg, x1, x2, y1, y2, n) in enumerate(rectangles):
+        for i, (cluster, rejected, best_gs, msg, x1, x2, y1, y2, n, j) in enumerate(rectangles):
             if x_start <= x1 <= x_end and y_start <= y1 <= y_end:
-                __plot_leave(ax, x1, y1, x2, y2, i, msg, False, positives=cluster, negatives=rejected)
+                __plot_leave(ax, x1, y1, x2, y2, j, msg, False, positives=cluster, negatives=rejected)
 
-        for i, (cluster, best_gs, msg, x1, x2, y1, y2, n, _, _, _) in enumerate(leaves):
+        for i, (cluster, best_gs, msg, x1, x2, y1, y2, n, _, _, _, j) in enumerate(leaves):
             if x_start <= x1 <= x_end and y_start <= y1 <= y_end:
-                __plot_leave(ax, x1, y1, x2, y2, i, msg, True, positives=cluster, negatives=None)
+                __plot_leave(ax, x1, y1, x2, y2, j, msg, True, positives=cluster, negatives=None)
 
         ax = visualise_true_tracks(ax, true_tracks)
         ax.set(xlabel='Sample', ylabel='Channel')
