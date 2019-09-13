@@ -111,7 +111,8 @@ def visualise_bf_data(obs_name, skip, nsamp, output, beams):
 
 
 def display_obs_info(obs_info, nsamp, sampling_rate, integration_time):
-    start_time = datetime.strptime(obs_info['start_time'][:-6], '%Y-%m-%d %H:%M:%S')
+    start_time = obs_info['start_time']
+    # start_time = datetime.strptime(obs_info['start_time'][:-6], '%Y-%m-%d %H:%M:%S')
     duration = timedelta(seconds=obs_info['duration'])
     end_time = start_time + duration
 
@@ -140,7 +141,7 @@ def generate_csv(output, integration_time, skip, file_name):
 
 if __name__ == '__main__':
     # User defined parameters
-    visualise = False
+    visualise = True
     run_beamformer = False
     nsamp = 32768  # samples to integrate
     nants = 32  # number of antennas
@@ -150,6 +151,10 @@ if __name__ == '__main__':
     filepath = "/media/denis/backup/birales/2019/2019_08_14/CAS_A_FES/CAS_A_FES_raw.dat"
 
     settings = pickle.load(open('/media/denis/backup/birales/2019/2019_08_14/CAS_A_FES/CAS_A_FES_raw.dat.pkl'))
+
+    filepath = "/media/denis/backup/birales/2019/2019_08_10/cas_raw/cas_raw_raw.dat"
+    settings = pickle.load(open('/media/denis/backup/birales/2019/2019_08_10/cas_raw/cas_raw_raw.dat.pkl'))
+
     settings = settings['settings']
     obs_info = settings['observation']
     obs_name = obs_info['name']

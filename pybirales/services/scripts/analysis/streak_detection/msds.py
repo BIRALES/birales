@@ -1,25 +1,22 @@
 # from multiprocessing import Pool
+
 import multiprocessing
-import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-from numba import cuda
 from numba import njit
-from scipy.cluster.hierarchy import fclusterdata
 from scipy.cluster.hierarchy import linkage, fcluster
 from scipy.spatial import KDTree
-from scipy.spatial.distance import pdist, cdist
-from scipy.stats import linregress, pearsonr
+from scipy.stats import pearsonr
 from sklearn import linear_model
+from sklearn.preprocessing import MinMaxScaler
 
 from util import timeit, __ir2
-from visualisation import visualise_post_processed_tracks, visualise_candidates, \
-    visualise_tracks, visualise_clusters, visualise_filtered_data
+from visualisation import visualise_post_processed_tracks, visualise_tracks, visualise_clusters, visualise_filtered_data
 
 
 # @profile
-@njit(["float64(float64[:],float64[:])"], fastmath=True)
+@njit(["float64(float64[:],float64[:])"], fastmath=False)
 def mydist2(p1, p2):
     diff = p1 - p2 + 1e-6
 
@@ -29,7 +26,7 @@ def mydist2(p1, p2):
     return np.vdot(diff, diff) ** 0.5
 
 
-@njit(["float64(float64[:],float64[:])"], fastmath=True)
+@njit(["float64(float64[:],float64[:])"], fastmath=False)
 def mydist3(p1, p2):
     diff = p1 - p2 + 1e-6  # dx = p1[1] - p2[1],  dy = p1[0] - p2[0]
 
@@ -42,16 +39,13 @@ def mydist3(p1, p2):
 def h_cluster(X, distance_thold, min_length=2, i=None):
     # Y = preprocessing.scale(X)
     # a = preprocessing.normalize(X)
+
     # scaler = MinMaxScaler()
     # sx = scaler.fit(X).transform(X)
+    # r = np.max(X, axis=0) - np.min(X, axis=0)
+    # cluster_labels = fclusterdata_denis(sx, 0.3, criterion='distance')
 
-    # Y = X.copy()
-    # Y[:, 2] = binned_statistic(Y[:, 2], Y[:, 2], bins=10, range=
-    # (0, 500))[2]
-
-    cluster_labels = fclusterdata_denis(X, 3, criterion='distance')
-
-    # cluster_labels = fclusterdata(X, 3, metric=mydist2, criterion='distance')
+    cluster_labels = fclusterdata_denis(X, 2, criterion='distance')
 
     u, c = np.unique(cluster_labels, return_counts=True)
     unique_groups = u[c > 2]
@@ -59,18 +53,7 @@ def h_cluster(X, distance_thold, min_length=2, i=None):
     return cluster_labels, unique_groups
 
 
-def pdist_denis(X, metric):
-    m, n = X.shape
-    k = 0
-    dm = np.empty((m * (m - 1)) // 2, dtype=np.float)
-    for i in xrange(0, m - 1):
-        for j in xrange(i + 1, m):
-            dm[k] = metric(X[i], X[j])
-            k = k + 1
-    return dm
-
-
-@njit(fastmath=True)
+@njit
 def pdist_denis2(X, m, dm, min_r):
     k = 0
     for i in xrange(0, m - 1):
@@ -94,6 +77,12 @@ def fclusterdata_denis(X, threshold, criterion, min_r=-1e9):
     # Perform single linkage clustering
     linked = linkage(distances, 'single')
 
+    v = distances[distances < 10]
+    hist, bins = np.histogram(v, bins=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    t = bins[np.argmax(hist)]
+
+    # print t, threshold
+    # threshold = t
     # Determine to which cluster each initial point would belong given a distance threshold
     return fcluster(linked, threshold, criterion=criterion)
 
@@ -166,32 +155,6 @@ def traverse(root, ndx, bbox, distance_thold=3.0, min_length=2, cluster_size_tho
 
     return rectangles, leaves
 
-# @profile
-def process_leave(ndx, bbox, distance_thold, cluster_size_thold, i=None):
-    leave = ()
-    rejected = ()
-    x1, x2, y1, y2 = bbox
-    labels, _ = h_cluster(ndx, distance_thold, min_length=2, i=i)
-    ratio, best_gs, cluster, rejected_data = __best_group(labels, ndx, bbox=bbox, i=i)
-    n = len(cluster)
-
-    mesg = 'B:{}\n N:{}\nI:{:0.3f}'.format(best_gs, n, ratio)
-
-    if best_gs > 0:
-        pear = pearsonr(cluster[:, 1], cluster[:, 0])
-
-        if n >= cluster_size_thold or pear[1] <= 0.1:
-            mc, ms, msnr = np.mean(cluster, axis=0)
-            leave = (cluster, best_gs, mesg, x1, x2, y1, y2, n, ms, mc, msnr, i)
-        else:
-            mesg += '\nS:{:0.3f}'.format(pear[1])
-            rejected = (cluster, rejected_data, best_gs, mesg, x1, x2, y1, y2, n, i)
-    else:
-        mesg += '\nG:{}'.format(best_gs)
-        rejected = (cluster, rejected_data, best_gs, mesg, x1, x2, y1, y2, n, i)
-
-    return rejected, leave
-
 
 def eu(x1, x2, y1, y2):
     diff = np.array([x1, y1]) - np.array([x2, y2])
@@ -199,104 +162,46 @@ def eu(x1, x2, y1, y2):
     return np.vdot(diff, diff) ** 0.5
 
 
+def linear_cluster(fclust1, bb, bbox=None, i=None):
+    u, c = np.unique(fclust1, return_counts=True)
+    min_mask = c > 3
+    u_groups = u[min_mask]
+
+    best_ratio = -0.1
+    best_data = bb
+
+    # start with the smallest grouping
+    sorted_groups = u_groups[np.argsort(c[min_mask])]
+    for g in sorted_groups:
+        c = bb[np.where(fclust1 == g)]
+        ratio, _, _ = __ir2(c, i)
+
+        if 0. >= ratio >= best_ratio:
+            best_ratio = ratio
+            best_data = c
+
+    if best_ratio > -0.1:
+        mc, ms, msnr = np.mean(best_data, axis=0)
+        x1, x2, y1, y2 = bbox
+        return [best_data, 0, '', x1, x2, y1, y2, best_data.shape[0], ms, mc, msnr, i]
+
+    return None
+
+
+def pl(leave, distance_thold=3):
+    (data, bbox) = leave
+    labels, _ = h_cluster(data, distance_thold, min_length=2, i=0)
+    return linear_cluster(labels, data, bbox=bbox, i=0)
+
+
 @timeit
-def process_leaves(leaves, distance_thold, cluster_size_thold, ndx, true_tracks, limits, visualisation=False):
-    rejected = []
-    clusters = []
+def process_leaves2(leaves, distance_thold, cluster_size_thold, ndx, true_tracks, limits, visualisation=False):
+    pool = multiprocessing.Pool(processes=8)
 
-    for i, leave in enumerate(leaves):
-        r, l = process_leave(ndx=leave[0], bbox=leave[1], distance_thold=distance_thold,
-                             cluster_size_thold=cluster_size_thold, i=i)
-        if r:
-            rejected.append(r)
-        else:
-            clusters.append(l)
+    clusters = [c for c in pool.map(pl, leaves) if c]
+    pool.close()
 
-    return rejected, clusters, estimate_leave_eps(clusters)
-
-
-@timeit
-def __m_process_leaves(leaves, distance_thold, cluster_size_thold, ndx, true_tracks, limits, index, a,
-                       visualisation=False):
-    rejected = []
-    clusters = []
-
-    print os.getpid(), 'processing', index, np.shape(leaves), 'from', len(leaves)
-    for i, leave in enumerate(leaves):
-        r, l = process_leave(ndx=leave[0], bbox=leave[1], distance_thold=distance_thold,
-                             cluster_size_thold=cluster_size_thold, i=i)
-
-        # rejected.extend(r)
-        # clusters.extend(l)
-        if r:
-            rejected.append(r)
-        else:
-            clusters.append(l)
-
-    print len(clusters), len(rejected)
-
-    print getl(clusters)
-    print getl(rejected, 1)
-
-    # visualise_tree_traversal(ndx, true_tracks, clusters, rejected, '2_tree_traversal.png', limits, vis=visualisation)
-    a[index] = (rejected, clusters, 23.434 + 4.5705087)
-    return a
-
-
-def m_process_leaves(leaves, distance_thold, cluster_size_thold, ndx, true_tracks, limits, visualisation=False):
-    manager = multiprocessing.Manager()
-    a = manager.dict()
-
-    n = len(leaves) / 2
-    subset = leaves[0:n]
-
-    p1 = multiprocessing.Process(target=__m_process_leaves, args=(
-        subset, distance_thold, cluster_size_thold, ndx, true_tracks, limits, 0, a, visualisation))
-
-    subset = leaves[n:len(leaves)]
-    p2 = multiprocessing.Process(target=__m_process_leaves, args=(
-        subset, distance_thold, cluster_size_thold, ndx, true_tracks, limits, 1, a, visualisation))
-
-    p1.start()
-
-    p2.start()
-
-    p1.join()
-
-    p2.join()
-
-    # pool = Pool(2)
-
-    # func = partial(process_leaves, leaves, distance_thold=distance_thold, cluster_size_thold=cluster_size_thold,
-    #                ndx=ndx,
-    #                true_tracks=true_tracks, limits=limits,
-    #                visualisation=visualisation)
-    # rejected, clusters, thres = pool.map(func, range(0, 2))
-
-    return a[0][0] + a[1][0], a[0][1] + a[1][1], a[0][2] + a[1][2]
-
-
-def getl(clusters, shift=0):
-    m = []
-    # (cluster, best_gs, mesg, x1, x2, y1, y2, n, ms, mc, msnr, i)
-    # (cluster, rejected_data, best_gs, mesg, x1, x2, y1, y2, n, i)
-
-    for c in clusters:
-        # line length
-        x1, x2 = np.min(c[0][:, 1]), np.max(c[0][:, 1])
-        y1, y2 = np.min(c[0][:, 0]), np.max(c[0][:, 0])
-        diff = np.array([x1, y1]) - np.array([x2, y2])
-        bs = np.vdot(diff, diff) ** 0.5
-
-        # bounding box
-        x1, x2 = c[3 + shift], c[4 + shift]
-        y1, y2 = c[5 + shift], c[6 + shift]
-        diff = np.array([x1, y1]) - np.array([x2, y2])
-        bs2 = np.vdot(diff, diff) ** 0.5
-
-        m.append([bs, bs2])
-
-    return np.mean(np.array(m), axis=0), np.std(np.array(m), axis=0)
+    return clusters
 
 
 def estimate_leave_eps(clusters):
@@ -305,159 +210,6 @@ def estimate_leave_eps(clusters):
     mean_leave_size = np.mean(diff, axis=0)
 
     return np.vdot(mean_leave_size, mean_leave_size) ** 0.5 + np.std(diff)
-
-
-# @profile
-# @njit
-
-
-# @profile
-def __best_group(fclust1, bb, bbox=None, i=None):
-    u, c = np.unique(fclust1, return_counts=True)
-    u_groups = u[c > 3]
-
-    best_ratio = -0.1
-    best_group = -1
-    best_data = bb
-    rejected_data = []
-    # bbox_area = (x2 - x1) * (y2 - y1)
-
-    # start with the smallest grouping
-    sorted_groups = u_groups[np.argsort(c[c > 3])]
-    for j, g in enumerate(sorted_groups):
-        c = bb[np.where(fclust1 == g)]
-        ratio, _, _ = __ir2(c, i)
-
-        if 0. >= ratio >= best_ratio:
-            best_ratio = ratio
-            best_group = g
-            best_data = c
-        else:
-            rejected_data.append((c, ratio))
-
-    return best_ratio, best_group, best_data, rejected_data
-
-
-def eigen_vectors(data):
-    coords = np.flip(np.swapaxes(data[:, :2] - np.mean(data[:, :2], axis=0), 0, -1), 0)
-
-    cov = np.cov(coords)
-    evals, evecs = np.linalg.eig(cov)
-
-    sort_indices = np.argsort(evals)[::-1]
-    x_v1, y_v1 = evecs[:, sort_indices[0]]  # Eigenvector with largest eigenvalue
-    x_v2, y_v2 = evecs[:, sort_indices[1]]  # Eigenvector with the second largest eigenvalue
-
-    return x_v1, y_v1, x_v2, y_v2
-
-
-def __ir(data, i=0, g=0):
-    x_v1, y_v1, x_v2, y_v2 = eigen_vectors(data)
-
-    if x_v1 == 0. or x_v2 == 0.:
-        return 10
-
-    diff1 = np.array([-2 * x_v1, 0])
-    pa1 = np.vdot(diff1, diff1) ** 0.5
-
-    diff2 = np.array([-2 * x_v2, 2 * y_v1])
-    pa2 = np.vdot(diff2, diff2) ** 0.5
-
-    # ev_1, ev_2 = ((-x_v1, -y_v1), (x_v1, y_v1)), ((-x_v2, -y_v2), (x_v2, y_v2))
-    d1 = dist_to_line(data, x_v1, y_v1)
-
-    d2 = dist_to_line(data, x_v2, y_v2)
-
-    # d1, d2 = nearest(m1, m2, coords[0, :], coords[1, :])
-
-    pa1n = np.sum(d1 < d2) + 1.
-    pa2n = np.sum(d1 >= d2) + 1.
-
-    return pa2n / pa1n * pa2 / pa1
-
-    # return pa2 / pa1
-
-
-def dist_to_line(points, x, y):
-    x0, y0 = points[:, 1] - np.mean(points[:, 1]), points[:, 0] - np.mean(points[:, 0])
-    x1, y1 = -x, -y
-    x2, y2 = x, y
-
-    num = np.abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1)
-    den = np.sqrt((y2 - y1) ** 2 + (x2 - x1) ** 2)
-
-    return num / den
-
-
-def membership(ev_1_vertices, ev_2_vertices, points, membership_ratio=0.7):
-    x_v1, y_v1 = ev_1_vertices
-    x_v2, y_v2 = ev_2_vertices
-
-    d_line1 = dist_to_line(points, x_v1, y_v1)
-
-    d_line2 = dist_to_line(points, x_v2, y_v2)
-
-    t = (d_line1 + d_line2) + 0.000000000001
-
-    mask = d_line1 < d_line2
-
-    a = 1. - (d_line2 / t)
-    a[mask] = (1. - (d_line1 / t))[mask]
-
-    # Select those points that are near to either of the two line by 70%
-    return a > membership_ratio
-
-
-def nearest(m1, m2, x, y, i=None):
-    if m1 == 0:
-        line1_x = x
-        line1_y = 0.
-    else:
-        line1_x = y / m1
-        line1_y = m1 * x
-
-    if m2 == 0.:
-        line2_x = x
-        line2_y = 0.
-    else:
-        line2_x = y / m2
-        line2_y = m2 * x
-
-    return np.hypot(line1_y - y, line1_x - x), np.hypot(line2_y - y, line2_x - x)
-
-
-def __inertia_ratio(data, j=0, g=0, visualise=None):
-    n = data.shape[0]
-
-    if n >= 10:
-        return 0.19, data
-
-    if np.unique(data[:, 1]).shape[0] < 2 or np.unique(data[:, 0]).shape[0] < 2:
-        return 0.21, data
-
-    x_v1, y_v1, x_v2, y_v2 = eigen_vectors(data)
-
-    if x_v1 == 0. or x_v2 == 0.:
-        return 20, data
-
-    # non negative slope
-    if y_v1 / x_v1 > 0:
-        return 20., data
-
-    m = membership(ev_1_vertices=(x_v1, y_v1), ev_2_vertices=(x_v2, y_v2), points=data, membership_ratio=0.7)
-
-    subset = data[m, :]
-
-    if len(subset) < 3:
-        return 30., data
-
-    ir = __ir(subset[:, :2], j, g)
-
-    # if g == 7 and j == 1 and n == 9:
-    #     print j, len(subset)
-    #     visualise_ir(data, g, ir)
-
-    return ir, subset
 
 
 def estimate_thickness(cluster, axis=0):
@@ -597,26 +349,6 @@ def validate_clusters2(data, labelled_clusters, unique_labels, true_tracks, limi
     return tracks
 
 
-def fit(cluster, in_liers, r_thold=-0.9, min_length=10, min_span_thold=1):
-    d = cluster[in_liers]
-
-    if len(d) < min_length:
-        return cluster, False
-
-    if len(np.unique(d[:, 1])) == 1 or len(np.unique(d[:, 0])) == 1:
-        return cluster, False
-
-    pear = pearsonr(d[:, 1], d[:, 0])
-
-    if len(np.unique(d[:, 1])) < min_span_thold:
-        return cluster, False
-
-    if pear[1] < 0.05 and pear[0] < r_thold:
-        return d, True
-
-    return cluster, False
-
-
 def is_valid(cluster, r_thold=-0.9, min_length=10, min_span_thold=1):
     c = cluster[:, 0]
     s = cluster[:, 1]
@@ -637,12 +369,29 @@ def is_valid(cluster, r_thold=-0.9, min_length=10, min_span_thold=1):
     return False
 
 
+# # filter false positives - based on their SNR values
+#     t = np.median(cluster[:, 2]) - np.std(cluster[:, 2]) * 2
+#
+#     # print t, np.mean(test_image[test_image > 0]) * 0.5
+#     return combined[combined[:, 2] > t]
+
 # @profile
 def validate_cluster(ransac, candidate, g):
     tracks = []
 
+    snr = candidate[:, 2]
+    s = candidate[:, 1]
+
+    # filter false positives - based on their SNR values
+    t = np.median(snr) - np.std(snr) * 2
+
+    candidate = candidate[snr > t]
+
     ransac.fit(candidate[:, 0].reshape(-1, 1), candidate[:, 1])
     candidate = candidate[ransac.inlier_mask_]
+
+    if len(np.unique(s)) < 15:
+        return tracks
 
     valid = is_valid(candidate, min_span_thold=15)
 
@@ -668,39 +417,6 @@ def validate_cluster(ransac, candidate, g):
             tracks.append(candidate)
 
     return tracks
-
-
-
-
-@timeit
-def fill_clusters(tracks, test_img, missing_thold, r_thold, min_span_thold, true_tracks, limits, visualisation=False):
-    filled_tracks = []
-
-    for i, c in enumerate(tracks):
-        # group = c[c[:, 3] > 0][:, 3][0]
-        missing_channels = np.setxor1d(np.arange(min(c[:, 0]), max(c[:, 0])),
-                                       c[:, 0])
-
-        r = len(missing_channels) / float(len(missing_channels) + len(c))
-        if r >= missing_thold:
-            continue
-
-        m, intercept, r_value, p, e = linregress(c[:, 1], c[:, 0])
-
-        if r_value < r_thold and len(np.unique(c[:, 1])) > min_span_thold:
-            # if r_value < r_thold:
-            c3 = fill(test_img, c)
-            filled_tracks.append(c3)
-        else:
-            group = c[:, 3][0]
-            print 'eliminating', group, 'because', r_value < r_thold, len(np.unique(c[:, 1])) > min_span_thold
-
-    visualise_post_processed_tracks(filled_tracks, true_tracks, '6_post-processed-tracks.png', limits=None,
-                                    debug=visualisation)
-
-    print 'Last validation removed', len(tracks) - len(filled_tracks), 'tracks from', len(tracks)
-
-    return filled_tracks
 
 
 @timeit
@@ -757,88 +473,6 @@ def build_tree(ndx, leave_size, n_axis, true_tracks, limits, debug=False, visual
     visualise_filtered_data(ndx, true_tracks, '1_filtered_data', limits=limits, debug=debug, vis=visualisation)
 
     return KDTree(ndx[:, :n_axis], leave_size)
-
-
-def visualise_ir(data, group, ratio2):
-    def nearest2(x0, y0, x1, y1, x2, y2):
-        num = np.abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1)
-        denom = np.sqrt((y2 - y1) ** 2 + (x2 - x1) ** 2)
-
-        return num / denom
-
-    sample = data[:, 1]
-    channel = data[:, 0]
-
-    ms, mc = np.mean(sample), np.mean(channel)
-    x = sample - ms
-    y = channel - mc
-
-    coords = np.flip(np.swapaxes(data[:, :2] - np.mean(data[:, :2], axis=0), 0, -1), 0)
-
-    cov = np.cov(coords)
-    evals, evecs = np.linalg.eig(cov)
-
-    sort_indices = np.argsort(evals)[::-1]
-    x_v1, y_v1 = evecs[:, sort_indices[0]]  # Eigenvector with largest eigenvalue
-    x_v2, y_v2 = evecs[:, sort_indices[1]]  # Eigenvector with the second largest eigenvalue
-
-    scale = 6
-
-    ax = plt.axes()
-    plt.plot([x_v1 * -scale * 1 + ms, x_v1 * scale * 1 + ms],
-             [y_v1 * -scale * 1 + mc, y_v1 * scale * 1 + mc], color='black')
-    plt.plot([x_v2 * -scale + ms, x_v2 * scale + ms],
-             [y_v2 * -scale + mc, y_v2 * scale + mc], color='blue')
-
-    plt.plot(x + ms, y + mc, '.', markersize=12, zorder=1)
-
-    x1, y1, x2, y2 = x_v1 * -scale * 1 + ms, y_v1 * -scale * 1 + mc, x_v1 * scale * 1 + ms, y_v1 * scale * 1 + mc
-    x12, y12, x22, y22 = x_v2 * -scale * 1 + ms, y_v2 * -scale * 1 + mc, x_v2 * scale * 1 + ms, y_v2 * scale * 1 + mc
-    mem = []
-
-    for point in data:
-        x_, y_ = point[1], point[0]
-        d1, d2 = nearest2(x_, y_, x1, y1, x2, y2), nearest2(x_, y_, x12, y12, x22, y22)
-
-        t = (d1 + d2)
-
-        a = 1. - (d2 / t)
-        if d1 < d2:
-            a = 1. - (d1 / t)
-
-        if a <= 0.7:
-            # print d1, d2, d1 / d2
-            score = 1. - (d2 / t)
-            plt.plot(point[1], point[0], 'o', color='r', markersize=10, zorder=-1)
-            ax.text(x_ + 0.2, y_ - 0.2, round(score, 2), color='r', fontsize=12, ha='center', va='center')
-            # print x_, y_, 'red'
-        else:
-            if d2 > d1:
-                plt.plot(x_, y_, 'o', color='k', markersize=10, zorder=-1)
-                # print x_, y_, 'k'
-            else:
-                plt.plot(x_, y_, 'o', color='b', markersize=10, zorder=-1)
-                # print x_, y_, 'b'
-
-            ax.text(x_ + 0.2, y_ + 0.2, round(d2, 2), color='b', fontsize=12, ha='center', va='center')
-            ax.text(x_ + 0.2, y_ - 0.2, round(d1, 2), color='k', fontsize=12, ha='center', va='center')
-            mem.append(np.array([y_, x_]))
-
-    ratio = __ir(np.vstack(mem))
-
-    ax.text(0.05, 0.95,
-            'Group: {}\nRatio: {:0.5f}\nCalculated Ratio: {:0.5f}'.format(group, ratio, ratio2), color='k',
-            weight='bold',
-            fontsize=15,
-            horizontalalignment='left',
-            verticalalignment='center', transform=ax.transAxes)
-
-    # line_1 = (x1, y1), (x2, y2)
-    # line_2 = (x12, y12), (x22, y22)
-
-    # print data[membership(line_1, line_2, data, membership_ratio=0.7), :].shape
-
-    plt.show()
 
 
 def visualise_ir2(data, group, ratio2):

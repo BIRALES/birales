@@ -13,8 +13,7 @@ from sklearn.cluster import DBSCAN
 from configuration import *
 from evaluation import *
 from filters import *
-from msds import traverse, cluster_leaves, pre_process_data, \
-    build_tree, validate_clusters2, fill_clusters2, m_process_leaves, process_leaves
+from msds import *
 from receiver import *
 from util import get_clusters
 from visualisation import *
@@ -171,9 +170,9 @@ def _viz_cluster(bb, fclust1):
 # @profile
 def msds_q(test_image):
     limits = get_limits(test_image, true_tracks)
-    limits = (50, 150, 6000, 6500)
-    # limits = (40, 200, 500, 1000)
-    limits = (50, 175, 4000, 7100)
+    limits = (0, 200, 8000, 8100)
+    # limits = (0, 200, 70, 200)
+    # limits = (50, 175, 4000, 7100)
     limits = None
 
     # Pre-process the input data
@@ -188,18 +187,19 @@ def msds_q(test_image):
                                   bbox=(0, test_image.shape[1], 0, test_image.shape[0]),
                                   distance_thold=3., min_length=2., cluster_size_thold=10.)
 
-    rejected, clusters, thres = process_leaves(leaves, distance_thold=3., cluster_size_thold=10.,
-                                               ndx=ndx,
-                                               true_tracks=true_tracks, limits=limits,
-                                               visualisation=vis)
+    clusters = process_leaves2(leaves, distance_thold=3., cluster_size_thold=10.,
+                               ndx=ndx,
+                               true_tracks=true_tracks, limits=limits,
+                               visualisation=vis)
 
     # Cluster the leaves based on their vicinity to each other
-    cluster_labels, unique_labels, cluster_data = cluster_leaves(clusters, distance_thold=thres,
+    cluster_labels, unique_labels, cluster_data = cluster_leaves(clusters, distance_thold=estimate_leave_eps(clusters),
                                                                  true_tracks=true_tracks, limits=limits,
                                                                  visualisation=debug)
 
     # Filter invalid clusters
-    valid_clusters = validate_clusters2(cluster_data, labelled_clusters=cluster_labels, unique_labels=unique_labels, true_tracks=true_tracks, limits=limits, visualisation=debug)
+    valid_clusters = validate_clusters2(cluster_data, labelled_clusters=cluster_labels, unique_labels=unique_labels,
+                                        true_tracks=true_tracks, limits=limits, visualisation=debug)
 
     # Fill any missing data (increase recall)
     valid_tracks = fill_clusters2(valid_clusters, test_image, true_tracks=true_tracks, visualisation=debug)
@@ -211,9 +211,9 @@ if __name__ == '__main__':
     debug = False
     vis = False
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
-    snr = [25]
+    snr = [5]
     # snr = [2, 3, 5, 10, 15, 20, 25]
-    # snr = [3]
+    # snr = [2]
     N_TRACKS = 15
     N_CHANS = 8192
     N_SAMPLES = 256
