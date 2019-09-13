@@ -2,8 +2,6 @@ import datetime
 import json
 import logging as log
 import pickle
-import sys
-import time
 
 import numpy as np
 
@@ -13,6 +11,7 @@ from pybirales.pipeline.base.definitions import PipelineError, ObservationInfo, 
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.dummy_data import DummyBlob
 from pybirales.repository.message_broker import broker
+import os
 
 
 class RawDataReader(ProcessingModule):
@@ -41,6 +40,10 @@ class RawDataReader(ProcessingModule):
         self._read_count = 0
         self._metrics_poll_freq = 10
         self._metric_channel = 'antenna_metrics'
+
+        self._base_filepath = config.filepath.split('.')[0]
+
+        self._raw_file_counter = 0
 
         # Call superclass initialiser
         super(RawDataReader, self).__init__(config, input_blob)
@@ -89,6 +92,25 @@ class RawDataReader(ProcessingModule):
                                         ('nants', self._nants)],
                          datatype=np.complex64)
 
+    def _change_raw_file(self):
+        # check if a new file exists:
+        next_file = '{}_{}.dat'.format(self._base_filepath, self._raw_file_counter + 1)
+
+        if os.path.exists(next_file):
+            self._f.close()
+            log.info('Stopped reading from raw file: {}'.format(self._filepath))
+
+            self._filepath = next_file
+
+            self._f = open(self._filepath, 'rb')
+            log.info('Using raw data in: {}'.format(self._filepath))
+
+            self._raw_file_counter += 1
+
+            return self._f
+
+        return None
+
     def process(self, obs_info, input_data, output_data):
         """
 
@@ -98,25 +120,24 @@ class RawDataReader(ProcessingModule):
         :return:
         """
 
-        # if self._read_count == 20:
-        #     raise BIRALESObservationException("Observation finished")
-
         data = self._f.read(self._nsamp * self._nants * 8)
 
-        if data is "":
-            log.warning('End of file reached. Raising "No Data" exception.')
-            raise NoDataReaderException
+        # Check if we have a complete set of data
+        if len(data) < self._nsamp * self._nants * 8:
+            # Change if there is any raw data file left
+            self._f = self._change_raw_file()
 
-        data = np.frombuffer(data, np.complex64)
+            if not self._f:
+                raise NoDataReaderException("Observation finished")
+
+            # Read from the next set of data from new file
+            data = self._f.read(self._nsamp * self._nants * 8)
 
         try:
+            data = np.frombuffer(data, np.complex64)
             data = data.reshape((1, 1, self._nsamp, self._nants))
         except ValueError:
-            # Sleep the thread before calling a no data - wait for the other modules to finish
-            # todo - this could be handled better
-            # time.sleep(20)
-
-            raise BIRALESObservationException("Observation finished")
+            raise BIRALESObservationException("An error has occurred whilst reading the raw data file")
 
         output_data[:] = data
 

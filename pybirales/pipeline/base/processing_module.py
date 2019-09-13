@@ -200,6 +200,10 @@ class ProcessingModule(Module):
             #     logging.info("Data finished")
             #     self.stop()
             except BIRALESObservationException:
+                log.exception("A Birales exception has occurred. Stopping the pipeline")
+                self.stop()
+            except NoDataReaderException:
+                log.info("Data Finished")
                 self.stop()
             except OSError:
                 log.exception("An OS exception has occurred. Stopping the pipeline")

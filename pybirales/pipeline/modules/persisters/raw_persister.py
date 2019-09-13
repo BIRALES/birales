@@ -5,6 +5,7 @@ import os
 import pickle
 import struct
 import time
+import logging
 
 from pybirales import settings
 from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
@@ -38,6 +39,11 @@ class RawPersister(ProcessingModule):
                 raise PipelineError("Raw Persister: filename_suffix required when not using timestamp")
             file_path = os.path.join(directory, filename + '.dat')
 
+        self._base_filepath = file_path.split('.')[0]
+        self._current_filepath = file_path
+        self._chunk_size = 20  # number of data blobs to save in a raw file
+        self._raw_file_counter = 1
+
         # Open file (if file exists, remove first)
         if os.path.exists(file_path):
             os.remove(file_path)
@@ -67,6 +73,8 @@ class RawPersister(ProcessingModule):
                 pickle.dump(obs_info.get_dict(), f)
             self._head_written = True
 
+        self._file = self.open_file()
+
         # Copy input data to output data
         if output_data is not None:
             output_data[:] = input_data
@@ -80,3 +88,25 @@ class RawPersister(ProcessingModule):
 
         self._file.write(struct.pack('f' * len(data), *data))
         self._file.flush()
+
+    def open_file(self):
+        """
+        Get the file path for the fits file
+
+        :return:
+        """
+
+        if self._iter_count % self._chunk_size == 0:
+            self._file.close()
+            logging.info("Closed raw data file at {}".format(self._current_filepath))
+
+            self._current_filepath = '{}_{}.dat'.format(self._base_filepath, self._raw_file_counter)
+
+            self._file = open(self._current_filepath, "wb+")
+            fadvise.set_advice(self._file, fadvise.POSIX_FADV_SEQUENTIAL)
+
+            logging.info("Opened a new raw file at {}".format(self._current_filepath))
+
+            self._raw_file_counter += 1
+
+        return self._file
