@@ -173,7 +173,7 @@ def msds_q(test_image):
     limits = (0, 200, 8000, 8100)
     # limits = (0, 200, 70, 200)
     # limits = (50, 175, 4000, 7100)
-    limits = None
+    # limits = None
 
     # Pre-process the input data
     ndx = pre_process_data(test_image, noise_estimate=0.93711)
@@ -183,14 +183,13 @@ def msds_q(test_image):
                         visualisation=vis)
 
     # Traverse the tree and identify valid linear streaks
-    rectangles, leaves = traverse(k_tree.tree, ndx,
+    leaves = traverse(k_tree.tree, ndx,
                                   bbox=(0, test_image.shape[1], 0, test_image.shape[0]),
                                   distance_thold=3., min_length=2., cluster_size_thold=10.)
 
-    clusters = process_leaves2(leaves, distance_thold=3., cluster_size_thold=10.,
-                               ndx=ndx,
-                               true_tracks=true_tracks, limits=limits,
-                               visualisation=vis)
+    clusters = process_leaves2(leaves)
+
+    visualise_tree_traversal(ndx, true_tracks, clusters, leaves, '2_processed_leaves.png', limits=limits, vis=False)
 
     # Cluster the leaves based on their vicinity to each other
     cluster_labels, unique_labels, cluster_data = cluster_leaves(clusters, distance_thold=estimate_leave_eps(clusters),
@@ -209,11 +208,11 @@ def msds_q(test_image):
 
 if __name__ == '__main__':
     debug = False
-    vis = False
+    vis = True
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
-    snr = [5]
-    # snr = [2, 3, 5, 10, 15, 20, 25]
-    # snr = [2]
+    snr = [25]
+    snr = [2, 3, 5, 10, 15, 20, 25]
+    snr = [10]
     N_TRACKS = 15
     N_CHANS = 8192
     N_SAMPLES = 256

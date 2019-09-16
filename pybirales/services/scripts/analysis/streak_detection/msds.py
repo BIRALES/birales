@@ -9,10 +9,10 @@ from scipy.cluster.hierarchy import linkage, fcluster
 from scipy.spatial import KDTree
 from scipy.stats import pearsonr
 from sklearn import linear_model
-from sklearn.preprocessing import MinMaxScaler
 
 from util import timeit, __ir2
-from visualisation import visualise_post_processed_tracks, visualise_tracks, visualise_clusters, visualise_filtered_data
+from visualisation import visualise_post_processed_tracks, visualise_tracks, visualise_clusters, \
+    visualise_filtered_data, visualise_tree_traversal
 
 
 # @profile
@@ -45,7 +45,7 @@ def h_cluster(X, distance_thold, min_length=2, i=None):
     # r = np.max(X, axis=0) - np.min(X, axis=0)
     # cluster_labels = fclusterdata_denis(sx, 0.3, criterion='distance')
 
-    cluster_labels = fclusterdata_denis(X, 2, criterion='distance')
+    cluster_labels = fclusterdata_denis(X, 3, criterion='distance')
 
     u, c = np.unique(cluster_labels, return_counts=True)
     unique_groups = u[c > 2]
@@ -77,12 +77,11 @@ def fclusterdata_denis(X, threshold, criterion, min_r=-1e9):
     # Perform single linkage clustering
     linked = linkage(distances, 'single')
 
-    v = distances[distances < 10]
-    hist, bins = np.histogram(v, bins=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-    t = bins[np.argmax(hist)]
+    # auto-selection of threshold based on density
+    # t = 2 * min(linked[:, 2])
+    # if min_r <= -10:
+    #     threshold = t
 
-    # print t, threshold
-    # threshold = t
     # Determine to which cluster each initial point would belong given a distance threshold
     return fcluster(linked, threshold, criterion=criterion)
 
@@ -117,7 +116,7 @@ def traverse(root, ndx, bbox, distance_thold=3.0, min_length=2, cluster_size_tho
     :param cluster_size_thold:
     :return:
     """
-    rectangles = []
+    # rectangles = []
     leaves = []
     x1, x2, y1, y2 = bbox
     if root:
@@ -131,7 +130,7 @@ def traverse(root, ndx, bbox, distance_thold=3.0, min_length=2, cluster_size_tho
                 _x1, _x2 = x1, root.split
 
             partition = _partition(ndx, _x1, _x2, _y1, _y2)
-            left, ll = traverse(root.less, partition, (_x1, _x2, _y1, _y2), distance_thold, min_length,
+            ll = traverse(root.less, partition, (_x1, _x2, _y1, _y2), distance_thold, min_length,
                                 cluster_size_thold)
 
             if root.split_dim == 0:
@@ -141,10 +140,10 @@ def traverse(root, ndx, bbox, distance_thold=3.0, min_length=2, cluster_size_tho
 
             partition = _partition(ndx, _x1, _x2, _y1, _y2)
 
-            right, lr = traverse(root.greater, partition, (_x1, _x2, _y1, _y2), distance_thold, min_length,
+            lr = traverse(root.greater, partition, (_x1, _x2, _y1, _y2), distance_thold, min_length,
                                  cluster_size_thold)
-            rectangles = rectangles + left
-            rectangles = rectangles + right
+            # rectangles = rectangles + left
+            # rectangles = rectangles + right
 
             leaves = leaves + ll
             leaves = leaves + lr
@@ -153,7 +152,7 @@ def traverse(root, ndx, bbox, distance_thold=3.0, min_length=2, cluster_size_tho
             if root.children > 3:
                 leaves.append((ndx, bbox))
 
-    return rectangles, leaves
+    return leaves
 
 
 def eu(x1, x2, y1, y2):
@@ -169,7 +168,6 @@ def linear_cluster(fclust1, bb, bbox=None, i=None):
 
     best_ratio = -0.1
     best_data = bb
-
     # start with the smallest grouping
     sorted_groups = u_groups[np.argsort(c[min_mask])]
     for g in sorted_groups:
@@ -183,7 +181,7 @@ def linear_cluster(fclust1, bb, bbox=None, i=None):
     if best_ratio > -0.1:
         mc, ms, msnr = np.mean(best_data, axis=0)
         x1, x2, y1, y2 = bbox
-        return [best_data, 0, '', x1, x2, y1, y2, best_data.shape[0], ms, mc, msnr, i]
+        return [best_data, 0, best_ratio, x1, x2, y1, y2, best_data.shape[0], ms, mc, msnr, i]
 
     return None
 
@@ -195,7 +193,7 @@ def pl(leave, distance_thold=3):
 
 
 @timeit
-def process_leaves2(leaves, distance_thold, cluster_size_thold, ndx, true_tracks, limits, visualisation=False):
+def process_leaves2(leaves):
     pool = multiprocessing.Pool(processes=8)
 
     clusters = [c for c in pool.map(pl, leaves) if c]

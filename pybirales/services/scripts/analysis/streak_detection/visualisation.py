@@ -119,7 +119,7 @@ def visualise_detector(data, candidates, tracks, d_name, snr, visualise=False):
         print 'Showing: ' + title
 
 
-def __plot_leave(ax, x1, y1, x2, y2, i, score, positive, positives=None, negatives=None):
+def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negatives=None):
     color = 'r'
     zorder = 1
     lw = 1
@@ -130,36 +130,22 @@ def __plot_leave(ax, x1, y1, x2, y2, i, score, positive, positives=None, negativ
 
         # Plot mean cluster
         ax.plot(np.mean(positives[:, 1]), np.mean(positives[:, 0]), '*', zorder=10, color='k')
-    if np.any(positives):
+
+        # Plot the data points that make the cluster
         ax.plot(positives[:, 1], positives[:, 0], 'g.', zorder=3)
 
-    colors = cycle(['b', 'm', 'c', 'y', 'g', 'orange', 'indianred', 'aqua', 'darkcyan', 'mediumpurple'])
+        ax.text(x1 + 0.5 * (x2 - x1), y1 + 0.5 * (y2 - y1), '{:0.3f}'.format(score), color='k', weight='bold',
+                fontsize=10, ha='center', va='center')
 
-    if negatives > 0:
-        if not positive:
-            ax.plot(positives[:, 1], positives[:, 0], 'r.', zorder=4)
-
-        # scores = '{}\n'.format(i)
-        scores = ''
-        # colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-        if len(negatives) > 50:
-            print i, len(negatives), x1, y1, x2, y2
-        for j, (n, ratio) in enumerate(negatives):
-            ax.plot(n[:, 1], n[:, 0], '.', zorder=5, color=next(colors))
-            scores += '{}: {:0.3f}\n'.format(j, ratio)
-        ax.text(x1 * 1.01, y1 + 0.95 * (y2 - y1), scores, color='k', fontsize=10, va='top')
+        ax.text(x1 + 0.95 * (x2 - x1), y1 + 0.95 * (y2 - y1), i, color='k', fontsize=8, ha='right', va='top', zorder=10)
+    else:
+        ax.plot(negatives[:, 1], negatives[:, 0], 'r.', zorder=1)
 
     rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=lw, edgecolor=color, facecolor='none',
                              zorder=zorder)
 
     # Add the patch to the Axes
     ax.add_patch(rect)
-
-    if positive:
-        ax.text(x1 + 0.5 * (x2 - x1), y1 + 0.5 * (y2 - y1), score, color='k', weight='bold',
-                fontsize=10, ha='center', va='center')
-
-    ax.text(x1 + 0.95 * (x2 - x1), y1 + 0.95 * (y2 - y1), i, color='k', fontsize=8, ha='right', va='top', zorder=10)
 
 
 def visualise_true_tracks(ax, true_tracks):
@@ -281,7 +267,7 @@ def visualise_filtered_data(ndx, true_tracks, filename, limits=None, debug=False
         ax.figure.savefig(filename)
 
 
-def visualise_tree_traversal(ndx, true_tracks, leaves, rectangles, filename, limits=None, vis=False):
+def visualise_tree_traversal(ndx, true_tracks, clusters, leaves, filename, limits=None, vis=False):
     if vis:
         fig, ax = plt.subplots(1)
         x_start, x_end, y_start, y_end = 0, ndx.shape[0], 0, ndx.shape[1]
@@ -291,13 +277,14 @@ def visualise_tree_traversal(ndx, true_tracks, leaves, rectangles, filename, lim
         ax.plot(ndx[:, 1], ndx[:, 0], 'r.')
         ax = set_limits(ax, limits)
 
-        for i, (cluster, rejected, best_gs, msg, x1, x2, y1, y2, n, j) in enumerate(rectangles):
+        for i, (leaf_ndx, leaf_bbox) in enumerate(leaves):
+            x1, x2, y1, y2 = leaf_bbox
             if x_start <= x1 <= x_end and y_start <= y1 <= y_end:
-                __plot_leave(ax, x1, y1, x2, y2, j, msg, False, positives=cluster, negatives=rejected)
+                __plot_leaf(ax, x1, y1, x2, y2, i, None, False, positives=None, negatives=leaf_ndx)
 
-        for i, (cluster, best_gs, msg, x1, x2, y1, y2, n, _, _, _, j) in enumerate(leaves):
+        for i, (cluster, best_gs, msg, x1, x2, y1, y2, n, _, _, _, j) in enumerate(clusters):
             if x_start <= x1 <= x_end and y_start <= y1 <= y_end:
-                __plot_leave(ax, x1, y1, x2, y2, j, msg, True, positives=cluster, negatives=None)
+                __plot_leaf(ax, x1, y1, x2, y2, i, msg, True, positives=cluster, negatives=None)
 
         ax = visualise_true_tracks(ax, true_tracks)
         ax.set(xlabel='Sample', ylabel='Channel')
