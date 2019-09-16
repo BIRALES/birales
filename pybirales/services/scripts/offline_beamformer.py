@@ -6,14 +6,14 @@ from datetime import timedelta, datetime
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from numba import njit
+from numba import njit, prange
 
 from offline_pointing import Pointing
 
 
-@njit
-def beamformer(i, nbeams, data, weights, coeffs, output):
-    for b in range(nbeams):
+@njit(parallel=True, fastmath=True)
+def beamformer(i, nbeams, data, weights, output):
+    for b in prange(nbeams):
         x = np.dot(data, weights[0, b, :])
         output[b, i] = np.sum(np.power(np.abs(x), 2))
 
@@ -65,7 +65,7 @@ def get_calibration_coefficients():
     return np.ones(shape=calibrated.shape, dtype=np.complex64)
 
 
-def beamform(config, nsamp, totalsamp, skip, calib_coeffs, pointing_weights, input_file_path, output_file_path):
+def beamform(config, nsamp, totalsamp, skip, calib_coeffs, pointing_weights):
     total = totalsamp / nsamp
     # Create output array
     output = np.zeros((config['nbeams'], int(total) / skip), dtype=np.float)
@@ -75,7 +75,6 @@ def beamform(config, nsamp, totalsamp, skip, calib_coeffs, pointing_weights, inp
 
     # Open file
     with open(filepath, 'rb') as f:
-        t0 = time.time()
         for i in range(0, int(total) / skip):
             t1 = time.time()
 
@@ -85,34 +84,31 @@ def beamform(config, nsamp, totalsamp, skip, calib_coeffs, pointing_weights, inp
             data = data.reshape((nsamp, nants))
 
             # Perform calibration and beamforming
-
-            beamformer(i, config['nbeams'], data, weights, None, output)
+            beamformer(i, config['nbeams'], data, weights, output)
             n_samples = i * skip
 
             percentage = i / (float(total) / skip) * 100
             print("Processing %d of %d [%.2f%%] dt=%.2f seconds" % (n_samples, total, percentage, time.time() - t1))
-        print "Beamforming finished in %.2f seconds" % (time.time() - t0)
-
-    # Save file
-    np.save(output_file_path + '.npy', output)
 
     return output
 
 
-def visualise_bf_data(obs_name, skip, nsamp, output, beams):
+def visualise_bf_data(obs_name, skip, integration_time, output, beams):
     fig, ax = plt.subplots(1)
-    title = '{} beamformed data (Skip:{}, dt:{:0.2f} seconds)'.format(obs_name, skip, nsamp)
+    title = '{} beamformed data (Skip:{:d}, dt:{:0.2f} seconds)'.format(obs_name, skip, integration_time)
+    samples = np.arange(0, output.shape[1], 1)
+    time = integration_time * samples * skip
     for b in beams:
-        ax.plot(10 * np.log10(output[b, :]), label='Beam {:d}'.format(b))
-    ax.set(xlabel='Sample', ylabel='Power (dB)', title=title)
+        ax.plot(time, 10 * np.log10(output[b, :]), label='Beam {:d}'.format(b))
+    ax.set(xlabel='Time (s)', ylabel='Power (dB)', title=title)
     plt.legend()
     plt.grid()
     plt.show()
 
 
 def display_obs_info(obs_info, nsamp, sampling_rate, integration_time):
-    start_time = obs_info['start_time']
-    # start_time = datetime.strptime(obs_info['start_time'][:-6], '%Y-%m-%d %H:%M:%S')
+    # start_time = obs_info['start_time']
+    start_time = datetime.strptime(obs_info['start_time'][:-6], '%Y-%m-%d %H:%M:%S')
     duration = timedelta(seconds=obs_info['duration'])
     end_time = start_time + duration
 
@@ -131,7 +127,7 @@ def generate_csv(output, integration_time, skip, file_name):
         samples = np.arange(0, output.shape[1], 1)
         df = df.append(pd.DataFrame({
             'sample': samples,
-            'timestamp': integration_time * samples * skip,
+            'time': integration_time * samples * skip,
             'power': output[b][:],
             'beam': np.full(output.shape[1], b)
         }), ignore_index=True, sort=False)
@@ -139,34 +135,46 @@ def generate_csv(output, integration_time, skip, file_name):
     df.to_csv(file_name + '.csv')
 
 
+def get_raw_filepaths(root_filepath):
+    file_paths = []
+    base_filepath = root_filepath.split('.')[0]
+
+    next_filepath = root_filepath
+    counter = 0
+    while os.path.exists(next_filepath):
+        file_paths.append(next_filepath)
+
+        next_filepath = '{}_{}.dat'.format(base_filepath, counter + 1)
+        counter += 1
+        print next_filepath
+
+    return file_paths
+
+
 if __name__ == '__main__':
     # User defined parameters
     visualise = True
-    run_beamformer = False
+    run_beamformer = True
     nsamp = 32768  # samples to integrate
     nants = 32  # number of antennas
     skip = 15  # chunks to skip
     beams = [6, 15, 24, 30]  # beams to be plotted
 
-    filepath = "/media/denis/backup/birales/2019/2019_08_14/CAS_A_FES/CAS_A_FES_raw.dat"
+    obs_raw_file = "/media/denis/backup/birales/2019/2019_09_14/CASA/CASA_raw.dat"
+    obs_raw_file = "/media/denis/backup/birales/2019/2019_08_14/CAS_A_FES/CAS_A_FES_raw.dat"
 
-    settings = pickle.load(open('/media/denis/backup/birales/2019/2019_08_14/CAS_A_FES/CAS_A_FES_raw.dat.pkl'))
-
-    filepath = "/media/denis/backup/birales/2019/2019_08_10/cas_raw/cas_raw_raw.dat"
-    settings = pickle.load(open('/media/denis/backup/birales/2019/2019_08_10/cas_raw/cas_raw_raw.dat.pkl'))
+    obs_root = os.path.abspath(os.path.join(obs_raw_file, os.pardir))
+    obs_raw_name = os.path.basename(obs_raw_file)
+    base_filepath = os.path.join(obs_root, obs_raw_name)
+    settings = pickle.load(open(base_filepath + '.pkl'))
 
     settings = settings['settings']
     obs_info = settings['observation']
     obs_name = obs_info['name']
-    output_file_path = '{}_beamformed_data'.format(obs_name)
 
     beamformer_config = settings['beamformer']
     beamformer_config['start_center_frequency'] = obs_info['start_center_frequency']
     beamformer_config['channel_bandwidth'] = obs_info['channel_bandwidth']
-
-    # Check filesize
-    filesize = os.path.getsize(filepath)
-    totalsamp = filesize / (8 * nants)  # number of samples per antenna
 
     sampling_rate = obs_info['samples_per_second']
     integration_time = nsamp * 1. / sampling_rate  # integration time of each sample in seconds
@@ -176,16 +184,34 @@ if __name__ == '__main__':
     pointing_weights = get_weights(beamformer_config)
     calib_coeffs = get_calibration_coefficients()
 
+    filepaths = get_raw_filepaths(base_filepath)
+    output_file_path = 'beamformed_output/{}_beamformed_data'.format(obs_name)
+    combined_output = []
+
     if run_beamformer:
-        # Run the beamformer on the input raw data
-        output = beamform(beamformer_config, nsamp, totalsamp, skip, calib_coeffs, pointing_weights, filepath,
-                          output_file_path)
+        t0 = time.time()
+        for filepath in filepaths:
+            print "Processing raw data at: {}".format(filepath)
+            # Check filesize
+            filesize = os.path.getsize(filepath)
+            totalsamp = filesize / (8 * nants)  # number of samples per antenna
+
+            # Run the beamformer on the input raw data
+            output = beamform(beamformer_config, nsamp, totalsamp, skip, calib_coeffs, pointing_weights)
+
+            combined_output.append(output)
+        print "Beamforming finished in %.2f seconds" % (time.time() - t0)
     else:
         # Read the beamformed data
         output = np.load(output_file_path + '.npy')
 
+    combined_output = np.hstack(combined_output)
+
     if visualise:
-        visualise_bf_data(obs_name, skip, integration_time, output, beams)
+        visualise_bf_data(obs_name, skip, integration_time, combined_output, beams)
 
     # Output data to csv file
-    generate_csv(output, integration_time, skip, output_file_path)
+    generate_csv(combined_output, integration_time, skip, output_file_path)
+
+    # Output data as an numpy array
+    np.save(output_file_path + '.npy', output_file_path)
