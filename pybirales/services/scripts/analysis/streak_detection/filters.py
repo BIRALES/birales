@@ -284,6 +284,14 @@ def sigma_clipping(test_img):
 
     return ~mask.mask, None
 
+def sigma_clipping4(test_img):
+    s_clip = SigmaClip(cenfunc=mean, iters=5, sigma_upper=4., sigma_lower=70.)
+
+    # print np.mean(test_img) - 3.*np.std(test_img), np.mean(test_img)+ 60.*np.std(test_img), np.max(test_img)
+    mask = s_clip(test_img)
+
+    return ~mask.mask, None
+
 
 def sigma_clipping_map(test_img):
     # from:  https://photutils.readthedocs.io/en/stable/segmentation.html#centroids-photometry-and-morphological-properties

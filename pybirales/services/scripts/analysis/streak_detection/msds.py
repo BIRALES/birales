@@ -326,6 +326,20 @@ def split2(ransac, candidate):
 
     return candidates
 
+def validate_clusters_func(cluster):
+    ransac = linear_model.RANSACRegressor(residual_threshold=5)
+    validated_clusters = validate_cluster(ransac, cluster, 0)
+    return validated_clusters
+
+@timeit
+def validate_clusters3(data, labelled_clusters, unique_labels):
+    pool = multiprocessing.Pool(processes=4)
+
+    candidates = [np.vstack(data[:, 0][labelled_clusters == g]) for g in unique_labels]
+    clusters = [c for sub_clusters in pool.map(validate_clusters_func, candidates) if sub_clusters for c in sub_clusters]
+    pool.close()
+
+    return clusters
 
 @timeit
 # @profile
@@ -342,7 +356,7 @@ def validate_clusters2(data, labelled_clusters, unique_labels, true_tracks, limi
 
     print 'Reduced', len(candidates) - len(tracks), 'candidates to', len(tracks), 'tracks in validation'
 
-    visualise_tracks(tracks, true_tracks, '5_tracks.png', limits=limits, debug=visualisation)
+    # visualise_tracks(tracks, true_tracks, '5_tracks.png', limits=limits, debug=visualisation)
 
     return tracks
 

@@ -17,6 +17,7 @@ from msds import *
 from receiver import *
 from util import get_clusters
 from visualisation import *
+from hdbscan import HDBSCAN
 
 
 def hough_transform(test_image, unfiltered_image=None):
@@ -42,6 +43,8 @@ def hough_transform(test_image, unfiltered_image=None):
         cluster = generate_line(x1=p0[0], x2=p1[0], y1=p0[1], y2=p1[1], limits=test_image.shape)
         cluster = np.column_stack([cluster, np.full(len(cluster), 1), np.full(len(cluster), i)])
         clusters.append(cluster)
+
+    clusters = _validate_clusters(clusters)
 
     return clusters
 
@@ -76,55 +79,12 @@ def astride(test_image):
 
         clusters.append(cluster_df)
 
-    return clusters
-
-
-def astride_old(test_image):
-    """
-    ASTRIDE feature detection
-
-    Clustering within the dataset are identified using the ASTRIDE streak detection algorithm
-
-    :return:
-    """
-
-    # Create a temporary fits file from the raw, unfiltered data
-    tmp_filepath = '/tmp/birales/unfiltered.fits'
-    if not os.path.exists(os.path.dirname(tmp_filepath)):
-        os.makedirs(os.path.dirname(tmp_filepath))
-
-    header = fits.Header()
-    header.set('OBS', 'TMP_data')
-    fits.writeto(tmp_filepath, test_image, overwrite=True, header=header)
-
-    streak = Streak(tmp_filepath, remove_bkg='constant', min_points=10, shape_cut=0.5, connectivity_angle=3)
-
-    streak.detect()
-
-    streaks = streak.streaks
-
-    clusters = []
-    for i, streak in enumerate(streaks):
-        n = len(streak['y'])
-        cluster = np.column_stack([np.array(streak['y']), np.array(streak['x']), np.full(n, 1), np.full(n, i)])
-        clusters.append(cluster)
+    # clusters = _validate_clusters(clusters)
 
     return clusters
 
 
 def hdbscan(test_image):
-    from hdbscan import HDBSCAN
-    def sim(u, v):
-        dx = v[0] - u[0]
-        dy = v[1] - u[1]
-        t = np.arctan(dy / dx)
-        return t
-        if 0.5 * np.pi <= t <= np.pi and 1.5 * np.pi <= t <= 2 * np.pi:
-            return dy / np.sin(t)
-        return 1.
-        # print x,y
-        # return 1
-
     hdbscan = HDBSCAN(algorithm='prims_kdtree', alpha=1.0, approx_min_span_tree=True,
                       gen_min_span_tree=False, leaf_size=50, metric='euclidean',
                       min_cluster_size=5, min_samples=None, p=None)
@@ -137,6 +97,8 @@ def hdbscan(test_image):
     c_labels = hdbscan.fit_predict(ndx)
 
     clusters = get_clusters(ndx, c_labels)
+
+    clusters = _validate_clusters(clusters)
 
     return clusters
 
@@ -159,12 +121,18 @@ def naive_dbscan(test_image):
 
     clusters = get_clusters(ndx, c_labels)
 
+    clusters = _validate_clusters(clusters)
+
     return clusters
 
 
 def _viz_cluster(bb, fclust1):
     for b, g in zip(bb, fclust1):
         print b[0], b[1], b[2], g
+
+
+def _validate_clusters(clusters):
+    return [c for c in clusters if is_valid(c, r_thold=-0.9, min_length=10, min_span_thold=1)]
 
 
 # @profile
@@ -184,35 +152,37 @@ def msds_q(test_image):
 
     # Traverse the tree and identify valid linear streaks
     leaves = traverse(k_tree.tree, ndx,
-                                  bbox=(0, test_image.shape[1], 0, test_image.shape[0]),
-                                  distance_thold=3., min_length=2., cluster_size_thold=10.)
+                      bbox=(0, test_image.shape[1], 0, test_image.shape[0]),
+                      distance_thold=3., min_length=2., cluster_size_thold=10.)
 
     clusters = process_leaves2(leaves)
 
-    visualise_tree_traversal(ndx, true_tracks, clusters, leaves, '2_processed_leaves.png', limits=limits, vis=False)
+    visualise_tree_traversal(ndx, true_tracks, clusters, leaves, '2_processed_leaves.png', limits=limits, vis=vis)
 
     # Cluster the leaves based on their vicinity to each other
     cluster_labels, unique_labels, cluster_data = cluster_leaves(clusters, distance_thold=estimate_leave_eps(clusters),
                                                                  true_tracks=true_tracks, limits=limits,
                                                                  visualisation=debug)
 
+
     # Filter invalid clusters
-    valid_clusters = validate_clusters2(cluster_data, labelled_clusters=cluster_labels, unique_labels=unique_labels,
-                                        true_tracks=true_tracks, limits=limits, visualisation=debug)
+    tracks = validate_clusters3(cluster_data, labelled_clusters=cluster_labels, unique_labels=unique_labels)
+
+    visualise_tracks(tracks, true_tracks, '5_tracks.png', limits=limits, debug=debug)
 
     # Fill any missing data (increase recall)
-    valid_tracks = fill_clusters2(valid_clusters, test_image, true_tracks=true_tracks, visualisation=debug)
+    valid_tracks = fill_clusters2(tracks, test_image, true_tracks=true_tracks, visualisation=debug)
 
     return valid_tracks
 
 
 if __name__ == '__main__':
     debug = False
-    vis = True
+    vis = False
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
     snr = [25]
     snr = [2, 3, 5, 10, 15, 20, 25]
-    snr = [10]
+    snr = [5]
     N_TRACKS = 15
     N_CHANS = 8192
     N_SAMPLES = 256
@@ -221,12 +191,11 @@ if __name__ == '__main__':
     metrics_df = pd.DataFrame()
 
     detectors = [
-        # ('Naive DBSCAN', naive_dbscan, ('Filter', sigma_clipping)),
-        # ('HDBSCAN', hdbscan, ('Filter', sigma_clipping)),
+        ('Naive DBSCAN', naive_dbscan, ('Filter', sigma_clipping4)),
+        # ('HDBSCAN', hdbscan, ('Filter', sigma_clipping4)),
         ('msds_q', msds_q, ('Filter', sigma_clipping)),
         # ('Hough Transform', hough_transform, ('Filter', global_thres)),
         # ('Astride', astride, ('No Filter', no_filter)),
-        # ('Old Astride', astride_old, ('No Filter', no_filter)),
         # ('CFAR', None, ('No Filter', cfar)),
     ]
 
@@ -307,4 +276,4 @@ if __name__ == '__main__':
             metrics_df = metrics_df.append(pd.DataFrame.from_dict(metrics[s], orient='index'))
         # data association
 
-    print metrics_df[['snr', 'f1', 'N', 'dt', 'precision', 'recall']].sort_values(by=['precision'], )
+    print metrics_df[['snr', 'f1', 'N', 'dt', 'precision', 'recall']].sort_values(by=['f1'], )
