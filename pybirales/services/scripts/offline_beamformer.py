@@ -3,22 +3,123 @@ import os
 import pickle
 import time
 from datetime import timedelta, datetime
+from abc import abstractmethod
 
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from numba import njit, prange
+from numba import njit, prange, jitclass
 
 from offline_pointing import Pointing
+import ctypes
+from numpy import ctypeslib
 
 log.basicConfig(level=log.NOTSET)
 
-# @profile
+
 @njit(parallel=True, fastmath=True)
-def beamformer(i, nbeams, data, weights, output):
+def n_beamform(i, nbeams, data, weights, output):
     for b in prange(nbeams):
         x = np.dot(data, weights[0, b, :])
         output[b, i] = np.sum(np.power(np.abs(x), 2))
+
+    return output
+
+
+class Beamformer:
+    def __init__(self):
+        pass
+
+    def beamform(self, config, calib_coeffs, pointing_weights, filepath):
+        # Check filesize
+        filesize = os.path.getsize(filepath)
+        totalsamp = filesize / (8 * nants)  # number of samples per antenna
+
+        total = totalsamp / nsamp
+
+        n_chunks = (int(total) / skip) + 1
+
+        # Create output array
+        output_data = np.zeros((config['nbeams'], n_chunks), dtype=np.float64)
+
+        output = self.output_blob(config, nsamp, n_chunks)
+
+        calib_coeffs = calib_coeffs[:nants_to_process]
+
+        # Apply the weights
+        weights = calib_coeffs * pointing_weights
+
+        # Open file
+        with open(filepath, 'rb') as f:
+            for i in range(0, n_chunks):
+                t1 = time.time()
+                f.seek(nsamp * nants * 8 * i * skip, 0)
+                data = f.read(nsamp * nants * 8)
+                data = np.frombuffer(data, np.complex64)
+                data = data.reshape((nsamp, nants))
+                data = np.ascontiguousarray(data[:, :nants_to_process], dtype=np.complex64)
+
+                output_data = self._beamform(i, config['nbeams'], data, weights, output, output_data)
+
+                n_samples = (i + 1) * skip
+
+                percentage = (i + 1.) / n_chunks * 100.
+                log.info("Processing %d of %d [%.2f%%] dt=%.2f seconds" % (
+                    n_samples, total, percentage, time.time() - t1))
+
+        return output_data
+
+    @abstractmethod
+    def _beamform(self, i, nbeams, data, weights, output, output_data):
+        pass
+
+    @abstractmethod
+    def output_blob(self, config, nsamp, nchunks):
+        pass
+
+
+class OfflineBeamformer(Beamformer):
+
+    def __init__(self):
+        Beamformer.__init__(self)
+
+    # @profile
+    def _beamform(self, i, nbeams, data, weights, output, output_data):
+        output_data = n_beamform(i, nbeams, data, weights, output)
+        return output_data
+
+    def output_blob(self, config, nsamp, nchunks):
+        return np.zeros((config['nbeams'], nchunks), dtype=np.complex64)
+
+
+class PyBiralesBeamformer(Beamformer):
+
+    def __init__(self):
+        Beamformer.__init__(self)
+        self.beamformer = ctypes.CDLL("/usr/local/lib/libbeamformer.so")
+        complex_p = ctypeslib.ndpointer(np.complex64, ndim=1, flags='C')
+        self.beamformer.beamform.argtypes = [complex_p, complex_p, complex_p, ctypes.c_uint32, ctypes.c_uint32,
+                                             ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32]
+        self.beamformer.beamform.restype = None
+
+    def _beamform(self, i, nbeams, input_data, weights, output, output_data):
+        # input_data = data.reshape(1, 1, data.shape[0], data.shape[1])
+        # output_data = output.reshape(1, 32, 1, 11)
+        self.beamformer.beamform(input_data.ravel(), weights.ravel(), output.ravel(), input_data.shape[0], 1, nbeams,
+                                 nants_to_process,
+                                 1, 8)
+
+        output_data[:, i] = np.sum(np.power(np.abs(output), 2), axis=1)
+
+        return output_data
+
+    # def _beamform(self, input_data, weights, output, nsamp, nsubs, nbeams, nants_to_process):
+    #     self.beamformer.beamform(input_data.ravel(), weights.ravel(), output.ravel(), nsamp, 1, nbeams,
+    #                              nants_to_process,
+    #                              1, 8)
+
+    def output_blob(self, config, nsamp, nchunks):
+        return np.zeros((config['nbeams'], nsamp), dtype=np.complex64)
 
 
 def get_weights(config, nants_to_process=32):
@@ -107,45 +208,6 @@ def get_calibration_coefficients(mode='uncalibrated'):
     raise BaseException("Calibration mode is not valid")
 
 
-def beamform(config, nsamp, totalsamp, skip, calib_coeffs, pointing_weights, nants_to_process):
-    total = totalsamp / nsamp
-
-    n_chunks = (int(total) / skip) + 1
-
-    # Create output array
-    output = np.zeros((config['nbeams'], n_chunks), dtype=np.float)
-
-    calib_coeffs = calib_coeffs[:nants_to_process]
-
-    # Apply the weights
-    weights = calib_coeffs * pointing_weights
-
-    # Open file
-    with open(filepath, 'rb') as f:
-        for i in range(0, n_chunks):
-            t1 = time.time()
-            f.seek(nsamp * nants * 8 * i * skip, 0)
-            data = f.read(nsamp * nants * 8)
-            data = np.frombuffer(data, np.complex64)
-            data = data.reshape((nsamp, nants))
-
-            data = np.ascontiguousarray(data[:, :nants_to_process], dtype=np.complex64)
-
-            # Perform calibration and beamforming
-            beamformer(i, config['nbeams'], data, weights, output)
-
-            # bbb = partial(bb, data, weights)
-            # output[:, i] = np.array([c for c in pool.map(bbb, range(config['nbeams'])) if c])
-
-            n_samples = (i + 1) * skip
-
-            percentage = (i + 1.) / n_chunks * 100.
-            log.info("Processing %d of %d [%.2f%%] dt=%.2f seconds" % (n_samples, total, percentage, time.time() - t1))
-
-
-    return output
-
-
 def visualise_bf_data(obs_name, skip, integration_time, output, beams, file_name=None, nants_to_process=32):
     fig, ax = plt.subplots(1)
     title = '{} beamformed data (Skip:{:d}, dt:{:0.2f} s, Antennas:{})'.format(obs_name, skip, integration_time,
@@ -153,7 +215,13 @@ def visualise_bf_data(obs_name, skip, integration_time, output, beams, file_name
     samples = np.arange(0, output.shape[1], 1)
     time = integration_time * samples * skip
     for b in beams:
-        ax.plot(time, 10 * np.log10(output[b, :]), label='Beam {:d}'.format(b))
+        noise_estimate = np.mean(np.concatenate([output[b, -50:] , output[b, :100]]))
+        power = output[b, :] - noise_estimate
+        power = 10 * np.log10(power)  # convert to db
+        noise_db = 10*np.log10(noise_estimate)
+        ax.plot(time, power, label='Beam {:d}'.format(b))
+
+        log.info("Antennas: {}, Beam: {}, Noise est. {:2.3f} dB, PSNR: {:2.3f}".format(nants_to_process, b, noise_db, max(power)-noise_db))
     ax.set(xlabel='Time (s)', ylabel='Power (dB)', title=title)
     plt.legend()
     plt.grid()
@@ -163,7 +231,7 @@ def visualise_bf_data(obs_name, skip, integration_time, output, beams, file_name
         fig.savefig(file_name + '.png')
 
 
-def display_obs_info(obs_info, nsamp, sampling_rate, integration_time):
+def display_obs_info(obs_name, obs_info, nsamp, sampling_rate, integration_time):
     # start_time = obs_info['start_time']
     start_time = datetime.strptime(obs_info['start_time'][:-6], '%Y-%m-%d %H:%M:%S')
     duration = timedelta(seconds=obs_info['duration'])
@@ -208,23 +276,8 @@ def get_raw_filepaths(root_filepath):
     return file_paths
 
 
-if __name__ == '__main__':
-    # User defined parameters
-    visualise = True
-    run_beamformer = True
-    save_data = False
-
-    nsamp = 32768  # samples to integrate
-    nants = 32  # number of antennas
-    nants_to_process = 32
-    calibration_mode = 'fes'
-    skip = 15  # chunks to skip
-    beams = [6, 15, 24, 30]  # beams to be plotted
-    # beams = [15]
+def run():
     suffix = '{}_{}'.format(calibration_mode, nants_to_process)
-
-    obs_raw_file = "/media/denis/backup/birales/2019/2019_09_14/CASA/CASA_raw.dat"
-    # obs_raw_file = "/media/denis/backup/birales/2019/2019_08_14/CAS_A_FES/CAS_A_FES_raw.dat"
 
     obs_root = os.path.abspath(os.path.join(obs_raw_file, os.pardir))
     obs_raw_name = os.path.basename(obs_raw_file)
@@ -242,7 +295,7 @@ if __name__ == '__main__':
     sampling_rate = obs_info['samples_per_second']
     integration_time = nsamp * 1. / sampling_rate  # integration time of each sample in seconds
 
-    display_obs_info(obs_info, nsamp, sampling_rate, integration_time)
+    display_obs_info(obs_name, obs_info, nsamp, sampling_rate, integration_time)
 
     pointing_weights = get_weights(beamformer_config, nants_to_process)
     calib_coeffs = get_calibration_coefficients(calibration_mode)
@@ -251,25 +304,25 @@ if __name__ == '__main__':
     output_file_path = 'beamformed_output/{}_beamformed_data_{}'.format(obs_name, suffix)
     combined_output = []
 
+    beamformer = OfflineBeamformer()
+    # beamformer = PyBiralesBeamformer()
+
     if run_beamformer:
         t0 = time.time()
         for filepath in filepaths:
             log.info("Processing raw data at: {}".format(filepath))
-            # Check filesize
-            filesize = os.path.getsize(filepath)
-            totalsamp = filesize / (8 * nants)  # number of samples per antenna
 
             # Run the beamformer on the input raw data
-            output = beamform(beamformer_config, nsamp, totalsamp, skip, calib_coeffs, pointing_weights,
-                              nants_to_process)
+            output = beamformer.beamform(beamformer_config, calib_coeffs, pointing_weights, filepath)
+            # output = beamformer.beamform(beamformer, beamformer_config, nsamp, totalsamp, skip, calib_coeffs, pointing_weights,
+            #                      nants_to_process)
 
             combined_output.append(output)
         log.info("Beamforming finished in %.2f seconds" % (time.time() - t0))
+        combined_output = np.hstack(combined_output)
     else:
         # Read the beamformed data
-        output = np.load(output_file_path + '.npy')
-
-    combined_output = np.hstack(combined_output)
+        combined_output = np.load(output_file_path + '.npy')
 
     if visualise:
         visualise_bf_data(obs_name, skip, integration_time, combined_output, beams, output_file_path, nants_to_process)
@@ -279,4 +332,25 @@ if __name__ == '__main__':
         generate_csv(combined_output, integration_time, skip, output_file_path)
 
         # Output data as an numpy array
-        np.save(output_file_path + '.npy', output_file_path)
+        np.save(output_file_path + '.npy', combined_output)
+
+if __name__ == '__main__':
+    # User defined parameters
+    visualise = True
+    run_beamformer = False
+    save_data = False
+
+    nsamp = 32768  # samples to integrate
+    nants = 32  # number of antennas
+    nants_to_process = 32
+    calibration_mode = 'fes'
+    skip = 15  # chunks to skip
+    beams = [6, 15, 24, 30]  # beams to be plotted
+
+
+    obs_raw_file = "/media/denis/backup/birales/2019/2019_09_14/CASA/CASA_raw.dat"
+    # # obs_raw_file = "/media/denis/backup/birales/2019/2019_08_14/CAS_A_FES/CAS_A_FES_raw.dat"
+
+    for n in [4, 8, 16, 32]:
+        nants_to_process = n
+        run()
