@@ -5,6 +5,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_sc
 import time
 import pandas as pd
 
+
 def evaluate_filter(truth_img, test_img, positives, exec_time, snr, thickness):
     """
 
@@ -79,24 +80,24 @@ def evaluate_detector(truth_img, test_img, candidates, exec_time, snr, thickness
     # prediction[pos[:, :2].astype(int)] = True
     prediction = prediction.ravel()
 
-    recall = recall_score(truth, prediction)
+    # recall = recall_score(truth, prediction)
     reduction = (1 - (np.sum(prediction) / np.prod(truth_img.shape)))
 
     tn, fp, fn, tp = confusion_matrix(truth, prediction).ravel().astype('float64')
     specificity = tn / (tn + fp)
-    sensitivity = tp / (tp + fn)
+    sensitivity = tp / (tp + fn)  # aka recall
 
     # harmonic mean of the recall and reduction rate
-    score = 2 * (recall * reduction) / (recall + reduction)
+    # score = 2 * (recall * reduction) / (recall + reduction)
 
     return {
-        'jaccard': jaccard_similarity_score(truth, prediction),
+        # 'jaccard': jaccard_similarity_score(truth, prediction),
         'f1': f1_score(truth, prediction),
         # 'precision': precision_score(truth, prediction, average='binary'),
         'precision': tp / (tp + fp),
-        'recall': recall,
-        'accuracy': accuracy_score(truth, prediction),
-        'mse': mean_squared_error(truth, prediction),
+        'recall': sensitivity,
+        # 'accuracy': accuracy_score(truth, prediction),
+        # 'mse': mean_squared_error(truth, prediction),
         'dt': exec_time,
         'nchans': truth_img.shape[0],
         'nsamples': truth_img.shape[1],
@@ -104,8 +105,8 @@ def evaluate_detector(truth_img, test_img, candidates, exec_time, snr, thickness
         'dx': thickness,
         'sensitivity': sensitivity,
         'specificity': specificity,
-        'n_px': np.sum(prediction).astype(np.int),
+        # 'n_px': np.sum(prediction).astype(np.int),
         'reduction': reduction * 100.,
-        'score': score,
+        # 'score': score,
         'N': len(candidates)
     }

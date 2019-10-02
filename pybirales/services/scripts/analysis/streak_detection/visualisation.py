@@ -1,10 +1,59 @@
 import os
-from itertools import cycle
 
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+import matplotlib.ticker as ticker
+
+sns.set(color_codes=True)
+
+# Seaborn settings
+# This sets reasonable defaults for font size for
+# a figure that will go in a paper
+sns.set_context("poster")
+
+# Set the font to be serif, rather than sans
+sns.set(font='serif', font_scale=2)
+
+# Make the background white, and specify the
+# specific font family
+sns.set_style("ticks",
+              {'axes.axisbelow': True,
+               'axes.edgecolor': '#666666',
+               'axes.facecolor': 'white',
+               'axes.grid': True,
+               'axes.labelcolor': '.15',
+               'axes.spines.bottom': True,
+               'axes.spines.left': True,
+               'axes.spines.right': True,
+               'axes.spines.top': True,
+               'figure.facecolor': 'white',
+               'figure.figsize': (12, 7.416408),
+               'font.family': ['serif'],
+               'font.sans-serif': ['Arial',
+                                   'DejaVu Sans',
+                                   'Liberation Sans',
+                                   'Bitstream Vera Sans',
+                                   'sans-serif'],
+               'grid.color': '#e0e0e0',
+               'grid.linestyle': '-',
+               'image.cmap': 'rocket',
+               'lines.solid_capstyle': 'round',
+               'lines.linewidth': 5,
+               'patch.edgecolor': 'w',
+               'patch.force_edgecolor': True,
+               'text.color': '.15',
+               'xtick.bottom': True,
+               'xtick.color': '#666666',
+               'xtick.direction': 'out',
+               'xtick.top': False,
+               'ytick.color': '#666666',
+               'ytick.direction': 'out',
+               'ytick.left': True,
+               'ytick.right': False}
+              )
+
 from scipy.stats import linregress
 
 from util import _partition, __ir2
@@ -117,6 +166,44 @@ def visualise_detector(data, candidates, tracks, d_name, snr, visualise=False):
         plt.show()
 
         print 'Showing: ' + title
+
+
+def visualise_ir2(data, group, ratio2):
+    if len(data) >= 10:
+        return 0., 0., data
+
+    ms, mc = np.mean(data[:, 1]), np.mean(data[:, 0])
+    coords = np.flip(np.swapaxes(data[:, :2] - np.mean(data[:, :2], axis=0), 0, -1), 0)
+    eigen_values, eigen_vectors = np.linalg.eig(np.cov(coords))
+    sort_indices = np.argsort(eigen_values)[::-1]
+
+    x_v1, y_v1 = eigen_vectors[:, sort_indices[0]]  # Eigenvector with largest eigenvalue
+    x_v2, y_v2 = eigen_vectors[:, sort_indices[1]]  # Eigenvector with the second largest eigenvalue
+
+    scale = 6
+
+    ax = plt.axes()
+    plt.plot([x_v1 * -scale * 1 + ms, x_v1 * scale * 1 + ms],
+             [y_v1 * -scale * 1 + mc, y_v1 * scale * 1 + mc], color='black')
+    plt.plot([x_v2 * -scale + ms, x_v2 * scale + ms],
+             [y_v2 * -scale + mc, y_v2 * scale + mc], color='blue')
+
+    plt.plot(data[:, 1], data[:, 0], '.', markersize=12, zorder=1)
+    ratio, _, _ = __ir2(data)
+    print ratio, len(data)
+    ax.text(0.05, 0.95,
+            'Group: {}\nRatio: {:0.5f}'.format(group, ratio), color='k',
+            weight='bold',
+            fontsize=15,
+            horizontalalignment='left',
+            verticalalignment='center', transform=ax.transAxes)
+
+    # line_1 = (x1, y1), (x2, y2)
+    # line_2 = (x12, y12), (x22, y22)
+
+    # print data[membership(line_1, line_2, data, membership_ratio=0.7), :].shape
+
+    plt.show()
 
 
 def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negatives=None):
@@ -291,3 +378,62 @@ def visualise_tree_traversal(ndx, true_tracks, clusters, leaves, filename, limit
         ax = set_limits(ax, limits)
         plt.grid()
         ax.figure.savefig(filename)
+
+
+def plot_metrics(metrics_df):
+    # Precision, recall, f1(parameter v, snr)
+    # Precision, recall, f1(parameter v, thickness)
+    # Precision, recall, f1(parameter v, n candidates)
+
+    algorithms = np.unique(metrics_df.index.values)
+    thickness = metrics_df['dx'].unique()
+    snr = metrics_df['snr'].unique()
+
+    # F1 vs SNR at different dx
+    if len(snr) > 1:
+        for t in thickness:
+            plt.figure()
+            title = "F1 against SNR\n(track width: {:d} px)".format(t)
+            data = metrics_df[metrics_df['dx'] == t]
+            ax = sns.lineplot(x='snr', y='f1', style=data.index.values, data=data, markers=True, lw=5, ms=10,
+                              color='black')
+            ax.set_title(title, pad=15)
+            ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
+            ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
+            ax.set_xlabel("SNR (dB)", labelpad=15)
+            ax.set_ylabel("F1 Score", labelpad=15)
+            ax.legend().set_title('Detector')
+            ax.set(ylim=(0, 1))
+            plt.legend(loc='lower right')
+
+    # F1 vs thickness at different SNR
+    if len(thickness) > 1:
+        for s in snr:
+            plt.figure()
+            title = "F1 against track width (SNR = {:d} dB)".format(s)
+            data = metrics_df[metrics_df['snr'] == s]
+            ax = sns.lineplot(x='dx', y='f1', style=data.index.values, data=data, markers=True, lw=5, ms=10,
+                              color='black')
+            ax.set_title(title)
+            ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
+            ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
+            ax.set_xlabel("Track width (px)", labelpad=15)
+            ax.set_ylabel("F1 Score", labelpad=15)
+            ax.legend().set_title('Detector')
+            ax.set(ylim=(0, 1))
+            plt.legend(loc='lower right')
+
+    # P/R per SNR for each algorithm at dx =1
+    # plt.figure()
+    # title = "Precision-Recall curve (track width: 1 px)"
+    # ax = sns.lineplot(x='recall', y='precision', color='black', style=metrics_df.index.values, markers=True,
+    #                   data=metrics_df, lw=5, ms=10)
+    # ax.set(ylim=(0, 1), xlim=(0, 1))
+    # ax.set_title(title)
+    # ax.set_xlabel("Recall")
+    # ax.set_ylabel("Precision")
+    # # ax.legend().texts[0].set_text('SNR (dB)')
+
+    plt.show()
+
+    print metrics_df[['precision', 'recall', 'snr', 'f1']]

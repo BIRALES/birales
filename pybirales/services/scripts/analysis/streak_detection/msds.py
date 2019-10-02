@@ -48,7 +48,7 @@ def h_cluster(X, distance_thold, min_length=2, i=None):
     cluster_labels = fclusterdata_denis(X, 3, criterion='distance')
 
     u, c = np.unique(cluster_labels, return_counts=True)
-    unique_groups = u[c > 2]
+    unique_groups = u[c > min_length]
 
     return cluster_labels, unique_groups
 
@@ -131,7 +131,7 @@ def traverse(root, ndx, bbox, distance_thold=3.0, min_length=2, cluster_size_tho
 
             partition = _partition(ndx, _x1, _x2, _y1, _y2)
             ll = traverse(root.less, partition, (_x1, _x2, _y1, _y2), distance_thold, min_length,
-                                cluster_size_thold)
+                          cluster_size_thold)
 
             if root.split_dim == 0:
                 _y1, _y2 = root.split, y2
@@ -141,7 +141,7 @@ def traverse(root, ndx, bbox, distance_thold=3.0, min_length=2, cluster_size_tho
             partition = _partition(ndx, _x1, _x2, _y1, _y2)
 
             lr = traverse(root.greater, partition, (_x1, _x2, _y1, _y2), distance_thold, min_length,
-                                 cluster_size_thold)
+                          cluster_size_thold)
             # rectangles = rectangles + left
             # rectangles = rectangles + right
 
@@ -172,7 +172,11 @@ def linear_cluster(fclust1, bb, bbox=None, i=None):
     sorted_groups = u_groups[np.argsort(c[min_mask])]
     for g in sorted_groups:
         c = bb[np.where(fclust1 == g)]
-        ratio, _, _ = __ir2(c, i)
+
+        # if len(np.unique(c[:, 1])) < 3:
+        #     continue
+
+        ratio, _, _ = __ir2(c, i=i)
 
         if 0. >= ratio >= best_ratio:
             best_ratio = ratio
@@ -188,7 +192,7 @@ def linear_cluster(fclust1, bb, bbox=None, i=None):
 
 def pl(leave, distance_thold=3):
     (data, bbox) = leave
-    labels, _ = h_cluster(data, distance_thold, min_length=2, i=0)
+    labels, _ = h_cluster(data, distance_thold, min_length=3, i=0)
     return linear_cluster(labels, data, bbox=bbox, i=0)
 
 
@@ -208,37 +212,6 @@ def estimate_leave_eps(clusters):
     mean_leave_size = np.mean(diff, axis=0)
 
     return np.vdot(mean_leave_size, mean_leave_size) ** 0.5 + np.std(diff)
-
-
-def estimate_thickness(cluster, axis=0):
-    _, c = np.unique(cluster[:, axis], return_counts=True)
-    return np.median(c)
-
-
-def thicken(sample, channel, slope, c, offset_sample, offset_channel):
-    na = len(sample)
-    nb = len(channel)
-
-    a = int(offset_sample - 0.5 * offset_sample)
-    b = int(offset_channel - 0.5 * offset_channel)
-
-    offsets_a = np.arange(-a, a)
-    offsets_b = np.arange(-b, b)
-
-    offsets_a = offsets_a[offsets_a != 0]
-    offsets_b = offsets_b[offsets_b != 0]
-
-    nna = na * (len(offsets_a))
-    filled = np.zeros(shape=(nna + nb * (len(offsets_b)), 2))
-    if a > 0:
-        for i, o in enumerate(offsets_a):
-            filled[i * na:i * na + na, :] = np.column_stack([channel, sample + o]).astype(int)
-
-    if b > 0:
-        for i, o in enumerate(offsets_b):
-            filled[nna + (i * nb):nna + (i * nb + nb), :] = np.column_stack([channel + o, sample]).astype(int)
-
-    return filled.astype(int)
 
 
 def fill(test_image, cluster, fill_thickness=False):
@@ -269,20 +242,6 @@ def fill(test_image, cluster, fill_thickness=False):
     filled_missing = np.column_stack(
         [new_channels, new_samples, test_image[new_channels, new_samples]])
     filled_missing = np.append(filled_missing, np.expand_dims(np.full(len(filled_missing), -2), axis=1), axis=1)
-
-    # Thickening functionality (axis should be inverse)
-    if fill_thickness:
-        channel_width = estimate_thickness(cluster, axis=1)
-        sample_width = estimate_thickness(cluster, axis=0)
-        filled_in_thick = thicken(new_samples, new_channels, ransac.estimator_.coef_[0],
-                                  ransac.estimator_.intercept_,
-                                  sample_width,
-                                  channel_width)
-        power = test_image[filled_in_thick[:, 0], filled_in_thick[:, 1]]
-        filled_in_thick = np.append(filled_in_thick, np.expand_dims(power, axis=1), axis=1)
-        filled_in_thick = np.append(filled_in_thick, np.expand_dims(np.full(len(filled_in_thick), -3), axis=1),
-                                    axis=1)
-        filled_missing = np.concatenate([filled_missing, filled_in_thick])
 
     # Combine the extracted data with the predicted
     combined = np.concatenate([cluster, filled_missing])
@@ -326,39 +285,74 @@ def split2(ransac, candidate):
 
     return candidates
 
-def validate_clusters_func(cluster):
-    ransac = linear_model.RANSACRegressor(residual_threshold=5)
-    validated_clusters = validate_cluster(ransac, cluster, 0)
-    return validated_clusters
 
-@timeit
-def validate_clusters3(data, labelled_clusters, unique_labels):
-    pool = multiprocessing.Pool(processes=4)
-
-    candidates = [np.vstack(data[:, 0][labelled_clusters == g]) for g in unique_labels]
-    clusters = [c for sub_clusters in pool.map(validate_clusters_func, candidates) if sub_clusters for c in sub_clusters]
-    pool.close()
-
-    return clusters
-
-@timeit
-# @profile
-def validate_clusters2(data, labelled_clusters, unique_labels, true_tracks, limits, visualisation=False):
-    ransac = linear_model.RANSACRegressor(residual_threshold=5)
+def validate_clusters_func(labelled_cluster):
     tracks = []
+    candidate, g = labelled_cluster
+    ransac = linear_model.RANSACRegressor(residual_threshold=5)
 
-    candidates = [np.vstack(data[:, 0][labelled_clusters == g]) for g in unique_labels]
-    for g, candidate in enumerate(candidates):
-        validated_clusters = validate_cluster(ransac, candidate, g)
+    snr = candidate[:, 2]
 
-        if validated_clusters:
-            tracks.extend(validated_clusters)
+    # filter false positives - based on their SNR values
+    t = np.median(snr) - np.std(snr) * 2
 
-    print 'Reduced', len(candidates) - len(tracks), 'candidates to', len(tracks), 'tracks in validation'
+    candidate = candidate[snr > t]
 
-    # visualise_tracks(tracks, true_tracks, '5_tracks.png', limits=limits, debug=visualisation)
+    unique_samples, indices = np.unique(candidate[:, 1], return_index=True)
+
+    if len(unique_samples) < 15:
+        return tracks
+
+    if abs(__ir2(candidate, min_n=len(candidate) + 1)[0]) < 0.001:
+        return [add_group(candidate, g)]
+
+    ransac.fit(candidate[:, 0].reshape(-1, 1), candidate[:, 1])
+    candidate = candidate[ransac.inlier_mask_]
+
+    valid = is_valid(candidate, min_span_thold=15)
+
+    tmp = [candidate]
+    if not valid:
+        tmp = split2(ransac, candidate)
+
+    for t_track in tmp:
+        s = t_track[:, 1]
+        c = t_track[:, 0]
+
+        if len(np.unique(s)) < 15:
+            continue
+
+        if not density_check(c):
+            continue
+
+        if np.corrcoef(s, c)[0][1] < -0.99 or len(np.unique(s)) > 30:
+            candidate = add_group(t_track, g)
+            tracks.append(candidate)
 
     return tracks
+
+
+def density_check(channels):
+    missing_channels = np.setxor1d(np.arange(min(channels), max(channels)), channels)
+
+    r = len(missing_channels) / float(len(missing_channels) + len(channels))
+    if r >= 0.40:
+        return False
+
+    return True
+
+@timeit
+def validate_clusters3(data, unique_labels):
+    pool = multiprocessing.Pool(processes=4)
+    labelled_clusters = data[:, 5]
+    candidates = [(np.vstack(data[:, 0][labelled_clusters == g]), g) for g in unique_labels]
+    clusters = [c for sub_clusters in pool.map(validate_clusters_func, candidates) if sub_clusters for c in
+                sub_clusters]
+    pool.close()
+
+    print 'Validation reduced {} to {}'.format(len(unique_labels), len(clusters))
+
+    return clusters
 
 
 def is_valid(cluster, r_thold=-0.9, min_length=10, min_span_thold=1):
@@ -381,56 +375,6 @@ def is_valid(cluster, r_thold=-0.9, min_length=10, min_span_thold=1):
     return False
 
 
-# # filter false positives - based on their SNR values
-#     t = np.median(cluster[:, 2]) - np.std(cluster[:, 2]) * 2
-#
-#     # print t, np.mean(test_image[test_image > 0]) * 0.5
-#     return combined[combined[:, 2] > t]
-
-# @profile
-def validate_cluster(ransac, candidate, g):
-    tracks = []
-
-    snr = candidate[:, 2]
-    s = candidate[:, 1]
-
-    # filter false positives - based on their SNR values
-    t = np.median(snr) - np.std(snr) * 2
-
-    candidate = candidate[snr > t]
-
-    ransac.fit(candidate[:, 0].reshape(-1, 1), candidate[:, 1])
-    candidate = candidate[ransac.inlier_mask_]
-
-    if len(np.unique(s)) < 15:
-        return tracks
-
-    valid = is_valid(candidate, min_span_thold=15)
-
-    tmp = [candidate]
-    if not valid:
-        tmp = split2(ransac, candidate)
-
-    for t_track in tmp:
-        s = t_track[:, 1]
-        c = t_track[:, 0]
-
-        if len(np.unique(s)) < 15:
-            continue
-
-        missing_channels = np.setxor1d(np.arange(min(c), max(c)), c)
-
-        r = len(missing_channels) / float(len(missing_channels) + len(c))
-        if r >= 0.40:
-            continue
-
-        if np.corrcoef(s, c)[0][1] < -0.99:
-            candidate = add_group(t_track, g)
-            tracks.append(candidate)
-
-    return tracks
-
-
 @timeit
 def fill_clusters2(tracks, test_img, true_tracks, visualisation=False):
     filled_tracks = [fill(test_img, t) for t in tracks]
@@ -438,23 +382,17 @@ def fill_clusters2(tracks, test_img, true_tracks, visualisation=False):
     visualise_post_processed_tracks(filled_tracks, true_tracks, '6_post-processed-tracks.png', limits=None,
                                     debug=visualisation)
 
-    print 'Last validation removed', len(tracks) - len(filled_tracks), 'tracks from', len(tracks)
-
     return filled_tracks
 
 
 @timeit
-def cluster_leaves(leaves, distance_thold, true_tracks, limits, visualisation=False):
+def cluster_leaves(leaves, distance_thold):
     cluster_data = np.vstack(
         [(cluster, j, x, y, p) for i, (cluster, best_gs, ratio, x1, x2, y1, y2, n, x, y, p, j) in enumerate(leaves)])
 
     cluster_labels, unique_labels = h_cluster_euclidean(cluster_data, distance_thold)
 
-    visualise_clusters(cluster_data, cluster_labels, unique_labels, true_tracks, filename='3_clusters.png',
-                       limits=limits,
-                       debug=visualisation)
-
-    return cluster_labels, unique_labels, cluster_data
+    return np.append(cluster_data, cluster_labels.reshape(-1, 1), axis=1), unique_labels
 
 
 @timeit
@@ -486,40 +424,3 @@ def build_tree(ndx, leave_size, n_axis, true_tracks, limits, debug=False, visual
 
     return KDTree(ndx[:, :n_axis], leave_size)
 
-
-def visualise_ir2(data, group, ratio2):
-    if len(data) >= 10:
-        return 0., 0., data
-
-    ms, mc = np.mean(data[:, 1]), np.mean(data[:, 0])
-    coords = np.flip(np.swapaxes(data[:, :2] - np.mean(data[:, :2], axis=0), 0, -1), 0)
-    eigen_values, eigen_vectors = np.linalg.eig(np.cov(coords))
-    sort_indices = np.argsort(eigen_values)[::-1]
-
-    x_v1, y_v1 = eigen_vectors[:, sort_indices[0]]  # Eigenvector with largest eigenvalue
-    x_v2, y_v2 = eigen_vectors[:, sort_indices[1]]  # Eigenvector with the second largest eigenvalue
-
-    scale = 6
-
-    ax = plt.axes()
-    plt.plot([x_v1 * -scale * 1 + ms, x_v1 * scale * 1 + ms],
-             [y_v1 * -scale * 1 + mc, y_v1 * scale * 1 + mc], color='black')
-    plt.plot([x_v2 * -scale + ms, x_v2 * scale + ms],
-             [y_v2 * -scale + mc, y_v2 * scale + mc], color='blue')
-
-    plt.plot(data[:, 1], data[:, 0], '.', markersize=12, zorder=1)
-    ratio, _, _ = __ir2(data)
-    print ratio, len(data)
-    ax.text(0.05, 0.95,
-            'Group: {}\nRatio: {:0.5f}'.format(group, ratio), color='k',
-            weight='bold',
-            fontsize=15,
-            horizontalalignment='left',
-            verticalalignment='center', transform=ax.transAxes)
-
-    # line_1 = (x1, y1), (x2, y2)
-    # line_2 = (x12, y12), (x22, y22)
-
-    # print data[membership(line_1, line_2, data, membership_ratio=0.7), :].shape
-
-    plt.show()

@@ -138,7 +138,7 @@ def _validate_clusters(clusters):
 # @profile
 def msds_q(test_image):
     limits = get_limits(test_image, true_tracks)
-    limits = (0, 200, 8000, 8100)
+    limits = (0, 100, 0, 1000)
     # limits = (0, 200, 70, 200)
     # limits = (50, 175, 4000, 7100)
     # limits = None
@@ -160,13 +160,16 @@ def msds_q(test_image):
     visualise_tree_traversal(ndx, true_tracks, clusters, leaves, '2_processed_leaves.png', limits=limits, vis=vis)
 
     # Cluster the leaves based on their vicinity to each other
-    cluster_labels, unique_labels, cluster_data = cluster_leaves(clusters, distance_thold=estimate_leave_eps(clusters),
-                                                                 true_tracks=true_tracks, limits=limits,
-                                                                 visualisation=debug)
+    cluster_data, unique_labels = cluster_leaves(clusters, distance_thold=estimate_leave_eps(clusters))
+    cluster_labels = cluster_data[:, 5]
 
-
+    visualise_clusters(cluster_data, cluster_labels, unique_labels, true_tracks, filename='3_clusters.png',
+                       limits=limits,
+                       debug=debug)
     # Filter invalid clusters
-    tracks = validate_clusters3(cluster_data, labelled_clusters=cluster_labels, unique_labels=unique_labels)
+    tracks = validate_clusters3(cluster_data, unique_labels=unique_labels)
+
+    # tracks = _validate_clusters(clusters)
 
     visualise_tracks(tracks, true_tracks, '5_tracks.png', limits=limits, debug=debug)
 
@@ -176,26 +179,84 @@ def msds_q(test_image):
     return valid_tracks
 
 
+def test_detector(filtered_test_img, noise_mean, true_tracks, detector, thickness, snr):
+    # Estimate the noise
+    t = thickness
+    s = snr
+    d_name, detect, (f_name, filter_func) = detector
+
+    metrics[s] = {}
+
+    print "\nEvaluating filters with tracks at SNR={:0.2f} dB".format(s)
+
+    # Add tracks to the true data
+    true_image = add_tracks(np.zeros(shape=filtered_test_img.shape), true_tracks, noise_mean, s)
+
+    data = filtered_test_img.copy()
+
+    # Add tracks to the simulated data
+    data = add_tracks(data, true_tracks, noise_mean, s)
+
+    if filter_func != no_filter:
+        # Filter the data in generate metrics
+        # Split data in chunks
+        start = time.time()
+        mask, threshold = chunked_filtering(data, filter_func)
+        # mask, _ = hit_and_miss(data, test_img, mask)
+        timing = time.time() - start
+        print "The {} filtering algorithm, finished in {:2.3f}s".format(f_name, timing)
+
+        visualise_filter(data, mask, true_tracks, f_name, s, threshold, visualise=False)
+
+        data[mask] = -100
+
+    # feature extraction - detection
+    print "Running {} algorithm".format(d_name)
+    start = time.time()
+    candidates = detect(data)
+    timing = time.time() - start
+    print "The {} detection algorithm, found {} candidates in {:2.3f}s".format(d_name, len(candidates),
+                                                                               timing)
+
+    # evaluation
+    metrics[s][d_name] = evaluate_detector(true_image, data, candidates, timing, s, t)
+
+    return metrics
+
+
 if __name__ == '__main__':
     debug = False
     vis = False
-    # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
-    snr = [25]
-    snr = [2, 3, 5, 10, 15, 20, 25]
-    snr = [5]
+    plot_results = True
+    from_file = False
+
+    if from_file:
+        metrics_df = pd.read_pickle("metrics_df.pkl")
+        plot_metrics(metrics_df)
+
+        exit()
+
     N_TRACKS = 15
     N_CHANS = 8192
     N_SAMPLES = 256
-    TRACK_THICKNESS = 1
+
+    track_thickness = [1, 2, 5]
+    # track_thickness = [1]
+
+    # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
+    snr = [25]
+    snr = [2, 3, 5, 10, 15, 20, 25]
+    # snr = [5, 10]
+
     metrics = {}
     metrics_df = pd.DataFrame()
 
     detectors = [
         ('Naive DBSCAN', naive_dbscan, ('Filter', sigma_clipping4)),
-        # ('HDBSCAN', hdbscan, ('Filter', sigma_clipping4)),
+        ## ('HDBSCAN', hdbscan, ('Filter', sigma_clipping4)),
         ('msds_q', msds_q, ('Filter', sigma_clipping)),
-        # ('Hough Transform', hough_transform, ('Filter', global_thres)),
-        # ('Astride', astride, ('No Filter', no_filter)),
+        ('Hough Transform', hough_transform, ('Filter', global_thres)),
+        ('Astride', astride, ('No Filter', no_filter)),
         # ('CFAR', None, ('No Filter', cfar)),
     ]
 
@@ -209,71 +270,76 @@ if __name__ == '__main__':
     filtered_test_img = rfi_filter(test_img)
     # visualise_image(test_img, 'Test Image: no tracks', tracks=None)
 
-    # Generate a number of tracks
-    true_tracks = get_test_tracks(N_TRACKS, GRADIENT_RANGE, TRACK_LENGTH_RANGE, filtered_test_img.shape,
-                                  TRACK_THICKNESS)
-
     # Estimate the noise
     noise_mean = np.mean(test_img)
 
     print 'Mean power (noise): ', noise_mean
+    for t in track_thickness:
+        np.random.seed(SEED)
+        # Generate a number of tracks
+        true_tracks = get_test_tracks(N_TRACKS, GRADIENT_RANGE, TRACK_LENGTH_RANGE, filtered_test_img.shape, t)
 
-    for d_name, detect, (f_name, filter_func) in detectors:
-        # filtering_algorithm = ('Filter', filter_func)
-        for s in snr:
-            metrics[s] = {}
-            metrics_tmp_df = pd.DataFrame()
-            np.random.seed(SEED)
-            print "\nEvaluating filters with tracks at SNR={:0.2f} dB".format(s)
+        for d_name, detect, (f_name, filter_func) in detectors:
+            # filtering_algorithm = ('Filter', filter_func)
 
-            # Add tracks to the true data
-            true_image = add_tracks(np.zeros(shape=filtered_test_img.shape), true_tracks, noise_mean, s)
+            for s in snr:
+                metrics[s] = {}
+                metrics_tmp_df = pd.DataFrame()
 
-            data = filtered_test_img.copy()
+                print "\nEvaluating filters with tracks at SNR={:0.2f} dB".format(s)
 
-            # Add tracks to the simulated data
-            data = add_tracks(data, true_tracks, noise_mean, s)
+                # Add tracks to the true data
+                true_image = add_tracks(np.zeros(shape=filtered_test_img.shape), true_tracks, noise_mean, s)
 
-            # visualise_image(data, 'Test Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks, visualise=True )
+                data = filtered_test_img.copy()
 
-            # visualise_image(true_image, 'Truth Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks)
+                # Add tracks to the simulated data
+                data = add_tracks(data, true_tracks, noise_mean, s)
 
-            if filter_func != no_filter:
-                # Filter the data in generate metrics
-                # data = test_img.copy()
+                # visualise_image(data, 'Test Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks, visualise=True )
 
-                # Split data in chunks
-                start = time.time()
-                mask, threshold = chunked_filtering(data, filter_func)
-                # mask, _ = hit_and_miss(data, test_img, mask)
-                timing = time.time() - start
-                print "The {} filtering algorithm, finished in {:2.3f}s".format(f_name, timing)
+                # visualise_image(true_image, 'Truth Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks)
 
-                visualise_filter(data, mask, true_tracks, f_name, s, threshold, visualise=False)
+                if filter_func != no_filter:
+                    # Filter the data in generate metrics
+                    # data = test_img.copy()
 
-                # metrics[s][f_name] = evaluate_filter(true_image, data, ~mask, timing, s, TRACK_THICKNESS)
+                    # Split data in chunks
+                    start = time.time()
+                    mask, threshold = chunked_filtering(data, filter_func)
+                    # mask, _ = hit_and_miss(data, test_img, mask)
+                    timing = time.time() - start
+                    print "The {} filtering algorithm, finished in {:2.3f}s".format(f_name, timing)
 
-                # data[:] = False
-                # data[~mask] = True
-                data[mask] = -100
+                    visualise_filter(data, mask, true_tracks, f_name, s, threshold, visualise=False)
 
-                # print np.mean(mask), s, threshold
+                    # metrics[s][f_name] = evaluate_filter(true_image, data, ~mask, timing, s, TRACK_THICKNESS)
+
+                    # data[:] = False
+                    # data[~mask] = True
+                    data[mask] = -100
+
+                    # print np.mean(mask), s, threshold
+                    # continue
                 # continue
-            # continue
-            # feature extraction - detection
-            print "Running {} algorithm".format(d_name)
-            start = time.time()
-            candidates = detect(data)
-            timing = time.time() - start
-            print "The {} detection algorithm, found {} candidates in {:2.3f}s".format(d_name, len(candidates), timing)
+                # feature extraction - detection
+                print "Running {} algorithm".format(d_name)
+                start = time.time()
+                candidates = detect(data)
+                timing = time.time() - start
+                print "The {} detection algorithm, found {} candidates in {:2.3f}s".format(d_name, len(candidates),
+                                                                                           timing)
 
-            # visualise candidates
-            # visualise_detector(data, candidates, tracks, d_name, s, visualise=True)
+                # visualise candidates
+                # visualise_detector(data, candidates, tracks, d_name, s, visualise=True)
 
-            # evaluation
-            metrics[s][d_name] = evaluate_detector(true_image, data, candidates, timing, s, TRACK_THICKNESS)
+                # evaluation
+                metrics[s][d_name] = evaluate_detector(true_image, data, candidates, timing, s, t)
 
-            metrics_df = metrics_df.append(pd.DataFrame.from_dict(metrics[s], orient='index'))
-        # data association
+                metrics_df = metrics_df.append(pd.DataFrame.from_dict(metrics[s], orient='index'))
 
-    print metrics_df[['snr', 'f1', 'N', 'dt', 'precision', 'recall']].sort_values(by=['f1'], )
+    print metrics_df[['snr', 'f1', 'N', 'dt', 'precision', 'recall', 'dx']].sort_values(by=['dx', 'snr', 'f1'])
+
+    if plot_results:
+        metrics_df.to_pickle("metrics_df.pkl")
+        plot_metrics(metrics_df)

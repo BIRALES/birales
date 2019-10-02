@@ -3,6 +3,7 @@ import time
 import numpy as np
 from numba import njit
 
+
 def get_clusters(ndx, c_labels):
     # Add cluster labels to the data
     labelled_data = np.append(ndx, np.expand_dims(c_labels, axis=1), axis=1)
@@ -61,8 +62,9 @@ def _partition(data, x1, x2, y1, y2):
     partition_y = data[np.logical_and(ys >= y1, ys <= y2)]
     return partition_y[np.logical_and(partition_y[:, 1] >= x1, partition_y[:, 1] <= x2)]
 
-def __ir2(data, i=None):
-    if len(data) >= 10:
+
+def __ir2(data, min_n=10, i=None):
+    if len(data) >= min_n:
         return 0., 0., 1
 
     # line is horizontal
