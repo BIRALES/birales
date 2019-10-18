@@ -114,6 +114,18 @@ class Beamformer(ProcessingModule):
         self._beamformer.beamform(input_data.ravel(), self._pointing.weights.ravel(), output_data.ravel(),
                                   nsamp, nsubs, self._nbeams, nants, npols, self._nthreads)
 
+        # print 'input_data', input_data.shape, input_data.dtype
+        # print 'weights', self._pointing.weights.shape, self._pointing.weights.dtype
+        # print 'output_data', output_data.shape, output_data.dtype
+        # print 'nsamp', nsamp
+        # print 'nsubs', nsubs
+        # print '_nbeams', self._nbeams
+        # print 'nants', nants
+        # print 'npols', npols
+        # print '_nthreads', self._nt#hreads
+
+        # self.beamformer2(sample, 32, input_data, self._pointing.weights, output_data)
+
         # Update observation information
         obs_info['nbeams'] = self._nbeams
         obs_info['pointings'] = self._config.pointings
@@ -125,6 +137,12 @@ class Beamformer(ProcessingModule):
     def stop(self):
         self._stop.set()
         logging.info('{} module stop flag set'.format(self.name))
+
+    # @njit(parallel=True, fastmath=True)
+    def beamformer2(self, sample, nbeams, data, weights, output):
+        for b in range(0, nbeams):
+            x = np.dot(data, weights[0, b, :])
+            output[b, i] = np.sum(np.power(np.abs(x), 2))
 
 
 class Pointing(object):
@@ -271,7 +289,7 @@ class Pointing(object):
 
         # Point beam to required ALT AZ
         log.debug("LAT: {}, HA: {}, DEC: {}, EL: {}, AZ: {}".format(self._reference_location[1], ha.deg, ref_dec +
-                                                                     delta_dec, beam_el.deg, beam_az.deg))
+                                                                    delta_dec, beam_el.deg, beam_az.deg))
         self.point_array_static(beam, beam_el, beam_az)
 
     def point_array(self, beam, ref_dec, ha, delta_dec):

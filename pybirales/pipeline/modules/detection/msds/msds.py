@@ -2,7 +2,6 @@
 
 import multiprocessing
 
-import matplotlib.pyplot as plt
 import numpy as np
 from numba import njit
 from scipy.cluster.hierarchy import linkage, fcluster
@@ -11,8 +10,19 @@ from scipy.stats import pearsonr
 from sklearn import linear_model
 
 from util import timeit, __ir2
-from visualisation import visualise_post_processed_tracks, visualise_tracks, visualise_clusters, \
-    visualise_filtered_data, visualise_tree_traversal
+
+P_VALUE = 0.05
+INF_DIST = 10000.
+MIN_CLST_DIST = 3
+MIN_MBR_LNGTH = 2
+SLOPE_ANGLE_RANGE = (-10, 0)
+MIN_CHILDREN = 3
+MIN_UNQ_SMPLS = 15
+MIN_IR = 0.001
+MIN_SPAN_THLD = 15
+MIN_CORR = -0.99
+MIN_UNQ_SMPLS_2 = 30
+MAX_MISSING_DATA = 0.4
 
 
 # @profile
@@ -86,8 +96,9 @@ def fclusterdata_denis(X, threshold, criterion, min_r=-1e9):
     return fcluster(linked, threshold, criterion=criterion)
 
 
+@timeit
 def h_cluster_euclidean(X, distance_thold):
-    cluster_labels = fclusterdata_denis(X[:, 2:4].astype(float), distance_thold, min_r=-1, criterion='distance')
+    cluster_labels = fclusterdata_denis(X[:, 2:4].astype(float), distance_thold, min_r=-10, criterion='distance')
 
     # cluster_labels = fclusterdata(X[:, 2:4].astype(float), distance_thold, metric=mydist3, criterion='distance')
 
@@ -161,17 +172,19 @@ def eu(x1, x2, y1, y2):
     return np.vdot(diff, diff) ** 0.5
 
 
-def linear_cluster(fclust1, bb, bbox=None, i=None):
-    u, c = np.unique(fclust1, return_counts=True)
+def linear_cluster(leave, distance_thold=3, i=0):
+    (data, bbox) = leave
+    labels, _ = h_cluster(data, distance_thold, min_length=3, i=0)
+    u, c = np.unique(labels, return_counts=True)
     min_mask = c > 3
     u_groups = u[min_mask]
 
     best_ratio = -0.1
-    best_data = bb
+    best_data = data
     # start with the smallest grouping
     sorted_groups = u_groups[np.argsort(c[min_mask])]
     for g in sorted_groups:
-        c = bb[np.where(fclust1 == g)]
+        c = data[np.where(labels == g)]
 
         # if len(np.unique(c[:, 1])) < 3:
         #     continue
@@ -190,18 +203,18 @@ def linear_cluster(fclust1, bb, bbox=None, i=None):
     return None
 
 
-def pl(leave, distance_thold=3):
-    (data, bbox) = leave
-    labels, _ = h_cluster(data, distance_thold, min_length=3, i=0)
-    return linear_cluster(labels, data, bbox=bbox, i=0)
+# def pl(leave, distance_thold=3):
+#     (data, bbox) = leave
+#     labels, _ = h_cluster(data, distance_thold, min_length=3, i=0)
+#     return linear_cluster(labels, data, bbox=bbox, i=0)
 
 
 @timeit
-def process_leaves2(leaves):
-    pool = multiprocessing.Pool(processes=8)
+def process_leaves(pool, leaves):
+    # pool = multiprocessing.Pool(processes=8)
 
-    clusters = [c for c in pool.map(pl, leaves) if c]
-    pool.close()
+    clusters = [c for c in pool.map(linear_cluster, leaves) if c]
+    # pool.close()
 
     return clusters
 
@@ -224,7 +237,9 @@ def fill(test_image, cluster, fill_thickness=False):
     # if n > len(cluster):
     #     return cluster
 
-    sample_gaps = np.arange(min(sample), max(sample))
+    # sample_gaps = np.arange(min(sample), max(sample))
+
+    sample_gaps = np.arange(0, 160)
     missing_samples = np.setxor1d(sample_gaps, sample)
 
     predicted_channel = ((missing_samples - ransac.estimator_.intercept_) / ransac.estimator_.coef_[0]).astype(int)
@@ -264,7 +279,7 @@ def add_group(candidate, group):
 
 
 # @profile
-def split2(ransac, candidate):
+def split(ransac, candidate):
     candidates = []
     ransac.fit(candidate[:, 0].reshape(-1, 1), candidate[:, 1])
     if np.sum(~ransac.inlier_mask_) > 0.2 * len(candidate):
@@ -300,65 +315,96 @@ def validate_clusters_func(labelled_cluster):
 
     unique_samples, indices = np.unique(candidate[:, 1], return_index=True)
 
-    if len(unique_samples) < 15:
+    if len(unique_samples) < MIN_UNQ_SMPLS:
+        print 'not enough unique samples', len(unique_samples), g, np.mean(candidate[:, 0])
         return tracks
 
-    if abs(__ir2(candidate, min_n=len(candidate) + 1)[0]) < 0.001:
+    if abs(__ir2(candidate, min_n=len(candidate) + 1)[0]) < MIN_IR:
+        print 'Ir is not small enough', np.mean(candidate[:, 0]), g
         return [add_group(candidate, g)]
 
     ransac.fit(candidate[:, 0].reshape(-1, 1), candidate[:, 1])
     candidate = candidate[ransac.inlier_mask_]
 
-    valid = is_valid(candidate, min_span_thold=15)
+    valid = is_valid(candidate, min_span_thold=MIN_SPAN_THLD)
 
     tmp = [candidate]
     if not valid:
-        tmp = split2(ransac, candidate)
+        tmp = split(ransac, candidate)
 
     for t_track in tmp:
+
+        t_track = density_check(t_track)
+
+        if not np.any(t_track):
+            print 'not dense', g
+            continue
+
         s = t_track[:, 1]
         c = t_track[:, 0]
 
-        if len(np.unique(s)) < 15:
-            continue
-
-        if not density_check(c):
-            continue
-
-        if np.corrcoef(s, c)[0][1] < -0.99 or len(np.unique(s)) > 30:
+        if np.corrcoef(s, c)[0][1] < MIN_CORR or len(np.unique(s)) > MIN_UNQ_SMPLS_2:
             candidate = add_group(t_track, g)
             tracks.append(candidate)
 
     return tracks
 
 
-def density_check(channels):
-    missing_channels = np.setxor1d(np.arange(min(channels), max(channels)), channels)
+def density_check(t_track):
+    channels = t_track[:, 0]
+    samples = t_track[:, 1]
 
-    r = len(missing_channels) / float(len(missing_channels) + len(channels))
-    if r >= 0.40:
+    missing_channels = np.setxor1d(np.arange(min(channels), max(channels)), channels)
+    r_channels = len(missing_channels) / float(len(missing_channels) + len(channels))
+
+    if r_channels >= MAX_MISSING_DATA:
+        sorted_track = t_track[(-t_track[:, 1]).argsort()]
+        gaps = np.where(np.diff(sorted_track[:, 0]) > 3)[0]
+        segments = np.array_split(sorted_track, gaps)
+
+        valid = [seg for seg in segments if len(seg) > 5]
+
+        if valid:
+            return np.vstack(valid)
+
+        return False
+    missing_samples = np.setxor1d(np.arange(min(samples), max(samples)), samples)
+    r_samples = len(missing_samples) / float(len(missing_samples) + len(samples))
+
+    if r_samples >= MAX_MISSING_DATA:
+        sorted_track = t_track[(-t_track[:, 1]).argsort()]
+        gaps = np.where(np.diff(sorted_track[:, 1]) > 3)[0]
+        segments = np.array_split(sorted_track, gaps)
+        valid = [seg for seg in segments if len(seg) > 5]
+        if valid:
+            return np.vstack(valid)
+
         return False
 
-    return True
+    return t_track
+
 
 @timeit
-def validate_clusters3(data, unique_labels):
-    pool = multiprocessing.Pool(processes=4)
+def validate_clusters(pool, data, unique_labels):
     labelled_clusters = data[:, 5]
     candidates = [(np.vstack(data[:, 0][labelled_clusters == g]), g) for g in unique_labels]
-    clusters = [c for sub_clusters in pool.map(validate_clusters_func, candidates) if sub_clusters for c in
-                sub_clusters]
-    pool.close()
+    # clusters = [c for sub_clusters in pool.map(validate_clusters_func, candidates) if sub_clusters for c in
+    #             sub_clusters]
+
+    clusters = []
+    for c in candidates:
+        clusters.extend(validate_clusters_func(c))
+    # clusters = [validate_clusters_func(c) for c in candidates]
 
     print 'Validation reduced {} to {}'.format(len(unique_labels), len(clusters))
 
     return clusters
 
 
-def is_valid(cluster, r_thold=-0.9, min_length=10, min_span_thold=1):
+def is_valid(cluster, r_thold=-0.9, min_span_thold=1):
     c = cluster[:, 0]
     s = cluster[:, 1]
-    if len(cluster) < min_length:
+    if len(cluster) < MIN_UNQ_SMPLS:
         return False
 
     if len(np.unique(s)) == 1 or len(np.unique(c)) == 1:
@@ -369,20 +415,10 @@ def is_valid(cluster, r_thold=-0.9, min_length=10, min_span_thold=1):
 
     pear = pearsonr(s, c)
 
-    if pear[1] < 0.05 and pear[0] < r_thold:
+    if pear[1] < P_VALUE and pear[0] < r_thold:
         return True
 
     return False
-
-
-@timeit
-def fill_clusters2(tracks, test_img, true_tracks, visualisation=False):
-    filled_tracks = [fill(test_img, t) for t in tracks]
-
-    visualise_post_processed_tracks(filled_tracks, true_tracks, '6_post-processed-tracks.png', limits=None,
-                                    debug=visualisation)
-
-    return filled_tracks
 
 
 @timeit
@@ -390,14 +426,20 @@ def cluster_leaves(leaves, distance_thold):
     cluster_data = np.vstack(
         [(cluster, j, x, y, p) for i, (cluster, best_gs, ratio, x1, x2, y1, y2, n, x, y, p, j) in enumerate(leaves)])
 
-    cluster_labels, unique_labels = h_cluster_euclidean(cluster_data, distance_thold)
+    if len(leaves) == 1:
+        return np.append(cluster_data, np.full(fill_value=1, shape=cluster_data.shape[0]).reshape(-1, 1), axis=1), [1]
 
+    cluster_labels, unique_labels = h_cluster_euclidean(cluster_data, distance_thold)
+    # print cluster_data.shape, cluster_labels.shape, unique_labels
     return np.append(cluster_data, cluster_labels.reshape(-1, 1), axis=1), unique_labels
 
 
 @timeit
 def pre_process_data(test_image, noise_estimate):
+    # print np.min(test_image), noise_estimate, np.shape(test_image)
     ndx = np.column_stack(np.where(test_image > 0.))
+    # print 'ndx', ndx.shape, test_image.shape
+    # print len(ndx), min(ndx[:, 0]), max(ndx[:, 0])
 
     power = test_image[test_image > 0.]
 
@@ -408,7 +450,7 @@ def pre_process_data(test_image, noise_estimate):
 
 
 @timeit
-def build_tree(ndx, leave_size, n_axis, true_tracks, limits, debug=False, visualisation=False):
+def build_tree(ndx, leave_size, n_axis):
     """
     Build a 2D or 3D kd tree.
 
@@ -420,7 +462,4 @@ def build_tree(ndx, leave_size, n_axis, true_tracks, limits, debug=False, visual
     :return:
     """
 
-    visualise_filtered_data(ndx, true_tracks, '1_filtered_data', limits=limits, debug=debug, vis=visualisation)
-
     return KDTree(ndx[:, :n_axis], leave_size)
-

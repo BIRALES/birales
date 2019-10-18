@@ -4,8 +4,8 @@ space debris tracks from the filtered data
 
 """
 
-from astride import Streak
 from astride.utils.edge import EDGE
+from hdbscan import HDBSCAN
 from skimage import measure
 from skimage.transform import probabilistic_hough_line
 from sklearn.cluster import DBSCAN
@@ -13,11 +13,10 @@ from sklearn.cluster import DBSCAN
 from configuration import *
 from evaluation import *
 from filters import *
-from msds import *
+from pybirales.pipeline.modules.detection.msds.msds import *
+from pybirales.pipeline.modules.detection.msds.util import get_clusters
+from pybirales.pipeline.modules.detection.msds.visualisation import *
 from receiver import *
-from util import get_clusters
-from visualisation import *
-from hdbscan import HDBSCAN
 
 
 def hough_transform(test_image, unfiltered_image=None):
@@ -138,24 +137,26 @@ def _validate_clusters(clusters):
 # @profile
 def msds_q(test_image):
     limits = get_limits(test_image, true_tracks)
-    limits = (0, 100, 0, 1000)
+    limits = (0, 200, 0, 1000)
     # limits = (0, 200, 70, 200)
     # limits = (50, 175, 4000, 7100)
     # limits = None
-
+    pool = multiprocessing.Pool(processes=8)
     # Pre-process the input data
     ndx = pre_process_data(test_image, noise_estimate=0.93711)
 
     # Build quad/nd tree that spans all the data points
-    k_tree = build_tree(ndx, leave_size=30, n_axis=2, true_tracks=true_tracks, limits=limits, debug=debug,
-                        visualisation=vis)
+    k_tree = build_tree(ndx, leave_size=30, n_axis=2)
+
+    visualise_filtered_data(ndx, true_tracks, '1_filtered_data', limits=limits, debug=debug, vis=vis)
 
     # Traverse the tree and identify valid linear streaks
     leaves = traverse(k_tree.tree, ndx,
                       bbox=(0, test_image.shape[1], 0, test_image.shape[0]),
                       distance_thold=3., min_length=2., cluster_size_thold=10.)
 
-    clusters = process_leaves2(leaves)
+
+    clusters = process_leaves(pool, leaves)
 
     visualise_tree_traversal(ndx, true_tracks, clusters, leaves, '2_processed_leaves.png', limits=limits, vis=vis)
 
@@ -167,14 +168,15 @@ def msds_q(test_image):
                        limits=limits,
                        debug=debug)
     # Filter invalid clusters
-    tracks = validate_clusters3(cluster_data, unique_labels=unique_labels)
-
-    # tracks = _validate_clusters(clusters)
+    tracks = validate_clusters(pool, cluster_data, unique_labels=unique_labels)
 
     visualise_tracks(tracks, true_tracks, '5_tracks.png', limits=limits, debug=debug)
 
     # Fill any missing data (increase recall)
-    valid_tracks = fill_clusters2(tracks, test_image, true_tracks=true_tracks, visualisation=debug)
+    valid_tracks = [fill(test_img, t) for t in tracks]
+
+    visualise_post_processed_tracks(valid_tracks, true_tracks, '6_post-processed-tracks.png', limits=None,
+                                    debug=debug)
 
     return valid_tracks
 
@@ -227,7 +229,7 @@ def test_detector(filtered_test_img, noise_mean, true_tracks, detector, thicknes
 if __name__ == '__main__':
     debug = False
     vis = False
-    plot_results = True
+    plot_results = False
     from_file = False
 
     if from_file:
@@ -241,22 +243,22 @@ if __name__ == '__main__':
     N_SAMPLES = 256
 
     track_thickness = [1, 2, 5]
-    # track_thickness = [1]
+    track_thickness = [1]
 
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
     snr = [25]
     snr = [2, 3, 5, 10, 15, 20, 25]
-    # snr = [5, 10]
+    snr = [5]
 
     metrics = {}
     metrics_df = pd.DataFrame()
 
     detectors = [
-        ('Naive DBSCAN', naive_dbscan, ('Filter', sigma_clipping4)),
+        # ('Naive DBSCAN', naive_dbscan, ('Filter', sigma_clipping4)),
         ## ('HDBSCAN', hdbscan, ('Filter', sigma_clipping4)),
         ('msds_q', msds_q, ('Filter', sigma_clipping)),
-        ('Hough Transform', hough_transform, ('Filter', global_thres)),
-        ('Astride', astride, ('No Filter', no_filter)),
+        # ('Hough Transform', hough_transform, ('Filter', global_thres)),
+        # ('Astride', astride, ('No Filter', no_filter)),
         # ('CFAR', None, ('No Filter', cfar)),
     ]
 

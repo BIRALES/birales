@@ -8,6 +8,7 @@ from pybirales import settings
 import time
 import logging as log
 import threading
+import sys
 
 
 class Module(Thread):
@@ -189,7 +190,10 @@ class ProcessingModule(Module):
                 res = self.process(obs_info, input_data, output_data)
                 tt = time.time() - s
 
-                if tt < settings.receiver.nsamp / settings.observation.samples_per_second:
+                nsamp = settings.rawdatareader.nsamp
+                # nsamp = settings.receiver.nsamp
+
+                if tt < float(nsamp) / settings.observation.samples_per_second:
                     log.info('[Iteration {}] {} finished in {:0.3f}s'.format(self._iter_count, self.name, tt))
                 else:
                     log.warning('[Iteration {}] {} finished in {:0.3f}s'.format(self._iter_count, self.name, tt))
@@ -216,7 +220,6 @@ class ProcessingModule(Module):
             # Release reader lock
             if self._input is not None:
                 self._input.release_read()
-
 
             # A short sleep to force a context switch (since locks do not force one)
             time.sleep(0.001)

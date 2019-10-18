@@ -207,6 +207,8 @@ def get_calibration_coefficients(mode='uncalibrated'):
 
     raise BaseException("Calibration mode is not valid")
 
+def estimate_noise(b, output):
+    return np.mean(np.concatenate([output[b, -50:] , output[b, :100]]))
 
 def visualise_bf_data(obs_name, skip, integration_time, output, beams, file_name=None, nants_to_process=32):
     fig, ax = plt.subplots(1)
@@ -215,9 +217,12 @@ def visualise_bf_data(obs_name, skip, integration_time, output, beams, file_name
     samples = np.arange(0, output.shape[1], 1)
     time = integration_time * samples * skip
     for b in beams:
-        noise_estimate = np.mean(np.concatenate([output[b, -50:] , output[b, :100]]))
+        noise_estimate = estimate_noise(b, output)
         power = output[b, :] - noise_estimate
+        power = power.real
+        power[power <= 0] = np.nan
         power = 10 * np.log10(power)  # convert to db
+
         noise_db = 10*np.log10(noise_estimate)
         ax.plot(time, power, label='Beam {:d}'.format(b))
 
@@ -250,14 +255,23 @@ def generate_csv(output, integration_time, skip, file_name):
 
     for b in range(0, output.shape[0]):
         samples = np.arange(0, output.shape[1], 1)
+        noise_estimate = estimate_noise(b, output).real
+        power = output[b, :] - noise_estimate
+        power = power.real
+        power[power <= 0] = np.nan
+        power = 10 * np.log10(power)  # convert to db
+        noise_db = 10 * np.log10(noise_estimate)
+
         df = df.append(pd.DataFrame({
             'sample': samples,
             'time': integration_time * samples * skip,
-            'power': output[b][:],
-            'beam': np.full(output.shape[1], b)
+            'power': output[b][:].real,
+            'beam': np.full(output.shape[1], b),
+            'power_db': power,
+            'noise_est_db': np.full(len(power), noise_db)
         }), ignore_index=True, sort=False)
 
-    df.to_csv(file_name + '.csv')
+    df.to_csv(file_name + '.csv', index=False, na_rep='NULL')
 
 
 def get_raw_filepaths(root_filepath):
@@ -331,14 +345,15 @@ def run():
         # Output data to csv file
         generate_csv(combined_output, integration_time, skip, output_file_path)
 
-        # Output data as an numpy array
-        np.save(output_file_path + '.npy', combined_output)
+        if run_beamformer:
+            # Output data as an numpy array
+            np.save(output_file_path + '.npy', combined_output)
 
 if __name__ == '__main__':
     # User defined parameters
     visualise = True
     run_beamformer = False
-    save_data = False
+    save_data = True
 
     nsamp = 32768  # samples to integrate
     nants = 32  # number of antennas
@@ -351,6 +366,8 @@ if __name__ == '__main__':
     obs_raw_file = "/media/denis/backup/birales/2019/2019_09_14/CASA/CASA_raw.dat"
     # # obs_raw_file = "/media/denis/backup/birales/2019/2019_08_14/CAS_A_FES/CAS_A_FES_raw.dat"
 
-    for n in [4, 8, 16, 32]:
-        nants_to_process = n
-        run()
+    run()
+
+    # for n in [4, 8, 16, 32]:
+    #     nants_to_process = n
+    #     run()

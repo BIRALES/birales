@@ -412,12 +412,13 @@ class TrackTransittedEvent(Event):
 
         Event.__init__(self)
         self.payload[
-            'body'] = 'Track {:03d} has `transitted` (score: {:0.3f}, size:{} ({} beams), doppler: {:0.3f} Hz at {:%H:%M:%S} UTC).'.format(
+            'body'] = 'Track {:03d} has `transitted` (score: {:0.3f}, size:{} duration:{}s, ({} beams), doppler: {:0.3f} Hz at {:%H:%M:%S} UTC) at {:0.3f} dB.'.format(
             id(sd_track) % 1000,
             sd_track.r_value,
             sd_track.size,
+            sd_track.duration,
             sd_track.activated_beams,
-            sd_track.ref_data['doppler'], sd_track.ref_data['time'])
+            sd_track.ref_data['doppler'], sd_track.ref_data['time'], sd_track.ref_data['snr'])
         log.info(self.payload['body'])
 
 

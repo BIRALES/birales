@@ -2,7 +2,7 @@ import time
 
 import numpy as np
 from numba import njit
-
+import pandas as pd
 
 def get_clusters(ndx, c_labels):
     # Add cluster labels to the data
@@ -89,3 +89,38 @@ def __ir2(data, min_n=10, i=None):
     m2 = -1 * np.arctan2(p_v1[1], p_v1[0])
 
     return np.abs(eigen_values[sort_indices[1]] / eigen_values[sort_indices[0]]) * np.sign(m1), np.rad2deg(m2), m1
+
+
+def _create_cluster(cluster_data, channels, obs_info, beam_id, iter_count):
+    """
+
+    :param cluster_data: The labelled cluster data
+    :param channels:
+    :param t0:
+    :param td:
+    :param beam_id:
+    :param iter_count:
+    :return:
+    """
+    t0 = np.datetime64(obs_info['timestamp'])
+    td = np.timedelta64(int(obs_info['sampling_time'] * 1e9), 'ns')
+    channel_ndx = cluster_data[:, 0].astype(int)
+    time_ndx = cluster_data[:, 1].astype(int)
+    snr_data = cluster_data[:, 2]
+    time_sample = time_ndx + iter_count * 160
+
+    # Calculate the channel (frequency) of the sample from the channel index
+    channel = channels[channel_ndx]
+
+    # Calculate the time of the sample from the time index
+    time = t0 + (time_sample - 160 * iter_count) * td
+
+    return pd.DataFrame({
+        'time_sample': time_sample,
+        'channel_sample': channel_ndx,
+        'time': time,
+        'channel': channel,
+        'snr': snr_data,
+        'beam_id': np.full(time_ndx.shape[0], beam_id),
+        'iter': np.full(time_ndx.shape[0], iter_count),
+    })

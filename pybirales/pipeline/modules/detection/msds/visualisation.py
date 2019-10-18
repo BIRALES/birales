@@ -56,7 +56,7 @@ sns.set_style("ticks",
 
 from scipy.stats import linregress
 
-from util import _partition, __ir2
+from pybirales.pipeline.modules.detection.msds.util import _partition, __ir2
 
 plt.rcParams['figure.figsize'] = (12, 10)
 
@@ -190,7 +190,7 @@ def visualise_ir2(data, group, ratio2):
 
     plt.plot(data[:, 1], data[:, 0], '.', markersize=12, zorder=1)
     ratio, _, _ = __ir2(data)
-    print ratio, len(data)
+
     ax.text(0.05, 0.95,
             'Group: {}\nRatio: {:0.5f}'.format(group, ratio), color='k',
             weight='bold',
@@ -236,8 +236,9 @@ def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negative
 
 
 def visualise_true_tracks(ax, true_tracks):
-    for i, (track_x, track_y) in enumerate(true_tracks):
-        ax.plot(track_x, track_y, 'o', color='k', zorder=-1)
+    if true_tracks:
+        for i, (track_x, track_y) in enumerate(true_tracks):
+            ax.plot(track_x, track_y, 'o', color='k', zorder=-1)
 
     return ax
 
@@ -254,12 +255,14 @@ def visualise_clusters(data, cluster_labels, unique_labels, true_tracks, filenam
     if debug:
         plt.clf()
         fig, ax = plt.subplots(1)
+
         for g in unique_labels:
             c = np.vstack(data[cluster_labels == g, 0])
             ax = sns.scatterplot(x=c[:, 1], y=c[:, 0])
             ax.annotate(g, (np.mean(c[:, 1]), np.mean(c[:, 0])))
 
-        ax = visualise_true_tracks(ax, true_tracks)
+        if true_tracks:
+            ax = visualise_true_tracks(ax, true_tracks)
 
         ax.set(xlabel='Sample', ylabel='Channel', title='Detected Clusters')
         ax = set_limits(ax, limits)
@@ -362,6 +365,7 @@ def visualise_tree_traversal(ndx, true_tracks, clusters, leaves, filename, limit
             x_start, x_end, y_start, y_end = limits
             ndx = _partition(ndx, x_start, x_end, y_start, y_end)
         ax.plot(ndx[:, 1], ndx[:, 0], 'r.')
+
         ax = set_limits(ax, limits)
 
         for i, (leaf_ndx, leaf_bbox) in enumerate(leaves):
@@ -437,3 +441,74 @@ def plot_metrics(metrics_df):
     plt.show()
 
     print metrics_df[['precision', 'recall', 'snr', 'f1']]
+
+
+def compare_algorithms(test_image, db_scan_clusters, msds_clusters, iteration, limits=None,
+                       debug=False):
+    if debug:
+        # plt.clf()
+        fig, axes = plt.subplots(nrows=1, ncols=3, sharey=True)
+        time_samples = test_image.shape[1]
+        print time_samples
+        ax1 = axes[0]
+        ax1.set_title('DBSCAN')
+        for i, c in enumerate(db_scan_clusters):
+            ax1.plot(c['time_sample'] - time_samples * iteration, c['channel_sample'], 'g.', zorder=4, ms=2)
+
+            print iteration, 'DBSCAN: Cluster {}, N: {}, Unique Samples: {}, Unique Channels: {}'.format(
+                i, len(c['time_sample']), len(np.unique(c['time_sample'])), len(np.unique(c['channel_sample'])))
+
+        ax2 = axes[1]
+        ax2.set_title('MSDS')
+        for i, c in enumerate(msds_clusters):
+            ax2.plot(c['time_sample'] - time_samples * iteration, c['channel_sample'], 'r.', zorder=4, ms=2)
+
+            print 'channel_sample', np.mean(c['channel_sample'])
+            print iteration, 'MSDS: Cluster {}, N: {}, Unique Samples: {}, Unique Channels: {}'.format(
+                i, len(c['time_sample']), len(np.unique(c['time_sample'])), len(np.unique(c['channel_sample'])))
+
+        ax = axes[2]
+        ndx = np.column_stack(np.where(test_image > 0.))
+        ndx2 = ndx[np.bitwise_and(ndx[:, 0] > limits[2], ndx[:, 0] < limits[3])]
+        ax.plot(ndx2[:, 1], ndx2[:, 0], 'k.', ms=2, zorder=0)
+        ax.set_title('Raw Data')
+        ax1.set(xlabel='Sample', ylabel='Channel', xticks=range(0, 160, 40))
+        ax2.set(xlabel='Sample', xticks=range(0, 160, 40))
+        ax.set(xlabel='Sample', xticks=range(0, 160, 40))
+        ax = set_limits(ax, limits)
+        plt.grid()
+
+        ax.figure.savefig('msds_dbscan_comparison_{}.png'.format(iteration))
+
+        # plt.show()
+
+
+def visualise_input_data(merged_input, input_data, filtered_merged, beam_id, iteration, debug):
+    if not debug:
+        return None
+
+    # plt.clf()
+    plt.figure(1)
+    ch_1 = 1700
+    ch_n = 2100
+    n_samples = 160
+
+    fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, sharey=True, figsize=(10, 10))
+
+    merged_ndx = np.column_stack(np.where(merged_input[ch_1:ch_n, :n_samples] > 0.))
+    ax1.plot(merged_ndx[:, 1], merged_ndx[:, 0], 'k.', ms=2, zorder=0)
+    ax1.set(ylabel='Channel', xlabel='Sample', xticks=range(0, n_samples, 50), title='Merged')
+
+    if np.any(input_data):
+        beam_ndx = np.column_stack(np.where(input_data[beam_id, ch_1:ch_n, :n_samples] > 0.))
+        ax2.plot(beam_ndx[:, 1], beam_ndx[:, 0], 'k.', ms=2, zorder=0)
+        ax2.set(xlabel='Sample', xticks=range(0, n_samples, 50), title='Beam %s' % beam_id)
+
+    f_merged_ndx = np.column_stack(np.where(filtered_merged[ch_1:ch_n, :n_samples] > 0.))
+    ax3.plot(f_merged_ndx[:, 1], f_merged_ndx[:, 0], 'k.', ms=2, zorder=0)
+    ax3.set(xlabel='Sample', xticks=range(0, n_samples, 50), title='Merged & Filtered')
+
+    ax1.figure.savefig('input_data_{}.png'.format(iteration))
+
+    # plt.show()
+    # exit()

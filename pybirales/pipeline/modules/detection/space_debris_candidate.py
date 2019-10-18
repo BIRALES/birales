@@ -135,7 +135,11 @@ class SpaceDebrisTrack:
 
     @property
     def size(self):
-        return self.data['channel'].size
+        return len(np.unique(self.data['time_sample']))
+
+    @property
+    def beam_size(self):
+        return len(np.unique(self.data[['beam_id', 'time_sample']].values))
 
     @property
     def activated_beams(self):
@@ -158,22 +162,23 @@ class SpaceDebrisTrack:
         self.ref_data['doppler'] = (self.data.iloc[mid]['channel'] - self._obs_info['transmitter_frequency']) * 1e6
         self.ref_data['gradient'] = 1e6 * (self.data['channel'].iloc[0] - self.data['channel'].iloc[-1]) / (
                 self.data['time'].iloc[0] - self.data['time'].iloc[-1]).total_seconds()
-        self.ref_data['snr'] = self.data.iloc[mid]['snr']
-
+        self.ref_data['snr'] = np.median(self.data['snr'])
+        self.ref_data['psnr'] = np.max(self.data['snr'])
         self._to_save = True
 
     def state_str(self):
-        return "df:{:3.5f} Hz, df/dt:{:3.5f} Hz/s and SNR: {:2.3f} dB on {:%d.%m.%y @ %H:%M:%S} , " \
-               "(C: {}, T:{}, f:{:2.5f} MHz, N:{}, B:{}, S:{:2.2f})".format(
+        return "df:{:3.5f} Hz, df/dt:{:3.5f} Hz/s and SNR: {:2.3f} dB on {:%d.%m.%y @ %H:%M:%S}\n" \
+               "C: {}, T:{}, PSNR:{:2.5f} dB, NUS:{}, B:{}, Size:{}, S:{:2.2f}".format(
             self.ref_data['doppler'],
             self.ref_data['gradient'],
             self.ref_data['snr'],
             self.ref_data['time'],
             self.ref_data['channel_sample'],
             self.ref_data['time_sample'],
-            self.ref_data['channel'],
+            self.ref_data['psnr'],
             self.size,
             self.activated_beams,
+            self.beam_size,
             self.r_value
         )
 
@@ -220,7 +225,6 @@ class SpaceDebrisTrack:
         try:
             is_valid, l_model = self._fit(tmp_merged_df['channel_sample'], tmp_merged_df['time_sample'])
         except TypeError:
-            print 'here'
             raise DetectionClusterIsNotValid(cluster_df)
 
         if is_valid:
@@ -273,6 +277,8 @@ class SpaceDebrisTrack:
             return False
 
         return True
+
+
 
     def is_linear(self):
         return np.abs(self.r_value) >= settings.detection.linearity_thold

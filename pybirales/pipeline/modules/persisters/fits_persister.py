@@ -32,7 +32,7 @@ class FitsPersister(ProcessingModule):
         self._beams_to_visualise = None
 
         # A new fits file will be created every Chunk Size iterations
-        self._chuck_size = 50
+        self._chuck_size = 10
 
     def _get_filepath(self, counter=0):
         """
@@ -66,7 +66,7 @@ class FitsPersister(ProcessingModule):
         Generate the output blob
         :return:
         """
-        return ChannelisedBlob(self._config, self._input.shape, datatype=np.float)
+        return ChannelisedBlob(self._config, self._input.shape, datatype=np.complex64)
 
     def process(self, obs_info, input_data, output_data):
         """
@@ -88,6 +88,8 @@ class FitsPersister(ProcessingModule):
         # Append data to the body of the fits file
         if self._beams_to_visualise:
             new_data = input_data[self._beams_to_visualise, :, :]
+
+            new_data = np.power(np.abs(new_data), 2.0)
 
             try:
                 self._fits_file = fits.open(self._fits_filepath)
@@ -115,8 +117,8 @@ class FitsPersister(ProcessingModule):
             else:
                 log.debug('Appending new data to the fits file at {}'.format(self._fits_filepath))
                 fits.writeto(self._fits_filepath, data, overwrite=True)
-        except KeyError:
-            log.warning("Could not save the data. Input data is not valid.")
+        except KeyError as e:
+            log.exception("Could not save the data. Input data is not valid.")
 
     @staticmethod
     def _create_header(obs_info, observation_name):

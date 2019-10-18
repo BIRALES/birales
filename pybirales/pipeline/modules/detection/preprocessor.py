@@ -45,8 +45,8 @@ class PreProcessor(ProcessingModule):
         channel_noise = self.channel_noise
         channel_noise_std = self.channel_noise_std
         if self.counter < self._moving_avg_period:
-            channel_noise = self.channel_noise[:,:, :self.counter+1]
-            channel_noise_std = self.channel_noise_std[:,:, :self.counter+1]
+            channel_noise = self.channel_noise[:, :, :self.counter + 1]
+            channel_noise_std = self.channel_noise_std[:, :, :self.counter + 1]
 
         return np.mean(channel_noise, axis=2), np.mean(channel_noise_std, axis=2)
 
@@ -61,31 +61,21 @@ class PreProcessor(ProcessingModule):
         """
 
         # Skip the first blob
-        if self._iter_count < 3:
+        if self._iter_count < 2:
             return
 
         # Process only 1 polarisation
         data = input_data[0, :, :, :]
 
+
         power_data = self._power(data)
-
-        # Estimate the noise from the data (in Watts)
-        # channel_noise, channel_noise_std = self._get_noise_estimation(power_data, self.counter)
-
-        # Remove noise from power
-        # power_data = power_data - channel_noise[:, :, np.newaxis]
-
-        # Convert power data to dB
-        # power_data = 10*np.log10(power_data)
 
         # Recalculate channel noise in db
         obs_info['channel_noise'], obs_info['channel_noise_std'] = self._get_noise_estimation(power_data, self.counter)
         obs_info['mean_noise'] = np.mean(obs_info['channel_noise'])
 
-
-
         # print ('input', np.mean(obs_info['channel_noise']),  np.mean(obs_info['channel_noise_std']), np.mean(power_data))
-
+        power_data = data
         # If the configuration was not saved AND the number of noise samples is sufficient, save the noise value.
         if not self._config_persisted and self.counter >= settings.detection.n_noise_samples:
             self._observation = Observation.objects.get(id=settings.observation.id)
@@ -107,6 +97,7 @@ class PreProcessor(ProcessingModule):
 
             log.info('Mean noise {:0.3f}'.format(obs_info['mean_noise']))
         output_data[:] = power_data
+
         self.counter += 1
 
         return obs_info
@@ -140,4 +131,4 @@ class PreProcessor(ProcessingModule):
             ('nbeams', input_shape['nbeams']),
             ('nchans', input_shape['nchans']),
             ('nsamp', input_shape['nsamp'])
-        ], datatype=np.float)
+        ], datatype=np.complex64)

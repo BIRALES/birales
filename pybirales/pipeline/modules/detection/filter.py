@@ -40,8 +40,18 @@ class RemoveBackgroundNoiseFilter(InputDataFilter):
         # std = np.std(data, axis=(1, 2), keepdims=True)
         # threshold = self.std_threshold * std + mean
 
-        # Calculate the threshold at which the noise will be clipped
-        t2 = 4 * obs_info['channel_noise_std'] + obs_info['channel_noise']
+        if np.any(obs_info['doppler_mask']):
+            print '1', obs_info['channel_noise_std'].shape
+            print '2', obs_info['doppler_mask'].shape
+            print '3', obs_info['channel_noise_std'][:, obs_info['doppler_mask']].shape
+            # Calculate the threshold at which the noise will be clipped
+            t2 = self.std_threshold * obs_info['channel_noise_std'][:, obs_info['doppler_mask']] + obs_info[
+                                                                                                       'channel_noise'][
+                                                                                                   :, obs_info[
+                                                                                                          'doppler_mask']]
+        else:
+            # Calculate the threshold at which the noise will be clipped
+            t2 = self.std_threshold * obs_info['channel_noise_std'] + obs_info['channel_noise']
 
         log.debug('Noise: {:0.2f}W, Threshold set at {:0.2f}W'.format(np.mean(obs_info['channel_noise']), np.mean(t2)))
         # re-shape threshold array so to make it compatible with the data
@@ -50,7 +60,7 @@ class RemoveBackgroundNoiseFilter(InputDataFilter):
         t2 = np.expand_dims(t2, axis=2)
 
         # print np.shape(t2), data.shape
-        data[data <= t2] = -100.
+        data[data <= t2] = -50.
 
         # print np.min(data)
 
@@ -76,7 +86,7 @@ class PepperNoiseFilter(InputDataFilter):
             data[beam_id, self._remove_pepper_noise(data[beam_id])] = -100
 
 
-class RemoveTransmitterChannelFilter(InputDataFilter):
+class RemoveTransmitterChannelFilterPeak(InputDataFilter):
     def __init__(self):
         InputDataFilter.__init__(self)
 
@@ -99,6 +109,43 @@ class RemoveTransmitterChannelFilter(InputDataFilter):
         data[:, peaks_snr_i, :] = -100
 
 
+class RemoveTransmitterChannelFilter(InputDataFilter):
+    def __init__(self):
+        InputDataFilter.__init__(self)
+
+        self._n_rfi_samples_thold = 0.6 # ~ 90 samples
+
+    def apply(self, data, obs_info):
+        """
+        Remove the main transmission beam from the beam data
+        :param data:
+        :return: void
+        """
+
+        beam_noise_est = np.mean(obs_info['channel_noise'], axis=1)
+        bs = np.sum(data, axis=2)
+        mean_bs = np.mean(bs, axis=1)
+        std_bs = np.std(bs, axis=1)
+
+        mean_bsr = np.repeat(mean_bs[:, np.newaxis], 8192, axis=1)
+        std_bsr = np.repeat(std_bs[:, np.newaxis], 8192, axis=1)
+
+        ndx = np.column_stack(np.where(bs > mean_bsr + 3 * std_bsr))
+
+        for b in range(0, data.shape[0]):
+            rfi_channels = ndx[ndx[:, 0] == b, 1]
+
+            # need to check for consistency
+            beam_noise = beam_noise_est[b]
+            for c in rfi_channels:
+                channel_data = data[b, c, :]
+                n2 = len(channel_data[channel_data > beam_noise])
+
+                # Channels which consistently have a high power (more than mean) are masked ~ 90 samples
+                if n2 > self._n_rfi_samples_thold * data.shape[2]:
+                    data[b, c, :] = beam_noise
+
+
 class Filter(ProcessingModule):
     _valid_input_blobs = [ChannelisedBlob]
 
@@ -108,8 +155,8 @@ class Filter(ProcessingModule):
 
         # The filters to be applied on the data. Filters will be applied in order.
         self._filters = [
-            RemoveTransmitterChannelFilter(),
-            RemoveBackgroundNoiseFilter(std_threshold=4.),
+            # RemoveTransmitterChannelFilter(),
+            # RemoveBackgroundNoiseFilter(std_threshold=3.),
             # PepperNoiseFilter(),
         ]
 
@@ -128,13 +175,13 @@ class Filter(ProcessingModule):
         """
 
         # Skip the first blob
-        if self._iter_count < 3:
+        if self._iter_count < 2:
             return
 
         # Apply the filters on the data
-        for f in self._filters:
-            f.apply(input_data, obs_info)
-
+        # for f in self._filters:
+        #     f.apply(input_data, obs_info)
+        # print 'filtering'
         output_data[:] = input_data
 
         return obs_info

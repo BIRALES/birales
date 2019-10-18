@@ -16,7 +16,7 @@ _algorithm = 'kd_tree'
 _linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
 db_scan = DBSCAN(eps=_eps, min_samples=_min_samples, algorithm=_algorithm, n_jobs=-1)
 N_SAMPLES = 32
-
+N_SAMPLES = 160
 
 def _validate(channel, time_sample, td):
     """
@@ -76,7 +76,7 @@ def _create(snr_data, cluster_data, channels, t0, td, beam_id, iter_count):
         return False, None
 
     # Calculate the time of the sample from the time index
-    time = t0 + (time_sample - 32 * iter_count) * td
+    time = t0 + (time_sample - 160 * iter_count) * td
 
     return True, pd.DataFrame({
         'time_sample': time_sample,
