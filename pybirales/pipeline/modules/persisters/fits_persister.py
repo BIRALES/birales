@@ -1,6 +1,9 @@
+import datetime
 import logging as log
 import os
 
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 import numpy as np
 from astropy.io import fits
 
@@ -8,6 +11,13 @@ from pybirales import settings
 from pybirales.pipeline.base.definitions import PipelineError
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
+
+
+class TLE_Target:
+    def __init__(self, name, transit_time, doppler):
+        self.name = name
+        self.doppler = doppler
+        self.transit_time = datetime.datetime.strptime(transit_time, '%d %b %Y %H:%M:%S.%f')
 
 
 class FitsPersister(ProcessingModule):
@@ -33,6 +43,11 @@ class FitsPersister(ProcessingModule):
 
         # A new fits file will be created every Chunk Size iterations
         self._chuck_size = 10
+
+        self.tle_targets = [
+            # TLE_Target(name='norad_1328', transit_time='05 MAR 2019 10:37:53.01', doppler=-1462.13774),
+            TLE_Target(name='norad_41182', transit_time='05 MAR 2019 11:23:28.73', doppler=-3226.36329)
+        ]
 
     def _get_filepath(self, counter=0):
         """
@@ -87,9 +102,12 @@ class FitsPersister(ProcessingModule):
 
         # Append data to the body of the fits file
         if self._beams_to_visualise:
-            new_data = input_data[self._beams_to_visualise, :, :]
-
+            # new_data = input_data[[15], :, :]
+            new_data = input_data[[14], :, :]
             new_data = np.power(np.abs(new_data), 2.0)
+
+            for target in self.tle_targets:
+                self.plot_TLE(obs_info, new_data[0, ...], target)
 
             try:
                 self._fits_file = fits.open(self._fits_filepath)
@@ -138,6 +156,49 @@ class FitsPersister(ProcessingModule):
         header.set('TX', obs_info['transmitter_frequency'])
 
         return header
+
+    def plot_TLE(self, obs_info, input_data, tle_target):
+        expected_transit_time = tle_target.transit_time
+        target_name = tle_target.name
+        expected_doppler = tle_target.doppler
+
+        start_window = expected_transit_time - datetime.timedelta(seconds=30)
+        end_window = expected_transit_time + datetime.timedelta(seconds=20)
+
+        print 'Current time is', obs_info['timestamp']
+        print 'TLE is between {} and {}'.format(start_window, end_window)
+        print 'Persister Within window', end_window >= obs_info['timestamp'] >= start_window, self._iter_count
+
+        if end_window >= obs_info['timestamp'] >= start_window:
+            expected_channel = (obs_info['transmitter_frequency'] * 1e6 + expected_doppler) - obs_info[
+                'start_center_frequency'] * 1e6
+            expected_channel /= obs_info['channel_bandwidth'] * 1e6
+
+            expected_channel = int(expected_channel)
+
+            channel_window = expected_channel - 500, expected_channel + 500
+
+            filename = '{}_TLE_prediction_{}'.format(target_name, self._iter_count)
+
+            time = [obs_info['timestamp'], datetime.timedelta(seconds=obs_info['sampling_time'] * 160) + obs_info[
+                'timestamp']]
+
+            subset = input_data[channel_window[0]: channel_window[1], :]
+
+            print 'Expecting target to be between', channel_window, subset.shape
+            fig = plt.figure(figsize=(11, 8))
+            ax = fig.add_subplot(1, 1, 1)
+            ax.set_xlabel("Time")
+            ax.set_ylabel("Channel")
+            im = ax.imshow(subset, aspect='auto', interpolation='none', origin='lower', vmin=0,
+                           extent=[0, 160, channel_window[0], channel_window[1]])
+            fig.colorbar(im)
+            fig.tight_layout()
+            plt.title(filename + ' from {:%H.%M.%S} to {:%M.%S}'.format(time[0], time[1]))
+            plt.show()
+
+            fig.savefig(filename, bbox_inches='tight')
+            fig.clf()
 
 
 class RawDataFitsPersister(FitsPersister):

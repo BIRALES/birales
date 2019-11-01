@@ -38,6 +38,8 @@ class RawDataReader(ProcessingModule):
         self._npols = config.npols
         self._filepath = config.filepath
         self._read_count = 0
+        self._read_count = 48 # norad 1328 on 03/05/2019
+        self._read_count = 53  # norad 41182 on 03/05/2019
         self._metrics_poll_freq = 10
         self._metric_channel = 'antenna_metrics'
 
@@ -52,7 +54,9 @@ class RawDataReader(ProcessingModule):
         try:
             self._f = open(self._filepath, 'rb')
             # self._f.seek(self._nsamp * self._nants * 8 * 48)
-            self._f.seek(self._nsamp * self._nants * 8 * 42)
+            # self._f.seek(self._nsamp * self._nants * 8 * 42)
+            self._f.seek(self._nsamp * self._nants * 8 * self._read_count)
+
             log.info('Using raw data in: {}'.format(self._filepath))
         except IOError:
             log.error('Data not found in %s. Exiting.', self._filepath)
@@ -129,7 +133,7 @@ class RawDataReader(ProcessingModule):
             self._f = self._change_raw_file()
 
             if not self._f:
-                time.sleep(20)
+                time.sleep(200)
                 raise NoDataReaderException("Observation finished")
 
             # Read from the next set of data from new file

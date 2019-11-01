@@ -136,35 +136,39 @@ def _validate_clusters(clusters):
 
 # @profile
 def msds_q(test_image):
-    limits = get_limits(test_image, true_tracks)
-    limits = (0, 200, 0, 1000)
+    # limits = get_limits(test_image, true_tracks)
     # limits = (0, 200, 70, 200)
     # limits = (50, 175, 4000, 7100)
     # limits = None
     pool = multiprocessing.Pool(processes=8)
     # Pre-process the input data
     ndx = pre_process_data(test_image, noise_estimate=0.93711)
+    # ndx = pre_process_data2(test_image)
 
     # Build quad/nd tree that spans all the data points
     k_tree = build_tree(ndx, leave_size=30, n_axis=2)
 
-    visualise_filtered_data(ndx, true_tracks, '1_filtered_data', limits=limits, debug=debug, vis=vis)
+    visualise_filtered_data(ndx, true_tracks, '1_filtered_data', limits=limits, debug=debug)
 
     # Traverse the tree and identify valid linear streaks
     leaves = traverse(k_tree.tree, ndx,
                       bbox=(0, test_image.shape[1], 0, test_image.shape[0]),
                       distance_thold=3., min_length=2., cluster_size_thold=10.)
 
+    positives, negatives = process_leaves(pool, leaves, parallel=False)
 
-    clusters = process_leaves(pool, leaves)
+    print "Processed {} leaves. Of which {} were positives.".format(len(leaves), len(positives))
 
-    visualise_tree_traversal(ndx, true_tracks, clusters, leaves, '2_processed_leaves.png', limits=limits, vis=vis)
+    visualise_tree_traversal(ndx, true_tracks, positives, negatives, '2_processed_leaves.png', limits=limits, vis=debug)
 
     # Cluster the leaves based on their vicinity to each other
-    cluster_data, unique_labels = cluster_leaves(clusters, distance_thold=estimate_leave_eps(clusters))
-    cluster_labels = cluster_data[:, 5]
+    eps = estimate_leave_eps(positives)
 
-    visualise_clusters(cluster_data, cluster_labels, unique_labels, true_tracks, filename='3_clusters.png',
+    print 'eps is:', eps
+    cluster_data, unique_labels = cluster_leaves(positives, distance_thold=eps)
+    cluster_labels = cluster_data[:, 6]
+
+    visualise_clusters(cluster_data, cluster_labels, unique_labels, true_tracks, positives, filename='3_clusters.png',
                        limits=limits,
                        debug=debug)
     # Filter invalid clusters
@@ -173,12 +177,14 @@ def msds_q(test_image):
     visualise_tracks(tracks, true_tracks, '5_tracks.png', limits=limits, debug=debug)
 
     # Fill any missing data (increase recall)
-    valid_tracks = [fill(test_img, t) for t in tracks]
+    tracks = [fill2(test_img, t) for t in tracks]
 
-    visualise_post_processed_tracks(valid_tracks, true_tracks, '6_post-processed-tracks.png', limits=None,
+    # valid_tracks = [fill(test_img, t) for t in tracks]
+    #
+    visualise_post_processed_tracks(tracks, true_tracks, '6_post-processed-tracks.png', limits=None, groups=None,
                                     debug=debug)
 
-    return valid_tracks
+    return tracks
 
 
 def test_detector(filtered_test_img, noise_mean, true_tracks, detector, thickness, snr):
@@ -227,8 +233,7 @@ def test_detector(filtered_test_img, noise_mean, true_tracks, detector, thicknes
 
 
 if __name__ == '__main__':
-    debug = False
-    vis = False
+    debug = True
     plot_results = False
     from_file = False
 
@@ -242,13 +247,15 @@ if __name__ == '__main__':
     N_CHANS = 8192
     N_SAMPLES = 256
 
+    limits = (0, 100, 7900, 8150)
+
     track_thickness = [1, 2, 5]
     track_thickness = [1]
 
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
     snr = [25]
     snr = [2, 3, 5, 10, 15, 20, 25]
-    snr = [5]
+    snr = [3]
 
     metrics = {}
     metrics_df = pd.DataFrame()

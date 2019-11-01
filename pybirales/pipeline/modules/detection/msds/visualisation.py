@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import matplotlib.ticker as ticker
+from util import grad, grad2
 
 sns.set(color_codes=True)
 
@@ -168,9 +169,9 @@ def visualise_detector(data, candidates, tracks, d_name, snr, visualise=False):
         print 'Showing: ' + title
 
 
-def visualise_ir2(data, group, ratio2):
-    if len(data) >= 10:
-        return 0., 0., data
+def visualise_ir2(data, org_data, group, ratio2):
+    # if len(data) >= 10:
+    #     return 0., 0., data
 
     ms, mc = np.mean(data[:, 1]), np.mean(data[:, 0])
     coords = np.flip(np.swapaxes(data[:, :2] - np.mean(data[:, :2], axis=0), 0, -1), 0)
@@ -188,8 +189,9 @@ def visualise_ir2(data, group, ratio2):
     plt.plot([x_v2 * -scale + ms, x_v2 * scale + ms],
              [y_v2 * -scale + mc, y_v2 * scale + mc], color='blue')
 
-    plt.plot(data[:, 1], data[:, 0], '.', markersize=12, zorder=1)
-    ratio, _, _ = __ir2(data)
+    plt.plot(org_data[:, 1], org_data[:, 0], '.', color='red', markersize=15, zorder=1)
+    plt.plot(data[:, 1], data[:, 0], '.', color='blue', markersize=12, zorder=2)
+    ratio, _, _ = __ir2(data, min_n=15)
 
     ax.text(0.05, 0.95,
             'Group: {}\nRatio: {:0.5f}'.format(group, ratio), color='k',
@@ -207,9 +209,11 @@ def visualise_ir2(data, group, ratio2):
 
 
 def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negatives=None):
+    from msds import h_cluster
     color = 'r'
     zorder = 1
     lw = 1
+    ax.text(x1 + 0.95 * (x2 - x1), y1 + 0.95 * (y2 - y1), i, color='k', fontsize=8, ha='right', va='top', zorder=10)
     if positive:
         color = 'g'
         zorder = 2
@@ -221,12 +225,29 @@ def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negative
         # Plot the data points that make the cluster
         ax.plot(positives[:, 1], positives[:, 0], 'g.', zorder=3)
 
-        ax.text(x1 + 0.5 * (x2 - x1), y1 + 0.5 * (y2 - y1), '{:0.3f}'.format(score), color='k', weight='bold',
-                fontsize=10, ha='center', va='center')
-
-        ax.text(x1 + 0.95 * (x2 - x1), y1 + 0.95 * (y2 - y1), i, color='k', fontsize=8, ha='right', va='top', zorder=10)
+        msg = '{:0.2f}\n{:0.2f}'.format(score, grad2(positives))
+        ax.text(x1 + 0.5 * (x2 - x1), y1 + 0.5 * (y2 - y1), msg, color='k', weight='bold',
+                fontsize=8, ha='center', va='center')
     else:
         ax.plot(negatives[:, 1], negatives[:, 0], 'r.', zorder=1)
+        ax.text(x1 + 0.5 * (x2 - x1), y1 + 0.5 * (y2 - y1), '{}'.format(score), color='k', weight='bold',
+                fontsize=8, ha='center', va='center')
+
+        # if i in [1195, 1220]:
+
+        labels, _ = h_cluster(negatives, 2.5, min_length=3, i=i)
+        u, c = np.unique(labels, return_counts=True)
+        min_mask = c > 3
+        u_groups = u[min_mask]
+
+        # start with the smallest grouping
+        sorted_groups = u_groups[np.argsort(c[min_mask])]
+        for j, g in enumerate(sorted_groups):
+            c = negatives[np.where(labels == g)]
+            ratio, _, _ = __ir2(c, i=i)
+            ax.plot(c[:, 1], c[:, 0], '.', color='pink', zorder=2)
+
+            print 'Cluster: {}, group: {}. ratio:{}. length:{}'.format(i, g, ratio, np.shape(c))
 
     rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=lw, edgecolor=color, facecolor='none',
                              zorder=zorder)
@@ -251,7 +272,7 @@ def set_limits(ax, limits):
     return ax
 
 
-def visualise_clusters(data, cluster_labels, unique_labels, true_tracks, filename, limits=None, debug=False):
+def visualise_clusters(data, cluster_labels, unique_labels, true_tracks, leaves, filename, limits=None, debug=False):
     if debug:
         plt.clf()
         fig, ax = plt.subplots(1)
@@ -260,6 +281,16 @@ def visualise_clusters(data, cluster_labels, unique_labels, true_tracks, filenam
             c = np.vstack(data[cluster_labels == g, 0])
             ax = sns.scatterplot(x=c[:, 1], y=c[:, 0])
             ax.annotate(g, (np.mean(c[:, 1]), np.mean(c[:, 0])))
+
+            # print 'cluster {}: inertia ratio is: {}'.format(g, __ir2(c, 1000, g))
+
+        for i, (cluster, best_gs, msg, x1, x2, y1, y2, n, _, _, _, _, j) in enumerate(leaves):
+            rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=1, edgecolor='gray', facecolor='none',
+                                     zorder=-1)
+            ax.text(x1 + 0.95 * (x2 - x1), y1 + 0.95 * (y2 - y1), j, color='k', fontsize=8, ha='right', va='top',
+                    zorder=10)
+            # Add the patch to the Axes
+            ax.add_patch(rect)
 
         if true_tracks:
             ax = visualise_true_tracks(ax, true_tracks)
@@ -304,22 +335,28 @@ def visualise_tracks(tracks, true_tracks, filename, limits=None, debug=False):
         ax.figure.savefig(filename)
 
 
-def visualise_post_processed_tracks(tracks, true_tracks, filename, limits=None, debug=False):
+def visualise_post_processed_tracks(tracks, true_tracks, filename, limits=None, groups=None, debug=False):
     if debug:
         plt.clf()
         fig, ax = plt.subplots(1)
         for i, c in enumerate(tracks):
+
             # if not np.any(c):
             #     continue
             m, intercept, r_value, p, e = linregress(c[:, 1], c[:, 0])
             group = c[:, 3][0]
+
             # group = i
             ratio = __ir2(c[:, :2], group)
             x = c[:, 1].mean()
             y = c[:, 0].mean()
-
             print group, 'R:{:0.5f} P:{:0.5f} E:{:0.5f} I:{:0.5f} N:{} M:{:0.4f} C:{:0.4f} X:{:0.4f} Y:{:0.4f}' \
                 .format(r_value, p, e, ratio[0], len(c), m, intercept, x, y)
+
+            ax.annotate('{:0.0f}'.format(group), (x, 1.01 * y), zorder=3)
+            if groups:
+                if group not in groups:
+                    continue
 
             missing = c[c[:, 3] == -2]
             thickened = c[c[:, 3] == -3]
@@ -327,12 +364,6 @@ def visualise_post_processed_tracks(tracks, true_tracks, filename, limits=None, 
             ax = sns.scatterplot(detected[:, 1], detected[:, 0], color='green', marker=".", zorder=4)
             ax = sns.scatterplot(thickened[:, 1], thickened[:, 0], marker=".", color='pink', zorder=2, edgecolor="k")
             ax = sns.scatterplot(missing[:, 1], missing[:, 0], marker="+", color='red', zorder=3, edgecolor="k")
-
-            ax.annotate('Group {:0.0f}'.format(group), (x, 1.01 * y), zorder=3)
-
-            if int(group) == 77:
-                for b in c:
-                    print b[0], b[1], b[2], b[3]
 
         ax = visualise_true_tracks(ax, true_tracks)
 
@@ -342,13 +373,13 @@ def visualise_post_processed_tracks(tracks, true_tracks, filename, limits=None, 
         ax.figure.savefig(filename)
 
 
-def visualise_filtered_data(ndx, true_tracks, filename, limits=None, debug=False, vis=False):
-    if vis or debug:
+def visualise_filtered_data(ndx, true_tracks, filename, limits=None, debug=False):
+    if debug:
         fig, ax = plt.subplots(1)
         if limits:
             x_start, x_end, y_start, y_end = limits
             ndx = _partition(ndx, x_start, x_end, y_start, y_end)
-        ax.plot(ndx[:, 1], ndx[:, 0], '.', 'r', zorder=-3)
+        ax.plot(ndx[:, 1], ndx[:, 0], '.', 'r', zorder=1)
 
         ax = visualise_true_tracks(ax, true_tracks)
         ax.set(xlabel='Sample', ylabel='Channel')
@@ -359,6 +390,7 @@ def visualise_filtered_data(ndx, true_tracks, filename, limits=None, debug=False
 
 def visualise_tree_traversal(ndx, true_tracks, clusters, leaves, filename, limits=None, vis=False):
     if vis:
+        plt.clf()
         fig, ax = plt.subplots(1)
         x_start, x_end, y_start, y_end = 0, ndx.shape[0], 0, ndx.shape[1]
         if limits:
@@ -368,16 +400,22 @@ def visualise_tree_traversal(ndx, true_tracks, clusters, leaves, filename, limit
 
         ax = set_limits(ax, limits)
 
-        for i, (leaf_ndx, leaf_bbox) in enumerate(leaves):
-            x1, x2, y1, y2 = leaf_bbox
+        for i, (cluster, best_gs, msg, x1, x2, y1, y2, n, _, _, _, _, j) in enumerate(leaves):
+            cluster_id = i
             if x_start <= x1 <= x_end and y_start <= y1 <= y_end:
-                __plot_leaf(ax, x1, y1, x2, y2, i, None, False, positives=None, negatives=leaf_ndx)
+                if j != 0:
+                    cluster_id = j
+                __plot_leaf(ax, x1, y1, x2, y2, cluster_id, msg, False, positives=None, negatives=cluster)
 
-        for i, (cluster, best_gs, msg, x1, x2, y1, y2, n, _, _, _, j) in enumerate(clusters):
+        for i, (cluster, best_gs, msg, x1, x2, y1, y2, n, _, _, _, _, j) in enumerate(clusters):
+            cluster_id = i
             if x_start <= x1 <= x_end and y_start <= y1 <= y_end:
-                __plot_leaf(ax, x1, y1, x2, y2, i, msg, True, positives=cluster, negatives=None)
+                if j != 0:
+                    cluster_id = j
+                __plot_leaf(ax, x1, y1, x2, y2, cluster_id, msg, True, positives=cluster, negatives=None)
 
-        ax = visualise_true_tracks(ax, true_tracks)
+        if true_tracks:
+            ax = visualise_true_tracks(ax, true_tracks)
         ax.set(xlabel='Sample', ylabel='Channel')
         ax = set_limits(ax, limits)
         plt.grid()
@@ -449,7 +487,7 @@ def compare_algorithms(test_image, db_scan_clusters, msds_clusters, iteration, l
         # plt.clf()
         fig, axes = plt.subplots(nrows=1, ncols=3, sharey=True)
         time_samples = test_image.shape[1]
-        print time_samples
+
         ax1 = axes[0]
         ax1.set_title('DBSCAN')
         for i, c in enumerate(db_scan_clusters):
@@ -483,31 +521,57 @@ def compare_algorithms(test_image, db_scan_clusters, msds_clusters, iteration, l
         # plt.show()
 
 
-def visualise_input_data(merged_input, input_data, filtered_merged, beam_id, iteration, debug):
+def visualise_input_data(merged_input, input_data, filtered_merged, beam_id, iteration, debug, limits):
     if not debug:
         return None
+    subset = input_data[beam_id, 3618:4618, 0:160]
+    # subset = input_data[14,3618:4618, 0:160]
+    # subset = np.m(subset, axis=0)
+    # subset = np.power(np.abs(subset), 2.0)
+    fig = plt.figure(figsize=(11, 8))
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Channel")
+    im = ax.imshow(subset, aspect='auto', interpolation='none', origin='lower', vmin=0,
+                   extent=[0, 160, 3618, 4618])
+    fig.colorbar(im)
+    fig.tight_layout()
+    # plt.title('Input data from {:%H.%M.%S} to {:%M.%S}'.format(time[0], time[1]))
+    plt.savefig('input_data_d_{}.png'.format(iteration))
+    # plt.show()
 
+    return
     # plt.clf()
     plt.figure(1)
-    ch_1 = 1700
-    ch_n = 2100
+    ch_1 = limits[2]
+    ch_n = limits[3]
+    ch_1 = 0
+    ch_n = 5000
+    t1 = 0
+    tn = limits[1]
     n_samples = 160
 
     fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, sharey=True, figsize=(10, 10))
 
-    merged_ndx = np.column_stack(np.where(merged_input[ch_1:ch_n, :n_samples] > 0.))
-    ax1.plot(merged_ndx[:, 1], merged_ndx[:, 0], 'k.', ms=2, zorder=0)
+    subset = merged_input[ch_1:ch_n, t1:tn]
+    im = ax1.imshow(subset, aspect='auto', interpolation='none', origin='lower', vmin=0,
+                    extent=[t1, tn, ch_1, ch_n])
     ax1.set(ylabel='Channel', xlabel='Sample', xticks=range(0, n_samples, 50), title='Merged')
 
-    if np.any(input_data):
-        beam_ndx = np.column_stack(np.where(input_data[beam_id, ch_1:ch_n, :n_samples] > 0.))
-        ax2.plot(beam_ndx[:, 1], beam_ndx[:, 0], 'k.', ms=2, zorder=0)
-        ax2.set(xlabel='Sample', xticks=range(0, n_samples, 50), title='Beam %s' % beam_id)
+    subset = input_data[beam_id, ch_1:ch_n, t1:tn]
 
-    f_merged_ndx = np.column_stack(np.where(filtered_merged[ch_1:ch_n, :n_samples] > 0.))
-    ax3.plot(f_merged_ndx[:, 1], f_merged_ndx[:, 0], 'k.', ms=2, zorder=0)
+    subset = np.power(np.abs(subset), 2.0)
+
+    im1 = ax2.imshow(subset, aspect='auto', interpolation='none', origin='lower', vmin=0,
+                     extent=[t1, tn, ch_1, ch_n])
+    ax2.set(xlabel='Sample', xticks=range(0, n_samples, 50), title='Beam %s' % beam_id)
+
+    subset = filtered_merged[ch_1:ch_n, :n_samples]
+    im = ax3.imshow(subset, aspect='auto', interpolation='none', origin='lower', vmin=0,
+                    extent=[t1, tn, ch_1, ch_n])
     ax3.set(xlabel='Sample', xticks=range(0, n_samples, 50), title='Merged & Filtered')
 
+    fig.colorbar(im1)
     ax1.figure.savefig('input_data_{}.png'.format(iteration))
 
     # plt.show()

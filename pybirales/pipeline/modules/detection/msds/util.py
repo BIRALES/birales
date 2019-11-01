@@ -4,6 +4,7 @@ import numpy as np
 from numba import njit
 import pandas as pd
 
+
 def get_clusters(ndx, c_labels):
     # Add cluster labels to the data
     labelled_data = np.append(ndx, np.expand_dims(c_labels, axis=1), axis=1)
@@ -63,9 +64,15 @@ def _partition(data, x1, x2, y1, y2):
     return partition_y[np.logical_and(partition_y[:, 1] >= x1, partition_y[:, 1] <= x2)]
 
 
+def eu(x1, x2, y1, y2):
+    diff = np.array([x1, y1]) - np.array([x2, y2])
+
+    return np.vdot(diff, diff) ** 0.5
+
+
 def __ir2(data, min_n=10, i=None):
     if len(data) >= min_n:
-        return 0., 0., 1
+        return -0.091, -1, -1
 
     # line is horizontal
     if len(np.unique(data[:, 0])) == 1:
@@ -88,7 +95,13 @@ def __ir2(data, min_n=10, i=None):
     # Gradient of 1st eigenvector (in degrees)
     m2 = -1 * np.arctan2(p_v1[1], p_v1[0])
 
-    return np.abs(eigen_values[sort_indices[1]] / eigen_values[sort_indices[0]]) * np.sign(m1), np.rad2deg(m2), m1
+    ir = np.abs(eigen_values[sort_indices[1]] / eigen_values[sort_indices[0]]) * np.sign(m1)
+
+    # radius = eu(data[:, 1].min(), data[:, 1].max(), data[:, 0].min(), data[:, 0].max())  / 2
+    # ir_normalised = ir / (len(data) * radius** 2)
+
+    # print ir, ir_normalised
+    return ir, np.rad2deg(m2), m1
 
 
 def _create_cluster(cluster_data, channels, obs_info, beam_id, iter_count):
@@ -124,3 +137,21 @@ def _create_cluster(cluster_data, channels, obs_info, beam_id, iter_count):
         'beam_id': np.full(time_ndx.shape[0], beam_id),
         'iter': np.full(time_ndx.shape[0], iter_count),
     })
+
+
+def grad(cluster):
+    cov = np.cov(cluster[:, 1], cluster[:, 0]).flatten()
+
+    return cov[0] / (cov[1] + 1e-9)
+
+def grad2(cluster):
+    _, i = np.unique(cluster[:, 1], return_index=True)
+    cluster = cluster[i]
+    cov = np.cov(cluster[:, 1], cluster[:, 0]).flatten()
+
+    return cov[0] / (cov[1] + 1e-9)
+
+def grad3(cluster):
+    cov = np.cov(cluster[:, 1], cluster[:, 0]).flatten()
+
+    return cov[0] / (cov[1] + 1e-9)

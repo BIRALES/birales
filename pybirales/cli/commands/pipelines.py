@@ -34,7 +34,7 @@ def pipelines(ctx, name, debug, duration):
 @click.option('--tx', 'tx', type=float, help='The transmission frequency in MHz')
 @click.option('--pointing', 'pointing', type=float, help='Reference Declination of the Beam Former')
 @click.pass_context
-@enable_notifications
+# @enable_notifications
 def detection_pipeline(ctx, config_file_path, tx, pointing):
     """
 

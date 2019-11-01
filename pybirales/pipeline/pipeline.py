@@ -358,3 +358,97 @@ class DataTruncatorPipelineMangerBuilder(PipelineManagerBuilder):
         self.manager.add_module("receiver", receiver)
         self.manager.add_module("persister", persister)
         self.manager.add_module("terminator", terminator)
+
+
+
+class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
+    def __init__(self):
+        PipelineManagerBuilder.__init__(self)
+
+        self.manager.name = 'Detection Pipeline'
+
+        self._id = 'detection_pipeline_builder'
+
+    def build(self):
+        """
+        This script runs the multi-pixel pipeline with debris detection enabled,
+        using the specified CONFIGURATION.
+l
+        :return:
+        """
+
+        # import faulthandler
+        # faulthandler.enable(all_threads=True)
+        #
+        # import ctypes
+        # ctypes.string_at(0)
+
+        # Pipeline Reader or Receiver input
+        if settings.manager.offline:
+            receiver = RawDataReader(settings.rawdatareader)
+            self.manager.name += ' (Offline)'
+        else:
+            receiver = Receiver(settings.receiver)
+
+        self.manager.add_module("receiver", receiver)
+
+        # Beam former
+        if settings.manager.save_raw:
+            persister_raw = RawPersister(settings.rawpersister, receiver.output_blob)
+            beamformer = Beamformer(settings.beamformer, persister_raw.output_blob)
+            self.manager.add_module("persister_raw", persister_raw)
+        else:
+            beamformer = Beamformer(settings.beamformer, receiver.output_blob)
+
+        self.manager.add_module("beamformer", beamformer)
+
+        # Channeliser
+        ppf = PFB(settings.channeliser, beamformer.output_blob)
+        self.manager.add_module("ppf", ppf)
+
+        # Beam persister
+        pp_input = ppf.output_blob
+        if settings.manager.save_beam:
+            persister_beam = BeamPersister(settings.persister, ppf.output_blob)
+            self.manager.add_module("persister_beam", persister_beam)
+
+            pp_input = persister_beam.output_blob
+
+        # Detection
+        if settings.manager.detector_enabled:
+            preprocessor = PreProcessor(settings.detection, pp_input)
+            self.manager.add_module("preprocessor", preprocessor)
+            filtering = Filter(settings.detection, preprocessor.output_blob)
+
+            if settings.fits_persister.visualise_raw_beams or settings.fits_persister.visualise_filtered_beams:
+
+                if settings.fits_persister.visualise_raw_beams:
+                    raw_fits_persister = RawDataFitsPersister(settings.fits_persister, preprocessor.output_blob)
+                    filtering = Filter(settings.detection, raw_fits_persister.output_blob)
+                    self.manager.add_module("raw_fits_persister", raw_fits_persister)
+
+                self.manager.add_module("filtering", filtering)
+
+                if settings.fits_persister.visualise_filtered_beams:
+                    filtered_fits_persister = FilteredDataFitsPersister(settings.fits_persister, filtering.output_blob)
+                    detector = Detector(settings.detection, filtered_fits_persister.output_blob)
+                    self.manager.add_module("filtered_fits_persister", filtered_fits_persister)
+                else:
+                    detector = Detector(settings.detection, filtering.output_blob)
+            else:
+                self.manager.add_module("filtering", filtering)
+                detector = Detector(settings.detection, filtering.output_blob)
+
+            self.manager.add_module("detector", detector)
+            if settings.detection.save_tdm:
+                tdm_persister = TDMPersister(settings.observation, detector.output_blob)
+                self.manager.add_module("tdm_persister", tdm_persister)
+
+                terminator = Terminator(settings.terminator, tdm_persister.output_blob)
+                self.manager.add_module("terminator", terminator)
+            else:
+                terminator = Terminator(settings.terminator, detector.output_blob)
+                self.manager.add_module("terminator", terminator)
+        else:
+            terminator = Terminator(settings.terminator, pp_input)
+            self.manager.add_module("terminator", terminator)
