@@ -12,6 +12,7 @@ from scipy.stats import linregress
 from util import timeit, __ir2, grad, grad2, grad3
 from visualisation import visualise_ir2
 from sklearn.linear_model import LinearRegression
+from functools import partial
 
 P_VALUE = 0.05
 INF_DIST = 10000.
@@ -77,16 +78,8 @@ def pdist_denis2(X, m, dm, min_r):
                 dm[k] = 100
             else:
                 diff += 1e-6
-                slope = diff[0] / diff[1]
-                if min_r <= slope <= 0:
-                    eu = np.vdot(diff, diff) ** 0.5
-                    dm[k] = eu
-
-                    # if perfectly vertical, only consider point if it is very near
-                    # if slope < -100 and abs(diff[0]) > 1:
-                    #     dm[k] = 10000
-
-                # dm[k] = np.vdot(diff, diff) ** 0.5
+                if min_r <= (diff[0] / diff[1]) <= 0:
+                    dm[k] = np.vdot(diff, diff) ** 0.5
             k = k + 1
     return dm
 
@@ -99,11 +92,11 @@ def pdist_denis_w_grad(X, m, dm, min_r):
         for j in xrange(i + 1, m):
             diff = X[i] - X[j] + 1e-6
             v[0] = diff[1] / diff[2]
-            if min_r <= v[0] <= 0:
-                v[1] = X[i][0]  # gradient of point 1
+            if MIN_R <= v[0] <= 0:
+                v[1] = X[i][0]  # slope of point 1
                 v[2] = X[j][0]  # slope of point 2
                 if -0.2 <= np.std(v) / np.mean(v) <= 0.2:
-                    dm[k] = np.vdot(diff[1:], diff[1:]) ** 0.5
+                    dm[k] = np.vdot(diff, diff) ** 0.5
             k = k + 1
     return dm
 
@@ -148,15 +141,35 @@ def fclusterdata_denis(X, threshold, criterion, min_r=-1e9, check_grad=False, cl
     return fcluster(linked, threshold, criterion=criterion)
 
 
-@timeit
-def h_cluster_euclidean(X, distance_thold):
-    cluster_labels = fclusterdata_denis(X[:, 2:5].astype(float), distance_thold, min_r=MIN_R, criterion='distance',
-                                        check_grad=True)
-    # cluster_labels = fclusterdata(X[:, 2:4].astype(float), distance_thold, metric=mydist3, criterion='distance')
+# todo numba optimise
+def filter_groups(X, cluster_labels, min_labels=2, min_leaves=1):
+    u, i, c = np.unique(cluster_labels, return_counts=True, return_index=True)
+    unique_groups = u[c > min_labels].astype(int)
 
-    u, c = np.unique(cluster_labels, return_counts=True)
-    unique_groups = u[c > 1]
-    return cluster_labels, unique_groups
+    f_groups = []
+    for i in range(len(unique_groups)):
+        g = unique_groups[i]
+        g_i = np.where(cluster_labels == g)
+        leave_ids = X[cluster_labels == g][:, 1].astype(int)
+        ul, cl = np.unique(leave_ids, return_counts=True)
+
+        if len(ul) > min_leaves:
+            f_groups.extend(g_i[0])
+    u_mask = np.array(f_groups).astype(int)
+    return np.append(X[u_mask], cluster_labels[u_mask].reshape(-1, 1), axis=1)
+
+
+@timeit
+def cluster_leaves(leaves, distance_thold):
+    cluster_data = np.vstack(
+        [(cluster, j, m, x, y, p) for i, (cluster, best_gs, ratio, x1, x2, y1, y2, n, x, y, p, m, j) in
+         enumerate(leaves)])
+
+    cluster_labels = fclusterdata_denis(cluster_data[:, 2:6].astype(float), distance_thold, min_r=MIN_R,
+                                        criterion='distance',
+                                        check_grad=True)
+
+    return filter_groups(cluster_data, cluster_labels)
 
 
 # @njit
@@ -224,7 +237,7 @@ def eu(x1, x2, y1, y2):
     return np.vdot(diff, diff) ** 0.5
 
 
-def linear_cluster(leave, distance_thold=3, cluster_id=0):
+def linear_cluster_old(leave, distance_thold=3, cluster_id=0):
     (data, bbox) = leave
     labels, _ = h_cluster(data, 3, min_length=2, i=cluster_id)
     u, c = np.unique(labels, return_counts=True)
@@ -260,24 +273,68 @@ def linear_cluster(leave, distance_thold=3, cluster_id=0):
     return [data, -1, best_ratio, x1, x2, y1, y2, best_data.shape[0], ms, mc, msnr, slope, cluster_id]
 
 
+def linear_cluster(leave_pair):
+    leave, cluster_id = leave_pair
+
+    (data, bbox) = leave
+    labels, _ = h_cluster(data, 3, min_length=2, i=cluster_id)
+    u, c = np.unique(labels, return_counts=True)
+    min_mask = c > 3
+    u_groups = u[min_mask]
+
+    best_ratio = -0.1
+    best_data = data
+    # start with the smallest grouping
+    x1, x2, y1, y2 = bbox
+
+    sorted_groups = u_groups[np.argsort(c[min_mask])]
+    best_groups = []
+    for g in sorted_groups:
+        c = data[np.where(labels == g)]
+        ratio, _, m1 = __ir2(c, min_n=20, i=cluster_id)
+
+        if cluster_id in [489]:
+        #     visualise_ir2(c, data, cluster_id, 0)
+            print ratio, grad(c), len(c), grad2(c), grad3(c), m1
+
+        # if 0. >= ratio >= best_ratio and SLOPE_ANGLE_RANGE[0] < grad(c) < SLOPE_ANGLE_RANGE[1]:
+        if 0. >= ratio >= -0.1:
+            best_ratio = ratio
+            best_data = c
+            mc, ms, msnr = np.mean(best_data, axis=0)
+            slope = grad2(best_data)
+            best_groups.append(
+                [best_data, cluster_id, ratio, x1, x2, y1, y2, best_data.shape[0], ms, mc, msnr, slope, cluster_id])
+
+    if best_groups:
+        return best_groups
+
+    slope = grad2(best_data)
+    best_ratio = '{:0.3f}\n{:0.3f}'.format(best_ratio, slope)
+    mc, ms, msnr = np.mean(best_data, axis=0)
+    return [[data, -1, best_ratio, x1, x2, y1, y2, best_data.shape[0], ms, mc, msnr, slope, cluster_id]]
+
+
 @timeit
 def process_leaves(pool, leaves, parallel=True):
     pos = []
     rej = []
-
+    leave_pairs = [(l, i) for i, l in enumerate(leaves)]
     if parallel:
-        for c in pool.map(linear_cluster, leaves):
-            if c[1] == -1:
-                rej.append(c)
-            else:
-                pos.append(c)
+        for clusters in pool.map(linear_cluster, leave_pairs):
+            for c in clusters:
+                if c[1] == -1:
+                    rej.append(c)
+                else:
+                    pos.append(c)
     else:
-        for i, l in enumerate(leaves):
-            c = linear_cluster(l, cluster_id=i)
-            if c[1] == -1:
-                rej.append(c)
-            else:
-                pos.append(c)
+        for l in leave_pairs:
+            clusters = linear_cluster(l)
+            for c in clusters:
+                if c[1] == -1:
+                    rej.append(c)
+                else:
+                    pos.append(c)
 
     return pos, rej
 
@@ -287,7 +344,8 @@ def estimate_leave_eps(clusters):
     diff = subset[:, [0, 2]] - subset[:, [1, 3]]
     mean_leave_size = np.median(diff, axis=0)
 
-    return np.vdot(mean_leave_size, mean_leave_size) ** 0.5 + 1 * np.std(diff)
+    return np.vdot(mean_leave_size, mean_leave_size) ** 0.5 * 1.5  # Get twice the leave size
+    return np.vdot(mean_leave_size, mean_leave_size) ** 0.5 + 1 * np.std(diff)  # 1 leave size + 1 std away
 
 
 def fill(test_image, cluster, fill_thickness=False):
@@ -337,7 +395,7 @@ def fill(test_image, cluster, fill_thickness=False):
     return combined[combined[:, 2] > t]
 
 
-def fill2(test_image, cluster, fill_thickness=False):
+def fill2(test_image, cluster, default=None):
     """
 
     :param test_image:
@@ -371,10 +429,13 @@ def fill2(test_image, cluster, fill_thickness=False):
     X = np.concatenate(x_seg)
     y_predict = model.predict(X=X.reshape(-1, 1)).astype(int)
 
-    combined = np.zeros(shape=(len(y_predict), 4), dtype=int)
+    combined = np.zeros(shape=(len(y_predict), 4), dtype=float)
     combined[:, 0] = y_predict
     combined[:, 1] = X
-    combined[:, 2] = test_image[combined[:, 0], combined[:, 1]]
+    if default:
+        combined[:, 2] = np.full(len(combined), default)
+    else:
+        combined[:, 2] = test_image[combined[:, 0].astype(int), combined[:, 1].astype(int)]
 
     # Remove duplicate rows with the same value and channel
     # Select sample with highest power per time sample
@@ -517,102 +578,67 @@ def validate_clusters_func2(labelled_cluster):
     tracks = []
     candidate, g = labelled_cluster
     ransac = linear_model.RANSACRegressor(residual_threshold=5)
-
-    snr = candidate[:, 2]
-
-    ransac.fit(candidate[:, 0].reshape(-1, 1), candidate[:, 1])
-
-    c = pearsonr(candidate[:, 0], candidate[:, 1])
-
-
-
-    print 'Group G: R:{:0.3f}, E:{:0.3f}, P:{:0.3f}, IR:{:0.3f}'.format(
-
-    __ir2(candidate, min_n=len(candidate) + 1)[0])
-
-    # filter false positives - based on their SNR values
-    t = np.median(snr) - np.std(snr) * 2
-
-    candidate = candidate[snr > t]
-
-    unique_samples, indices = np.unique(candidate[:, 1], return_index=True)
-
-    if len(unique_samples) < MIN_UNQ_SMPLS:
-        print 'not enough unique samples', len(unique_samples), g, np.mean(candidate[:, 0])
-        return tracks
-
-    # skip validation if IR is very low
-    if abs(__ir2(candidate, min_n=len(candidate) + 1)[0]) < MIN_R:
-        print 'Ir small enough', np.mean(candidate[:, 0]), g
-        return [add_group(candidate, g)]
-
-        # return tracks
-
     ransac.fit(candidate[:, 0].reshape(-1, 1), candidate[:, 1])
     candidate = candidate[ransac.inlier_mask_]
+    ir = __ir2(candidate, min_n=len(candidate) + 1)[0]
+    m, intercept, r_value, p, e = linregress(candidate[:, 1], candidate[:, 0])
 
-    valid = is_valid(candidate, min_span_thold=MIN_SPAN_THLD, group=g)
+    if ir > 0.01:
+        print "Candidate {}, dropped since inertia ratio is not small enough ({:0.3f})".format(g, ir)
+    elif r_value > -.98:
+        print "Candidate {}, dropped since r-value is not high enough ({:0.3f})".format(g, r_value)
 
-    if g == 22:
-        print 'is_valid', valid
+    elif p > 0.01:
+        print "Candidate {}, dropped since p-value is not low enough ({:0.3f})".format(g, p)
 
-    tmp = [candidate]
-    if not valid:
-        tmp = split(ransac, candidate)
-
-    for t_track in tmp:
-
-        t_track = density_check(t_track)
-
-        if not np.any(t_track):
-            print 'not dense', g
-            continue
-
-        s = t_track[:, 1]
-        c = t_track[:, 0]
-
-        if np.corrcoef(s, c)[0][1] < MIN_CORR or len(np.unique(s)) > MIN_UNQ_SMPLS_2:
-            candidate = add_group(t_track, g)
-            tracks.append(candidate)
+    elif e > 0.01:
+        print "Candidate {}, dropped since correlation error is greater than 0.01 ({})".format(g, e)
+    else:
+        candidate = density_check(candidate, cluster_id=g)
+        if len(candidate) < 1:
+            print "Candidate {}, dropped since density is not high enough ({})".format(g, len(candidate))
         else:
-            print 'Not corr or not long enough', g, np.corrcoef(s, c)[0][1], len(np.unique(s))
+            return [add_group(candidate, g)]
 
     return tracks
 
 
-
-def density_check(t_track):
-    channels = t_track[:, 0]
-    samples = t_track[:, 1]
-
-    missing_channels = np.setxor1d(np.arange(min(channels), max(channels)), channels)
-    r_channels = len(missing_channels) / float(len(missing_channels) + len(channels))
+def remove_isolated_segments(track, param, min_seg_length=5, gap_length=3):
+    missing = np.setxor1d(np.arange(min(param), max(param)), param)
+    r_channels = len(missing) / float(len(missing) + len(param))
 
     if r_channels >= MAX_MISSING_DATA:
-        sorted_track = t_track[(-t_track[:, 1]).argsort()]
-        gaps = np.where(np.diff(sorted_track[:, 0]) > 3)[0]
+        sorted_track = track[(-track[:, 1]).argsort()]
+        gaps = np.where(np.diff(sorted_track[:, 0]) > gap_length)[0] + 1
         segments = np.array_split(sorted_track, gaps)
 
-        valid = [seg for seg in segments if len(seg) > 5]
+        valid_segments = [seg for seg in segments if len(seg) > min_seg_length]
 
-        if valid:
-            return np.vstack(valid)
+        if len(valid_segments) > 0:
+            return np.vstack(valid_segments)
 
-        return False
-    missing_samples = np.setxor1d(np.arange(min(samples), max(samples)), samples)
-    r_samples = len(missing_samples) / float(len(missing_samples) + len(samples))
+        return []
 
-    if r_samples >= MAX_MISSING_DATA:
-        sorted_track = t_track[(-t_track[:, 1]).argsort()]
-        gaps = np.where(np.diff(sorted_track[:, 1]) > 3)[0]
-        segments = np.array_split(sorted_track, gaps)
-        valid = [seg for seg in segments if len(seg) > 5]
-        if valid:
-            return np.vstack(valid)
+    return track
 
-        return False
 
-    return t_track
+def density_check(track, cluster_id):
+    channels = track[:, 0]
+    samples = track[:, 1]
+    track = remove_isolated_segments(track, samples, min_seg_length=5, gap_length=3)
+
+    if len(track) < 1:
+        print "Track {} was removed because samples are too sparse".format(cluster_id)
+        return track
+
+    track = remove_isolated_segments(track, channels, min_seg_length=5, gap_length=3)
+
+    if len(track) < 1:
+        print "Track {} was removed because channels are too sparse".format(cluster_id)
+        return track
+
+    return track
+
 
 
 @timeit
@@ -638,17 +664,17 @@ def is_valid(cluster, r_thold=-0.9, min_span_thold=1, group=-1):
 
     ur = len(np.unique(c)) * 1.0 / (max(c) - min(c))
     if ur < 0.4:
-        print 'uniq < 0.4', group
+        # print 'uniq < 0.4', group
         return False
     # if len(cluster) < MIN_UNQ_SMPLS:
     #     return False
 
     if len(np.unique(s)) == 1 or len(np.unique(c)) == 1:
-        print 'uniq = 1', group
+        # print 'uniq = 1', group
         return False
 
     if len(np.unique(s)) < min_span_thold:
-        print 'uniq min than span', group, len(np.unique(s))
+        # print 'uniq min than span', group, len(np.unique(s))
         return False
 
     pear = pearsonr(s, c)
@@ -656,33 +682,24 @@ def is_valid(cluster, r_thold=-0.9, min_span_thold=1, group=-1):
     if pear[1] < P_VALUE and pear[0] < r_thold:
         return True
     else:
-        print 'pear[1] < P_VALUE and pear[0] < r_thold', group, pear
-
+        # print 'pear[1] < P_VALUE and pear[0] < r_thold', group, pear
+        pass
     return False
 
 
 @timeit
-def cluster_leaves(leaves, distance_thold):
-    cluster_data = np.vstack(
-        [(cluster, j, m, x, y, p) for i, (cluster, best_gs, ratio, x1, x2, y1, y2, n, x, y, p, m, j) in
-         enumerate(leaves)])
-
-    if len(leaves) == 1:
-        return np.append(cluster_data, np.full(fill_value=1, shape=cluster_data.shape[0]).reshape(-1, 1), axis=1), [1]
-
-    cluster_labels, unique_labels = h_cluster_euclidean(cluster_data, distance_thold)
-    # print cluster_data.shape, cluster_labels.shape, unique_labels
-    return np.append(cluster_data, cluster_labels.reshape(-1, 1), axis=1), unique_labels
-
-
-@timeit
-def pre_process_data(test_image, noise_estimate):
+def pre_process_data(test_image, noise_estimate=None):
     # print np.min(test_image), noise_estimate, np.shape(test_image)
+    if noise_estimate:
+        test_image -= noise_estimate
+
     ndx = np.column_stack(np.where(test_image > 0.))
     # print 'ndx', ndx.shape, test_image.shape
     # print len(ndx), min(ndx[:, 0]), max(ndx[:, 0])
 
     power = test_image[test_image > 0.]
+
+    return np.append(ndx, np.expand_dims(power, axis=1), axis=1)
 
     snr = 10 * np.log10(power / noise_estimate)
     ndx = np.append(ndx, np.expand_dims(snr, axis=1), axis=1)

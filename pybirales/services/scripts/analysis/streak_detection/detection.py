@@ -14,7 +14,7 @@ from configuration import *
 from evaluation import *
 from filters import *
 from pybirales.pipeline.modules.detection.msds.msds import *
-from pybirales.pipeline.modules.detection.msds.util import get_clusters
+from pybirales.pipeline.modules.detection.msds.util import get_clusters, snr_calc
 from pybirales.pipeline.modules.detection.msds.visualisation import *
 from receiver import *
 
@@ -142,11 +142,18 @@ def msds_q(test_image):
     # limits = None
     pool = multiprocessing.Pool(processes=8)
     # Pre-process the input data
+    # debug= False
+    org_test_image = test_image.copy()
+    noise_mean = np.mean(test_image)
+    mask, threshold = chunked_filtering(test_image, sigma_clipping)
+    test_image[mask] = -100
+    t1 = time.time()
     ndx = pre_process_data(test_image, noise_estimate=0.93711)
-    # ndx = pre_process_data2(test_image)
+
+    # ndx = pre_process_data2(test_imagesysyte)
 
     # Build quad/nd tree that spans all the data points
-    k_tree = build_tree(ndx, leave_size=30, n_axis=2)
+    k_tree = build_tree(ndx, leave_size=40, n_axis=2)
 
     visualise_filtered_data(ndx, true_tracks, '1_filtered_data', limits=limits, debug=debug)
 
@@ -155,29 +162,32 @@ def msds_q(test_image):
                       bbox=(0, test_image.shape[1], 0, test_image.shape[0]),
                       distance_thold=3., min_length=2., cluster_size_thold=10.)
 
-    positives, negatives = process_leaves(pool, leaves, parallel=False)
+    positives, negatives = process_leaves(pool, leaves, parallel=True)
 
     print "Processed {} leaves. Of which {} were positives.".format(len(leaves), len(positives))
 
     visualise_tree_traversal(ndx, true_tracks, positives, negatives, '2_processed_leaves.png', limits=limits, vis=debug)
-
+    print 'per beam part took', time.time() - t1
     # Cluster the leaves based on their vicinity to each other
     eps = estimate_leave_eps(positives)
 
     print 'eps is:', eps
-    cluster_data, unique_labels = cluster_leaves(positives, distance_thold=eps)
+    cluster_data = cluster_leaves(positives, distance_thold=eps)
     cluster_labels = cluster_data[:, 6]
 
-    visualise_clusters(cluster_data, cluster_labels, unique_labels, true_tracks, positives, filename='3_clusters.png',
+    visualise_clusters(cluster_data, cluster_labels, np.unique(cluster_labels), true_tracks, positives, filename='3_clusters.png',
                        limits=limits,
                        debug=debug)
     # Filter invalid clusters
-    tracks = validate_clusters(pool, cluster_data, unique_labels=unique_labels)
+    tracks = validate_clusters(pool, cluster_data, unique_labels=np.unique(cluster_labels))
 
     visualise_tracks(tracks, true_tracks, '5_tracks.png', limits=limits, debug=debug)
 
     # Fill any missing data (increase recall)
-    tracks = [fill2(test_img, t) for t in tracks]
+    # tracks = [fill2(org_test_image, t) for t in tracks]
+
+
+    tracks = [snr_calc(t, noise_estimate=noise_mean) for t in tracks]
 
     # valid_tracks = [fill(test_img, t) for t in tracks]
     #
@@ -247,7 +257,7 @@ if __name__ == '__main__':
     N_CHANS = 8192
     N_SAMPLES = 256
 
-    limits = (0, 100, 7900, 8150)
+    limits = (0, 200, 6200, 6500)
 
     track_thickness = [1, 2, 5]
     track_thickness = [1]
@@ -263,7 +273,7 @@ if __name__ == '__main__':
     detectors = [
         # ('Naive DBSCAN', naive_dbscan, ('Filter', sigma_clipping4)),
         ## ('HDBSCAN', hdbscan, ('Filter', sigma_clipping4)),
-        ('msds_q', msds_q, ('Filter', sigma_clipping)),
+        ('msds_q', msds_q, ('Filter', no_filter)),
         # ('Hough Transform', hough_transform, ('Filter', global_thres)),
         # ('Astride', astride, ('No Filter', no_filter)),
         # ('CFAR', None, ('No Filter', cfar)),
@@ -324,12 +334,8 @@ if __name__ == '__main__':
 
                     # metrics[s][f_name] = evaluate_filter(true_image, data, ~mask, timing, s, TRACK_THICKNESS)
 
-                    # data[:] = False
-                    # data[~mask] = True
                     data[mask] = -100
 
-                    # print np.mean(mask), s, threshold
-                    # continue
                 # continue
                 # feature extraction - detection
                 print "Running {} algorithm".format(d_name)

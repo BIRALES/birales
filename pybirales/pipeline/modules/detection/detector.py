@@ -12,9 +12,9 @@ from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.modules.detection.dbscan_detection import detect
 from pybirales.pipeline.modules.detection.exceptions import DetectionClusterIsNotValid
 from pybirales.pipeline.modules.detection.filter import RemoveBackgroundNoiseFilter, RemoveTransmitterChannelFilter
-from pybirales.pipeline.modules.detection.msds.msds import *
-from pybirales.pipeline.modules.detection.msds.util import _create_cluster
-from pybirales.pipeline.modules.detection.msds.visualisation import *
+from msds.msds import *
+from msds.util import _create_cluster, snr_calc
+from msds.visualisation import *
 from pybirales.pipeline.modules.detection.space_debris_candidate import SpaceDebrisTrack
 import pandas as pd
 import datetime
@@ -70,8 +70,8 @@ class Detector(ProcessingModule):
                                       obs_info['start_center_frequency'] + obs_info['channel_bandwidth'] * obs_info[
                                           'nchans'], obs_info['channel_bandwidth'])
 
-            doppler_mask = np.ones(shape=8192).astype(bool)
-            return self.channels, doppler_mask
+            # doppler_mask = np.ones(shape=8192).astype(bool)
+            # return self.channels, doppler_mask
 
             a = obs_info['transmitter_frequency'] + settings.detection.doppler_range[0] * 1e-6
             b = obs_info['transmitter_frequency'] + settings.detection.doppler_range[1] * 1e-6
@@ -177,53 +177,16 @@ class Detector(ProcessingModule):
 
         return temp_candidates
 
-    def _msds_get_merged_input(self, input_data):
-        merged_input = np.sum(input_data, axis=0)
-
-        # power
-        merged_input = np.power(np.abs(merged_input), 2.0) + 0.00000000000001
-
-        return merged_input
-
-    def _msds_get_merged_filtered_input(self, input_data, obs_info):
-        # filter before
-        input_data = np.power(np.abs(input_data), 2.0) + 0.00000000000001
-        # print '1', obs_info['iter_count'], input_data.min(), input_data.max(), input_data.mean()
-        # self.filter_bkg3.apply(input_data, obs_info)
-        # input_data[input_data < 0] = 0
-
-        threshold = 3 * np.mean(input_data, axis=2) + np.mean(input_data, axis=2)
-        t2 = np.expand_dims(threshold, axis=2)
-        input_data[input_data <= t2] = 0
-
-        # print '2', obs_info['iter_count'], input_data.min(), input_data.max(), input_data.mean()
-        input_data[input_data < 0] = 0
-        # print '3', obs_info['iter_count'], input_data.min(), input_data.max(), input_data.mean()
-
-        merged_input = np.sum(input_data, axis=0)
-
-        # power
-        # merged_input = np.power(np.abs(merged_input), 2.0) + 0.00000000000001
-
-        obs_info['channel_noise'] = np.mean(merged_input, axis=1)
-        obs_info['channel_noise_std'] = np.std(merged_input, axis=1)
-
-        threshold = 2 * obs_info['channel_noise_std'] + obs_info['channel_noise']
-        t2 = np.expand_dims(threshold, axis=1)
-        merged_input[merged_input <= t2] = 0
-
-        return merged_input, obs_info
-
     def _msds_get_filtered_input(self, input_data, obs_info, beam_id):
         # filter before
         input_data = np.power(np.abs(input_data[beam_id, ...]), 2.0) + 0.00000000000001
 
+        obs_info['channel_noise'] = np.mean(input_data, axis=1)
+        obs_info['channel_noise_std'] = np.std(input_data, axis=1)
+
         threshold = 3 * np.mean(input_data, axis=1) + np.mean(input_data, axis=1)
         t2 = np.expand_dims(threshold, axis=1)
         input_data[input_data <= t2] = 0
-
-        obs_info['channel_noise'] = np.mean(input_data, axis=1)
-        obs_info['channel_noise_std'] = np.std(input_data, axis=1)
 
         return input_data, obs_info
 
@@ -237,52 +200,15 @@ class Detector(ProcessingModule):
 
         return input_data, obs_info
 
-    def _msds_get_merged_max_input(self, input_data, obs_info):
-        input_data = np.power(np.abs(input_data), 2.0) + 0.00000000000001
-        # input_data = input_data[14, ...]
-
-        # input_data = np.max(input_data, axis=0)
-        #
-        # np.save('tmp_power_blob.npy', input_data)
-        #
-        # exit()
-
-        input_data_max = np.max(input_data, axis=(1, 2), keepdims=True)
-        input_data_min = np.min(input_data, axis=(1, 2), keepdims=True)
-
-        input_data_norm = (input_data - input_data_min) / (input_data_max - input_data_min)
-
-        print input_data_norm.shape, np.min(input_data_norm), np.max(input_data_norm)
-
-        threshold = 4 * np.std(input_data_norm, axis=2) + np.mean(input_data_norm, axis=2)
-
-        t2 = np.expand_dims(threshold, axis=2)
-        input_data_norm[input_data_norm <= t2] = 0
-
-        input_data = np.max(input_data_norm, axis=0)
-
-        threshold = 1 * np.std(input_data) + np.mean(input_data)
-        print 'threshold is ', threshold, 1 * np.std(input_data[input_data > 0]) + np.mean(input_data[input_data > 0])
-        input_data[input_data <= threshold] = 0
-
-        return input_data, obs_info
-
     def _msds_get_filtered_input2(self, input_data, obs_info):
         input_data = np.power(np.abs(input_data), 2.0) + 0.00000000000001
-        # input_data = input_data[14, ...]
 
-        # input_data = np.max(input_data, axis=0)
-        #
-        # np.save('tmp_power_blob.npy', input_data)
-        #
-        # exit()
+        obs_info['beam_noise'] = np.mean(np.mean(input_data, axis=1), axis=1)
 
         input_data_max = np.max(input_data, axis=(1, 2), keepdims=True)
         input_data_min = np.min(input_data, axis=(1, 2), keepdims=True)
 
         input_data_norm = (input_data - input_data_min) / (input_data_max - input_data_min)
-
-        print input_data_norm.shape, np.min(input_data_norm), np.max(input_data_norm)
 
         threshold = 3 * np.std(input_data_norm, axis=2) + np.mean(input_data_norm, axis=2)
 
@@ -316,11 +242,14 @@ class Detector(ProcessingModule):
 
         t1 = time.time()
         clusters = []
+        # for b in [14, 20, 21, 22, 23]:
         for b in range(0, 32):
             beam_seg_input_data = seg_input_data[b, ...]
 
             # todo Get ndx for all beams. Do not do SNR calculation for now.
-            ndx = pre_process_data2(beam_seg_input_data)
+            # print "noise estimate in beam {} is {} {}".format(b, obs_info['beam_noise'][b],
+            #                                                   np.mean(beam_seg_input_data))
+            ndx = pre_process_data(beam_seg_input_data, noise_estimate=None)
 
             # visualise_input_data(None, seg_input_data, None, b, self._iter_count, debug, limits)
 
@@ -328,23 +257,25 @@ class Detector(ProcessingModule):
             k_tree = build_tree(ndx, leave_size=40, n_axis=2)
 
             # Traverse the tree and identify valid linear streaks
-            leaves = traverse(k_tree.tree, ndx, bbox=(0, ndx[:, 1].max(), 0, ndx[:, 0].max()),
+            leaves = traverse(k_tree.tree, ndx, bbox=(0, beam_seg_input_data.shape[1], 0, beam_seg_input_data.shape[0]),
                               distance_thold=3., min_length=2., cluster_size_thold=10.)
 
-            positives, negatives = process_leaves(self.pool, leaves)
+            positives, negatives = process_leaves(self.pool, leaves, parallel=True)
 
-            if 14 <= b <= 15:
+            if 14 <= b <= 15 and self._iter_count == 4:
                 print 'Found {} clusters in beam {} iteration {}'.format(len(positives), b, self._iter_count)
                 visualise_tree_traversal(ndx, None, positives, negatives,
-                                         '2_processed_leaves_{}_{}.png'.format(self._iter_count, b), limits=limits, vis=debug)
+                                         '2_processed_leaves_{}_{}.png'.format(self._iter_count, b), limits=limits,
+                                         vis=debug)
 
             clusters.extend(positives)
 
             if len(positives) > 0:
                 print 'Iteration {}. Found {} clusters in beam {}'.format(self._iter_count, len(positives), b)
 
-        print 'Iteration {}. Process leaves across 32 beams finished in {} seconds'.format(self._iter_count,
-                                                                                           time.time() - t1)
+        print 'Iteration {}. Found {}.Process leaves across 32 beams finished in {} seconds'.format(self._iter_count,
+                                                                                                    len(clusters),
+                                                                                                    time.time() - t1)
         # todo Cluster the remaining data points by using the mean and slope. Investigate whether to use the slope
         # as another parameter in the clustering technique or by clustering if the joined cluster is not
         # very different from that of the individual data points.
@@ -356,22 +287,21 @@ class Detector(ProcessingModule):
 
         log.info('Found {} clusters from {} leaves. EPS is {:0.3f}'.format(len(clusters), len(leaves), eps))
 
-        cluster_data, unique_labels = cluster_leaves(clusters, distance_thold=eps)
+        cluster_data = cluster_leaves(clusters, distance_thold=eps)
+        cluster_labels = cluster_data[:, 6]
 
-        visualise_clusters(cluster_data, cluster_data[:, 6], unique_labels, None,
-                           filename='3_clusters{}.png'.format(self._iter_count), limits=limits, debug=debug)
-
-
-        # if not np.any(cluster_data):
-        #     return []
+        visualise_clusters(cluster_data, cluster_labels, np.unique(cluster_labels), None, clusters,
+                           filename='3_clusters_{}.png'.format(self._iter_count),
+                           limits=limits,
+                           debug=debug)
 
         # Validate the clusters
-        valid_tracks = validate_clusters(self.pool, cluster_data, unique_labels=unique_labels)
+        valid_tracks = validate_clusters(self.pool, cluster_data, unique_labels=np.unique(cluster_labels))
 
         visualise_tracks(valid_tracks, None, '5_tracks_{}.png'.format(self._iter_count), limits=limits, debug=debug)
 
-        # Fill any missing data (increase recall) todo try the new fill functionality
-        # valid_tracks = [fill(np.power(np.abs(input_data), 2), t) for t in tracks]
+        # Fill needs to be changed to detector.py since which beam will you use to fill?
+        # valid_tracks = [fill2(input_data, t, default=np.mean(t[:, 2])) for t in valid_tracks]
 
         # visualise_post_processed_tracks(tracks, None,
         #                                 '6_post-processed-tracks_{}.png'.format(self._iter_count), limits=None,
@@ -384,14 +314,23 @@ class Detector(ProcessingModule):
         chl = cluster[:, 0].astype(int)
         sample = cluster[:, 1].astype(int)
         clusters = []
-
+        m = []
         power = np.power(np.abs(input_data[:, chl, sample]), 2.0)
         for beam_id in range(0, 32):
             beam_power = power[beam_id]
             noise_estimate = np.mean(beam_noise[beam_id])
 
-            ## Select data points whose power is less than 5 db from the peak snr
-            beam_snr = 10 * np.log10(beam_power / noise_estimate)
+            signal_power = beam_power - noise_estimate
+
+            # Remove data points whose power is below the noise estimate
+            s_mask = signal_power > 0
+            beam_cluster = cluster[s_mask]
+
+            if len(beam_cluster) < 5:
+                continue
+
+            # Select data points whose power is less than 5 db from the peak snr
+            beam_snr = 10 * np.log10(signal_power[s_mask] / noise_estimate)
 
             # Select data points that are less than 5 dB from the peak SNR of the detections
             thres_db = np.max(beam_snr) - 5
@@ -402,13 +341,18 @@ class Detector(ProcessingModule):
 
             beam_mask = beam_snr >= thres_db
 
-            c = cluster[beam_mask]
+            c = beam_cluster[beam_mask]
             c[:, 2] = beam_snr[beam_mask]
 
-            clusters.append(_create_cluster(c, channels, obs_info, beam_id, iter_counter))
+            if len(c) < 5:
+                # Add the cluster if it is large enough
+                continue
 
-        m = pd.concat(clusters)
-        print 'Cluster was {} long and this became {} after splitting into the beams'.format(len(cluster), len(m))
+            clusters.append(_create_cluster(c, channels, obs_info, beam_id, iter_counter))
+        if len(clusters) > 0:
+            m = pd.concat(clusters)
+
+            print 'Cluster was {} long and this became {} after splitting into the beams'.format(len(cluster), len(m))
         return m
 
     # @timeit
@@ -474,8 +418,6 @@ class Detector(ProcessingModule):
         :return:
         """
 
-        # print np.shape(input_data)
-        # input_data = input_data[0, :, :, :]
         obs_info['iter_count'] = self._iter_count
         obs_info['transitted_tracks'] = []
         channels, doppler_mask = self._apply_doppler_mask(obs_info)
@@ -486,7 +428,8 @@ class Detector(ProcessingModule):
 
         limits = (0, 160, 4000, 4600)
 
-        # print np.where(doppler_mask == True)
+        # with doppler mask
+        limits = (0, 160, 1500, 2000)
 
         # Skip the first few blobs (to allow for an accurate noise estimation to be determined)
         if self._iter_count < 2:
@@ -505,14 +448,15 @@ class Detector(ProcessingModule):
         # [Feature Extraction] Process the input data and identify the detection clusters
         input_data_org = input_data.copy()
 
+        t = time.time()
         clusters_dbscan = self._get_clusters_naive(input_data_org, channels, channel_noise, obs_info, self._iter_count,
                                                    limits, debug)
         clusters = clusters_dbscan
-
+        print self._iter_count, 'dbscan finished in ', time.time() - t
         t = time.time()
         clusters_msds = self._get_clusters_msds(input_data, channels, channel_noise, obs_info, self._iter_count, limits,
                                                 debug)
-        print 'msds finished in ', time.time() - t
+        print self._iter_count, 'msds finished in ', time.time() - t
 
         clusters = clusters_msds
 

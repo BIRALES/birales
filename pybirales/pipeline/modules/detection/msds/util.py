@@ -155,3 +155,9 @@ def grad3(cluster):
     cov = np.cov(cluster[:, 1], cluster[:, 0]).flatten()
 
     return cov[0] / (cov[1] + 1e-9)
+
+
+def snr_calc(track, noise_estimate):
+    track[:, 2] = 10 * np.log10( (track[:, 2]) / noise_estimate)
+
+    return track

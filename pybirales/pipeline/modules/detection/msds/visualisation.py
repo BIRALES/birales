@@ -226,7 +226,7 @@ def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negative
         ax.plot(positives[:, 1], positives[:, 0], 'g.', zorder=3)
 
         msg = '{:0.2f}\n{:0.2f}'.format(score, grad2(positives))
-        ax.text(x1 + 0.5 * (x2 - x1), y1 + 0.5 * (y2 - y1), msg, color='k', weight='bold',
+        ax.text(x1 + 0.5 * (x2 - x1), y1 + 0.5 * (y2 - y1), msg, color='blue', weight='bold',
                 fontsize=8, ha='center', va='center')
     else:
         ax.plot(negatives[:, 1], negatives[:, 0], 'r.', zorder=1)
@@ -350,8 +350,8 @@ def visualise_post_processed_tracks(tracks, true_tracks, filename, limits=None, 
             ratio = __ir2(c[:, :2], group)
             x = c[:, 1].mean()
             y = c[:, 0].mean()
-            print group, 'R:{:0.5f} P:{:0.5f} E:{:0.5f} I:{:0.5f} N:{} M:{:0.4f} C:{:0.4f} X:{:0.4f} Y:{:0.4f}' \
-                .format(r_value, p, e, ratio[0], len(c), m, intercept, x, y)
+            print group, 'R:{:0.5f} P:{:0.5f} E:{:0.5f} I:{:0.5f} N:{} M:{:0.4f} C:{:0.4f} X:{:0.4f} Y:{:0.4f} SNR:{:0.2f}' \
+                .format(r_value, p, e, ratio[0], len(c), m, intercept, x, y, np.mean(c[:, 2]))
 
             ax.annotate('{:0.0f}'.format(group), (x, 1.01 * y), zorder=3)
             if groups:
@@ -493,8 +493,8 @@ def compare_algorithms(test_image, db_scan_clusters, msds_clusters, iteration, l
         for i, c in enumerate(db_scan_clusters):
             ax1.plot(c['time_sample'] - time_samples * iteration, c['channel_sample'], 'g.', zorder=4, ms=2)
 
-            print iteration, 'DBSCAN: Cluster {}, N: {}, Unique Samples: {}, Unique Channels: {}'.format(
-                i, len(c['time_sample']), len(np.unique(c['time_sample'])), len(np.unique(c['channel_sample'])))
+            print iteration, 'DBSCAN: Cluster {}, N: {}, Unique Samples: {}, Unique Channels: {} Beam:{}'.format(
+                i, len(c['time_sample']), len(np.unique(c['time_sample'])), len(np.unique(c['channel_sample'])), c['beam_id'][0])
 
         ax2 = axes[1]
         ax2.set_title('MSDS')
