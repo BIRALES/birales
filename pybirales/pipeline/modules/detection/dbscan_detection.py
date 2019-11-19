@@ -18,6 +18,7 @@ db_scan = DBSCAN(eps=_eps, min_samples=_min_samples, algorithm=_algorithm, n_job
 N_SAMPLES = 32
 N_SAMPLES = 160
 
+
 def _validate(channel, time_sample, td):
     """
     Validate the detection cluster
@@ -100,7 +101,7 @@ def partition_input_data(input_data, channel_noise, beam_id):
 
     # Process part of the input_data
     beam_data = input_data[beam_id, :, :]
-    
+
     # Get the channel noise for this beam
     beam_noise = channel_noise[beam_id]
 
@@ -117,14 +118,23 @@ def partition_input_data(input_data, channel_noise, beam_id):
     """
 
     # Remove filtered data from the calculation
-    snr_data = beam_data / beam_noise[:, np.newaxis]
+    noise_estimate = np.mean(beam_noise)
+
+    # snr_data = beam_data  / beam_noise[:, np.newaxis]
+
+
+    snr_data = (beam_data - noise_estimate) / noise_estimate
+
+    # print "snr_data2", snr_data
+
+
 
     # Remove filtered data from the calculation
     ndx = np.where(snr_data > 0.)
     snr_data = snr_data[ndx]
 
     # Convert SNR to dB
-    snr_data = 10*np.log10(snr_data)
+    snr_data = 10 * np.log10(snr_data)
 
     return np.column_stack(ndx), snr_data
     #
@@ -160,7 +170,6 @@ def dbscan_clustering(beam_ndx, snr_data):
     # Cluster mask to remove noise clusters
     denoise_mask = labelled_data[:, 2] > -1
 
-
     # Select only those labels which were not classified as noise was(-1)
     return labelled_data[denoise_mask], snr_data[denoise_mask]
 
@@ -191,6 +200,7 @@ def create_clusters(snr_data, labelled_data, channels, t0, td, beam_id, iter_cou
             clusters.append(cluster)
 
     return clusters
+
 
 @timeit
 def detect(input_data, channels, t0, td, iter_count, channel_noise, beam_id):

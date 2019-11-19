@@ -31,27 +31,6 @@ MIN_R *= 1.1  # buffer
 SLOPE_ANGLE_RANGE = (MIN_R, 0)
 
 
-# # @profile
-# @njit(["float64(float64[:],float64[:])"], fastmath=False)
-# def mydist2(p1, p2):
-#     diff = p1 - p2 + 1e-6
-#
-#     if (diff[0] / diff[1]) > 0:
-#         return 10000.
-#
-#     return np.vdot(diff, diff) ** 0.5
-#
-#
-# @njit(["float64(float64[:],float64[:])"], fastmath=False)
-# def mydist3(p1, p2):
-#     diff = p1 - p2 + 1e-6  # dx = p1[1] - p2[1],  dy = p1[0] - p2[0]
-#
-#     # if -0.987 <= diff[1] / diff[0] <= -0.0056:
-#     if -1 <= diff[1] / diff[0] <= 0:
-#         return np.vdot(diff, diff) ** 0.5
-#     return 10000.
-#
-
 def h_cluster(X, distance_thold, min_length=2, i=None):
     cluster_labels = fclusterdata_denis(X, distance_thold, criterion='distance', min_r=-1e9, check_grad=False,
                                         cluster_id=i)
@@ -101,41 +80,19 @@ def pdist_denis_w_grad(X, m, dm, min_r):
     return dm
 
 
-# @njit
-# def pdist_denis_w_grad(X, m, dm, min_r):
-#     k = 0
-#     v = np.zeros(shape=3)
-#     for i in xrange(0, m - 1):
-#         for j in xrange(i + 1, m):
-#             diff = X[i] - X[j] + 1e-6
-#             v[0] = diff[2] / diff[1]
-#
-#             if min_r <= v[0] <= 0:
-#                 dm[k] = np.vdot(diff[1:], diff[1:]) ** 0.5
-#             k = k + 1
-#     return dm
-
-
 # @profile
 def fclusterdata_denis(X, threshold, criterion, min_r=-1e9, check_grad=False, cluster_id=0):
-    # Compute the distance matrix
-    # distances = pdist(X, metric)
-
     m = X.shape[0]
     dm = np.full((m * (m - 1)) // 2, 10000, dtype=np.float)
 
     if check_grad:
+        # Compute the distance matrix
         distances = pdist_denis_w_grad(X, m, dm, min_r)
     else:
         distances = pdist_denis2(X, m, dm, min_r)
 
     # Perform single linkage clustering
     linked = linkage(distances, 'single')
-
-    # auto-selection of threshold based on density
-    # t = 2 * min(linked[:, 2])
-    # if min_r <= -10:
-    #     threshold = t
 
     # Determine to which cluster each initial point would belong given a distance threshold
     return fcluster(linked, threshold, criterion=criterion)
@@ -294,7 +251,7 @@ def linear_cluster(leave_pair):
         ratio, _, m1 = __ir2(c, min_n=20, i=cluster_id)
 
         if cluster_id in [489]:
-        #     visualise_ir2(c, data, cluster_id, 0)
+            #     visualise_ir2(c, data, cluster_id, 0)
             print ratio, grad(c), len(c), grad2(c), grad3(c), m1
 
         # if 0. >= ratio >= best_ratio and SLOPE_ANGLE_RANGE[0] < grad(c) < SLOPE_ANGLE_RANGE[1]:
@@ -575,38 +532,41 @@ def validate_clusters_func(labelled_cluster):
 
 
 def validate_clusters_func2(labelled_cluster):
-    tracks = []
+    """
+
+    :param labelled_cluster:
+    :return:
+    """
+
     candidate, g = labelled_cluster
     ransac = linear_model.RANSACRegressor(residual_threshold=5)
     ransac.fit(candidate[:, 0].reshape(-1, 1), candidate[:, 1])
     candidate = candidate[ransac.inlier_mask_]
-    ir = __ir2(candidate, min_n=len(candidate) + 1)[0]
+
     m, intercept, r_value, p, e = linregress(candidate[:, 1], candidate[:, 0])
 
-    if ir > 0.01:
-        print "Candidate {}, dropped since inertia ratio is not small enough ({:0.3f})".format(g, ir)
-    elif r_value > -.98:
+    if r_value > -.98:
         print "Candidate {}, dropped since r-value is not high enough ({:0.3f})".format(g, r_value)
-
     elif p > 0.01:
         print "Candidate {}, dropped since p-value is not low enough ({:0.3f})".format(g, p)
-
     elif e > 0.01:
         print "Candidate {}, dropped since correlation error is greater than 0.01 ({})".format(g, e)
     else:
-        candidate = density_check(candidate, cluster_id=g)
+        candidate = remove_isolated_segments(candidate, axis=1, min_seg_length=5, gap_length=3, cluster_id=g)
+        candidate = remove_isolated_segments(candidate, axis=0, min_seg_length=5, gap_length=3, cluster_id=g)
+
         if len(candidate) < 1:
             print "Candidate {}, dropped since density is not high enough ({})".format(g, len(candidate))
         else:
             return [add_group(candidate, g)]
 
-    return tracks
+    return []
 
 
-def remove_isolated_segments(track, param, min_seg_length=5, gap_length=3):
+def remove_isolated_segments_old(track, param, min_seg_length=5, gap_length=3, cluster_id=None):
     missing = np.setxor1d(np.arange(min(param), max(param)), param)
     r_channels = len(missing) / float(len(missing) + len(param))
-
+    MAX_MISSING_DATA = 0.
     if r_channels >= MAX_MISSING_DATA:
         sorted_track = track[(-track[:, 1]).argsort()]
         gaps = np.where(np.diff(sorted_track[:, 0]) > gap_length)[0] + 1
@@ -622,16 +582,40 @@ def remove_isolated_segments(track, param, min_seg_length=5, gap_length=3):
     return track
 
 
+def remove_isolated_segments(track, axis, min_seg_length=5, gap_length=3, cluster_id=None):
+    """
+    Remove isolated segments from a track.
+
+    :param track:
+    :param axis:
+    :param min_seg_length:
+    :param gap_length:
+    :param cluster_id:
+    :return:
+    """
+    if len(track) < 1:
+        return np.array([])
+
+    sorted_track = track[(-track[:, axis]).argsort()]
+    gaps = np.where(np.diff(sorted_track[:, axis]) < -gap_length)[0] + 1
+    segments = np.array_split(sorted_track, gaps)
+
+    valid_segments = [seg for seg in segments if len(seg) > min_seg_length]
+
+    if len(valid_segments) > 0:
+        return np.vstack(valid_segments)
+
+    return np.array([])
+
+
 def density_check(track, cluster_id):
-    channels = track[:, 0]
-    samples = track[:, 1]
-    track = remove_isolated_segments(track, samples, min_seg_length=5, gap_length=3)
+    track = remove_isolated_segments(track, axis=1, min_seg_length=5, gap_length=3, cluster_id=cluster_id)
 
     if len(track) < 1:
         print "Track {} was removed because samples are too sparse".format(cluster_id)
         return track
 
-    track = remove_isolated_segments(track, channels, min_seg_length=5, gap_length=3)
+    track = remove_isolated_segments(track, axis=0, min_seg_length=5, gap_length=3, cluster_id=cluster_id)
 
     if len(track) < 1:
         print "Track {} was removed because channels are too sparse".format(cluster_id)
@@ -640,18 +624,13 @@ def density_check(track, cluster_id):
     return track
 
 
-
 @timeit
 def validate_clusters(pool, data, unique_labels):
     labelled_clusters = data[:, 6]
     candidates = [(np.vstack(data[:, 0][labelled_clusters == g]), g) for g in unique_labels]
-    # clusters = [c for sub_clusters in pool.map(validate_clusters_func, candidates) if sub_clusters for c in
-    #             sub_clusters]
-
     clusters = []
     for c in candidates:
         clusters.extend(validate_clusters_func2(c))
-    # clusters = [validate_clusters_func(c) for c in candidates]
 
     print 'Validation reduced {} to {}'.format(len(unique_labels), len(clusters))
 
@@ -689,27 +668,12 @@ def is_valid(cluster, r_thold=-0.9, min_span_thold=1, group=-1):
 
 @timeit
 def pre_process_data(test_image, noise_estimate=None):
-    # print np.min(test_image), noise_estimate, np.shape(test_image)
     if noise_estimate:
         test_image -= noise_estimate
 
     ndx = np.column_stack(np.where(test_image > 0.))
-    # print 'ndx', ndx.shape, test_image.shape
-    # print len(ndx), min(ndx[:, 0]), max(ndx[:, 0])
-
     power = test_image[test_image > 0.]
 
-    return np.append(ndx, np.expand_dims(power, axis=1), axis=1)
-
-    snr = 10 * np.log10(power / noise_estimate)
-    ndx = np.append(ndx, np.expand_dims(snr, axis=1), axis=1)
-    # ndx = np.append(ndx, np.expand_dims(power, axis=1), axis=1)
-    return ndx
-
-
-def pre_process_data2(test_image):
-    ndx = np.column_stack(np.where(test_image > 0.))
-    power = test_image[test_image > 0.]
     return np.append(ndx, np.expand_dims(power, axis=1), axis=1)
 
 

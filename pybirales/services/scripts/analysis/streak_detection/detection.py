@@ -143,14 +143,8 @@ def msds_q(test_image):
     pool = multiprocessing.Pool(processes=8)
     # Pre-process the input data
     # debug= False
-    org_test_image = test_image.copy()
-    noise_mean = np.mean(test_image)
-    mask, threshold = chunked_filtering(test_image, sigma_clipping)
-    test_image[mask] = -100
     t1 = time.time()
     ndx = pre_process_data(test_image, noise_estimate=0.93711)
-
-    # ndx = pre_process_data2(test_imagesysyte)
 
     # Build quad/nd tree that spans all the data points
     k_tree = build_tree(ndx, leave_size=40, n_axis=2)
@@ -175,7 +169,8 @@ def msds_q(test_image):
     cluster_data = cluster_leaves(positives, distance_thold=eps)
     cluster_labels = cluster_data[:, 6]
 
-    visualise_clusters(cluster_data, cluster_labels, np.unique(cluster_labels), true_tracks, positives, filename='3_clusters.png',
+    visualise_clusters(cluster_data, cluster_labels, np.unique(cluster_labels), true_tracks, positives,
+                       filename='3_clusters.png',
                        limits=limits,
                        debug=debug)
     # Filter invalid clusters
@@ -183,63 +178,9 @@ def msds_q(test_image):
 
     visualise_tracks(tracks, true_tracks, '5_tracks.png', limits=limits, debug=debug)
 
-    # Fill any missing data (increase recall)
-    # tracks = [fill2(org_test_image, t) for t in tracks]
-
-
-    tracks = [snr_calc(t, noise_estimate=noise_mean) for t in tracks]
-
-    # valid_tracks = [fill(test_img, t) for t in tracks]
-    #
-    visualise_post_processed_tracks(tracks, true_tracks, '6_post-processed-tracks.png', limits=None, groups=None,
-                                    debug=debug)
+    # tracks = [snr_calc(t, noise_estimate=noise_mean) for t in tracks]
 
     return tracks
-
-
-def test_detector(filtered_test_img, noise_mean, true_tracks, detector, thickness, snr):
-    # Estimate the noise
-    t = thickness
-    s = snr
-    d_name, detect, (f_name, filter_func) = detector
-
-    metrics[s] = {}
-
-    print "\nEvaluating filters with tracks at SNR={:0.2f} dB".format(s)
-
-    # Add tracks to the true data
-    true_image = add_tracks(np.zeros(shape=filtered_test_img.shape), true_tracks, noise_mean, s)
-
-    data = filtered_test_img.copy()
-
-    # Add tracks to the simulated data
-    data = add_tracks(data, true_tracks, noise_mean, s)
-
-    if filter_func != no_filter:
-        # Filter the data in generate metrics
-        # Split data in chunks
-        start = time.time()
-        mask, threshold = chunked_filtering(data, filter_func)
-        # mask, _ = hit_and_miss(data, test_img, mask)
-        timing = time.time() - start
-        print "The {} filtering algorithm, finished in {:2.3f}s".format(f_name, timing)
-
-        visualise_filter(data, mask, true_tracks, f_name, s, threshold, visualise=False)
-
-        data[mask] = -100
-
-    # feature extraction - detection
-    print "Running {} algorithm".format(d_name)
-    start = time.time()
-    candidates = detect(data)
-    timing = time.time() - start
-    print "The {} detection algorithm, found {} candidates in {:2.3f}s".format(d_name, len(candidates),
-                                                                               timing)
-
-    # evaluation
-    metrics[s][d_name] = evaluate_detector(true_image, data, candidates, timing, s, t)
-
-    return metrics
 
 
 if __name__ == '__main__':
@@ -265,7 +206,7 @@ if __name__ == '__main__':
     # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
     snr = [25]
     snr = [2, 3, 5, 10, 15, 20, 25]
-    snr = [3]
+    snr = [5]
 
     metrics = {}
     metrics_df = pd.DataFrame()
@@ -273,7 +214,7 @@ if __name__ == '__main__':
     detectors = [
         # ('Naive DBSCAN', naive_dbscan, ('Filter', sigma_clipping4)),
         ## ('HDBSCAN', hdbscan, ('Filter', sigma_clipping4)),
-        ('msds_q', msds_q, ('Filter', no_filter)),
+        ('msds_q', msds_q, ('Filter', sigma_clipping)),
         # ('Hough Transform', hough_transform, ('Filter', global_thres)),
         # ('Astride', astride, ('No Filter', no_filter)),
         # ('CFAR', None, ('No Filter', cfar)),
@@ -341,9 +282,15 @@ if __name__ == '__main__':
                 print "Running {} algorithm".format(d_name)
                 start = time.time()
                 candidates = detect(data)
+
+                candidates = [snr_calc(candidate, noise_estimate=noise_mean) for candidate in candidates]
                 timing = time.time() - start
                 print "The {} detection algorithm, found {} candidates in {:2.3f}s".format(d_name, len(candidates),
                                                                                            timing)
+
+                visualise_post_processed_tracks(candidates, true_tracks, '6_post-processed-tracks.png', limits=None,
+                                                groups=None,
+                                                debug=debug)
 
                 # visualise candidates
                 # visualise_detector(data, candidates, tracks, d_name, s, visualise=True)

@@ -162,8 +162,8 @@ class SpaceDebrisTrack:
         self.ref_data['doppler'] = (self.data.iloc[mid]['channel'] - self._obs_info['transmitter_frequency']) * 1e6
         self.ref_data['gradient'] = 1e6 * (self.data['channel'].iloc[0] - self.data['channel'].iloc[-1]) / (
                 self.data['time'].iloc[0] - self.data['time'].iloc[-1]).total_seconds()
-        self.ref_data['snr'] = np.median(self.data['snr'])
-        self.ref_data['psnr'] = np.max(self.data['snr'])
+        self.ref_data['snr'] = float(np.median(self.data['snr']))
+        self.ref_data['psnr'] = float(np.max(self.data['snr']))
         self._to_save = True
 
     def state_str(self):
@@ -352,12 +352,13 @@ class SpaceDebrisTrack:
                                                                                              self.activated_beams,
                                                                                              self.r_value))
             else:
-                # print self._to_dict()
+                print self._to_dict()
                 sd = _db_model(**self._to_dict()).save()
                 self._id = sd.id
                 log.info("Track {:03d} (n: {}, r: {:0.3f}) saved".format(id(self) % 1000, self.size, self.r_value))
         except ValidationError:
             log.exception("Missing or incorrect data in Space Debris Track Model")
+
         except OperationError:
             log.exception("Space debris track could not be saved to DB")
         else:

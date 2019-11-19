@@ -481,16 +481,17 @@ def plot_metrics(metrics_df):
     print metrics_df[['precision', 'recall', 'snr', 'f1']]
 
 
-def compare_algorithms(test_image, db_scan_clusters, msds_clusters, iteration, limits=None,
+def compare_algorithms(db_scan_clusters, msds_clusters, iteration, limits=None,
                        debug=False):
     if debug:
         # plt.clf()
-        fig, axes = plt.subplots(nrows=1, ncols=3, sharey=True)
-        time_samples = test_image.shape[1]
+        fig, axes = plt.subplots(nrows=1, ncols=2, sharey=True)
+        time_samples = 160
 
         ax1 = axes[0]
         ax1.set_title('DBSCAN')
-        for i, c in enumerate(db_scan_clusters):
+        for i, cluster in enumerate(db_scan_clusters):
+            c = cluster.data
             ax1.plot(c['time_sample'] - time_samples * iteration, c['channel_sample'], 'g.', zorder=4, ms=2)
 
             print iteration, 'DBSCAN: Cluster {}, N: {}, Unique Samples: {}, Unique Channels: {} Beam:{}'.format(
@@ -498,25 +499,20 @@ def compare_algorithms(test_image, db_scan_clusters, msds_clusters, iteration, l
 
         ax2 = axes[1]
         ax2.set_title('MSDS')
-        for i, c in enumerate(msds_clusters):
+        for i, cluster in enumerate(msds_clusters):
+            c = cluster.data
             ax2.plot(c['time_sample'] - time_samples * iteration, c['channel_sample'], 'r.', zorder=4, ms=2)
 
             print 'channel_sample', np.mean(c['channel_sample'])
             print iteration, 'MSDS: Cluster {}, N: {}, Unique Samples: {}, Unique Channels: {}'.format(
                 i, len(c['time_sample']), len(np.unique(c['time_sample'])), len(np.unique(c['channel_sample'])))
 
-        ax = axes[2]
-        ndx = np.column_stack(np.where(test_image > 0.))
-        ndx2 = ndx[np.bitwise_and(ndx[:, 0] > limits[2], ndx[:, 0] < limits[3])]
-        ax.plot(ndx2[:, 1], ndx2[:, 0], 'k.', ms=2, zorder=0)
-        ax.set_title('Raw Data')
+
         ax1.set(xlabel='Sample', ylabel='Channel', xticks=range(0, 160, 40))
         ax2.set(xlabel='Sample', xticks=range(0, 160, 40))
-        ax.set(xlabel='Sample', xticks=range(0, 160, 40))
-        ax = set_limits(ax, limits)
         plt.grid()
 
-        ax.figure.savefig('msds_dbscan_comparison_{}.png'.format(iteration))
+        ax2.figure.savefig('msds_dbscan_comparison_{}.png'.format(iteration))
 
         # plt.show()
 
