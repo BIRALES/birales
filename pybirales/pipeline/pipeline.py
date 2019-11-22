@@ -8,6 +8,7 @@ from pybirales.pipeline.modules.channeliser import PFB
 from pybirales.pipeline.modules.correlator import Correlator
 from pybirales.pipeline.modules.detection.detector import Detector
 from pybirales.pipeline.modules.detection.filter import Filter
+from pybirales.pipeline.modules.detection.msds_detector import Detector as MSDSDetector
 from pybirales.pipeline.modules.detection.preprocessor import PreProcessor
 from pybirales.pipeline.modules.generator import DummyDataGenerator
 from pybirales.pipeline.modules.persisters.beam_persister import BeamPersister
@@ -20,7 +21,7 @@ from pybirales.pipeline.modules.receivers.receiver import Receiver
 from pybirales.pipeline.modules.rso_simulator import RSOGenerator
 from pybirales.pipeline.modules.terminator import Terminator
 
-AVAILABLE_PIPELINES_BUILDERS = ['detection_pipeline',
+AVAILABLE_PIPELINES_BUILDERS = ['detection_pipeline', 'msds_detection_pipeline',
                                 'correlation_pipeline',
                                 'standalone_pipeline', 'test_receiver_pipeline', 'dummy_data_pipeline',
                                 'rso_generator_pipeline', 'raw_data_truncator_pipeline']
@@ -42,6 +43,8 @@ def get_builder_by_id(builder_id):
 
     if builder_id == 'detection_pipeline':
         return DetectionPipelineMangerBuilder()
+    if builder_id == 'msds_detection_pipeline':
+        return MSDSDetectionPipelineManagerBuilder()
     elif builder_id == 'correlation_pipeline':
         return CorrelatorPipelineManagerBuilder()
     elif builder_id == 'standalone_pipeline':
@@ -85,12 +88,6 @@ class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
 l
         :return:
         """
-
-        # import faulthandler
-        # faulthandler.enable(all_threads=True)
-        #
-        # import ctypes
-        # ctypes.string_at(0)
 
         # Pipeline Reader or Receiver input
         if settings.manager.offline:
@@ -360,28 +357,21 @@ class DataTruncatorPipelineMangerBuilder(PipelineManagerBuilder):
         self.manager.add_module("terminator", terminator)
 
 
-
-class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
+class MSDSDetectionPipelineManagerBuilder(PipelineManagerBuilder):
     def __init__(self):
         PipelineManagerBuilder.__init__(self)
 
-        self.manager.name = 'Detection Pipeline'
+        self.manager.name = 'MSDS Detection Pipeline'
 
-        self._id = 'detection_pipeline_builder'
+        self._id = 'msds_detection_pipeline_builder'
 
     def build(self):
         """
         This script runs the multi-pixel pipeline with debris detection enabled,
         using the specified CONFIGURATION.
-l
+
         :return:
         """
-
-        # import faulthandler
-        # faulthandler.enable(all_threads=True)
-        #
-        # import ctypes
-        # ctypes.string_at(0)
 
         # Pipeline Reader or Receiver input
         if settings.manager.offline:
@@ -414,41 +404,24 @@ l
 
             pp_input = persister_beam.output_blob
 
-        # Detection
-        if settings.manager.detector_enabled:
-            preprocessor = PreProcessor(settings.detection, pp_input)
-            self.manager.add_module("preprocessor", preprocessor)
-            filtering = Filter(settings.detection, preprocessor.output_blob)
+        preprocessor = PreProcessor(settings.detection, pp_input)
+        self.manager.add_module("preprocessor", preprocessor)
 
-            if settings.fits_persister.visualise_raw_beams or settings.fits_persister.visualise_filtered_beams:
+        detector_input = preprocessor.output_blob
+        if settings.fits_persister.visualise_raw_beams:
+            raw_fits_persister = RawDataFitsPersister(settings.fits_persister, pp_input)
+            self.manager.add_module("raw_fits_persister", raw_fits_persister)
+            detector_input = raw_fits_persister.output_blob
 
-                if settings.fits_persister.visualise_raw_beams:
-                    raw_fits_persister = RawDataFitsPersister(settings.fits_persister, preprocessor.output_blob)
-                    filtering = Filter(settings.detection, raw_fits_persister.output_blob)
-                    self.manager.add_module("raw_fits_persister", raw_fits_persister)
+        detector = MSDSDetector(settings.detection, detector_input)
+        self.manager.add_module("detector", detector)
 
-                self.manager.add_module("filtering", filtering)
+        if settings.detection.save_tdm:
+            tdm_persister = TDMPersister(settings.observation, detector.output_blob)
+            self.manager.add_module("tdm_persister", tdm_persister)
 
-                if settings.fits_persister.visualise_filtered_beams:
-                    filtered_fits_persister = FilteredDataFitsPersister(settings.fits_persister, filtering.output_blob)
-                    detector = Detector(settings.detection, filtered_fits_persister.output_blob)
-                    self.manager.add_module("filtered_fits_persister", filtered_fits_persister)
-                else:
-                    detector = Detector(settings.detection, filtering.output_blob)
-            else:
-                self.manager.add_module("filtering", filtering)
-                detector = Detector(settings.detection, filtering.output_blob)
-
-            self.manager.add_module("detector", detector)
-            if settings.detection.save_tdm:
-                tdm_persister = TDMPersister(settings.observation, detector.output_blob)
-                self.manager.add_module("tdm_persister", tdm_persister)
-
-                terminator = Terminator(settings.terminator, tdm_persister.output_blob)
-                self.manager.add_module("terminator", terminator)
-            else:
-                terminator = Terminator(settings.terminator, detector.output_blob)
-                self.manager.add_module("terminator", terminator)
+            terminator = Terminator(settings.terminator, tdm_persister.output_blob)
+            self.manager.add_module("terminator", terminator)
         else:
-            terminator = Terminator(settings.terminator, pp_input)
+            terminator = Terminator(settings.terminator, detector.output_blob)
             self.manager.add_module("terminator", terminator)

@@ -40,18 +40,7 @@ class RemoveBackgroundNoiseFilter(InputDataFilter):
         # std = np.std(data, axis=(1, 2), keepdims=True)
         # threshold = self.std_threshold * std + mean
 
-        if np.any(obs_info['doppler_mask']):
-            print '1', obs_info['channel_noise_std'].shape
-            print '2', obs_info['doppler_mask'].shape
-            print '3', obs_info['channel_noise_std'][:, obs_info['doppler_mask']].shape
-            # Calculate the threshold at which the noise will be clipped
-            t2 = self.std_threshold * obs_info['channel_noise_std'][:, obs_info['doppler_mask']] + obs_info[
-                                                                                                       'channel_noise'][
-                                                                                                   :, obs_info[
-                                                                                                          'doppler_mask']]
-        else:
-            # Calculate the threshold at which the noise will be clipped
-            t2 = self.std_threshold * obs_info['channel_noise_std'] + obs_info['channel_noise']
+        t2 = self.std_threshold * obs_info['channel_noise_std'] + obs_info['channel_noise']
 
         log.debug('Noise: {:0.2f}W, Threshold set at {:0.2f}W'.format(np.mean(obs_info['channel_noise']), np.mean(t2)))
         # re-shape threshold array so to make it compatible with the data
@@ -155,8 +144,8 @@ class Filter(ProcessingModule):
 
         # The filters to be applied on the data. Filters will be applied in order.
         self._filters = [
-            # RemoveTransmitterChannelFilter(),
-            # RemoveBackgroundNoiseFilter(std_threshold=3.),
+            RemoveTransmitterChannelFilter(),
+            RemoveBackgroundNoiseFilter(std_threshold=4.),
             # PepperNoiseFilter(),
         ]
 
@@ -179,9 +168,9 @@ class Filter(ProcessingModule):
             return
 
         # Apply the filters on the data
-        # for f in self._filters:
-        #     f.apply(input_data, obs_info)
-        # print 'filtering'
+        for f in self._filters:
+            f.apply(input_data, obs_info)
+
         output_data[:] = input_data
 
         return obs_info

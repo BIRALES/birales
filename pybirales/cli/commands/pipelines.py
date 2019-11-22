@@ -12,7 +12,6 @@ from pybirales.services.scheduler.observation import ScheduledObservation
 @click.option('--debug/--no-debug', default=False)
 @click.option('--duration', 'duration', default=3600, help='The duration of the observation (2 hours by default)')
 @click.pass_context
-
 def pipelines(ctx, name, debug, duration):
     if not name:
         name = 'Observation_{:%Y-%m-%dT%H%M}'.format(datetime.datetime.utcnow())
@@ -26,6 +25,25 @@ def pipelines(ctx, name, debug, duration):
         },
         'duration': duration
     }
+
+
+def __detection_pipeline(ctx, config_file_path, tx, pointing, pipeline_name):
+    if tx:
+        ctx.obj = update_config(ctx.obj, 'observation', 'transmitter_frequency', tx)
+
+    if pointing:
+        ctx.obj = update_config(ctx.obj, 'beamformer', 'reference_declination', pointing)
+
+    ctx.obj['start_time'] = datetime.datetime.utcnow()
+
+    observation = ScheduledObservation(name=ctx.obj['observation']['name'],
+                                       pipeline_name=pipeline_name,
+                                       config_file=config_file_path,
+                                       config_parameters=ctx.obj)
+
+    om = ObservationManager()
+
+    om.run(observation)
 
 
 @pipelines.command(short_help='Run the Detection Pipeline')
@@ -47,23 +65,29 @@ def detection_pipeline(ctx, config_file_path, tx, pointing):
     :return:
     """
 
-    if tx:
-        ctx.obj = update_config(ctx.obj, 'observation', 'transmitter_frequency', tx)
+    __detection_pipeline(ctx, config_file_path, tx, pointing, 'detection_pipeline')
 
-    if pointing:
-        ctx.obj = update_config(ctx.obj, 'beamformer', 'reference_declination', pointing)
 
-    ctx.obj['start_time'] = datetime.datetime.utcnow()
+@pipelines.command(short_help='Run the Detection Pipeline')
+@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+              help='The BIRALES configuration file', multiple=True)
+@click.option('--tx', 'tx', type=float, help='The transmission frequency in MHz')
+@click.option('--pointing', 'pointing', type=float, help='Reference Declination of the Beam Former')
+@click.pass_context
+# @enable_notifications
+def msds_detection_pipeline(ctx, config_file_path, tx, pointing):
+    """
 
-    observation = ScheduledObservation(name=ctx.obj['observation']['name'],
-                                       pipeline_name='detection_pipeline',
-                                       config_file=config_file_path,
-                                       config_parameters=ctx.obj)
+    Run the Detection Pipeline
 
-    om = ObservationManager()
+    :param ctx:
+    :param tx:
+    :param pointing:
+    :param config_file_path: The default configuration file to be used.
+    :return:
+    """
 
-    om.run(observation)
-
+    __detection_pipeline(ctx, config_file_path, tx, pointing, 'msds_detection_pipeline')
 
 
 @pipelines.command(short_help='Run the Correlation Pipeline')
@@ -153,7 +177,6 @@ def dummy_data_pipeline(ctx, config_file_path):
 
     om = ObservationManager()
     om.run(observation)
-
 
 
 @pipelines.command(short_help='Run the RSO generator Pipeline')

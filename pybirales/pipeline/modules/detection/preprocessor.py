@@ -74,8 +74,6 @@ class PreProcessor(ProcessingModule):
         obs_info['channel_noise'], obs_info['channel_noise_std'] = self._get_noise_estimation(power_data, self.counter)
         obs_info['mean_noise'] = np.mean(obs_info['channel_noise'])
 
-        # print ('input', np.mean(obs_info['channel_noise']),  np.mean(obs_info['channel_noise_std']), np.mean(power_data))
-        power_data = data
         # If the configuration was not saved AND the number of noise samples is sufficient, save the noise value.
         if not self._config_persisted and self.counter >= settings.detection.n_noise_samples:
             self._observation = Observation.objects.get(id=settings.observation.id)
@@ -131,4 +129,4 @@ class PreProcessor(ProcessingModule):
             ('nbeams', input_shape['nbeams']),
             ('nchans', input_shape['nchans']),
             ('nsamp', input_shape['nsamp'])
-        ], datatype=np.complex64)
+        ], datatype=np.float)

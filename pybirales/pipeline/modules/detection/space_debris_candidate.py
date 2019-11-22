@@ -352,7 +352,6 @@ class SpaceDebrisTrack:
                                                                                              self.activated_beams,
                                                                                              self.r_value))
             else:
-                print self._to_dict()
                 sd = _db_model(**self._to_dict()).save()
                 self._id = sd.id
                 log.info("Track {:03d} (n: {}, r: {:0.3f}) saved".format(id(self) % 1000, self.size, self.r_value))
