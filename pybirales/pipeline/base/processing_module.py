@@ -189,7 +189,7 @@ class ProcessingModule(Module):
                 res = self.process(obs_info, input_data, output_data)
                 tt = time.time() - s
 
-                if tt < settings.receiver.nsamp / settings.observation.samples_per_second:
+                if tt < float(settings.receiver.nsamp) / settings.observation.samples_per_second:
                     log.info('[Iteration {}] {} finished in {:0.3f}s'.format(self._iter_count, self.name, tt))
                 else:
                     log.warning('[Iteration {}] {} finished in {:0.3f}s'.format(self._iter_count, self.name, tt))

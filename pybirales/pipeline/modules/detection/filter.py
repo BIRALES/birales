@@ -108,7 +108,7 @@ class Filter(ProcessingModule):
 
         # The filters to be applied on the data. Filters will be applied in order.
         self._filters = [
-            RemoveTransmitterChannelFilter(),
+            # RemoveTransmitterChannelFilter(),
             RemoveBackgroundNoiseFilter(std_threshold=4.),
             # PepperNoiseFilter(),
         ]
