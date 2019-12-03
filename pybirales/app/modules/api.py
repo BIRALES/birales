@@ -4,12 +4,12 @@ import os
 import subprocess
 
 import dateutil.parser
+import pandas as pd
 import pytz
 from flask import Blueprint, request
 
 from pybirales.repository.message_broker import broker
 from pybirales.repository.models import SpaceDebrisTrack, Event
-import pandas as pd
 
 api_page = Blueprint('api_page', __name__, template_folder='templates')
 
@@ -44,12 +44,14 @@ def observation_track_data(observation_id=None, from_date=None, to_date=None):
     if request.values.get('observation_id'):
         observation_id = request.values.get('observation_id')
 
-    print from_date, to_date, observation_id
+    # print from_date, to_date, observation_id
 
     detected_candidates = SpaceDebrisTrack.get(observation_id=observation_id, to_time=to_date,
                                                from_time=from_date).limit(5)
 
-    print detected_candidates
+    # print detected_candidates
+
+    response = []
 
     for c in detected_candidates:
         df = pd.DataFrame(c.data)
@@ -62,13 +64,15 @@ def observation_track_data(observation_id=None, from_date=None, to_date=None):
         df = df.sort_values('snr', ascending=False).drop_duplicates(subset=['channel_sample', 'beam_id']).sort_values(
             by=['time_sample'])
 
-        c.data = {
-            'channel': df['channel'].tolist(),
-            'time': df['time'].tolist(),
-            'snr': df['snr'].tolist()
-        }
+        response.append({
+            'tx': c.tx,
+            'data': {
+                'channel': df['channel'].tolist(),
+                'time': [t.replace(tzinfo=pytz.utc).isoformat('T') for t in df['time'].tolist()],
+                'snr': df['snr'].tolist()
+            }})
 
-    return detected_candidates.to_json()
+    return json.dumps(response)
 
 
 @api_page.route('/api/status/birales_service', methods=['GET'])
