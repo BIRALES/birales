@@ -1,5 +1,4 @@
 import datetime
-import logging as log
 import os
 
 from bson.objectid import ObjectId
@@ -96,12 +95,21 @@ class Observation(BIRALESObservation):
     calibration_obs = ReferenceField(CalibrationObservation)
 
     def description(self):
+        config_files = 'birales.ini'
+
+        for path in self.config_file:
+            b = os.path.basename(path)
+            if b != 'birales.ini':
+                config_files += ', ' + b
+
         return {
             'tx': self.tx,
             'status': self.status,
             'duration': self.config_parameters['duration'],
             'start': self.date_time_start,
             'end': self.date_time_end,
+            'declination': self.settings['beamformer']['reference_declination'],
+            'config': config_files
         }
 
 
