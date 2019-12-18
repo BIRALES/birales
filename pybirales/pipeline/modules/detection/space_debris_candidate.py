@@ -91,7 +91,7 @@ class SpaceDebrisTrack:
         # The last iteration counter
         self._last_iter_count = 0
 
-        self._max_candidate_iter = 10
+        self._max_candidate_iter = 2
 
         # The iteration number
         self._iter = 0
@@ -245,6 +245,8 @@ class SpaceDebrisTrack:
         :return:
         """
 
+        print iter_count, self._last_iter_count
+
         # The track is deemed to be finished if it has not been updated since N iterations
         if (iter_count - self._last_iter_count) > self._max_candidate_iter:
             log.debug(
@@ -305,7 +307,7 @@ class SpaceDebrisTrack:
         return dist.cosine([self.m, self.intercept], [cluster_m, cluster_c]) < settings.detection.similarity_thold
 
     def _to_dict(self):
-        return {
+        to_save = {
             'name': self.name,
             'observation': self._obs_id,
             'pointings': {
@@ -336,6 +338,8 @@ class SpaceDebrisTrack:
             'duration': self.duration.total_seconds(),
             'activated_beams': self.activated_beams
         }
+
+        return to_save
 
     def save(self):
         """
@@ -391,3 +395,18 @@ class SpaceDebrisTrack:
                 subset=['time_sample', 'beam_id']).sort_values(by=['time_sample'])
 
         return reduced_df
+
+    def track_expired(self, obs_info):
+        last_time = self.data['time'].max()
+        track_length = self.data['time'].max() - self.data['time'].min()
+
+        last_timestamp = obs_info['timestamp'] + datetime.timedelta(seconds=obs_info['sampling_time'] * 160)
+        # print 'last_time', last_time
+        # print 'track_length', track_length
+        # print 'last_timestamp', last_timestamp
+        # print '(current_timestamp - last_time) > track_length', (last_timestamp - last_time) > track_length
+
+        if (last_timestamp - last_time) > track_length:
+            return True
+
+        return False

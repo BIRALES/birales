@@ -1,14 +1,13 @@
 import logging
-
-from abc import abstractmethod
-from threading import Thread, Event
-from pybirales.pipeline.base.definitions import NoDataReaderException, InputDataNotValidException, \
-    BIRALESObservationException
-from pybirales import settings
-import time
 import logging as log
 import threading
-import sys
+import time
+from abc import abstractmethod
+from threading import Thread, Event
+
+from pybirales import settings
+from pybirales.pipeline.base.definitions import NoDataReaderException, InputDataNotValidException, \
+    BIRALESObservationException
 
 
 class Module(Thread):
@@ -174,10 +173,14 @@ class ProcessingModule(Module):
         while not self._stop.is_set():
 
             # Get pointer to input data if required
-            input_data, obs_info = None, None
+            input_data, obs_info = None, {}
+            obs_info['stop_pipeline_at'] = -1
             if self._input is not None:
                 # This can be released immediately since, data has already been deep copied
                 input_data, obs_info = self._input.request_read()
+
+                if 'stop_pipeline_at' not in obs_info:
+                    obs_info['stop_pipeline_at'] = -1
 
             # Get pointer to output data if required
             output_data = None
@@ -187,7 +190,14 @@ class ProcessingModule(Module):
             # Perform required processing
             try:
                 s = time.time()
-                res = self.process(obs_info, input_data, output_data)
+
+                if obs_info['stop_pipeline_at'] == self._iter_count:
+                    log.info('Stop pipeline message broadcasted to the %s module', self.name)
+                    self.stop()
+                else:
+                    res = self.process(obs_info, input_data, output_data)
+                    if res is not None:
+                        obs_info = res
                 tt = time.time() - s
 
                 nsamp = settings.rawdatareader.nsamp
@@ -198,8 +208,7 @@ class ProcessingModule(Module):
                 else:
                     log.warning('[Iteration {}] {} finished in {:0.3f}s'.format(self._iter_count, self.name, tt))
 
-                if res is not None:
-                    obs_info = res
+
             # except NoDataReaderException:
             #     logging.info("Data finished")
             #     self.stop()

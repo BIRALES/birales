@@ -214,14 +214,13 @@ class PipelineManager(object):
         while not self.stopped:
             now = datetime.datetime.utcnow()
 
-            # If one module stops without setting the stop bit (such as through a signal
-            # handler, stop all the pipeline
-            if self.is_module_stopped():
-                # self.stop_pipeline()
-                break
+            # # If one module stops without setting the stop bit (such as through a signal
+            # # handler, stop all the pipeline
+            # if self.is_module_stopped():
+            #     break
 
             # If all modules have stopped, we are ready
-            elif self.all_modules_stopped():
+            if self.all_modules_stopped():
                 log.debug('All modules are stopped')
                 break
 

@@ -1,6 +1,5 @@
 from multiprocessing import Pool
 
-from pybirales import settings
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.modules.detection.dbscan_detection import detect
@@ -59,7 +58,7 @@ class Detector(ProcessingModule):
                                         save_candidates=settings.detection.save_candidates)
 
         # [Track Termination] Check each track and determine if the detection object has transitted outside FoV
-        self._candidates, self._n_rso = active_tracks(candidates, self._n_rso, self._iter_count)
+        self._candidates, self._n_rso = active_tracks(obs_info, candidates, self._n_rso, self._iter_count)
 
         # Output a TDM for the tracks that have transitted outside the telescope's FoV
         obs_info['transitted_tracks'] = [c for c in candidates if c not in self._candidates]
@@ -82,6 +81,7 @@ class Detector(ProcessingModule):
         if self._iter_count < 2:
             return obs_info
 
+        obs_info['track_name'] = settings.observation.target_name
         obs_info['iter_count'] = self._iter_count
         obs_info['transitted_tracks'] = []
         self.channels, self._doppler_mask = apply_doppler_mask(self._doppler_mask, self.channels,

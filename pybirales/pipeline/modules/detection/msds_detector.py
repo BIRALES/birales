@@ -5,7 +5,6 @@ import pandas as pd
 
 from msds.msds import *
 from msds.util import _create_cluster
-from pybirales import settings
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.modules.detection.dbscan_detection import detect
@@ -133,53 +132,56 @@ class Detector(ProcessingModule):
 
         return valid_tracks
 
-    def diff(self, input_data, cluster, channels, obs_info, iter_counter, nbeams):
-        chl = cluster[:, 0].astype(int)
-        sample = cluster[:, 1].astype(int)
-        clusters = []
-        m = []
-        # power = np.power(np.abs(input_data[:, chl, sample]), 2.0)
-        power = input_data[:, chl, sample]
+    def diff(self, input_data, clusters, channels, obs_info, iter_counter, nbeams):
+        candidates = []
+        for cluster in clusters:
+            chl = cluster[:, 0].astype(int)
+            sample = cluster[:, 1].astype(int)
+            beam_clusters = []
 
-        for beam_id in range(0, nbeams):
-            beam_power = power[beam_id]
-            noise_estimate = np.mean(obs_info['channel_noise'][beam_id])
+            # power = np.power(np.abs(input_data[:, chl, sample]), 2.0)
+            power = input_data[:, chl, sample]
 
-            # Remove noise power from signal
-            signal_power = beam_power - noise_estimate
+            for beam_id in range(0, nbeams):
+                beam_power = power[beam_id]
+                noise_estimate = np.mean(obs_info['channel_noise'][beam_id])
 
-            # Remove data points whose power is below the noise estimate
-            s_mask = signal_power > 0
-            beam_cluster = cluster[s_mask]
+                # Remove noise power from signal
+                signal_power = beam_power - noise_estimate
 
-            if len(beam_cluster) < 5:
-                continue
+                # Remove data points whose power is below the noise estimate
+                s_mask = signal_power > 0
+                beam_cluster = cluster[s_mask]
 
-            # Select data points whose power is less than 5 db from the peak snr
-            beam_snr = 10 * np.log10(signal_power[s_mask] / noise_estimate)
+                if len(beam_cluster) < 5:
+                    continue
 
-            # Select data points that are less than 5 dB from the peak SNR of the detections
-            # thres_db = np.max(beam_snr) - 15
+                # Select data points whose power is less than 5 db from the peak snr
+                beam_snr = 10 * np.log10(signal_power[s_mask] / noise_estimate)
 
-            # Minimum SNR is 1 dB
-            thres_db = 1
+                # Select data points that are less than 5 dB from the peak SNR of the detections
+                # thres_db = np.max(beam_snr) - 15
 
-            beam_mask = beam_snr >= thres_db
+                # Minimum SNR is 1 dB
+                thres_db = 1
 
-            c = beam_cluster[beam_mask]
-            c[:, 2] = beam_snr[beam_mask]
+                beam_mask = beam_snr >= thres_db
 
-            if len(c) < 5:
-                # Add the cluster if it is large enough
-                continue
+                c = beam_cluster[beam_mask]
+                c[:, 2] = beam_snr[beam_mask]
 
-            clusters.append(_create_cluster(c, channels, obs_info, beam_id, iter_counter))
-        if len(clusters) > 0:
-            m = pd.concat(clusters)
+                if len(c) < 5:
+                    # Add the cluster if it is large enough
+                    continue
 
-            log.debug(
-                'Cluster was {} long and this became {} after splitting into the beams'.format(len(cluster), len(m)))
-        return m
+                beam_clusters.append(_create_cluster(c, channels, obs_info, beam_id, iter_counter))
+            if len(beam_clusters) > 0:
+                m = pd.concat(beam_clusters)
+
+                log.debug('Cluster was {} long and this became {} after splitting into the beams'.format(len(cluster),
+                                                                                                         len(m)))
+                candidates.append(m)
+        return candidates
 
     # @timeit
     def _get_clusters_naive(self, input_data, channels, obs_info, iter_counter, limits, debug):
@@ -222,7 +224,7 @@ class Detector(ProcessingModule):
         start_window = expected_transit_time - datetime.timedelta(seconds=30)
         end_window = expected_transit_time + datetime.timedelta(seconds=10)
 
-        log.debug('[Visualisation] Current time is {}'.format(obs_info['timestamp']))
+        log.debug('[Visualisation] [Iter {}] Current time is {}'.format(self._iter_count, obs_info['timestamp']))
         log.debug('[Visualisation] TLE is between {} and {}'.format(start_window, end_window))
         log.debug(
             '[Visualisation] Detector Within window {} {}'.format(end_window >= obs_info['timestamp'] >= start_window,
@@ -242,7 +244,7 @@ class Detector(ProcessingModule):
         clusters = self._get_clusters_msds(seg_input_data, limits, debug)
 
         # Split the track detection into multiple beams
-        clusters = [self.diff(input_data, c, channels, obs_info, self._iter_count, nbeams=32) for c in clusters]
+        clusters = self.diff(input_data, clusters, channels, obs_info, self._iter_count, nbeams=32)
 
         # [Track Association] Create new tracks from clusters or merge clusters into existing tracks
         candidates = aggregate_clusters(self._candidates_msds, clusters, obs_info,
@@ -250,7 +252,8 @@ class Detector(ProcessingModule):
                                         save_candidates=settings.detection.save_candidates)
 
         # [Track Termination] Check each track and determine if the detection object has transitted outside FoV
-        self._candidates_msds, self._n_rso_msds = active_tracks(candidates, self._n_rso_msds, self._iter_count)
+        self._candidates_msds, self._n_rso_msds = active_tracks(obs_info, candidates, self._n_rso_msds,
+                                                                self._iter_count)
 
         # Output a TDM for the tracks that have transitted outside the telescope's FoV
         obs_info['transitted_tracks_msds'] = [c for c in candidates if c not in self._candidates_msds]
@@ -273,10 +276,10 @@ class Detector(ProcessingModule):
                                         save_candidates=settings.detection.save_candidates)
 
         # [Track Termination] Check each track and determine if the detection object has transitted outside FoV
-        self._candidates, self._n_rso = active_tracks(candidates, self._n_rso, self._iter_count)
+        self._candidates, self._n_rso = active_tracks(obs_info, candidates, self._n_rso, self._iter_count)
 
         # Output a TDM for the tracks that have transitted outside the telescope's FoV
-        obs_info['transitted_tracks_msds'] = [c for c in candidates if c not in self._candidates]
+        obs_info['transitted_tracks'] = [c for c in candidates if c not in self._candidates]
 
         for i, candidate in enumerate(self._candidates):
             log.info("DBSCAN RSO %d: %s", self._n_rso + 1 + i, candidate.state_str())
@@ -291,30 +294,35 @@ class Detector(ProcessingModule):
         :param input_data:
         :param output_data:
         :return:
+
         """
+
+        obs_info['iter_count'] = self._iter_count
+        obs_info['transitted_tracks'] = []
+        obs_info['transitted_tracks_msds'] = []
+
         # Skip the first few blobs (to allow for an accurate noise estimation to be determined)
         if self._iter_count < 2:
             return obs_info
 
         self.filter_tx.apply(input_data, obs_info)
 
-        obs_info['iter_count'] = self._iter_count
-        obs_info['transitted_tracks'] = []
+
         self.channels, self._doppler_mask = apply_doppler_mask(self._doppler_mask, self.channels,
                                                                settings.detection.doppler_range,
                                                                obs_info)
 
         obs_info['doppler_mask'] = self._doppler_mask
 
-        limits = (0, 160, 1500, 2000)  # with doppler mask
-        debug = self.should_debug(obs_info, timestamp='05 MAR 2019 11:23:28.73')
+        limits = (0, 160, 0, 4000)  # with doppler mask
+        debug = self.should_debug(obs_info, timestamp='03 OCT 2019 06:27:15.603')
 
         obs_info = self.__process_dbscan(input_data[:, self._doppler_mask, :].copy(), obs_info, self.channels, limits,
                                          debug)
         obs_info = self.__process_msds(input_data[:, self._doppler_mask, :], obs_info, self.channels, limits, debug)
 
-        compare_algorithms(msds_clusters=self._candidates_msds, db_scan_clusters=self._candidates,
-                           limits=limits, iteration=self._iter_count, debug=debug)
+        # compare_algorithms(msds_clusters=self._candidates_msds, db_scan_clusters=self._candidates,
+        #                    limits=limits, iteration=self._iter_count, debug=debug)
 
         return obs_info
 

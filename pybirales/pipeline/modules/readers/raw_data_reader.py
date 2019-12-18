@@ -1,17 +1,16 @@
 import datetime
 import json
 import logging as log
+import os
 import pickle
 
 import numpy as np
-import time
+
 from pybirales import settings
-from pybirales.pipeline.base.definitions import PipelineError, ObservationInfo, NoDataReaderException, \
-    BIRALESObservationException
+from pybirales.pipeline.base.definitions import PipelineError, ObservationInfo, BIRALESObservationException
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.dummy_data import DummyBlob
 from pybirales.repository.message_broker import broker
-import os
 
 
 class RawDataReader(ProcessingModule):
@@ -32,14 +31,24 @@ class RawDataReader(ProcessingModule):
         if {'nants', 'nsamp', 'nsubs', 'npols'} - set(config.settings()) != set():
             raise PipelineError("DummyDataGenerator: Missing keys on configuration "
                                 "(nants, nsamp, nsub, 'npols')")
+
         self._nants = config.nants
         self._nsamp = config.nsamp
         self._nsubs = config.nsubs
         self._npols = config.npols
         self._filepath = config.filepath
-        self._read_count = 0
-        self._read_count = 48 # norad 1328 on 03/05/2019
-        self._read_count = 53  # norad 41182 on 03/05/2019
+
+        self._read_count = 48  # norad 1328 on 03/05/2019
+        self._read_count = 53  # norad 41182 on 03/05/2019 @ 11
+        self._read_count = 35  # norad 20666 on 11/02/2019 @ 11
+        self._read_count = 60  # norad 25160 on 03/10/2019 @ 06
+        self._read_count = 50  # norad 40894 on 11/02/2019 @ 10:53
+        self._read_count = 70  # norad 41240 on 11/02/2019 @ 11:36
+
+        self._read_count = 20  # norad 4259 on 03/10/2019 @ 06:27
+
+        self._read_count = 20  # norad 1328 on 03/10/2019 @ 06:27
+
         self._metrics_poll_freq = 10
         self._metric_channel = 'antenna_metrics'
 
@@ -50,30 +59,74 @@ class RawDataReader(ProcessingModule):
         # Call superclass initialiser
         super(RawDataReader, self).__init__(config, input_blob)
 
-        # Load the data file
-        try:
-            self._f = open(self._filepath, 'rb')
-            # self._f.seek(self._nsamp * self._nants * 8 * 48)
-            # self._f.seek(self._nsamp * self._nants * 8 * 42)
-            self._f.seek(self._nsamp * self._nants * 8 * self._read_count)
-
-            log.info('Using raw data in: {}'.format(self._filepath))
-        except IOError:
-            log.error('Data not found in %s. Exiting.', self._filepath)
-            raise BIRALESObservationException("Data not found in {}".format(self._filepath))
-
         # Load the PKL file
         try:
             self._config = pickle.load(open(self._filepath + config.config_ext, 'rb'))
 
             # Use the declination that is in the PKL file
             settings.beamformer.reference_declination = self._config['settings']['beamformer']['reference_declination']
+
+
         except IOError:
             log.error('Config PKL file was not found in %s. Exiting.', self._filepath + config.config_ext)
             raise BIRALESObservationException("Config PKL file was not found")
 
+        self._raw_file_timerange_display(self._filepath, self._config['timestamp'])
+
+        # Load the data file
+        try:
+            self._f = self._get_start_file(self._filepath, self._read_count)
+
+            # self._f = open(self._filepath, 'rb')
+            # self._f.seek(self._nsamp * self._nants * 8 * self._read_count)
+
+            log.info('Using raw data in: {}'.format(self._filepath))
+        except IOError:
+            log.error('Data not found in %s. Exiting.', self._filepath)
+            raise BIRALESObservationException("Data not found in {}".format(self._filepath))
+
         # Processing module name
         self.name = "RawDataReader"
+
+    def _get_start_file(self, filepath, skip):
+        self._f = open(filepath, 'rb')
+
+        if os.stat(filepath).st_size < self._nsamp * self._nants * 8 * skip:
+            next_file = '{}_{}.dat'.format(self._base_filepath, self._raw_file_counter + 1)
+            self._raw_file_counter += 1
+
+            log.info("%s was skipped. Blobs to skip: %d. Next file: %s", os.path.basename(filepath), skip, next_file)
+
+            # self._raw_file_timerange(filepath, self._config['timestamp'])
+
+            skip -= os.stat(filepath).st_size / (self._nsamp * self._nants * 8)
+
+            return self._get_start_file(next_file, skip)
+
+        self._f.seek(self._nsamp * self._nants * 8 * skip)
+
+        log.info("RawDataReader will use: %s and skip %d blobs from it. (read counter: %s)", filepath, skip,
+                 self._read_count)
+
+        return self._f
+
+    def _raw_file_timerange_display(self, filepath, t0):
+
+        raw_file = filepath
+        sampling_time = 1. / 78125
+
+        td = datetime.timedelta(seconds=self._nsamp * sampling_time)
+        n_blobs = 0
+        _raw_file_counter = 0
+        while os.path.exists(raw_file):
+            c_blobs = n_blobs
+            n_blobs += os.stat(raw_file).st_size / (self._nsamp * self._nants * 8)
+            print  os.path.basename(raw_file), t0 + td * c_blobs, ' to ', t0 + td * n_blobs, (
+                        n_blobs - c_blobs), 'blobs', td * (n_blobs - c_blobs)
+
+            _raw_file_counter += 1
+            raw_file = '{}_{}.dat'.format(self._base_filepath, _raw_file_counter)
+
 
     @staticmethod
     def _calculate_rms(input_data):
@@ -133,8 +186,13 @@ class RawDataReader(ProcessingModule):
             self._f = self._change_raw_file()
 
             if not self._f:
-                time.sleep(200)
-                raise NoDataReaderException("Observation finished")
+                log.info("Data finished successfully. Stopping modules at iteration %d", self._iter_count)
+                obs_info['stop_pipeline_at'] = self._iter_count
+                self.stop()
+
+                return
+                # time.sleep(200)
+                # raise NoDataReaderException("Observation finished")
 
             # Read from the next set of data from new file
             data = self._f.read(self._nsamp * self._nants * 8)

@@ -2,10 +2,11 @@ import os
 
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import numpy as np
 import seaborn as sns
-import matplotlib.ticker as ticker
-from util import grad, grad2
+
+from util import grad2
 
 sns.set(color_codes=True)
 
@@ -494,8 +495,8 @@ def compare_algorithms(db_scan_clusters, msds_clusters, iteration, limits=None,
             c = cluster.data
             ax1.plot(c['time_sample'] - time_samples * iteration, c['channel_sample'], 'g.', zorder=4, ms=2)
 
-            print iteration, 'DBSCAN: Cluster {}, N: {}, Unique Samples: {}, Unique Channels: {} Beam:{}'.format(
-                i, len(c['time_sample']), len(np.unique(c['time_sample'])), len(np.unique(c['channel_sample'])), c['beam_id'][0])
+            # print iteration, 'DBSCAN: Cluster {}, N: {}, Unique Samples: {}, Unique Channels: {} Beam:{}'.format(
+            #     i, len(c['time_sample']), len(np.unique(c['time_sample'])), len(np.unique(c['channel_sample'])), c['beam_id'][0])
 
         ax2 = axes[1]
         ax2.set_title('MSDS')
@@ -503,9 +504,9 @@ def compare_algorithms(db_scan_clusters, msds_clusters, iteration, limits=None,
             c = cluster.data
             ax2.plot(c['time_sample'] - time_samples * iteration, c['channel_sample'], 'r.', zorder=4, ms=2)
 
-            print 'channel_sample', np.mean(c['channel_sample'])
-            print iteration, 'MSDS: Cluster {}, N: {}, Unique Samples: {}, Unique Channels: {}'.format(
-                i, len(c['time_sample']), len(np.unique(c['time_sample'])), len(np.unique(c['channel_sample'])))
+            # print 'channel_sample', np.mean(c['channel_sample'])
+            # print iteration, 'MSDS: Cluster {}, N: {}, Unique Samples: {}, Unique Channels: {}'.format(
+            #     i, len(c['time_sample']), len(np.unique(c['time_sample'])), len(np.unique(c['channel_sample'])))
 
 
         ax1.set(xlabel='Sample', ylabel='Channel', xticks=range(0, 160, 40))

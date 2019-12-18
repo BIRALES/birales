@@ -2,7 +2,6 @@ import datetime
 import logging as log
 import os
 
-import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.io import fits
@@ -81,7 +80,7 @@ class FitsPersister(ProcessingModule):
         Generate the output blob
         :return:
         """
-        return ChannelisedBlob(self._config, self._input.shape, datatype=np.complex64)
+        return ChannelisedBlob(self._config, self._input.shape, datatype=np.float64)
 
     def process(self, obs_info, input_data, output_data):
         """
@@ -93,8 +92,8 @@ class FitsPersister(ProcessingModule):
         """
 
         # Skip the first blob
-        # if self._iter_count < 1:
-        #     return
+        if self._iter_count < 2:
+            return
 
         # print obs_info['start_center_frequency'], obs_info['start_center_frequency'] + obs_info['channel_bandwidth'] * 8192
 
@@ -103,7 +102,8 @@ class FitsPersister(ProcessingModule):
         # Append data to the body of the fits file
         if self._beams_to_visualise:
             # new_data = input_data[[15], :, :]
-            new_data = input_data[[14], :, :]
+
+            new_data = input_data[self._beams_to_visualise, :, :]
             new_data = np.power(np.abs(new_data), 2.0)
 
             for target in self.tle_targets:

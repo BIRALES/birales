@@ -409,19 +409,12 @@ class MSDSDetectionPipelineManagerBuilder(PipelineManagerBuilder):
 
         detector_input = preprocessor.output_blob
         if settings.fits_persister.visualise_raw_beams:
-            raw_fits_persister = RawDataFitsPersister(settings.fits_persister, pp_input)
+            raw_fits_persister = RawDataFitsPersister(settings.fits_persister, preprocessor.output_blob)
             self.manager.add_module("raw_fits_persister", raw_fits_persister)
             detector_input = raw_fits_persister.output_blob
 
         detector = MSDSDetector(settings.detection, detector_input)
         self.manager.add_module("detector", detector)
 
-        if settings.detection.save_tdm:
-            tdm_persister = TDMPersister(settings.observation, detector.output_blob)
-            self.manager.add_module("tdm_persister", tdm_persister)
-
-            terminator = Terminator(settings.terminator, tdm_persister.output_blob)
-            self.manager.add_module("terminator", terminator)
-        else:
-            terminator = Terminator(settings.terminator, detector.output_blob)
-            self.manager.add_module("terminator", terminator)
+        terminator = Terminator(settings.terminator, detector.output_blob)
+        self.manager.add_module("terminator", terminator)

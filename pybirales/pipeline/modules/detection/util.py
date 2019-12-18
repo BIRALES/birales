@@ -3,10 +3,12 @@ import logging as log
 from scipy import stats
 
 from msds.visualisation import *
+from pybirales import settings
 from pybirales.events.events import TrackTransittedEvent
 from pybirales.events.publisher import publish
 from pybirales.pipeline.modules.detection.exceptions import DetectionClusterIsNotValid
 from pybirales.pipeline.modules.detection.space_debris_candidate import SpaceDebrisTrack
+from pybirales.services.post_processing.tdm_persister import persist
 
 
 def apply_doppler_mask(doppler_mask, channels, doppler_range, obs_info):
@@ -90,7 +92,7 @@ def aggregate_clusters(candidates, clusters, obs_info, notifications=False, save
     return candidates
 
 
-def active_tracks(candidates, n_rso, iter_count):
+def active_tracks(obs_info, candidates, n_rso, iter_count):
     """
 
     :param candidates:
@@ -109,14 +111,20 @@ def active_tracks(candidates, n_rso, iter_count):
             invalid_tracks += 1
             continue
 
-        if candidate.has_transitted(iter_count=iter_count):
+        if candidate.track_expired(obs_info):
+            # print iter_count
+
+            # if candidate.has_transitted(iter_count=iter_count):
             # If the candidate is not valid delete it else it won't be added to the list
             # if not candidate.is_valid:
             #     candidate.delete()
             # else:
+
             # Track has transitted outside the field of view of the instrument
             publish(TrackTransittedEvent(candidate))
             transitted += 1
+
+            persist(obs_info, candidate, debug=settings.detection.debug_candidates)
         else:
             temp_candidates.append(candidate)
 
