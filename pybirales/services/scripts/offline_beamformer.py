@@ -1,18 +1,19 @@
+import ctypes
 import logging as log
 import os
 import pickle
 import time
-from datetime import timedelta, datetime
 from abc import abstractmethod
-from scipy import io
+from datetime import timedelta, datetime
+
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from numba import njit, prange, jitclass
+from numba import njit, prange
+from numpy import ctypeslib
+from scipy import io
 
 from offline_pointing import Pointing
-import ctypes
-from numpy import ctypeslib
 
 log.basicConfig(level=log.NOTSET)
 
@@ -395,8 +396,8 @@ def run():
 
 if __name__ == '__main__':
     # User defined parameters
-    visualise = True
-    run_beamformer = False
+    visualise = False
+    run_beamformer = True
     save_data = True
 
     nsamp = 32768  # samples to integrate
@@ -409,8 +410,9 @@ if __name__ == '__main__':
     obs_raw_file = "/media/denis/backup/birales/2019/2019_09_14/CASA/CASA_raw.dat"
     # # obs_raw_file = "/media/denis/backup/birales/2019/2019_08_14/CAS_A_FES/CAS_A_FES_raw.dat"
 
-    run()
+    # run()
 
     # for n in [4, 8, 16, 32]:
-    #     nants_to_process = n
-    #     run()
+    for n in [4, 8, 16]:
+        nants_to_process = n
+        run()
