@@ -1,9 +1,7 @@
 import ctypes
 import logging
 import logging as log
-import os
 import warnings
-from datetime import datetime
 from math import cos, sin, atan2, asin
 
 import numpy as np
@@ -12,6 +10,7 @@ from astropy import units as u
 from astropy.coordinates import Angle
 from astropy.units import Quantity
 from astropy.utils.exceptions import AstropyWarning
+from numba import njit, prange
 from numpy import ctypeslib
 
 from pybirales import settings
@@ -24,6 +23,13 @@ from pybirales.repository.models import CalibrationObservation, Observation
 
 # Mute Astropy Warnings
 warnings.simplefilter('ignore', category=AstropyWarning)
+
+
+@njit(parallel=True, fastmath=True)
+def beamformer_python(nbeams, data, weights, output):
+    for b in prange(nbeams):
+        x = np.dot(data, weights[0, b, :])
+        output[:, b, :, :] = np.sum(np.power(np.abs(x), 2))
 
 
 class Beamformer(ProcessingModule):
@@ -114,17 +120,8 @@ class Beamformer(ProcessingModule):
         self._beamformer.beamform(input_data.ravel(), self._pointing.weights.ravel(), output_data.ravel(),
                                   nsamp, nsubs, self._nbeams, nants, npols, self._nthreads)
 
-        # print 'input_data', input_data.shape, input_data.dtype
-        # print 'weights', self._pointing.weights.shape, self._pointing.weights.dtype
-        # print 'output_data', output_data.shape, output_data.dtype
-        # print 'nsamp', nsamp
-        # print 'nsubs', nsubs
-        # print '_nbeams', self._nbeams
-        # print 'nants', nants
-        # print 'npols', npols
-        # print '_nthreads', self._nt#hreads
-
-        # self.beamformer2(sample, 32, input_data, self._pointing.weights, output_data)
+        # input_data_bkp = np.ascontiguousarray(input_data_bkp[0, 0, :, :], dtype=np.complex64)
+        # beamformer_python(self._nbeams, input_data_bkp, self._pointing.weights, output_data_bkp)
 
         # Update observation information
         obs_info['nbeams'] = self._nbeams
@@ -137,12 +134,6 @@ class Beamformer(ProcessingModule):
     def stop(self):
         self._stop.set()
         logging.info('{} module stop flag set'.format(self.name))
-
-    # @njit(parallel=True, fastmath=True)
-    def beamformer2(self, sample, nbeams, data, weights, output):
-        for b in range(0, nbeams):
-            x = np.dot(data, weights[0, b, :])
-            output[b, i] = np.sum(np.power(np.abs(x), 2))
 
 
 class Pointing(object):
