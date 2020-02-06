@@ -2,7 +2,7 @@ function TrackSNRProfilePlotter(selector) {
     this.selector = selector;
     this.title = 'Track';
     this.name = 'SNR Profile';
-    this.x_label = 'Timestamp (Local)';
+    this.x_label = 'Timestamp (UTC)';
     this.y_label = 'SNR (dBHz)';
     this.api_entry = '/api/live/data';
     this.color_map = colorbrewer['Set3'][12];
@@ -111,7 +111,7 @@ TrackSNRProfilePlotter.prototype = {
             let tx = track['tx'];
             $.each(track['data']['channel'], function (i) {
                 track_data.push({
-                    x: track['data']['time'][i].$date,
+                    x: moment.utc(track['data']['time'][i]),
                     y: track['data']['snr'][i]
                 })
             });

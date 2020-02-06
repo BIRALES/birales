@@ -3,7 +3,7 @@ function TrackDopplerProfilePlotter(selector) {
     this.title = 'Track';
     this.name = 'Doppler Profile';
     this.y_label = 'Doppler Shift (Hz)';
-    this.x_label = 'Timestamp (Local)';
+    this.x_label = 'Timestamp (UTC)';
     this.api_entry = '/api/live/data';
     this.color_map = colorbrewer['Set3'][12];
 
@@ -79,7 +79,7 @@ TrackDopplerProfilePlotter.prototype = {
             let tx = track['tx'];
             $.each(track['data']['channel'], function (i) {
                 track_data.push({
-                    x: track['data']['time'][i].$date,
+                    x: moment.utc(track['data']['time'][i]),
                     y: (track['data']['channel'][i] - tx) * 1e6
                 })
             });

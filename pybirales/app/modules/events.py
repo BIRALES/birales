@@ -8,7 +8,7 @@ events_page = Blueprint('events_page', __name__, template_folder='templates')
 
 @events_page.route('/events')
 def index():
-    page = request.args.get(get_page_parameter(), default=1)
+    page = int(request.args.get(get_page_parameter(), default=1))
     per_page = 25
 
     events = Event.objects.order_by('-created_at').skip((page-1) * per_page).limit(per_page)

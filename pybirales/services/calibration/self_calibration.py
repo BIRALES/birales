@@ -1,6 +1,8 @@
-import numpy as np
 import logging
 from copy import deepcopy
+
+import numpy as np
+import scipy.linalg as lin
 
 import geometric as gu
 
@@ -33,7 +35,7 @@ class SelfCal(object):
         self.ref_antenna = None
         self._logger = logging.getLogger(__name__)
 
-    def phasecal_run(self, vis_in, no_of_antennas, baseline_no):
+    def phasecal_run2(self, vis_in, no_of_antennas, baseline_no):
 
         """
         Carries out a sky-independent phase calibration. Input visibilities can be either from an incoming stream
@@ -75,6 +77,81 @@ class SelfCal(object):
                     self.phase_coeffs[pol, i] = 1. + 0.j
                 if (coeffs_mean + (2 * coeffs_std)) < self.phase_coeffs[pol, i]:
                     self.phase_coeffs[pol, i] = 1. + 0.j
+
+        self.ant_coeffs = deepcopy(self.phase_coeffs)
+        self.ant_coeffs = np.transpose(self.ant_coeffs)
+        self.coeff_type = "calib_geom"
+        self._logger.info('Phase calibration successful')
+
+    def phasecal_run(self, vis_in, no_of_antennas, baseline_no):
+
+        max_iterations = 800
+        tolerance = 1e-8
+
+        """
+        Calibration test with StEFCal
+        """
+
+        self.phase_coeffs = np.ones((vis_in.shape[1], no_of_antennas), dtype=np.complex64)
+
+        counter = 0
+        measured = np.zeros((no_of_antennas, no_of_antennas), dtype=np.complex64)
+        for i in range(no_of_antennas):
+            for j in range(no_of_antennas):
+                if i < j:
+                    measured[i, j] = vis_in[counter]
+                    measured[j, i] = np.conj(vis_in[counter])
+                    counter += 1
+
+        # With point source calibration, define model as a corr matrix of ones 
+        model = np.ones_like(measured, dtype=np.complex64)
+        for i in range(no_of_antennas):
+            model[i, i] = 0. + 0.j
+
+        # StEFCal run
+        nst = len(model)
+        numsamples = measured.shape[0] / measured.shape[1]
+
+        gs = []
+        gs = gs + [np.ones(nst, dtype=np.complex64)]
+
+        model = np.tile(model, (numsamples, 1))
+
+        norms = []
+        rmsep = []
+        rmsep_change = []
+        counter = 0
+
+        for i in range(1, max_iterations):
+
+            g = np.ones(nst, dtype=np.complex64)
+
+            for p in range(0, nst):
+
+                Zp = np.multiply(gs[i - 1], model[:, p])
+                if np.vdot(Zp, Zp) != 0.:
+                    g[p] = np.divide(np.vdot(measured[:, p], Zp), np.vdot(Zp, Zp))
+                else:
+                    g[p] = 0. + 0.j
+
+            gs = gs + [g]
+
+            if np.mod(i, 2) == 0 and i > 0:
+
+                norm = lin.norm(gs[i] - gs[i - 1]) / lin.norm(gs[i])
+
+                norms = norms + [norm]
+
+                if norm >= tolerance:
+
+                    gs[i] = (gs[i] + gs[i - 1]) / 2
+
+                else:
+                    break
+
+        inverter = np.ones(len(gs[i - 1]), dtype=np.complex64)
+        gs_out = np.divide(inverter, gs[i - 1], out=np.zeros_like(inverter), where=gs[i - 1] != 0.)
+        self.phase_coeffs[0, :] = gs_out
 
         self.ant_coeffs = deepcopy(self.phase_coeffs)
         self.ant_coeffs = np.transpose(self.ant_coeffs)

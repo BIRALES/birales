@@ -28,7 +28,7 @@
             let obs_modes_endpoint = "{{ obs_modes_endpoint }}";
 
             let today = new Date();
-            today = moment(today).add(today.getTimezoneOffset() + 15, "minute").toDate();
+            today = moment(today).add(today.getTimezoneOffset() + 5, "minute").toDate();
 
             let obs_start_time = $('#date_start').flatpickr({
                 enableTime: true,
