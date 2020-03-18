@@ -95,12 +95,12 @@ AntennaMetricsPlotter.prototype = {
             }
             self.data.datasets[i].data.push(value);
 
-            if (self.data.datasets[i].data.length > 30) {
+            if (self.data.datasets[i].data.length > 90) {
                 self.data.datasets[i].data.shift();
             }
         });
 
-        if (self.data.labels.length > 30) {
+        if (self.data.labels.length > 90) {
             self.data.labels.shift();
         }
 

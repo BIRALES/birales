@@ -274,8 +274,8 @@ class CalibrationObservationManager(ObservationManager):
             real, imag, fringe_image = self._calibration_facade.calibrate(self.calibration_dir, corr_matrix_filepath)
         except IOError as e:
             raise CalibrationFailedException(e)
-        except IndexError as e:
-            raise CalibrationFailedException(e)
+        # except IndexError as e:
+        #     raise CalibrationFailedException(e)
         else:
             observation.model.real = real.tolist()
             observation.model.imag = imag.tolist()

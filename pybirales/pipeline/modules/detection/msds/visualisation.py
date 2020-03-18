@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 import seaborn as sns
+from cycler import cycler
+from matplotlib.font_manager import FontProperties
 
 from util import grad2
 
@@ -22,7 +24,7 @@ sns.set(font='serif', font_scale=2)
 # specific font family
 sns.set_style("ticks",
               {'axes.axisbelow': True,
-               'axes.edgecolor': '#666666',
+               'axes.edgecolor': '#333333',
                'axes.facecolor': 'white',
                'axes.grid': True,
                'axes.labelcolor': '.15',
@@ -30,6 +32,7 @@ sns.set_style("ticks",
                'axes.spines.left': True,
                'axes.spines.right': True,
                'axes.spines.top': True,
+               'axes.linewidth': 1.25,
                'figure.facecolor': 'white',
                'figure.figsize': (12, 7.416408),
                'font.family': ['serif'],
@@ -39,18 +42,18 @@ sns.set_style("ticks",
                                    'Bitstream Vera Sans',
                                    'sans-serif'],
                'grid.color': '#e0e0e0',
-               'grid.linestyle': '-',
+               'grid.linestyle': '--',
                'image.cmap': 'rocket',
                'lines.solid_capstyle': 'round',
                'lines.linewidth': 5,
-               'patch.edgecolor': 'w',
+               'patch.edgecolor': 'b',
                'patch.force_edgecolor': True,
                'text.color': '.15',
                'xtick.bottom': True,
-               'xtick.color': '#666666',
+               'xtick.color': '#333333',
                'xtick.direction': 'out',
                'xtick.top': False,
-               'ytick.color': '#666666',
+               'ytick.color': '#333333',
                'ytick.direction': 'out',
                'ytick.left': True,
                'ytick.right': False}
@@ -61,11 +64,24 @@ from scipy.stats import linregress
 from pybirales.pipeline.modules.detection.msds.util import _partition, __ir2
 
 plt.rcParams['figure.figsize'] = (12, 10)
+plt.rcParams['axes.edgecolor'] = "#333333"
+plt.rc('ytick', labelsize=15)
+plt.rc('xtick', labelsize=15)
+plt.rc('axes', labelsize=20)
+plt.rc('legend', fontsize=15)
 
 
 def save_figure(filename, out_dir, obs_name, save=False):
     if save:
         plt.savefig(os.path.join(out_dir, obs_name, filename, '.pdf'))
+
+
+def round_down(x):
+    return int(np.floor(x / 10.0)) * 10
+
+
+def round_up(x):
+    return int(np.ceil(x / 10.0)) * 10
 
 
 def get_limits(image, tracks):
@@ -75,11 +91,11 @@ def get_limits(image, tracks):
     y_start = 0
     y_end = image.shape[0]
 
-    # print x_start, x_end, y_start, y_end
+    # return x_start, x_end, y_start, y_end
     if tracks:
         m_track = tracks[0]
         for t in tracks:
-            if len(t[0]) > len(m_track[0]):
+            if len(t[0]) < len(m_track[0]):
                 m_track = t
 
         x_m = np.mean(m_track[0]).astype(int)
@@ -96,10 +112,10 @@ def get_limits(image, tracks):
     # print x_start, x_end, y_start, y_end
 
     # return 800, 875, 4190, 4268
-    return x_start, x_end, y_start, y_end
+    return round_down(x_start), round_up(x_end), round_down(y_start), round_up(y_end)
 
 
-def visualise_image(image, title, tracks, visualise=False):
+def visualise_image(image, title, tracks, visualise=False, file_name=None, bar=True):
     """
     Visualise the test data
     :param image:
@@ -112,36 +128,53 @@ def visualise_image(image, title, tracks, visualise=False):
         print "Visualising a subset of the image {} from {}".format(image[y_start:y_end, x_start:x_end].shape,
                                                                     prev_shape)
 
-        ax = sns.heatmap(image[y_start:y_end, x_start:x_end], cbar_kws={'label': 'Power (dB)'}, xticklabels=25,
-                         yticklabels=25)
+        ax = sns.heatmap(image[y_start:y_end, x_start:x_end], xticklabels=20, yticklabels=10, cbar=True)
         ax.invert_yaxis()
-        # ax.set(ylim=(y_start, y_end), xlim=(x_start, x_end))
 
         ax.set(xlabel='Time sample', ylabel='Channel')
-        # a[np.nonzero(a)].mean()
-        a = image[y_start:y_end, x_start:x_end]
-        # print "mean:", a[np.nonzero(a)].max()
+        ax.xaxis.labelpad = 20
+        ax.yaxis.labelpad = 20
+        ax.tick_params(width=2)
+
+        ax.set(xlabel='Time sample', ylabel='Channel')
+        for _, spine in ax.spines.items():
+            spine.set_visible(True)
+
+        if file_name:
+            plt.tight_layout()
+            plt.savefig(file_name)
 
         plt.show()
 
 
-def visualise_filter(data, mask, tracks, f_name, snr, threshold=None, visualise=False):
+def visualise_filter(data, mask, tracks, f_name, snr, threshold=None, visualise=True, file_name=None):
     if visualise:
         filter_str = '{} at SNR {} dB.'.format(f_name, snr)
         if threshold:
             filter_str += 'Threshold at {:2.2f}W'.format(threshold)
 
         x_start, x_end, y_start, y_end = get_limits(data, tracks)
-        ax = sns.heatmap(data[y_start:y_end, x_start:x_end], cbar_kws={'label': 'Power (dB)'},
-                         xticklabels=25,
-                         yticklabels=25,
+        ax = sns.heatmap(data[y_start:y_end, x_start:x_end],
+                         xticklabels=20,
+                         yticklabels=10,
                          mask=mask[y_start:y_end, x_start:x_end])
         # ax.set(ylim=(y_start, y_end), xlim=(x_start, x_end))
         ax.invert_yaxis()
-        ax.set(xlabel='Time sample', ylabel='Channel', title=filter_str)
-        plt.show()
+        ax.xaxis.labelpad = 20
+        ax.yaxis.labelpad = 20
+        ax.tick_params(width=2)
+        # ax.set(xlabel='Time sample', ylabel='Channel', title=filter_str)
+        ax.set(xlabel='Time sample', ylabel='Channel')
+        for _, spine in ax.spines.items():
+            spine.set_visible(True)
 
         print 'Showing: ' + filter_str
+
+        if file_name:
+            plt.tight_layout()
+            plt.savefig(file_name)
+
+        plt.show()
 
 
 def visualise_detector(data, candidates, tracks, d_name, snr, visualise=False):
@@ -508,7 +541,6 @@ def compare_algorithms(db_scan_clusters, msds_clusters, iteration, limits=None,
             # print iteration, 'MSDS: Cluster {}, N: {}, Unique Samples: {}, Unique Channels: {}'.format(
             #     i, len(c['time_sample']), len(np.unique(c['time_sample'])), len(np.unique(c['channel_sample'])))
 
-
         ax1.set(xlabel='Sample', ylabel='Channel', xticks=range(0, 160, 40))
         ax2.set(xlabel='Sample', xticks=range(0, 160, 40))
         plt.grid()
@@ -573,3 +605,108 @@ def visualise_input_data(merged_input, input_data, filtered_merged, beam_id, ite
 
     # plt.show()
     # exit()
+
+
+def plot_metric(metrics_df, metric, file_name=None):
+    fig, ax = plt.subplots(1)
+    algorithms = metrics_df.index.unique()
+
+    for name in algorithms:
+        if name.endswith('_pp'):
+            continue
+        data = metrics_df[metrics_df.index == name]
+        ax.plot(data['snr'], data[metric], '-', lw=3, label='{}'.format(name.title()))
+
+    ax.set(xlabel='SNR (dB)', ylabel=metric.title())
+
+    plt.grid(alpha=0.3)
+
+    # box = ax.get_position()
+    # ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+
+    fontP = FontProperties()
+    fontP.set_size('small')
+    ax.legend(prop=fontP, bbox_to_anchor=(1.04, 1.00), borderaxespad=0)
+
+    if file_name:
+        plt.tight_layout()
+        fig.savefig(file_name)
+
+
+def mono_cylcer():
+    return (cycler('color', ['k']) * cycler('linestyle', ['-', '--', ':', '=.']) * cycler('marker', ['^', ',', '.']))
+
+
+def plot_metric_combined(metrics_df, metrics, pp_results=False, file_name=None):
+    fig, axes = plt.subplots(nrows=3, ncols=1, sharex=True)
+    algorithms = metrics_df['name'].unique()
+    monochrome = mono_cylcer()
+
+    for i, ax in enumerate(axes):
+        metric = metrics[i]
+        ax.set_prop_cycle(monochrome)
+        for name in algorithms:
+            if pp_results:
+                if not name.endswith('_pp'):
+                    continue
+                name = name[:-3]
+            else:
+                if name.endswith('_pp'):
+                    continue
+            data = metrics_df[metrics_df['name'] == name]
+
+            ax.plot(data['snr'], data[metric]['mean'], lw=2, label='{}'.format(name.title()))
+
+        ax.set(ylabel=metric.title())
+
+        ax.xaxis.labelpad = 15
+        ax.yaxis.labelpad = 15
+        ax.tick_params(width=2)
+
+    # # plt.grid(alpha=0.3)
+    # fig.legend(axes,  # List of the line objects
+    #            labels=algorithms,  # The labels for each line
+    #            loc="upper right",  # Position of the legend
+    #            borderaxespad=0.1, frameon=False)  # Title for the legend
+    axes[0].yaxis.set_ticks(np.arange(0, 1.25, 0.25))
+    axes[1].yaxis.set_ticks(np.arange(0.7, 1.0, 0.1))
+    axes[2].yaxis.set_ticks(np.arange(0, 1.25, 0.25))
+
+    lgd = axes[0].legend(bbox_to_anchor=(1.3, 1.05), frameon=False)
+    axes[2].set(xlabel="SNR (dB)")
+
+    if file_name:
+        # plt.subplots_adjust(right=1.15)
+        plt.tight_layout()
+        fig.savefig(file_name, bbox_extra_artists=(lgd,),
+                    bbox_inches='tight')
+
+
+def plot_timings(metrics_df, algorithms, include_pp=False, file_name=None):
+    fig, ax = plt.subplots(1)
+    # algorithms = metrics_df.index.unique()
+
+    metrics_df = metrics_df[metrics_df['snr'] == metrics_df['snr'].max()]
+    for name in algorithms:
+        name_str = name.title().replace('_', ' ')
+        data = metrics_df[metrics_df['name'] == name]
+        f_time = data['dt']['mean']
+        b1 = ax.barh(name_str, f_time, yerr=data['dt']['std'], color='#e0e0e0', zorder=3, edgecolor='#666666',
+                     alpha=0.8)
+
+        if include_pp:
+            data = metrics_df[metrics_df['name'] == name + '_pp']
+            b2 = ax.barh(name_str, data['dt']['mean'], yerr=data['dt']['std'], left=f_time, color='#666666', zorder=3,
+                         edgecolor='#666666', alpha=0.8)
+
+    # plt.legend((b1[0], b2[0]), ('Men', 'Women'))
+    ax.invert_yaxis()
+    ax.set(xlabel='Processing Time (s)')
+    ax.grid(which='x')
+
+    ax.set_axisbelow(True)
+    plt.rc('axes', labelsize=45)
+    ax.xaxis.labelpad = 15
+    if file_name:
+        plt.tight_layout()
+        fig.savefig(file_name)

@@ -13,7 +13,8 @@ from numba import njit, prange
 from numpy import ctypeslib
 from scipy import io
 
-from offline_pointing import Pointing
+from pybirales.services.scripts.calibration.offline_calibration import calibrate
+from pybirales.services.scripts.offline_pointing import Pointing
 
 log.basicConfig(level=log.NOTSET)
 
@@ -215,6 +216,10 @@ def get_calibration_coefficients(mode='uncalibrated'):
     if mode == 'uncalibrated':
         return np.ones(shape=(32), dtype=np.complex64)
 
+    if mode == 'stefcal':
+        # this will be replaced by the calibration algorithm
+        return np.ones(shape=(32), dtype=np.complex64)
+
     raise BaseException("Calibration mode is not valid")
 
 
@@ -349,10 +354,23 @@ def run():
     display_obs_info(obs_name, obs_info, nsamp, sampling_rate, integration_time)
 
     pointing_weights = get_weights(beamformer_config, nants_to_process)
-    calib_coeffs = get_calibration_coefficients(calibration_mode)
+
+    if CALIBRATE:
+        PARAMETERS = {
+            'manager': {
+                'debug': True
+            },
+            'duration': 3600,
+            'beamformer': {'reference_declination': 58.9}
+        }
+        real, imag, source, obs_name, obs_info, _ = calibrate(obs_root, config_filepath, PARAMETERS)
+
+        calib_coeffs = np.array(real + imag * 1j, dtype=np.complex64)
+    else:
+        calib_coeffs = get_calibration_coefficients(calibration_mode)
 
     filepaths = get_raw_filepaths(base_filepath)
-    output_file_path = 'beamformed_output/{}_beamformed_data_{}'.format(obs_name, suffix)
+    output_file_path = 'output/{}_beamformed_data_{}'.format(obs_name, suffix)
     combined_output = []
 
     beamformer = OfflineBeamformer()
@@ -396,23 +414,27 @@ def run():
 
 if __name__ == '__main__':
     # User defined parameters
-    visualise = False
+    visualise = True
+    CALIBRATE = True
     run_beamformer = True
     save_data = True
 
     nsamp = 32768  # samples to integrate
     nants = 32  # number of antennas
     nants_to_process = 1
-    calibration_mode = 'fes'
+    calibration_mode = 'stefcal'
     skip = 0  # chunks to skip ( 0 does not skip)
     beams = [6, 15, 24, 30]  # beams to be plotted
 
-    obs_raw_file = "/media/denis/backup/birales/2019/2019_09_14/CASA/CASA_raw.dat"
-    # # obs_raw_file = "/media/denis/backup/birales/2019/2019_08_14/CAS_A_FES/CAS_A_FES_raw.dat"
+    CONFIG_ROOT = '/home/denis/.birales/configuration/'
+    config_filepath = [os.path.join(CONFIG_ROOT, 'birales.ini'),
+                       os.path.join(CONFIG_ROOT, 'offline_calibration.ini')]
 
-    # run()
+    obs_raw_file = "/media/denis/backup/birales/2019/2019_09_14/CASA/CASA_raw.dat"
+    # obs_raw_file = "/media/denis/backup/birales/2019/2019_08_14/CAS_A_FES/CAS_A_FES_raw.dat"
+
+    run()
 
     # for n in [4, 8, 16, 32]:
-    for n in [4, 8, 16]:
-        nants_to_process = n
-        run()
+    #     nants_to_process = n
+    #     run()

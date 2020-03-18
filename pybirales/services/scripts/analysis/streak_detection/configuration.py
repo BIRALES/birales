@@ -1,6 +1,7 @@
-import numpy as np
-from logging.config import dictConfig
 import logging as log
+from logging.config import dictConfig
+
+import numpy as np
 
 DEBUG = True
 LOGGING_CONFIG = dict(
@@ -33,7 +34,7 @@ CD = 78125 / 8192.
 F = (1. / TD) / (1. / CD)
 GRADIENT_RANGE = np.array([-0.057, -100.47]) / F
 # GRADIENT_RANGE = np.array([-0.057, -200.47]) / F
-TRACK_LENGTH_RANGE = np.array([5, 15]) / TD  # in seconds
+TRACK_LENGTH_RANGE = np.array([1, 5]) / TD  # in seconds
 TRACK_THICKNESS = 5
 # FITS_FILE = "norad_1328/norad_1328_raw_0.fits"
 FITS_FILE = "filter_test/filter_test_raw_0.fits"

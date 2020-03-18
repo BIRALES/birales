@@ -120,6 +120,18 @@ l
 
             pp_input = persister_beam.output_blob
 
+        preprocessor = PreProcessor(settings.detection, pp_input)
+        self.manager.add_module("preprocessor", preprocessor)
+
+        # added to output raw fits only
+        raw_fits_persister = RawDataFitsPersister(settings.fits_persister, preprocessor.output_blob)
+        self.manager.add_module("raw_fits_persister", raw_fits_persister)
+        terminator = Terminator(settings.terminator, raw_fits_persister.output_blob)
+        self.manager.add_module("terminator", terminator)
+        # added to output raw fits only
+
+        return
+
         # Detection
         if settings.manager.detector_enabled:
             preprocessor = PreProcessor(settings.detection, pp_input)

@@ -47,4 +47,6 @@ class FringeImager:
         # Save the calibration check image to disk
         plt.savefig(self.calibration_check_path)
 
+        plt.close()
+
         return self.calibration_check_path

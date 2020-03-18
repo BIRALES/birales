@@ -1,12 +1,79 @@
+import time
+
 import numpy as np
+import pandas as pd
 from skimage.measure import compare_ssim as ssim
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score, confusion_matrix, \
     jaccard_similarity_score, mean_squared_error
-import time
-import pandas as pd
 
 
-def evaluate_filter(truth_img, test_img, positives, exec_time, snr, thickness):
+def new_e(truth_img, positives):
+    truth = np.where(truth_img > 0, 1, 0)
+
+    pred = np.zeros(shape=truth_img.shape)
+    pred[positives] = True
+
+    s = truth + pred
+    b = truth - pred
+
+    tp = len(s[s == 2])
+    tn = len(s[s == 0])
+
+    fp = len(b[b == -1])
+    fn = len(b[b == 1])
+
+    return float(tn), float(fp), float(fn), float(tp)
+
+
+def evaluate_filter(truth_img, test_img, positives, exec_time, snr, thickness, name):
+    """
+
+    :param truth:
+    :param prediction:
+    :param positives: Location where the filter thinks there should be a target
+    :return:
+    """
+
+    tn, fp, fn, tp = new_e(truth_img, positives)
+
+    p = tp + fn
+    n = tn + fp
+
+    specificity = tn / n  # aka: specificity, selectivity or true negative rate
+    sensitivity = tp / p  # aka: sensitivity, recall, hit rate, or true positive rate
+
+    fpr = 1 - specificity  # aka: fall-out or false positive rate (FPR)
+    try:
+        precision = tp / (tp + fp)
+    except ZeroDivisionError:
+        precision = 0
+
+    accuracy = (tp + tn) / (p + n)
+    f1 = 2 * tp / (2 * tp + fp + fn)
+    reduction = 1 - (fp + tp) / truth_img.size
+
+    score = 2 * (sensitivity * specificity) / (sensitivity + specificity)
+
+    return {
+        'name': name,
+        'f1': f1,
+        'precision': precision,
+        'accuracy': accuracy,
+        'fpr': fpr,
+        'tpr': sensitivity,
+        'dt': exec_time,
+        'nchans': truth_img.shape[0],
+        'nsamples': truth_img.shape[1],
+        'snr': snr,
+        'dx': thickness,
+        'recall': sensitivity,
+        'specificity': specificity,
+        'reduction': reduction * 100.,
+        'score': score
+    }
+
+
+def evaluate_filter_old(truth_img, test_img, positives, exec_time, snr, thickness):
     """
 
     :param truth:
@@ -38,7 +105,7 @@ def evaluate_filter(truth_img, test_img, positives, exec_time, snr, thickness):
     sensitivity = tp / (tp + fn)
 
     # harmonic mean of the recall and reduction rate
-    score = 2 * (recall * reduction) / (recall + reduction)
+    score = 2 * (recall * specificity) / (recall + specificity)
 
     return {
         'jaccard': jaccard_similarity_score(truth, prediction),

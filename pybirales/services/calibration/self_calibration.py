@@ -89,7 +89,7 @@ class SelfCal(object):
         tolerance = 1e-8
 
         """
-        Calibration test with StEFCal
+        Calibration with StEFCal
         """
 
         self.phase_coeffs = np.ones((vis_in.shape[1], no_of_antennas), dtype=np.complex64)
@@ -105,6 +105,7 @@ class SelfCal(object):
 
         # With point source calibration, define model as a corr matrix of ones 
         model = np.ones_like(measured, dtype=np.complex64)
+
         for i in range(no_of_antennas):
             model[i, i] = 0. + 0.j
 
@@ -237,17 +238,18 @@ class SelfCal(object):
                 self.vis_transfer[t, pol] = vis_in[t, pol] * ((np.complex(coeffs_real[a1], coeffs_imag[a1])) *
                                                               np.conj(np.complex(coeffs_real[a2], coeffs_imag[a2])))
 
-    def coeff_apply(self, vis_in, baseline_no):
+    def coeff_apply(self, vis_in, baseline_no, calibrator_pointing_weights):
 
         # Create empty calibrated visibilities matrix
         self.vis_transfer = np.ones((len(vis_in[:, 0]), len(vis_in[0, :])), dtype=np.complex)
 
+        coeffs_calibrator_pointing = self.latest_coeffs * calibrator_pointing_weights
         for pol in range(vis_in.shape[1]):
             coeffs_real = []
             coeffs_imag = []
             for j in range(self.latest_coeffs.shape[1]):
-                coeffs_real.append(self.latest_coeffs[pol, j].real)
-                coeffs_imag.append(self.latest_coeffs[pol, j].imag)
+                coeffs_real.append(coeffs_calibrator_pointing[pol, j].real)
+                coeffs_imag.append(coeffs_calibrator_pointing[pol, j].imag)
 
             coeffs_real = np.array(coeffs_real)
             coeffs_imag = np.array(coeffs_imag)
@@ -330,9 +332,9 @@ class SelfCal(object):
             # self.ant_coeffs[:, pol].real /= self.ant_coeffs[0, pol].real
             # self.ant_coeffs[:, pol].imag -= self.ant_coeffs[0, pol].imag
 
-            self.ref_antenna = 0
-            self.latest_coeffs[:, pol] /= self.latest_coeffs[self.ref_antenna, pol]
-        self.coeffs_no_geom = deepcopy(self.latest_coeffs)
+            # self.ref_antenna = 0
+            # self.latest_coeffs[:, pol] /= self.latest_coeffs[self.ref_antenna, pol]
+        # self.coeffs_no_geom = deepcopy(self.latest_coeffs)
         # self.coeffs_no_geom.imag = np.degrees(self.coeffs_no_geom.imag)
         self.coeff_type = "no_geom"
         self._logger.info('Geometric calibration pointing coefficient removal successful')
@@ -496,6 +498,7 @@ class SelfCalRun:
         self._cal_dir = cal_input['cal_coeffs_dir']
 
         self._vis_in = vis_in
+
         self.selfcal.vis_transfer = self._vis_in
 
         if self._transit_observation is True:
@@ -509,6 +512,25 @@ class SelfCalRun:
             self._vis_in = np.reshape(self.selfcal.peak_visibilities, [self.selfcal.peak_visibilities.shape[0], 1])
             self.selfcal.vis_transfer = self._vis_in
 
+        # Test addition of geometric coefficients prior to calibration
+        self.selfcal.latest_coeffs = self.selfcal.latest_coeffs.T
+        self.selfcal.geometric_addition(self._vis_in, self._no_of_antennas, self._pointing_dec,
+                                        self._antennas, self._longitude, self._latitude, self._frequency,
+                                        self._bandwidth)
+
+        calibrator_pointing_weights = deepcopy(self.selfcal.latest_coeffs)
+
+        counter = 0
+        for i in range(self._no_of_antennas):
+            for j in range(i + 1, self._no_of_antennas):
+                self.selfcal.vis_transfer[counter, 0] *= (self.selfcal.latest_coeffs[i, 0] *
+                                                          np.conjugate(self.selfcal.latest_coeffs[j, 0]))
+                # self._vis_in[counter, 0] *= (self.selfcal.latest_coeffs[i, 0] *
+                #                                          np.conjugate(self.selfcal.latest_coeffs[j, 0]))
+                counter += 1
+
+        self.selfcal.latest_coeffs = np.ones((1, self._no_of_antennas), dtype=np.complex64)
+
         if self._phasecal is True and self._gaincal is True:
 
             counter = 0
@@ -516,7 +538,7 @@ class SelfCalRun:
 
                 self.selfcal.phasecal_run(self.selfcal.vis_transfer, self._no_of_antennas, self._baseline_no)
                 self.selfcal.coeff_manager()
-                self.selfcal.coeff_apply(self._vis_in, self._baseline_no)
+                self.selfcal.coeff_apply(self._vis_in, self._baseline_no, calibrator_pointing_weights)
 
                 if counter >= 0 or np.abs(np.abs(np.max(self.selfcal.vis_transfer).real) -
                                           np.abs(np.min(self.selfcal.vis_transfer).real)) < 0.1:
@@ -539,15 +561,22 @@ class SelfCalRun:
                     break
 
                 counter += 1
-
+#
         self.selfcal.latest_coeffs = np.transpose(self.selfcal.latest_coeffs)
 
         self.selfcal.test_save_coeffs(self.selfcal.latest_coeffs, self._main_dir)
-        self.selfcal.geometric_removal(self._vis_in, self._no_of_antennas, self._calibration_dec,
-                                       self._antennas, self._longitude, self._latitude, self._frequency,
-                                       self._bandwidth)
-        #self.selfcal.coeffs_no_geom = self.selfcal.latest_coeffs
+        #
+        self.selfcal.coeffs_no_geom = deepcopy(self.selfcal.latest_coeffs)
+        self.selfcal.coeff_type = "no_geom"
         self.selfcal.test_save_coeffs(self.selfcal.coeffs_no_geom, self._main_dir)
+
+        # self.selfcal.geometric_removal(self._vis_in, self._no_of_antennas, self._calibration_dec,
+        #                                self._antennas, self._longitude, self._latitude, self._frequency,
+        #                                self._bandwidth)
+        # self.selfcal.latest_coeffs[:, 0] /= self.selfcal.latest_coeffs[0, 0]
+        # self.selfcal.coeffs_no_geom = deepcopy(self.selfcal.latest_coeffs)
+        # self.selfcal.test_save_coeffs(self.selfcal.coeffs_no_geom, self._main_dir)
+        #
         self.selfcal.geometric_addition(self._vis_in, self._no_of_antennas, self._pointing_dec,
                                         self._antennas, self._longitude, self._latitude, self._frequency,
                                         self._bandwidth)
