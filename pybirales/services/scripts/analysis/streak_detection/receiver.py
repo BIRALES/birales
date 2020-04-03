@@ -4,6 +4,10 @@ import random
 import numpy as np
 from astropy.io import fits
 
+from filters import rfi_filter
+
+DOPPLER_RANGE = [2392, 6502]
+
 
 def generate_line(x1, y1, x2, y2, limits=None):
     """Brensenham line algorithm"""
@@ -81,34 +85,17 @@ def generate_test_image(directory, nsamples):
     base_file = random.choice(dir_list)
 
     fits_file = fits.open(os.path.join(directory, base_file))
-    image_shape = np.shape(fits_file[0].data[0])
-    start = np.random.randint(low=0, high=image_shape[1] - nsamples + 1)
 
-    test_img = fits_file[0].data[0, :, start: start + nsamples]
+    start = np.random.randint(low=0, high=np.shape(fits_file[0].data[0])[1] - nsamples + 1)
+
+    test_img = fits_file[0].data[0, DOPPLER_RANGE[0]:DOPPLER_RANGE[1], start: start + nsamples]
 
     print 'Test Image of size {} was generated from Raw File {}. Noise estimate at {:0.3f}W'. \
         format(test_img.shape, base_file, np.mean(test_img))
 
-    return test_img
+    # Remove channels with RFI
+    test_img = rfi_filter(test_img)
 
-
-def create_test_img(filepath, nchans=192, nsamples=120):
-    """
-
-    :param filepath:
-    :param scaling_factor: downscale factor
-    :return:
-    """
-    fits_file = fits.open(filepath)
-    size = np.shape(fits_file[0].data[0])
-
-    # n_chans = size[0] - nchans
-    # n_samples = size[1] - nsamples
-
-    test_img = fits_file[0].data[0][:nchans, :nsamples]
-    print 'Test Image of size {} was generated. Noise estimate at {:0.3f}W'.format(test_img.shape, np.mean(test_img))
-
-    # return np.random.normal(0, 0.5, (nchans, nsamples))
     return test_img
 
 
@@ -124,30 +111,18 @@ def get_test_tracks(n_tracks, gradient, track_length, image_shape, thickness):
 
         end = np.amin([start + tl, image_shape[1]])
 
-
-
         x = np.arange(start, end)
-        c = np.random.randint(low=2000, high=image_shape[0] - 2000)
+        c = np.random.randint(low=0, high=4110 - m * min(x))
         x, y = create_track(x, m, c, image_shape, thickness)
 
         print 'Created track with m={:0.2f}, c={:0.1f}, of {}px at ({},{}) to ({},{})'.format(m, c, (
                 max(x) - start), start, max(y), end, min(y))
+        # beams = range(nbeams)
+        # reps = np.ceil(len(x) / float(len(beams)))
+        #
+        # b = np.repeat(beams, reps)[: len(x)]
 
-        # if n_tracks < 3:
-        #     print "\nTest track ", i, 'Gradient: {:0.3f}, Intercept: {:0.3f}'.format(m, c)
-        #     print "ax.set_ylim({}, {})".format(min(y),max(y))
-        #     print "ax.set_xlim({}, {})".format(start,end)
-        #     print start, end, c, m
-
-        tracks.append((x, y))
-
-    # tracks = []
-    # x, y = create_track(np.arange(50, 166), -0.7, 208, image_shape, thickness)
-    # tracks.append((x, y))
-    #
-    #
-    # x, y = create_track(np.arange(28, 156), -0.15, 150, image_shape, thickness)
-    # tracks.append((x, y))
+        tracks.append(np.array([x, y]))
 
     print 'Created {} tracks'.format(n_tracks)
 

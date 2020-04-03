@@ -57,7 +57,7 @@ def chunked_filtering(test_img, filter_func):
     return result_mask, threshold
 
 
-def no_filter(test_img):
+def dummy_filter(test_img):
     return np.zeros(test_img.shape, dtype=bool), None
 
 
@@ -168,17 +168,17 @@ def isodata(test_img):
     return local_filter_mask, local_thresh
 
 
-def hit_and_miss(data, test_img, mask):
+def hit_and_miss(data, test_img, nd_mask):
     structure = np.zeros((5, 5))
     structure[2, 2] = 1
 
-    data[mask] = 0
+    data[nd_mask] = 0
 
-    mask += binary_hit_or_miss(data, structure1=structure)
+    nd_mask += binary_hit_or_miss(data, structure1=structure)
 
-    data[~mask] = test_img[~mask]
+    data[~nd_mask] = test_img[~nd_mask]
 
-    return mask, None
+    return nd_mask, None
 
 
 def morph_opening(data, test_img, mask):
@@ -229,7 +229,7 @@ def rfi_filter(test_img):
     return test_img
 
 
-def cfar(test_image):
+def cfar(test_image, true_tracks, noise_est):
     """
         Detect peaks with CFAR algorithm.
 
@@ -285,6 +285,7 @@ def sigma_clipping(test_img):
 
     return ~mask.mask, None
 
+
 def sigma_clipping4(test_img):
     s_clip = SigmaClip(cenfunc=mean, iters=5, sigma_upper=4., sigma_lower=10.)
 
@@ -305,3 +306,4 @@ def sigma_clipping_map(test_img):
     mask = test_img <= threshold
 
     return mask, np.mean(threshold)
+

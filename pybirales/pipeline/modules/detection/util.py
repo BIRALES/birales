@@ -28,6 +28,13 @@ def apply_doppler_mask(doppler_mask, channels, doppler_range, obs_info):
 
         doppler_mask = np.bitwise_and(channels < b, channels > a)
 
+        # print a
+        # print b
+        # print len(channels)
+        # print np.argmin(channels < b)
+        # print np.argmax(channels > a)
+        # print channels[2392], channels[6502]
+
         channels = channels[doppler_mask]
 
     return channels, doppler_mask

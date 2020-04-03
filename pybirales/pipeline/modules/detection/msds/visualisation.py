@@ -198,9 +198,6 @@ def visualise_detector(data, candidates, tracks, d_name, snr, visualise=False):
         ax.set(ylim=(y_start, y_end), xlim=(x_start, x_end))
         ax.set(xlabel='Time sample', ylabel='Channel', title=title)
         ax.legend()
-        plt.show()
-
-        print 'Showing: ' + title
 
 
 def visualise_ir2(data, org_data, group, ratio2):
@@ -269,7 +266,7 @@ def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negative
 
         # if i in [1195, 1220]:
 
-        labels, _ = h_cluster(negatives, 2.5, min_length=3, i=i)
+        labels, _ = h_cluster(negatives, 2, min_length=3, i=i)
         u, c = np.unique(labels, return_counts=True)
         min_mask = c > 3
         u_groups = u[min_mask]
@@ -306,9 +303,11 @@ def set_limits(ax, limits):
     return ax
 
 
-def visualise_clusters(data, cluster_labels, unique_labels, true_tracks, leaves, filename, limits=None, debug=False):
+def visualise_clusters(data, true_tracks, leaves, filename, limits=None, debug=False):
     if debug:
-        plt.clf()
+        # plt.clf()
+        cluster_labels = data[:, 5]
+        unique_labels = np.unique(cluster_labels)
         fig, ax = plt.subplots(1)
 
         for g in unique_labels:
@@ -318,7 +317,8 @@ def visualise_clusters(data, cluster_labels, unique_labels, true_tracks, leaves,
 
             # print 'cluster {}: inertia ratio is: {}'.format(g, __ir2(c, 1000, g))
 
-        for i, (cluster, best_gs, msg, x1, x2, y1, y2, n, _, _, _, _, j) in enumerate(leaves):
+        for i, (cluster, j, msg, bbox) in enumerate(leaves):
+            x1, x2, y1, y2, = bbox
             rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=1, edgecolor='gray', facecolor='none',
                                      zorder=-1)
             ax.text(x1 + 0.95 * (x2 - x1), y1 + 0.95 * (y2 - y1), j, color='k', fontsize=8, ha='right', va='top',
@@ -337,7 +337,7 @@ def visualise_clusters(data, cluster_labels, unique_labels, true_tracks, leaves,
 
 def visualise_candidates(candidates, true_tracks, filename, limits=None, debug=False):
     if debug:
-        plt.clf()
+        # plt.clf()
         fig, ax = plt.subplots(1)
         for c in candidates:
             group_2 = c[:, 3][0]
@@ -354,7 +354,7 @@ def visualise_candidates(candidates, true_tracks, filename, limits=None, debug=F
 
 def visualise_tracks(tracks, true_tracks, filename, limits=None, debug=False):
     if debug:
-        plt.clf()
+        # plt.clf()
         fig, ax = plt.subplots(1)
         for c in tracks:
             group_2 = c[:, 3][0]
@@ -371,7 +371,7 @@ def visualise_tracks(tracks, true_tracks, filename, limits=None, debug=False):
 
 def visualise_post_processed_tracks(tracks, true_tracks, filename, limits=None, groups=None, debug=False):
     if debug:
-        plt.clf()
+        # plt.clf()
         fig, ax = plt.subplots(1)
         for i, c in enumerate(tracks):
 
@@ -384,8 +384,13 @@ def visualise_post_processed_tracks(tracks, true_tracks, filename, limits=None, 
             ratio = __ir2(c[:, :2], group)
             x = c[:, 1].mean()
             y = c[:, 0].mean()
-            print group, 'R:{:0.5f} P:{:0.5f} E:{:0.5f} I:{:0.5f} N:{} M:{:0.4f} C:{:0.4f} X:{:0.4f} Y:{:0.4f} SNR:{:0.2f}' \
-                .format(r_value, p, e, ratio[0], len(c), m, intercept, x, y, np.mean(c[:, 2]))
+
+            score = (abs(r_value) + abs(1 - p) + abs(1 - e)) / 3
+            param = c[:, 1]
+            missing = np.setxor1d(np.arange(min(param), max(param)), param)
+            score = len(missing) / float(len(param))
+            print group, 'S:{:0.5f} R:{:0.5f} P:{:0.5f} E:{:0.5f} I:{:0.5f} N:{} M:{:0.4f} C:{:0.4f} X:{:0.4f} Y:{:0.4f} SNR:{:0.2f}' \
+                .format(score, r_value, p, e, ratio[0], len(c), m, intercept, x, y, np.mean(c[:, 2]))
 
             ax.annotate('{:0.0f}'.format(group), (x, 1.01 * y), zorder=3)
             if groups:
@@ -424,7 +429,7 @@ def visualise_filtered_data(ndx, true_tracks, filename, limits=None, debug=False
 
 def visualise_tree_traversal(ndx, true_tracks, clusters, leaves, filename, limits=None, vis=False):
     if vis:
-        plt.clf()
+        # plt.clf()
         fig, ax = plt.subplots(1)
         x_start, x_end, y_start, y_end = 0, ndx.shape[0], 0, ndx.shape[1]
         if limits:
@@ -434,19 +439,21 @@ def visualise_tree_traversal(ndx, true_tracks, clusters, leaves, filename, limit
 
         ax = set_limits(ax, limits)
 
-        for i, (cluster, best_gs, msg, x1, x2, y1, y2, n, _, _, _, _, j) in enumerate(leaves):
-            cluster_id = i
+        for i, (cluster, cluster_id, ratio, bbox) in enumerate(leaves):
+            # cluster_id = i
+            x1, x2, y1, y2 = bbox
             if x_start <= x1 <= x_end and y_start <= y1 <= y_end:
-                if j != 0:
-                    cluster_id = j
-                __plot_leaf(ax, x1, y1, x2, y2, cluster_id, msg, False, positives=None, negatives=cluster)
+                # if j != 0:
+                #     cluster_id = j
+                __plot_leaf(ax, x1, y1, x2, y2, cluster_id, ratio, False, positives=None, negatives=cluster)
 
-        for i, (cluster, best_gs, msg, x1, x2, y1, y2, n, _, _, _, _, j) in enumerate(clusters):
-            cluster_id = i
+        for i, (cluster, cluster_id, ratio, bbox) in enumerate(clusters):
+            # cluster_id = i
+            x1, x2, y1, y2, = bbox
             if x_start <= x1 <= x_end and y_start <= y1 <= y_end:
-                if j != 0:
-                    cluster_id = j
-                __plot_leaf(ax, x1, y1, x2, y2, cluster_id, msg, True, positives=cluster, negatives=None)
+                # if j != 0:
+                #     cluster_id = j
+                __plot_leaf(ax, x1, y1, x2, y2, cluster_id, ratio, True, positives=cluster, negatives=None)
 
         if true_tracks:
             ax = visualise_true_tracks(ax, true_tracks)
@@ -691,12 +698,12 @@ def plot_timings(metrics_df, algorithms, include_pp=False, file_name=None):
         name_str = name.title().replace('_', ' ')
         data = metrics_df[metrics_df['name'] == name]
         f_time = data['dt']['mean']
-        b1 = ax.barh(name_str, f_time, yerr=data['dt']['std'], color='#e0e0e0', zorder=3, edgecolor='#666666',
+        b1 = ax.barh(name_str, f_time, xerr=data['dt']['std'], color='#e0e0e0', zorder=3, edgecolor='#666666',
                      alpha=0.8)
 
         if include_pp:
             data = metrics_df[metrics_df['name'] == name + '_pp']
-            b2 = ax.barh(name_str, data['dt']['mean'], yerr=data['dt']['std'], left=f_time, color='#666666', zorder=3,
+            b2 = ax.barh(name_str, data['dt']['mean'], xerr=data['dt']['std'], left=f_time, color='#666666', zorder=3,
                          edgecolor='#666666', alpha=0.8)
 
     # plt.legend((b1[0], b2[0]), ('Men', 'Women'))
@@ -710,3 +717,22 @@ def plot_timings(metrics_df, algorithms, include_pp=False, file_name=None):
     if file_name:
         plt.tight_layout()
         fig.savefig(file_name)
+
+
+def viz_den(X, Z, threshold, labels):
+    from scipy.cluster import hierarchy
+    from matplotlib.ticker import MaxNLocator
+    hierarchy.set_link_color_palette(['m', 'c', 'y', 'k'])
+    fig, (ax1, ax2) = plt.subplots(2, 1)
+
+    dn1 = hierarchy.dendrogram(Z, ax=ax1, count_sort=True, labels=X[:, 1].astype(int), above_threshold_color='y',
+                               color_threshold=2, orientation='top')
+    hierarchy.set_link_color_palette(None)  # reset to default after use
+
+    u_labels = np.unique(labels)
+    for u in u_labels:
+        ax2.plot(X[labels == u][:, 1].astype(int), X[labels == u][:, 0], '.', ms=15)
+
+    ax2.xaxis.set_major_locator(MaxNLocator(integer=True))
+    print threshold
+    plt.show()

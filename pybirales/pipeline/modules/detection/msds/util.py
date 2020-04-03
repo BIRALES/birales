@@ -1,8 +1,8 @@
 import time
 
 import numpy as np
-from numba import njit
 import pandas as pd
+from scipy.stats import pearsonr
 
 
 def get_clusters(ndx, c_labels):
@@ -139,11 +139,6 @@ def _create_cluster(cluster_data, channels, obs_info, beam_id, iter_count):
     })
 
 
-def grad(cluster):
-    cov = np.cov(cluster[:, 1], cluster[:, 0]).flatten()
-
-    return cov[0] / (cov[1] + 1e-9)
-
 def grad2(cluster):
     _, i = np.unique(cluster[:, 1], return_index=True)
     cluster = cluster[i]
@@ -151,13 +146,35 @@ def grad2(cluster):
 
     return cov[0] / (cov[1] + 1e-9)
 
-def grad3(cluster):
-    cov = np.cov(cluster[:, 1], cluster[:, 0]).flatten()
-
-    return cov[0] / (cov[1] + 1e-9)
-
 
 def snr_calc(track, noise_estimate):
-    track[:, 2] = 10 * np.log10( (track[:, 2]) / noise_estimate)
+    track[:, 2] = 10 * np.log10((track[:, 2] - noise_estimate) / noise_estimate)
 
     return track
+
+
+def _validate_clusters(clusters):
+    return [c for c in clusters if is_valid(c, r_thold=-0.9, min_span_thold=1)]
+
+
+def is_valid(cluster, r_thold=-0.9, min_span_thold=1, group=-1):
+    c = cluster[:, 0]
+    s = cluster[:, 1]
+
+    ur = len(np.unique(c)) * 1.0 / (max(c) - min(c))
+    if ur < 0.4:
+        return False
+
+    if len(np.unique(s)) == 1 or len(np.unique(c)) == 1:
+        return False
+
+    if len(np.unique(s)) < min_span_thold:
+        return False
+
+    pear = pearsonr(s, c)
+
+    if pear[1] < 0.05 and pear[0] < r_thold:
+        return True
+    else:
+        pass
+    return False

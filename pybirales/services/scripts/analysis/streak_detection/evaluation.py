@@ -128,7 +128,68 @@ def evaluate_filter_old(truth_img, test_img, positives, exec_time, snr, thicknes
     }
 
 
-def evaluate_detector(truth_img, test_img, candidates, exec_time, snr, thickness):
+def evaluate_detector(truth_img, test_img, candidates, exec_time, snr, thickness, name):
+    # # truth = truth_img.ravel()
+    # # truth[truth > 0.] = True
+    # # truth[truth <= 0.] = False
+    #
+    # truth = truth_img.ravel().astype('bool')
+
+    prediction = np.zeros(shape=test_img.shape).astype('bool')
+
+    if candidates:
+        for c in candidates:
+            if isinstance(c, pd.DataFrame):
+                prediction[c['channel'].astype(int), c['sample'].astype(int)] = True
+            else:
+                prediction[c[:, 0].astype(int), c[:, 1].astype(int)] = True
+    # # positives = pos[:,0:1]
+    # # prediction[pos[:, :2].astype(int)] = True
+    # prediction = prediction.ravel()
+    #
+    # # recall = recall_score(truth, prediction)
+    # reduction = (1 - (np.sum(prediction) / np.prod(truth_img.shape)))
+
+    tn, fp, fn, tp = new_e(truth_img, prediction)
+
+    p = tp + fn
+    n = tn + fp
+
+    specificity = tn / n  # aka: specificity, selectivity or true negative rate
+    sensitivity = tp / p  # aka: sensitivity, recall, hit rate, or true positive rate
+
+    fpr = 1 - specificity  # aka: fall-out or false positive rate (FPR)
+    try:
+        precision = tp / (tp + fp)
+    except ZeroDivisionError:
+        precision = 0
+
+    accuracy = (tp + tn) / (p + n)
+    f1 = 2 * tp / (2 * tp + fp + fn)
+    reduction = 1 - (fp + tp) / truth_img.size
+
+    score = 2 * (sensitivity * specificity) / (sensitivity + specificity)
+
+    return {
+        'name': name,
+        'f1': f1,
+        'precision': precision,
+        'accuracy': accuracy,
+        'fpr': fpr,
+        'tpr': sensitivity,
+        'dt': exec_time,
+        'nchans': truth_img.shape[0],
+        'nsamples': truth_img.shape[1],
+        'snr': snr,
+        'dx': thickness,
+        'recall': sensitivity,
+        'specificity': specificity,
+        'reduction': reduction * 100.,
+        'score': score
+    }
+
+
+def evaluate_detector_old(truth_img, test_img, candidates, exec_time, snr, thickness):
     # truth = truth_img.ravel()
     # truth[truth > 0.] = True
     # truth[truth <= 0.] = False
