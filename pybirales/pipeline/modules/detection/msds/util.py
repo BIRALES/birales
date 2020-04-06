@@ -161,15 +161,15 @@ def is_valid(cluster, r_thold=-0.9, min_span_thold=1, group=-1):
     c = cluster[:, 0]
     s = cluster[:, 1]
 
-    ur = len(np.unique(c)) * 1.0 / (max(c) - min(c))
-    if ur < 0.4:
-        return False
-
-    if len(np.unique(s)) == 1 or len(np.unique(c)) == 1:
-        return False
-
-    if len(np.unique(s)) < min_span_thold:
-        return False
+    # ur = len(np.unique(c)) * 1.0 / (max(c) - min(c))
+    # if ur < 0.4:
+    #     return False
+    #
+    # if len(np.unique(s)) == 1 or len(np.unique(c)) == 1:
+    #     return False
+    #
+    # if len(np.unique(s)) < min_span_thold:
+    #     return False
 
     pear = pearsonr(s, c)
 

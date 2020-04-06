@@ -229,7 +229,7 @@ def rfi_filter(test_img):
     return test_img
 
 
-def cfar(test_image, true_tracks, noise_est):
+def cfar(test_image):
     """
         Detect peaks with CFAR algorithm.
 

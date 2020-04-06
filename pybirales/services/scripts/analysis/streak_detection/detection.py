@@ -14,7 +14,7 @@ from skimage.transform import probabilistic_hough_line
 from sklearn.cluster import DBSCAN
 
 from pybirales.pipeline.modules.detection.msds.msds import *
-from pybirales.pipeline.modules.detection.msds.util import get_clusters, _validate_clusters
+from pybirales.pipeline.modules.detection.msds.util import get_clusters, _validate_clusters, timeit
 from pybirales.pipeline.modules.detection.msds.visualisation import *
 from receiver import *
 
@@ -75,7 +75,8 @@ def astride(test_image, true_tracks, noise_est):
     clusters = []
     for i, streak in enumerate(streaks):
         cluster = np.column_stack(
-            [streak['y'], streak['x'], test_image[streak['y'].astype(int), streak['x'].astype(int)]])
+            [streak['y'], streak['x'], test_image[streak['y'].astype(int), streak['x'].astype(int)],
+             np.full(len(streak['x']), i)])
         clusters.append(cluster)
     #
     # for i, streak in enumerate(streaks):
@@ -136,12 +137,13 @@ def naive_dbscan(test_image, true_tracks, noise_estimate):
 
 
 # @profile
+@timeit
 def msds_q(test_image, true_tracks, noise_est):
     limits = get_limits(test_image, true_tracks)
     debug = False
 
     # limits = (0, 100, 5900, 6000)
-    limits = (30, 150, 450, 600)
+    limits = (30, 200, 2500, 2900)
     # limits = None
     pool = multiprocessing.Pool(processes=8)
     # Pre-process the input data
@@ -161,7 +163,7 @@ def msds_q(test_image, true_tracks, noise_est):
                       bbox=(0, test_image.shape[1], 0, test_image.shape[0]),
                       distance_thold=3., min_length=2., cluster_size_thold=10.)
 
-    positives, negatives = process_leaves(pool, leaves, parallel=False)
+    positives, negatives = process_leaves(pool, leaves, parallel=True)
 
     print "Processed {} leaves. Of which {} were positives.".format(len(leaves), len(positives))
 

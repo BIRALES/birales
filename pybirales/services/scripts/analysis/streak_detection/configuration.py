@@ -32,6 +32,7 @@ N_TRACKS = 1
 TD = 262144 / 78125 / 32.
 CD = 78125 / 8192.
 F = (1. / TD) / (1. / CD)
+F = CD / TD
 GRADIENT_RANGE = np.array([-0.057, -100.47]) / F
 # GRADIENT_RANGE = np.array([-0.057, -200.47]) / F
 TRACK_LENGTH_RANGE = np.array([3, 10]) / TD  # in seconds
@@ -41,3 +42,11 @@ FITS_FILE = "filter_test/filter_test_raw_0.fits"
 FITS_FILE = "detection_raw_data/detection_raw_data_1.fits"
 VISUALISE = True
 SAVE_FIGURES = False
+
+
+def m2doppler_rate(m):
+    return m * CD / TD
+
+
+def doppler_rate2m(doppler_rate):
+    return doppler_rate * TD / CD

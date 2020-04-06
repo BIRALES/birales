@@ -67,11 +67,10 @@ DETECTION_TESTS = TestSuite('detection_tests', [
 ])
 
 DETECTION_TESTS_DEBUG = TestSuite('detection_tests', [
-    # Test(triangle_filter, [msds_detector]),
+    Test(triangle_filter, [msds_detector]),
     # Test(triangle_filter, [msds_detector, dbscan_detector, hough_detector]),
-    Test(no_filter, [astride_detector])
-    # Test(no_filter, [astride_detector, cfar_detector])
+    # Test(no_filter, [astride_detector])
 ])
 
-DETECTION_ALG = [dbscan_detector, msds_detector, astride_detector, hough_detector, cfar_detector]
+DETECTION_ALG = [dbscan_detector, msds_detector, astride_detector, hough_detector]
 IS_ALG = [yen_filter, otsu_filter, iso_filter, triangle_filter, sc_3_filter, sc_4_filter]

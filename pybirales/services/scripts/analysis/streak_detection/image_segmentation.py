@@ -41,9 +41,8 @@ def test_detector(detector, data, true_tracks, noise_estimate, debug=False, visu
                                     debug=debug)
 
     # visualise candidates
-    visualise_detector(data, candidates, tracks, detector.name, s, visualise=visualise)
+    # visualise_detector(data, candidates, tracks, detector.name, s, visualise=visualise)
 
-    # evaluation(truth_img, test_img, positives, exec_time, snr, thickness, name)
     return evaluate_detector(true_image, data, candidates, timing, s, thickness=1, name=detector.name)
 
 
@@ -74,14 +73,14 @@ def show_results_detector(metrics_df, algorithms, directory):
     agg_df = metrics_df.groupby(['snr', 'name']).agg(['mean', 'std']).reset_index()
 
     # visualise the results
-    plot_metric_combined(agg_df, ['recall', 'precision', 'score'],
-                         file_name=directory + '/combined_v_snr' + EXT)
-    plot_metric_combined(agg_df, ['recall', 'precision', 'score'], pp_results=True,
-                         file_name=directory + '/combined_pp_v_snr' + EXT)
+    # plot_metric_combined(agg_df, ['recall', 'precision', 'f1'],
+    #                      file_name=directory + '/combined_v_snr' + EXT)
+    # plot_metric_combined(agg_df, ['recall', 'precision', 'f1'], pp_results=True,
+    #                      file_name=directory + '/combined_pp_v_snr' + EXT)
+    #
+    # plot_timings(agg_df, algorithms=algorithms, include_pp=True, file_name=directory + '/timings' + EXT)
 
-    plot_timings(agg_df, algorithms=algorithms, include_pp=True, file_name=directory + '/timings' + EXT)
-
-    print agg_df[['name', 'snr', 'dt', 'recall', 'precision', 'f1', 'tpr', 'fpr']]
+    print agg_df[['name', 'snr', 'dt', 'recall', 'precision', 'f1', 'tpr', 'fpr']].sort_values(by=['snr'])
 
     return agg_df
 
@@ -94,13 +93,13 @@ if __name__ == '__main__':
     SAVE = True
     USE_CACHE = False
     VISUALISE = False
+    DEBUG_DETECTOR = True
     POST_PROCESS = True
     TRACK_THICKNESS = 1
     N_CHANS = 4110
     N_SAMPLES = 160
     N_TRACKS = 10
     N_TESTS = 1
-    NBEAMS = 1
     ROOT = "/home/denis/.birales/visualisation/fits/bkg_noise_dataset_casa_20190914"
     ROOT = "/home/denis/.birales/visualisation/fits/detection_raw_data"
     EXT = '.pdf'
@@ -115,7 +114,8 @@ if __name__ == '__main__':
 
     snr = np.arange(0, 7, 0.5)
     snr = [2, 3, 5, 10]
-    snr = [5]
+    snr = [5, 10, 15, 30]
+    # snr = [30]
 
     OUTPUT_DF = 'output_' + str(len(TEST_SUITE.name)) + str(N_CHANS) + str(N_SAMPLES) + str(N_TRACKS) + '_'.join(
         map(str, snr)) + '.pkl'
@@ -124,34 +124,39 @@ if __name__ == '__main__':
     # org_test_img = create_test_img(os.path.join(ROOT, FITS_FILE), nchans=N_CHANS, nsamples=N_SAMPLES)
 
     # visualise_image(test_img, 'Test Image: no tracks', tracks=None)
-
+    count = 0
     t1 = time.time()
     for t in range(0, N_TESTS):
+
         org_test_img = generate_test_image(ROOT, N_SAMPLES)
 
         # Estimate the noise
         noise_mean = np.mean(org_test_img)
 
         # Make a copy of the data such that if it is mutated by the filter, the original is not affected
-        test_img = org_test_img.copy()
+        test_img_s = org_test_img.copy()
 
-        print np.mean(test_img)
+        print np.mean(test_img_s)
         # Generate a number of tracks
-        tracks = get_test_tracks(N_TRACKS, GRADIENT_RANGE, TRACK_LENGTH_RANGE, test_img.shape, TRACK_THICKNESS)
+        tracks = get_test_tracks(N_TRACKS, GRADIENT_RANGE, TRACK_LENGTH_RANGE, test_img_s.shape, TRACK_THICKNESS)
 
         # Add tracks to the true data
 
-        true_image = add_tracks(np.zeros(shape=test_img.shape), tracks, 1, .1)
+        true_image = add_tracks(np.zeros(shape=test_img_s.shape), tracks, 1, .1)
 
         visualise_image(true_image, 'Truth Image: %d tracks at SNR %dW' % (N_TRACKS, 1), tracks,
                         visualise=VISUALISE,
                         file_name="true_track.png", bar=False)
 
+        # if count == 0:
+        #     count = count + 1
+        #     continue
+
         for s in snr:
-            print "Evaluating filters with tracks at SNR {:0.2f}W".format(s)
+            print "Evaluating filters with tracks at SNR {:0.2f} dB and noise {:0.3f}".format(s, noise_mean)
 
             # Add tracks to the simulated data
-            test_img = add_tracks(test_img, tracks, noise_mean, s)
+            test_img = add_tracks(test_img_s, tracks, noise_mean, s)
 
             visualise_image(test_img, 'Test Image: %d tracks at SNR %d dB' % (N_TRACKS, s), tracks,
                             visualise=VISUALISE,  # VISUALISE,
@@ -196,7 +201,7 @@ if __name__ == '__main__':
 
                 # Detection stuff here
                 for detector in test.detectors:
-                    results = test_detector(detector, data, tracks, noise_mean)
+                    results = test_detector(detector, data, tracks, noise_mean, debug=DEBUG_DETECTOR)
                     detection_metrics_df = detection_metrics_df.append(results, ignore_index=True)
 
     # agg_df = show_results_filter(metrics_df, im_algorithms, 'image_seg_results')
