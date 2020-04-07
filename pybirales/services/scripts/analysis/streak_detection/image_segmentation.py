@@ -73,12 +73,10 @@ def show_results_detector(metrics_df, algorithms, directory):
     agg_df = metrics_df.groupby(['snr', 'name']).agg(['mean', 'std']).reset_index()
 
     # visualise the results
-    # plot_metric_combined(agg_df, ['recall', 'precision', 'f1'],
-    #                      file_name=directory + '/combined_v_snr' + EXT)
-    # plot_metric_combined(agg_df, ['recall', 'precision', 'f1'], pp_results=True,
-    #                      file_name=directory + '/combined_pp_v_snr' + EXT)
-    #
-    # plot_timings(agg_df, algorithms=algorithms, include_pp=True, file_name=directory + '/timings' + EXT)
+    plot_metric_combined(agg_df, ['recall', 'precision', 'f1'],
+                         file_name=directory + '/combined_v_snr' + EXT)
+
+    plot_timings(agg_df, algorithms=algorithms, include_pp=True, file_name=directory + '/timings' + EXT)
 
     print agg_df[['name', 'snr', 'dt', 'recall', 'precision', 'f1', 'tpr', 'fpr']].sort_values(by=['snr'])
 
@@ -93,13 +91,13 @@ if __name__ == '__main__':
     SAVE = True
     USE_CACHE = False
     VISUALISE = False
-    DEBUG_DETECTOR = True
+    DEBUG_DETECTOR = False
     POST_PROCESS = True
     TRACK_THICKNESS = 1
     N_CHANS = 4110
     N_SAMPLES = 160
     N_TRACKS = 10
-    N_TESTS = 1
+    N_TESTS = 5
     ROOT = "/home/denis/.birales/visualisation/fits/bkg_noise_dataset_casa_20190914"
     ROOT = "/home/denis/.birales/visualisation/fits/detection_raw_data"
     EXT = '.pdf'
@@ -112,10 +110,10 @@ if __name__ == '__main__':
     metrics_df = pd.DataFrame()
     detection_metrics_df = pd.DataFrame()
 
-    snr = np.arange(0, 7, 0.5)
+    snr = np.arange(0, 10, 0.5)
     snr = [2, 3, 5, 10]
-    snr = [5, 10, 15, 30]
-    # snr = [30]
+    # snr = [5, 10, 15, 30]
+    snr = [5]
 
     OUTPUT_DF = 'output_' + str(len(TEST_SUITE.name)) + str(N_CHANS) + str(N_SAMPLES) + str(N_TRACKS) + '_'.join(
         map(str, snr)) + '.pkl'

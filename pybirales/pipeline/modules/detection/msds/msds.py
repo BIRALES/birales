@@ -53,7 +53,7 @@ def dm(X, m, dm, min_r, cid):
     return dm
 
 
-# @njit("float64[:](float64[:,:], int32, float64[:])")
+@njit("float64[:](float64[:,:], int32, float64[:])")
 def dm_grad(X, m, dm):
     k = 0
     v = np.zeros(shape=3)
@@ -137,7 +137,7 @@ def h_cluster(X, distance_thold, min_length=2, i=None):
     return cluster_labels, unique_groups
 
 
-# @njit("float64[:, :](float64[:,:], int32,  int32,  int32,  int32)")
+@njit("float64[:, :](float64[:,:], int32,  int32,  int32,  int32)")
 def _partition(data, x1, x2, y1, y2):
     ys = data[:, 0]
     partition_y = data[np.logical_and(ys >= y1, ys <= y2)]

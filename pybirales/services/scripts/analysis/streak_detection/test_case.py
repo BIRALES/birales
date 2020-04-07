@@ -44,8 +44,8 @@ sc_3_filter = ImageSegmentationAlgorithm('sigma_clip3', sigma_clipping)
 sc_4_filter = ImageSegmentationAlgorithm('sigma_clip4', sigma_clipping4)
 no_filter = ImageSegmentationAlgorithm('No filter', dummy_filter)
 
-dbscan_detector = FeatureExtractionAlgorithm('Naive DBSCAN', naive_dbscan)
-msds_detector = FeatureExtractionAlgorithm('msds_q', msds_q)
+dbscan_detector = FeatureExtractionAlgorithm('DBSCAN', naive_dbscan)
+msds_detector = FeatureExtractionAlgorithm('MSDS', msds_q)
 hough_detector = FeatureExtractionAlgorithm('Hough Transform', hough_transform)
 astride_detector = FeatureExtractionAlgorithm('Astride', astride)
 cfar_detector = FeatureExtractionAlgorithm('CFAR', cfar)
@@ -67,9 +67,9 @@ DETECTION_TESTS = TestSuite('detection_tests', [
 ])
 
 DETECTION_TESTS_DEBUG = TestSuite('detection_tests', [
-    Test(triangle_filter, [msds_detector]),
-    # Test(triangle_filter, [msds_detector, dbscan_detector, hough_detector]),
-    # Test(no_filter, [astride_detector])
+    # Test(triangle_filter, [msds_detector, dbscan_detector]),
+    Test(triangle_filter, [msds_detector, dbscan_detector, hough_detector]),
+    Test(no_filter, [astride_detector])
 ])
 
 DETECTION_ALG = [dbscan_detector, msds_detector, astride_detector, hough_detector]
