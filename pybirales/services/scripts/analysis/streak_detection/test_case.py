@@ -36,17 +36,17 @@ canny = ImageSegmentationAlgorithm('Canny', canny_filter)
 sigma_clip_map = ImageSegmentationAlgorithm('sigma_clip_map', sigma_clipping_map)
 adaptive_filter = ImageSegmentationAlgorithm('Adaptive Filter', adaptive)
 
-yen_filter = ImageSegmentationAlgorithm('yen', yen)
+yen_filter = ImageSegmentationAlgorithm('Yen', yen)
 otsu_filter = ImageSegmentationAlgorithm('Otsu Filter', otsu_thres)
-iso_filter = ImageSegmentationAlgorithm('iso_data', isodata)
-triangle_filter = ImageSegmentationAlgorithm('triangle', triangle)
-sc_3_filter = ImageSegmentationAlgorithm('sigma_clip3', sigma_clipping)
+iso_filter = ImageSegmentationAlgorithm('Iso Data', isodata)
+triangle_filter = ImageSegmentationAlgorithm('Triangle', triangle)
+sc_3_filter = ImageSegmentationAlgorithm('Sigma Clip', sigma_clipping)
 sc_4_filter = ImageSegmentationAlgorithm('sigma_clip4', sigma_clipping4)
 no_filter = ImageSegmentationAlgorithm('No filter', dummy_filter)
 
 dbscan_detector = FeatureExtractionAlgorithm('DBSCAN', naive_dbscan)
 msds_detector = FeatureExtractionAlgorithm('MSDS', msds_q)
-hough_detector = FeatureExtractionAlgorithm('Hough Transform', hough_transform)
+hough_detector = FeatureExtractionAlgorithm('Hough', hough_transform)
 astride_detector = FeatureExtractionAlgorithm('Astride', astride)
 cfar_detector = FeatureExtractionAlgorithm('CFAR', cfar)
 
@@ -56,7 +56,7 @@ IMAGE_SEG_TESTS = TestSuite('filter_tests', [
     Test(iso_filter, []),
     Test(triangle_filter, []),
     Test(sc_3_filter, []),
-    Test(sc_4_filter, []),
+    # Test(sc_4_filter, []),
 ])
 
 DETECTION_TESTS = TestSuite('detection_tests', [
@@ -67,9 +67,9 @@ DETECTION_TESTS = TestSuite('detection_tests', [
 ])
 
 DETECTION_TESTS_DEBUG = TestSuite('detection_tests', [
-    # Test(triangle_filter, [msds_detector, dbscan_detector]),
-    Test(triangle_filter, [msds_detector, dbscan_detector, hough_detector]),
-    Test(no_filter, [astride_detector])
+    Test(triangle_filter, [msds_detector]),
+    # Test(triangle_filter, [msds_detector, dbscan_detector, hough_detector]),
+    # Test(no_filter, [astride_detector])
 ])
 
 DETECTION_ALG = [dbscan_detector, msds_detector, astride_detector, hough_detector]

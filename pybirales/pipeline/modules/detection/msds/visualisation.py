@@ -8,6 +8,7 @@ import seaborn as sns
 from cycler import cycler
 from matplotlib.font_manager import FontProperties
 
+from pybirales.services.scripts.analysis.analysis import COLORS
 from util import grad2
 
 sns.set(color_codes=True)
@@ -239,52 +240,103 @@ def visualise_ir2(data, org_data, group, ratio2):
     plt.show()
 
 
-def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negatives=None):
+def visualise_ir2_pub(data, org_data, group, ratio2):
+    # if len(data) >= 10:
+    #     return 0., 0., data
+
+    ms, mc = np.mean(data[:, 1]), np.mean(data[:, 0])
+    coords = np.flip(np.swapaxes(data[:, :2] - np.mean(data[:, :2], axis=0), 0, -1), 0)
+    eigen_values, eigen_vectors = np.linalg.eig(np.cov(coords))
+    sort_indices = np.argsort(eigen_values)[::-1]
+
+    x_v1, y_v1 = eigen_vectors[:, sort_indices[0]]  # Eigenvector with largest eigenvalue
+    x_v2, y_v2 = eigen_vectors[:, sort_indices[1]]  # Eigenvector with the second largest eigenvalue
+
+    scale_1 = 6
+    scale_2 = 2
+
+    ax = plt.axes()
+    plt.plot([x_v1 * -scale_1 * 1 + ms, x_v1 * scale_1 * 1 + ms],
+             [y_v1 * -scale_1 * 1 + mc, y_v1 * scale_1 * 1 + mc], color='black')
+    plt.plot([x_v2 * -scale_2 + ms, x_v2 * scale_2 + ms],
+             [y_v2 * -scale_2 + mc, y_v2 * scale_2 + mc], color='gray')
+
+    # plt.plot(org_data[:, 1], org_data[:, 0], '.', color='red', markersize=15, zorder=1)
+    plt.plot(data[:, 1], data[:, 0], '.', color='k', markersize=12, zorder=2)
+    ratio, _, _ = __ir2(data, min_n=15)
+
+    # ax.text(0.05, 0.95,
+    #         'Ratio: {:0.3f}'.format(ratio), color='k',
+    #         weight='bold',
+    #         fontsize=15,
+    #         horizontalalignment='right',
+    #         verticalalignment='center', transform=ax.transAxes)
+    ax.xaxis.labelpad = 20
+    ax.yaxis.labelpad = 20
+    ax.set(xlabel='Sample', ylabel='Channel')
+
+    plt.grid()
+    ax.figure.savefig('g={}_ir={:2.3}.pdf'.format(group, ratio))
+
+
+def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negatives=None, pub=False):
     from msds import h_cluster
     color = 'r'
     zorder = 1
     lw = 1
-    ax.text(x1 + 0.95 * (x2 - x1), y1 + 0.95 * (y2 - y1), i, color='k', fontsize=8, ha='right', va='top', zorder=10)
+    figure_limits = (70, 4010)
+    if not pub:
+        ax.text(x1 + 0.95 * (x2 - x1), y1 + 0.95 * (y2 - y1), i, color='k', fontsize=8, ha='right', va='top', zorder=10)
+
+    # if i == 1085:
+    #     visualise_ir2_pub(positives, positives, i, -1)
+
     if positive:
         color = 'g'
         zorder = 2
         lw = 2
 
         # Plot mean cluster
-        ax.plot(np.mean(positives[:, 1]), np.mean(positives[:, 0]), '*', zorder=10, color='k')
+        if not pub:
+            ax.plot(np.mean(positives[:, 1]), np.mean(positives[:, 0]), '*', zorder=10, color='w', markeredgecolor='k',
+                    markersize=7.5)
 
         # Plot the data points that make the cluster
         ax.plot(positives[:, 1], positives[:, 0], 'g.', zorder=3)
 
-        msg = '{:0.2f}\n{:0.2f}'.format(score, grad2(positives))
-        ax.text(x1 + 0.5 * (x2 - x1), y1 + 0.5 * (y2 - y1), msg, color='blue', weight='bold',
-                fontsize=8, ha='center', va='center')
+        if not pub:
+            msg = '{:0.2f}\n{:0.2f}'.format(score, grad2(positives))
+            ax.text(x1 + 0.5 * (x2 - x1), y1 + 0.5 * (y2 - y1), msg, color='blue', weight='bold',
+                    fontsize=8, ha='center', va='center')
     else:
         ax.plot(negatives[:, 1], negatives[:, 0], 'r.', zorder=1)
-        ax.text(x1 + 0.5 * (x2 - x1), y1 + 0.5 * (y2 - y1), '{}'.format(score), color='k', weight='bold',
-                fontsize=8, ha='center', va='center')
 
-        # if i in [1195, 1220]:
+        if not pub:
+            ax.text(x1 + 0.5 * (x2 - x1), y1 + 0.5 * (y2 - y1), '{}'.format(score), color='k', weight='bold',
+                    fontsize=8, ha='center', va='center')
 
         labels, _ = h_cluster(negatives, 2, min_length=3, i=i)
         u, c = np.unique(labels, return_counts=True)
         min_mask = c > 3
         u_groups = u[min_mask]
 
-        # start with the smallest grouping
-        sorted_groups = u_groups[np.argsort(c[min_mask])]
-        for j, g in enumerate(sorted_groups):
-            c = negatives[np.where(labels == g)]
-            ratio, _, _ = __ir2(c, i=i)
-            ax.plot(c[:, 1], c[:, 0], '.', color='pink', zorder=2)
+        if not pub:
+            # start with the smallest grouping
+            sorted_groups = u_groups[np.argsort(c[min_mask])]
+            for j, g in enumerate(sorted_groups):
+                c = negatives[np.where(labels == g)]
+                ratio, _, _ = __ir2(c, i=i)
+                ax.plot(c[:, 1], c[:, 0], '.', color='pink', zorder=2)
 
-            print 'Cluster: {}, group: {}. ratio:{}. length:{}'.format(i, g, ratio, np.shape(c))
+                print 'Cluster: {}, group: {}. ratio:{}. length:{}'.format(i, g, ratio, np.shape(c))
 
     rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=lw, edgecolor=color, facecolor='none',
                              zorder=zorder)
 
     # Add the patch to the Axes
     ax.add_patch(rect)
+    ax.xaxis.labelpad = 20
+    ax.yaxis.labelpad = 20
 
 
 def visualise_true_tracks(ax, true_tracks):
@@ -303,7 +355,7 @@ def set_limits(ax, limits):
     return ax
 
 
-def visualise_clusters(data, true_tracks, leaves, filename, limits=None, debug=False):
+def visualise_clusters(data, true_tracks, leaves, filename, limits=None, debug=False, pub=True):
     if debug:
         # plt.clf()
         cluster_labels = data[:, 5]
@@ -312,8 +364,10 @@ def visualise_clusters(data, true_tracks, leaves, filename, limits=None, debug=F
 
         for g in unique_labels:
             c = np.vstack(data[cluster_labels == g, 0])
-            ax = sns.scatterplot(x=c[:, 1], y=c[:, 0])
-            ax.annotate(g, (np.mean(c[:, 1]), np.mean(c[:, 0])))
+            ax.plot(c[:, 1], c[:, 0], '.')
+
+            if not pub:
+                ax.annotate(g, (np.mean(c[:, 1]), np.mean(c[:, 0])))
 
             # print 'cluster {}: inertia ratio is: {}'.format(g, __ir2(c, 1000, g))
 
@@ -321,16 +375,24 @@ def visualise_clusters(data, true_tracks, leaves, filename, limits=None, debug=F
             x1, x2, y1, y2, = bbox
             rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=1, edgecolor='gray', facecolor='none',
                                      zorder=-1)
-            ax.text(x1 + 0.95 * (x2 - x1), y1 + 0.95 * (y2 - y1), j, color='k', fontsize=8, ha='right', va='top',
-                    zorder=10)
+
+            # Plot mean cluster
+            ax.plot(np.mean(cluster[:, 1]), np.mean(cluster[:, 0]), '*', zorder=10, color='w', markeredgecolor='k',
+                    markersize=7.5)
+
+            if not pub:
+                ax.text(x1 + 0.95 * (x2 - x1), y1 + 0.95 * (y2 - y1), j, color='k', fontsize=8, ha='right', va='top',
+                        zorder=10)
             # Add the patch to the Axes
             ax.add_patch(rect)
 
         if true_tracks:
             ax = visualise_true_tracks(ax, true_tracks)
 
-        ax.set(xlabel='Sample', ylabel='Channel', title='Detected Clusters')
+        ax.set(xlabel='Sample', ylabel='Channel')
         ax = set_limits(ax, limits)
+        ax.xaxis.labelpad = 20
+        ax.yaxis.labelpad = 20
         plt.grid()
         ax.figure.savefig(filename)
 
@@ -348,23 +410,28 @@ def visualise_candidates(candidates, true_tracks, filename, limits=None, debug=F
 
         ax.set(xlabel='Sample', ylabel='Channel', title='Detected Candidates')
         ax = set_limits(ax, limits)
+        ax.xaxis.labelpad = 20
+        ax.yaxis.labelpad = 20
         plt.grid()
         ax.figure.savefig(filename)
 
 
-def visualise_tracks(tracks, true_tracks, filename, limits=None, debug=False):
+def visualise_tracks(tracks, true_tracks, filename, limits=None, debug=False, pub=True):
     if debug:
         # plt.clf()
         fig, ax = plt.subplots(1)
         for c in tracks:
             group_2 = c[:, 3][0]
-            ax = sns.scatterplot(x=c[:, 1], y=c[:, 0])
-            ax.annotate(group_2, (np.mean(c[:, 1]), np.mean(c[:, 0])))
+            ax.plot(c[:, 1], c[:, 0], '.')
+            if not pub:
+                ax.annotate(group_2, (np.mean(c[:, 1]), np.mean(c[:, 0])))
 
         ax = visualise_true_tracks(ax, true_tracks)
 
-        ax.set(xlabel='Sample', ylabel='Channel', title='Detected Tracks')
+        ax.set(xlabel='Sample', ylabel='Channel')
         ax = set_limits(ax, limits)
+        ax.xaxis.labelpad = 20
+        ax.yaxis.labelpad = 20
         plt.grid()
         ax.figure.savefig(filename)
 
@@ -418,9 +485,15 @@ def visualise_filtered_data(ndx, true_tracks, filename, limits=None, debug=False
         if limits:
             x_start, x_end, y_start, y_end = limits
             ndx = _partition(ndx, x_start, x_end, y_start, y_end)
-        ax.plot(ndx[:, 1], ndx[:, 0], '.', 'r', zorder=1)
+        ax.scatter(ndx[:, 1], ndx[:, 0], color='gray', marker='.')
+        # ax = sns.scatterplot(x=ndx[:, 1], y=ndx[:, 0], marker='.', color='r', zorder=1)
 
-        ax = visualise_true_tracks(ax, true_tracks)
+        ax = set_limits(ax, limits)
+        ax.xaxis.labelpad = 15
+        ax.yaxis.labelpad = 15
+
+        if true_tracks:
+            ax = visualise_true_tracks(ax, true_tracks)
         ax.set(xlabel='Sample', ylabel='Channel')
         ax = set_limits(ax, limits)
         plt.grid()
@@ -442,7 +515,7 @@ def visualise_tree_traversal(ndx, true_tracks, clusters, leaves, filename, limit
         for i, (cluster, cluster_id, ratio, bbox) in enumerate(leaves):
             # cluster_id = i
             x1, x2, y1, y2 = bbox
-            if x_start <= x1 <= x_end and y_start <= y1 <= y_end:
+            if x_start * 0.5 <= x1 <= x_end * 1.5 and y_start * 0.5 <= y1 <= y_end * 1.5:
                 # if j != 0:
                 #     cluster_id = j
                 __plot_leaf(ax, x1, y1, x2, y2, cluster_id, ratio, False, positives=None, negatives=cluster)
@@ -450,7 +523,7 @@ def visualise_tree_traversal(ndx, true_tracks, clusters, leaves, filename, limit
         for i, (cluster, cluster_id, ratio, bbox) in enumerate(clusters):
             # cluster_id = i
             x1, x2, y1, y2, = bbox
-            if x_start <= x1 <= x_end and y_start <= y1 <= y_end:
+            if x_start * 0.5 <= x1 <= x_end * 1.5 and y_start * 0.5 <= y1 <= y_end * 1.5:
                 # if j != 0:
                 #     cluster_id = j
                 __plot_leaf(ax, x1, y1, x2, y2, cluster_id, ratio, True, positives=cluster, negatives=None)
@@ -641,7 +714,9 @@ def plot_metric(metrics_df, metric, file_name=None):
 
 
 def mono_cylcer():
-    return (cycler('color', ['k']) * cycler('linestyle', ['-', '--', ':', '=.']) * cycler('marker', ['^', ',', '.']))
+    return (cycler('color', ['k']) * cycler('markerfacecolor', ['w']) * cycler('markeredgecolor', ['k']) * cycler(
+        'linestyle', ['-']) * cycler('marker', ['.', '+', 'o', '^', 'x', '']))
+    # return (cycler('color', ['k', 'gray']) * cycler('linestyle', ['-', '--', ':', '=.']) * cycler('marker', ['^', ',', '.']))
 
 
 def plot_metric_combined(metrics_df, metrics, pp_results=False, file_name=None):
@@ -662,7 +737,7 @@ def plot_metric_combined(metrics_df, metrics, pp_results=False, file_name=None):
                     continue
             data = metrics_df[metrics_df['name'] == name]
 
-            ax.plot(data['snr'], data[metric]['mean'], lw=2, label='{}'.format(name.title()))
+            ax.plot(data['snr'], data[metric]['mean'], lw=1, label='{}'.format(name.title()))
 
         ax.set(ylabel=metric.title())
 
@@ -670,16 +745,14 @@ def plot_metric_combined(metrics_df, metrics, pp_results=False, file_name=None):
         ax.yaxis.labelpad = 15
         ax.tick_params(width=2)
 
-    # # plt.grid(alpha=0.3)
-    # fig.legend(axes,  # List of the line objects
-    #            labels=algorithms,  # The labels for each line
-    #            loc="upper right",  # Position of the legend
-    #            borderaxespad=0.1, frameon=False)  # Title for the legend
-    axes[0].yaxis.set_ticks(np.arange(0, 1.25, 0.25))
-    axes[1].yaxis.set_ticks(np.arange(0.7, 1.0, 0.1))
-    axes[2].yaxis.set_ticks(np.arange(0, 1.25, 0.25))
+    # axes[1].yaxis.set_ticks(np.arange(0.7, 1.0, 0.1))
 
-    lgd = axes[0].legend(bbox_to_anchor=(1.3, 1.05), frameon=False)
+    from matplotlib.ticker import FormatStrFormatter
+    axes[0].yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    axes[1].yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    axes[2].yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+
+    lgd = axes[0].legend(bbox_to_anchor=(1.0, 1.05), frameon=False)
     axes[2].set(xlabel="SNR (dB)")
 
     if file_name:
@@ -692,6 +765,7 @@ def plot_metric_combined(metrics_df, metrics, pp_results=False, file_name=None):
 def plot_timings(metrics_df, algorithms, include_pp=False, file_name=None):
     fig, ax = plt.subplots(1)
     # algorithms = metrics_df.index.unique()
+    errors_kw = dict(capsize=9, capthick=3, elinewidth=3, zorder=4, ecolor='#666666')
 
     metrics_df = metrics_df[metrics_df['snr'] == metrics_df['snr'].max()]
     for name in algorithms:
@@ -699,15 +773,55 @@ def plot_timings(metrics_df, algorithms, include_pp=False, file_name=None):
         data = metrics_df[metrics_df['name'] == name]
         f_time = data['dt']['mean']
         b1 = ax.barh(name_str, f_time, xerr=data['dt']['std'], color='#e0e0e0', zorder=3, edgecolor='#666666',
-                     alpha=0.8)
+                     alpha=0.8, error_kw=errors_kw)
 
         if include_pp:
             data = metrics_df[metrics_df['name'] == name + '_pp']
-            b2 = ax.barh(name_str, data['dt']['mean'], xerr=data['dt']['std'], left=f_time, color='#666666', zorder=3,
-                         edgecolor='#666666', alpha=0.8)
+            b2 = ax.barh(name_str, data['dt']['mean'], xerr=data['dt']['std'], left=f_time, color='#999999', zorder=3,
+                         edgecolor='#666666', alpha=0.8, error_kw=errors_kw)
 
     # plt.legend((b1[0], b2[0]), ('Men', 'Women'))
     ax.invert_yaxis()
+    ax.set(xlabel='Processing Time (s)')
+    ax.grid(which='x')
+
+    ax.set_axisbelow(True)
+    plt.rc('axes', labelsize=45)
+    ax.xaxis.labelpad = 15
+    if file_name:
+        plt.tight_layout()
+        fig.savefig(file_name)
+
+
+def plot_timings_detector(metrics_df, algorithms, file_name=None):
+    fig, ax = plt.subplots(1)
+    # algorithms = metrics_df.index.unique()
+    errors_kw = dict(capsize=9, capthick=3, elinewidth=3, zorder=4, ecolor='#666666')
+    snrs = [1, 5, 10]
+
+    bw = 0.4
+    left = bw / 2.
+    ng = len(algorithms)
+    l = [bw + i * bw * (ng + 1) for i in np.arange(ng)]
+    algorithms = ['Astride', 'DBSCAN', 'MSDS', 'Hough']
+    for i, name in enumerate(algorithms):
+        for j, snr in enumerate(snrs):
+            data = metrics_df[metrics_df['snr'] == snr][metrics_df['name'] == name]
+            f_time = data['dt']['mean']
+
+            b1 = ax.bar(left, f_time, yerr=data['dt']['std'], zorder=3, edgecolor='#666666',
+                        alpha=0.61, error_kw=errors_kw, label=snr, width=bw, color=COLORS[j])
+
+            left += bw
+
+        left += bw
+
+        # legend['labels'].append('SNR = {} dB'.format(snr))
+    print l
+    plt.xticks([0.6, 2.2, 3.8, 5.4], algorithms)
+    plt.legend(['SNR = {:1.0f} dB'.format(snr) for snr in snrs])
+
+    # ax.invert_yaxis()
     ax.set(xlabel='Processing Time (s)')
     ax.grid(which='x')
 

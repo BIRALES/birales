@@ -9,7 +9,6 @@ from scipy.spatial import KDTree
 from scipy.stats import linregress
 from sklearn import linear_model
 
-from pybirales.pipeline.modules.detection.msds.util import timeit
 from util import __ir2, grad2
 
 P_VALUE = 0.05
@@ -262,7 +261,7 @@ def density_check2(data, threshold, cluster_id):
     return score < threshold
 
 
-@timeit
+# @timeit
 def process_leaves(pool, leaves, parallel=True):
     pos = []
     rej = []
@@ -286,7 +285,7 @@ def process_leaves(pool, leaves, parallel=True):
     return pos, rej
 
 
-@timeit
+# @timeit
 def estimate_leave_eps(positives):
     bboxes = np.vstack(np.array(positives)[:, 3])
     a = bboxes[:, 0] - bboxes[:, 1]
@@ -330,7 +329,7 @@ def validate_clusters_func(labelled_cluster):
     return []
 
 
-@timeit
+# @timeit
 def validate_clusters(data):
     labelled_clusters = data[:, 5]
     unique_labels = np.unique(labelled_clusters)
@@ -344,7 +343,7 @@ def validate_clusters(data):
     return clusters
 
 
-@timeit
+# @timeit
 def pre_process_data(test_image, noise_estimate=None):
     if noise_estimate:
         test_image -= noise_estimate
@@ -355,7 +354,7 @@ def pre_process_data(test_image, noise_estimate=None):
     return np.append(ndx, np.expand_dims(power, axis=1), axis=1)
 
 
-@timeit
+# @timeit
 def build_tree(ndx, leave_size, n_axis):
     """
     Build a 2D or 3D kd tree.

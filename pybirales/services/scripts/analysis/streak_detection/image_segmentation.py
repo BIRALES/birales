@@ -18,7 +18,7 @@ from detection import *
 from evaluation import *
 from filters import hit_and_miss
 from receiver import *
-from test_case import DETECTION_TESTS, IMAGE_SEG_TESTS, DETECTION_TESTS_DEBUG, DETECTION_ALG
+from test_case import IMAGE_SEG_TESTS, DETECTION_TESTS_DEBUG, DETECTION_ALG
 from configuration import *
 from pybirales.pipeline.modules.detection.msds.util import snr_calc
 
@@ -27,7 +27,7 @@ from pybirales.pipeline.modules.detection.msds.util import snr_calc
 # Metrics as a function of SNR
 # Filters as a function of speed
 
-def test_detector(detector, data, true_tracks, noise_estimate, debug=False, visualise=False):
+def test_detector(detector, data, true_tracks, noise_estimate, debug=True, visualise=False):
     print "Running {} algorithm".format(detector.name)
     start = time.time()
     candidates = detector.func(data, true_tracks, noise_estimate)
@@ -57,28 +57,49 @@ def show_results_filter(metrics_df, im_algorithms, directory):
 
     agg_df = metrics_df.groupby(['snr', 'name']).agg(['mean', 'std']).reset_index()
 
+    snrs = agg_df['snr'].unique()
+    n_algs = len(im_algorithms)
+
+    file_name = 'SNR={}-{}dB__ALG={}'.format(agg_df['snr'].min(), agg_df['snr'].max(), n_algs)
+
     # visualise the results
     plot_metric_combined(agg_df, ['recall', 'specificity', 'score'],
-                         file_name=directory + '/combined_v_snr' + EXT)
+                         file_name=directory + '/' + file_name + '__combined_v_snr' + EXT)
     plot_metric_combined(agg_df, ['recall', 'specificity', 'score'], pp_results=True,
-                         file_name=directory + '/combined_pp_v_snr' + EXT)
+                         file_name=directory + '/' + file_name + '__combined_pp_v_snr' + EXT)
 
-    plot_timings(agg_df, algorithms=im_algorithms, include_pp=True, file_name=directory + '/timings' + EXT)
+    plot_timings(agg_df, algorithms=im_algorithms, include_pp=True,
+                 file_name=directory + '/' + file_name + '__timings' + EXT)
 
     print agg_df[['name', 'snr', 'dt', 'score', 'recall', 'specificity', 'reduction', 'fpr']]
+
+    agg_df.to_csv(directory + '/' + file_name + '__export.csv')
+
     return agg_df
+
+
+def str_join(params):
+    params = [str(p) for p in params]
+    return '_'.join(params)
 
 
 def show_results_detector(metrics_df, algorithms, directory):
     agg_df = metrics_df.groupby(['snr', 'name']).agg(['mean', 'std']).reset_index()
 
+    snrs = agg_df['snr'].unique()
+    n_algs = len(algorithms)
+
+    file_name = 'SNR={}-{}dB__ALG={}'.format(agg_df['snr'].min(), agg_df['snr'].max(), n_algs)
+
     # visualise the results
     plot_metric_combined(agg_df, ['recall', 'precision', 'f1'],
-                         file_name=directory + '/combined_v_snr' + EXT)
+                         file_name=directory + '/' + file_name + '__combined_v_snr' + EXT)
 
-    plot_timings(agg_df, algorithms=algorithms, include_pp=True, file_name=directory + '/timings' + EXT)
+    # plot_timings_detector(agg_df, algorithms=algorithms, file_name=directory + '/' + file_name + '__timings' + EXT)
 
     print agg_df[['name', 'snr', 'dt', 'recall', 'precision', 'f1', 'tpr', 'fpr']].sort_values(by=['snr'])
+
+    agg_df.to_csv(directory + '/' + file_name + '__export.csv')
 
     return agg_df
 
@@ -97,12 +118,12 @@ if __name__ == '__main__':
     N_CHANS = 4110
     N_SAMPLES = 160
     N_TRACKS = 10
-    N_TESTS = 5
+    N_TESTS = 2
     ROOT = "/home/denis/.birales/visualisation/fits/bkg_noise_dataset_casa_20190914"
     ROOT = "/home/denis/.birales/visualisation/fits/detection_raw_data"
     EXT = '.pdf'
     TEST_SUITE = IMAGE_SEG_TESTS
-    TEST_SUITE = DETECTION_TESTS
+    # TEST_SUITE = DETECTION_TESTS
     TEST_SUITE = DETECTION_TESTS_DEBUG
 
     im_algorithms = [t.image_seg_algo.name for t in TEST_SUITE.tests]
@@ -110,10 +131,12 @@ if __name__ == '__main__':
     metrics_df = pd.DataFrame()
     detection_metrics_df = pd.DataFrame()
 
-    snr = np.arange(0, 10, 0.5)
-    snr = [2, 3, 5, 10]
+    snr = np.arange(0, 12, 0.5)
+    # snr = [2, 3, 5, 10]
     # snr = [5, 10, 15, 30]
+    # snr = [5, 10, 15]
     snr = [5]
+    # snr = np.arange(0, 10.5, 0.5)
 
     OUTPUT_DF = 'output_' + str(len(TEST_SUITE.name)) + str(N_CHANS) + str(N_SAMPLES) + str(N_TRACKS) + '_'.join(
         map(str, snr)) + '.pkl'
@@ -145,7 +168,7 @@ if __name__ == '__main__':
         visualise_image(true_image, 'Truth Image: %d tracks at SNR %dW' % (N_TRACKS, 1), tracks,
                         visualise=VISUALISE,
                         file_name="true_track.png", bar=False)
-
+        #
         # if count == 0:
         #     count = count + 1
         #     continue
@@ -204,6 +227,6 @@ if __name__ == '__main__':
 
     # agg_df = show_results_filter(metrics_df, im_algorithms, 'image_seg_results')
 
-    agg_df = show_results_detector(detection_metrics_df, detection_algorithms, 'detection_results')
+    # agg_df = show_results_detector(detection_metrics_df, detection_algorithms, 'detection_results')
 
     plt.show()

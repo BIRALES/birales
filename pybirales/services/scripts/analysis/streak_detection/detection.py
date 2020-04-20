@@ -140,10 +140,11 @@ def naive_dbscan(test_image, true_tracks, noise_estimate):
 @timeit
 def msds_q(test_image, true_tracks, noise_est):
     limits = get_limits(test_image, true_tracks)
-    debug = False
+    debug = True
+    ext = '.pdf'
 
     # limits = (0, 100, 5900, 6000)
-    limits = (30, 200, 2500, 2900)
+    limits = (40, 150, 60, 170)
     # limits = None
     pool = multiprocessing.Pool(processes=8)
     # Pre-process the input data
@@ -156,7 +157,7 @@ def msds_q(test_image, true_tracks, noise_est):
     # Build quad/nd tree that spans all the data points
     k_tree = build_tree(ndx, leave_size=40, n_axis=2)
 
-    visualise_filtered_data(ndx, true_tracks, '1_filtered_data', limits=limits, debug=debug)
+    visualise_filtered_data(ndx, true_tracks, '1_filtered_data' + ext, limits=limits, debug=debug)
 
     # Traverse the tree and identify valid linear streaks
     leaves = traverse(k_tree.tree, ndx,
@@ -165,9 +166,12 @@ def msds_q(test_image, true_tracks, noise_est):
 
     positives, negatives = process_leaves(pool, leaves, parallel=True)
 
+    pool.close()
+
     print "Processed {} leaves. Of which {} were positives.".format(len(leaves), len(positives))
 
-    visualise_tree_traversal(ndx, true_tracks, positives, negatives, '2_processed_leaves.png', limits=limits, vis=debug)
+    visualise_tree_traversal(ndx, true_tracks, positives, negatives, '2_processed_leaves' + ext, limits=limits,
+                             vis=debug)
 
     # positives.extend(pos)
 
@@ -177,12 +181,12 @@ def msds_q(test_image, true_tracks, noise_est):
     cluster_data = h_cluster_leaves(positives, distance_thold=eps)
 
     visualise_clusters(cluster_data, true_tracks, positives,
-                       filename='3_clusters.png',
+                       filename='3_clusters' + ext,
                        limits=limits,
                        debug=debug)
-    # Filter invalid clusters
+    # Filter invalid clusterss
     tracks = validate_clusters(cluster_data)
 
-    visualise_tracks(tracks, true_tracks, '5_tracks.png', limits=limits, debug=debug)
+    visualise_tracks(tracks, true_tracks, '4_tracks' + ext, limits=limits, debug=debug)
 
     return tracks
