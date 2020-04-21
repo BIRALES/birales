@@ -164,7 +164,7 @@ def msds_q(test_image, true_tracks, noise_est):
                       bbox=(0, test_image.shape[1], 0, test_image.shape[0]),
                       distance_thold=3., min_length=2., cluster_size_thold=10.)
 
-    positives, negatives = process_leaves(pool, leaves, parallel=True)
+    positives, negatives = process_leaves(leaves, pool)
 
     pool.close()
 

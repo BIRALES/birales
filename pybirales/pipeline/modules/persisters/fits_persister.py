@@ -44,8 +44,8 @@ class FitsPersister(ProcessingModule):
         self._chuck_size = 10
 
         self.tle_targets = [
-            # TLE_Target(name='norad_1328', transit_time='05 MAR 2019 10:37:53.01', doppler=-1462.13774),
-            TLE_Target(name='norad_41182', transit_time='05 MAR 2019 11:23:28.73', doppler=-3226.36329)
+            TLE_Target(name='norad_1328', transit_time='05 MAR 2019 10:37:53.01', doppler=-1462.13774),
+            # TLE_Target(name='norad_41182', transit_time='05 MAR 2019 11:23:28.73', doppler=-3226.36329)
         ]
 
     def _get_filepath(self, counter=0):

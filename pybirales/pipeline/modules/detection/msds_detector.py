@@ -1,7 +1,9 @@
 import datetime
+import pickle
 from multiprocessing import Pool
 
 import pandas as pd
+from skimage.filters import threshold_triangle
 
 from msds.msds import *
 from msds.util import _create_cluster
@@ -12,6 +14,88 @@ from pybirales.pipeline.modules.detection.filter import RemoveTransmitterChannel
 from pybirales.pipeline.modules.detection.util import *
 
 
+def triangle_filter(beam_data):
+    noise_est = np.mean(np.mean(beam_data, axis=1))
+
+    local_thresh = threshold_triangle(beam_data, nbins=2048)
+    local_filter_mask = beam_data < local_thresh
+
+    beam_data[local_filter_mask] = -100
+
+    return beam_data, noise_est
+
+
+@timeit
+def _get_clusters_msds(pool, input_data, obs_info, _iter, limits, debug):
+    """
+    Multi-pixel streak detection strategy
+
+    Algorithm combines the beam data across the multi-pixel in order to increase SNR whilst
+    reducing the computational load. Data is transformed such that data points belonging
+    to the same streak, cluster around a common point.  Then, a noise-aware clustering algorithm,
+    such as DBSCAN, can be applied on the data points to identify the candidate tracks.
+
+    :param input_data:
+    :param limits:
+    :param debug:
+    :return:
+    """
+
+    clusters = []
+
+    t1 = time.time()
+    # for c in pool.map(serial_msds, [(input_data[b, ...], b) for b in range(0, 32)]):
+    #     clusters.extend(c)
+
+    for c in pool.map(serial_msds, [(input_data[b, ...], b) for b in range(0, 32)]):
+        clusters.extend(c)
+
+    # for b in range(0,32):
+    #     c = serial_msds((input_data[b, ...], b))
+    #     clusters.extend(c)
+
+    print 'Iter {}. Stage 1. Finished in {:0.3f}'.format(_iter, time.time() - t1)
+
+    return clusters
+
+
+def serial_msds(data):
+    t1 = time.time()
+
+    beam_data, b = data
+    beam_seg_input_data, noise_est = triangle_filter(beam_data)
+    # beam_seg_input_data, noise_est, b = beam_data
+    ndx = pre_process_data(beam_seg_input_data, noise_estimate=noise_est)
+
+    # Create tree on the merged input data
+    k_tree = build_tree(ndx, leave_size=40, n_axis=2)
+
+    # Traverse the tree and identify valid linear streaks
+    leaves = traverse(k_tree.tree, ndx, bbox=(0, beam_seg_input_data.shape[1], 0, beam_seg_input_data.shape[0]),
+                      distance_thold=3., min_length=2., cluster_size_thold=10.)
+
+    t2 = time.time()
+    positives, negatives = process_leaves(leaves)
+    print 'Beam {}. process_leaves Finished in {:0.3f}'.format(b, time.time() - t2)
+
+    # Cluster the leaves based on their vicinity to each other
+    eps = estimate_leave_eps(positives)
+
+    t3 = time.time()
+    cluster_data = h_cluster_leaves(positives, distance_thold=eps)
+
+    print 'Beam {}. h_cluster_leaves Finished in {:0.3f}'.format(b, time.time() - t3)
+
+    #
+    valid_tracks = validate_clusters(cluster_data, beam_id=b)
+
+    # visualise_tracks(valid_tracks, None, '5_tracks_{}.png'.format(self._iter_count), limits=limits, debug=debug)
+
+    print 'Beam {}. Noise: {:0.3f}. Finished in {:0.3f}'.format(b, noise_est, time.time() - t1)
+
+    return valid_tracks
+
+
 class Detector(ProcessingModule):
     _valid_input_blobs = [ChannelisedBlob]
 
@@ -20,7 +104,7 @@ class Detector(ProcessingModule):
         self._validate_data_blob(input_blob, valid_blobs=[ChannelisedBlob])
 
         if settings.detection.multi_proc:
-            self.pool = Pool(4)
+            self.pool = Pool(8)
 
         self.channels = None
 
@@ -51,86 +135,16 @@ class Detector(ProcessingModule):
         # if settings.detection.multi_proc:
         self.pool.close()
 
+    @timeit
     def _msds_image_segmentation(self, input_data, obs_info):
-        # input_data = np.power(np.abs(input_data), 2.0)
-
         obs_info['beam_noise'] = np.mean(np.mean(input_data, axis=1), axis=1)
 
-        input_data_max = np.max(input_data, axis=(1, 2), keepdims=True)
-        input_data_min = np.min(input_data, axis=(1, 2), keepdims=True)
+        local_thresh = threshold_triangle(input_data, nbins=2048)
+        local_filter_mask = input_data < local_thresh
 
-        input_data_norm = (input_data - input_data_min) / (input_data_max - input_data_min)
-
-        threshold = 3 * np.std(input_data_norm, axis=2) + np.mean(input_data_norm, axis=2)
-
-        t2 = np.expand_dims(threshold, axis=2)
-        input_data_norm[input_data_norm <= t2] = 0
-
-        input_data = input_data_norm
+        input_data[local_filter_mask] = -100
 
         return input_data, obs_info
-
-    def _get_clusters_msds(self, input_data, limits, debug):
-        """
-        Multi-pixel streak detection strategy
-
-        Algorithm combines the beam data across the multi-pixel in order to increase SNR whilst
-        reducing the computational load. Data is transformed such that data points belonging
-        to the same streak, cluster around a common point.  Then, a noise-aware clustering algorithm,
-        such as DBSCAN, can be applied on the data points to identify the candidate tracks.
-
-        :param input_data:
-        :param limits:
-        :param debug:
-        :return:
-        """
-
-        clusters = []
-
-        for b in range(0, 32):
-            beam_seg_input_data = input_data[b, ...]
-
-            ndx = pre_process_data(beam_seg_input_data, noise_estimate=None)
-
-            # Create tree on the merged input data
-            k_tree = build_tree(ndx, leave_size=40, n_axis=2)
-
-            # Traverse the tree and identify valid linear streaks
-            leaves = traverse(k_tree.tree, ndx, bbox=(0, beam_seg_input_data.shape[1], 0, beam_seg_input_data.shape[0]),
-                              distance_thold=3., min_length=2., cluster_size_thold=10.)
-
-            positives, negatives = process_leaves(self.pool, leaves, parallel=True)
-
-            if 14 <= b <= 15 and self._iter_count == 4:
-                print 'Found {} clusters in beam {} iteration {}'.format(len(positives), b, self._iter_count)
-                visualise_tree_traversal(ndx, None, positives, negatives,
-                                         '2_processed_leaves_{}_{}.png'.format(self._iter_count, b), limits=limits,
-                                         vis=debug)
-
-            clusters.extend(positives)
-
-        if not clusters:
-            return []
-
-        # Cluster the leaves based on their vicinity to each other
-        eps = estimate_leave_eps(clusters)
-
-        log.info('Found {} clusters in iteration {}. EPS is {:0.3f}'.format(len(clusters), self._iter_count, eps))
-
-        cluster_data = cluster_leaves(clusters, distance_thold=eps)
-        cluster_labels = cluster_data[:, 6]
-
-        visualise_clusters(cluster_data, cluster_labels, np.unique(cluster_labels), None, clusters,
-                           filename='3_clusters_{}.png'.format(self._iter_count),
-                           limits=limits,
-                           debug=debug)
-
-        # Validate the clusters
-        valid_tracks = validate_clusters(self.pool, cluster_data, unique_labels=np.unique(cluster_labels))
-
-        visualise_tracks(valid_tracks, None, '5_tracks_{}.png'.format(self._iter_count), limits=limits, debug=debug)
-
-        return valid_tracks
 
     def diff(self, input_data, clusters, channels, obs_info, iter_counter, nbeams):
         candidates = []
@@ -235,16 +249,19 @@ class Detector(ProcessingModule):
 
         return False
 
+    @timeit
     def __process_msds(self, input_data, obs_info, channels, limits, debug):
 
         # [Image segmentation] Filter input data and get the noise_estimate across N beams
-        seg_input_data, obs_info = self._msds_image_segmentation(input_data, obs_info)
+        # seg_input_data, obs_info = self._msds_image_segmentation(input_data, obs_info)
+
+        if self._iter_count == 2:
+            np.save('input_data_{}.npy'.format(self._iter_count), input_data)
+            pickle.dump(obs_info, open('obs_info_{}.pkl'.format(self._iter_count), "wb"))
+            np.save('channels_{}.npy'.format(self._iter_count), channels)
 
         # [Feature Extraction] Process the input data and identify the detection clusters
-        clusters = self._get_clusters_msds(seg_input_data, limits, debug)
-
-        # Split the track detection into multiple beams
-        clusters = self.diff(input_data, clusters, channels, obs_info, self._iter_count, nbeams=32)
+        clusters = _get_clusters_msds(self.pool, input_data, obs_info, self._iter_count, limits, debug)
 
         # [Track Association] Create new tracks from clusters or merge clusters into existing tracks
         candidates = aggregate_clusters(self._candidates_msds, clusters, obs_info,
@@ -307,7 +324,6 @@ class Detector(ProcessingModule):
 
         self.filter_tx.apply(input_data, obs_info)
 
-
         self.channels, self._doppler_mask = apply_doppler_mask(self._doppler_mask, self.channels,
                                                                settings.detection.doppler_range,
                                                                obs_info)
@@ -315,16 +331,72 @@ class Detector(ProcessingModule):
         obs_info['doppler_mask'] = self._doppler_mask
 
         limits = (0, 160, 0, 4000)  # with doppler mask
-        debug = self.should_debug(obs_info, timestamp='03 OCT 2019 06:27:15.603')
+        debug = self.should_debug(obs_info, timestamp='05 MAR 2019 10:37:53.01')
 
-        obs_info = self.__process_dbscan(input_data[:, self._doppler_mask, :].copy(), obs_info, self.channels, limits,
-                                         debug)
+        # obs_info = self.__process_dbscan(input_data[:, self._doppler_mask, :].copy(), obs_info, self.channels, limits,
+        #                                  debug)
+
         obs_info = self.__process_msds(input_data[:, self._doppler_mask, :], obs_info, self.channels, limits, debug)
 
-        # compare_algorithms(msds_clusters=self._candidates_msds, db_scan_clusters=self._candidates,
-        #                    limits=limits, iteration=self._iter_count, debug=debug)
+        compare_algorithms(msds_clusters=self._candidates_msds, db_scan_clusters=self._candidates,
+                           limits=limits, iteration=self._iter_count, debug=debug)
 
         return obs_info
 
     def generate_output_blob(self):
         return ChannelisedBlob(self._config, self._input.shape, datatype=np.float)
+
+
+def create_candidate(cluster_data, channels, iter_count, nsamples, t0, td):
+    channel_ndx = cluster_data[:, 0].astype(int)
+    time_ndx = cluster_data[:, 1].astype(int)
+    time_sample = time_ndx + iter_count * nsamples
+    channel = channels[channel_ndx]
+
+    return pd.DataFrame({
+        'time_sample': time_sample,
+        'channel_sample': channel_ndx,
+        'time': t0 + (time_sample - 160 * iter_count) * td,
+        'channel': channel,
+        'snr': cluster_data[:, 2],
+        'beam_id': cluster_data[:, 4],
+        'iter': np.full(time_ndx.shape[0], iter_count),
+    })
+
+
+if __name__ == '__main__':
+    _iter_count = 2
+    _n_rso_msds = 0
+    pool = Pool(8)
+    n_rso_msds = 0
+    input_data = np.load('input_data_{}.npy'.format(_iter_count))
+    obs_info = pickle.load(open('obs_info_{}.pkl'.format(_iter_count), 'rb'))
+    channels = np.load('channels_{}.npy'.format(_iter_count))
+
+    t0 = np.datetime64(obs_info['timestamp'])
+    td = np.timedelta64(int(obs_info['sampling_time'] * 1e9), 'ns')
+
+    limits = (0, 160, 0, 4000)
+
+    # [Feature Extraction] Process the input data and identify the detection clusters
+    beam_clusters = _get_clusters_msds(pool, input_data, obs_info, _iter_count, limits, debug=True)
+
+    beam_candidates = [create_candidate(c, channels, _iter_count, 160, t0, td) for c in beam_clusters]
+
+    _candidates_msds = []
+    # [Track Association] Create new tracks from clusters or merge clusters into existing tracks
+    candidates = aggregate_clusters(_candidates_msds, beam_candidates, obs_info,
+                                    notifications=False,
+                                    save_candidates=False)
+
+    # [Track Termination] Check each track and determine if the detection object has transitted outside FoV
+    _candidates_msds, _n_rso_msds = active_tracks(obs_info, candidates, _n_rso_msds,
+                                                  _iter_count)
+
+    # Output a TDM for the tracks that have transitted outside the telescope's FoV
+    obs_info['transitted_tracks_msds'] = [c for c in candidates if c not in _candidates_msds]
+
+    for i, candidate in enumerate(_candidates_msds):
+        print"MSDS RSO %d: %s" % (n_rso_msds + 1 + i, candidate.state_str())
+
+    pool.close()

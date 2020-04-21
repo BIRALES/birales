@@ -82,7 +82,7 @@ def fclusterdata(X, threshold, criterion, min_r=-1e9, check_grad=False, cluster_
         # Compute the distance matrix
         t1 = time.time()
         distances = dm_grad(X, m, empty_dm)
-        print "dm took {} seconds".format(time.time() - t1)
+        # print "dm took {} seconds".format(time.time() - t1)
     else:
         distances = dm(X, m, empty_dm, min_r, cluster_id)
 
@@ -100,6 +100,9 @@ def h_cluster_leaves(leaves, distance_thold):
         [(cluster, cluster_id, grad2(cluster), np.mean(cluster[:, 1]), np.mean(cluster[:, 0])) for
          (cluster, cluster_id, ratio, bbox) in
          leaves])
+
+    if len(leaves) == 1:
+        return np.append(X, np.array([[0]]), axis=1)
 
     cluster_labels = fclusterdata(X[:, 2:].astype(float), distance_thold, min_r=MIN_R,
                                   criterion='distance',
@@ -262,11 +265,11 @@ def density_check2(data, threshold, cluster_id):
 
 
 # @timeit
-def process_leaves(pool, leaves, parallel=True):
+def process_leaves(leaves, pool=False):
     pos = []
     rej = []
     leave_pairs = [(l, i) for i, l in enumerate(leaves)]
-    if parallel:
+    if pool:
         for clusters in pool.map(linear_cluster, leave_pairs):
             for c in clusters:
                 if c[1] < 0:
@@ -297,7 +300,7 @@ def add_group(candidate, group):
     return np.append(candidate, np.expand_dims(np.full(len(candidate), group), axis=1), axis=1)
 
 
-def validate_clusters_func(labelled_cluster):
+def validate_clusters_func(labelled_cluster, beam_id=-1):
     """
 
     :param labelled_cluster:
@@ -324,19 +327,22 @@ def validate_clusters_func(labelled_cluster):
     elif e > 0.01:
         log.debug("Candidate {}, dropped since correlation error is greater than 0.01 ({})".format(g, e))
     else:
-        return [np.append(candidate, np.expand_dims(np.full(len(candidate), g), axis=1), axis=1)]
+        c = add_group(candidate, g)
+        if beam_id > -1:
+            return [add_group(c, beam_id)]
+        return c
 
     return []
 
 
 # @timeit
-def validate_clusters(data):
+def validate_clusters(data, beam_id=-1):
     labelled_clusters = data[:, 5]
     unique_labels = np.unique(labelled_clusters)
     candidates = [(np.vstack(data[:, 0][labelled_clusters == g]), g) for g in unique_labels]
     clusters = []
     for c in candidates:
-        clusters.extend(validate_clusters_func(c))
+        clusters.extend(validate_clusters_func(c, beam_id=beam_id))
 
     log.debug('Validation reduced {} to {}'.format(len(unique_labels), len(clusters)))
 

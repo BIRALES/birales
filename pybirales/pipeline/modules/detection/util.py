@@ -2,6 +2,7 @@ import logging as log
 
 from scipy import stats
 
+from msds.util import timeit
 from msds.visualisation import *
 from pybirales import settings
 from pybirales.events.events import TrackTransittedEvent
@@ -52,6 +53,7 @@ def _debug_msg(cluster, iter_count):
                                                                         iter_count)
 
 
+@timeit
 def aggregate_clusters(candidates, clusters, obs_info, notifications=False, save_candidates=False):
     """
     Create Space Debris Tracks from the detection clusters identified in each beam
@@ -99,6 +101,7 @@ def aggregate_clusters(candidates, clusters, obs_info, notifications=False, save
     return candidates
 
 
+@timeit
 def active_tracks(obs_info, candidates, n_rso, iter_count):
     """
 
