@@ -1,8 +1,9 @@
-import logging as log
 import json
+import logging as log
+
 from pybirales.repository.message_broker import RedisManager
-from pybirales.utilities.singleton import Singleton
 from pybirales.repository.models import Event
+from pybirales.utilities.singleton import Singleton
 
 
 def publish(event):
@@ -35,7 +36,7 @@ class EventsPublisher:
             log.debug('{} published on #{} across {} subscribers'.format(event.name, channel, s))
 
         # Save the event to the database
-        self.save(event)
+        # self.save(event)
 
     def save(self, event):
         """

@@ -184,7 +184,7 @@ def msds_q(test_image, true_tracks, noise_est):
                        filename='3_clusters' + ext,
                        limits=limits,
                        debug=debug)
-    # Filter invalid clusterss
+    # Filter invalid clusters
     tracks = validate_clusters(cluster_data)
 
     visualise_tracks(tracks, true_tracks, '4_tracks' + ext, limits=limits, debug=debug)

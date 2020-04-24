@@ -1,6 +1,4 @@
-# from multiprocessing import Pool
 import logging as log
-import time
 
 import numpy as np
 from numba import njit
@@ -80,7 +78,7 @@ def fclusterdata(X, threshold, criterion, min_r=-1e9, check_grad=False, cluster_
 
     if check_grad:
         # Compute the distance matrix
-        t1 = time.time()
+        # t1 = time.time()
         distances = dm_grad(X, m, empty_dm)
         # print "dm took {} seconds".format(time.time() - t1)
     else:
@@ -191,17 +189,50 @@ def traverse(root, ndx, bbox, distance_thold=3.0, min_length=2, cluster_size_tho
             leaves = leaves + lr
 
         else:
-            if root.children > 3:
+            if root.children > min_length:
+                # print len(leaves)
                 leaves.append((ndx, bbox))
 
     return leaves
 
 
-# @timeit
+# # @timeit
+# def linear_cluster(leave_pair):
+#     # better at handling crossing streaks
+#     # print np.shape(leave_pair),
+#     leave, cluster_id = leave_pair
+#     # print cluster_id
+#     (data, bbox) = leave
+#     labels, _ = h_cluster(data, 2, min_length=2, i=cluster_id)
+#     u, c = np.unique(labels, return_counts=True)
+#     min_mask = c > 3
+#     u_groups = u[min_mask]
+#
+#     best_ratio = -0.1
+#
+#     sorted_groups = u_groups[np.argsort(c[min_mask])]
+#     n_data = []
+#     for g in sorted_groups:
+#         c = data[np.where(labels == g)]
+#         ratio, _, m1 = __ir2(c, min_n=20, i=cluster_id)
+#
+#         if 0. >= ratio >= -0.1:
+#             best_ratio = ratio
+#             if density_check2(c, 0.5, cluster_id):
+#                 n_data.append([c, cluster_id + g * .1, ratio, bbox])
+#
+#     if best_ratio > -0.1:
+#         return np.array([1, n_data], dtype=np.object)
+#
+#     return np.array([-1, [data, -1 * cluster_id, best_ratio, bbox]], dtype=np.object)
+#     # return [[data, -1 * cluster_id, best_ratio, bbox]]
+
+# @profile
 def linear_cluster(leave_pair):
     # better at handling crossing streaks
+    # print np.shape(leave_pair),
     leave, cluster_id = leave_pair
-
+    # print cluster_id
     (data, bbox) = leave
     labels, _ = h_cluster(data, 2, min_length=2, i=cluster_id)
     u, c = np.unique(labels, return_counts=True)
@@ -219,12 +250,34 @@ def linear_cluster(leave_pair):
         if 0. >= ratio >= -0.1:
             best_ratio = ratio
             if density_check2(c, 0.5, cluster_id):
-                n_data.append([c, cluster_id, ratio, bbox])
+                n_data.append([c, cluster_id + g * .1, ratio, bbox])
 
     if best_ratio > -0.1:
         return n_data
 
+    # return np.array([-1, [data, -1 * cluster_id, best_ratio, bbox]], dtype=np.object)
     return [[data, -1 * cluster_id, best_ratio, bbox]]
+
+
+def linear_clusterf(leave_pair):
+    # better at handling crossing streaks
+    # no rejections
+
+    leave, cluster_id = leave_pair
+
+    (data, bbox) = leave
+    labels, u_groups = h_cluster(data, 3, min_length=5, i=cluster_id)
+
+    n_data = []
+    for g in u_groups:
+        c = data[np.where(labels == g)]
+        ratio, _, _ = __ir2(c, min_n=20, i=cluster_id)
+
+        if 0. >= ratio >= -0.1:
+            if density_check2(c, 0.5, cluster_id):
+                n_data.append([c, cluster_id, ratio, bbox])
+
+    return n_data
 
 
 def linear_cluster2(leave_pair):
@@ -256,16 +309,21 @@ def linear_cluster2(leave_pair):
     return [data, -1 * cluster_id, best_ratio, bbox]
 
 
-def density_check2(data, threshold, cluster_id):
-    param = np.unique(data[:, 1])
-    missing = np.setxor1d(np.arange(min(param), max(param) + 1), param)
-    score = len(missing) / float(len(param))
+def missing_score(param):
+    missing = np.setxor1d(np.arange(min(param), max(param)), param)
+    return len(missing) / float(len(param))
 
-    return score < threshold
+
+def density_check2(data, threshold, cluster_id):
+    # param = np.unique(data[:, 1])
+    # missing = np.setxor1d(np.arange(min(param), max(param) + 1), param)
+    # score = len(missing) / float(len(param))
+
+    return missing_score(data[:, 1]) < threshold
 
 
 # @timeit
-def process_leaves(leaves, pool=False):
+def process_leaves(leaves, pool=False, debug=False):
     pos = []
     rej = []
     leave_pairs = [(l, i) for i, l in enumerate(leaves)]
@@ -285,7 +343,23 @@ def process_leaves(leaves, pool=False):
                 else:
                     pos.append(c)
 
+        # for l in leave_pairs:
+        #     pos.extend([c for c in linear_cluster(l) if c[1] < 0]), []
+
     return pos, rej
+
+
+def process_leaves2(leaves, pool=False, output_rej=True, debug=False):
+    # pos = []
+    # for i, l in izip(count(), leaves):
+    #     pos.extend(linear_clusterf(leave_pair=(l, i)))
+    #
+    # return pos, []
+    pos = []
+    for i in range(len(leaves)):
+        pos += linear_clusterf(leave_pair=(leaves[i], i))
+
+    return pos, []
 
 
 # @timeit
@@ -318,14 +392,15 @@ def validate_clusters_func(labelled_cluster, beam_id=-1):
     missing = np.setxor1d(np.arange(min(param), max(param)), param)
     score = len(missing) / float(len(param))
 
-    if score > 2:
+    if score > 1:
         log.debug("Candidate {}, dropped since missing score is not high enough ({:0.3f})".format(g, score))
-    elif r_value > -.98:
+    elif r_value > -.99:
         log.debug("Candidate {}, dropped since r-value is not high enough ({:0.3f})".format(g, r_value))
     elif p > 0.01:
         log.debug("Candidate {}, dropped since p-value is not low enough ({:0.3f})".format(g, p))
-    elif e > 0.01:
-        log.debug("Candidate {}, dropped since correlation error is greater than 0.01 ({})".format(g, e))
+    elif e > 0.05:
+        log.info("Candidate {}, dropped since correlation error is greater than 0.01 ({})".format(g, e))
+        log.info("Candidate {}, {:0.3f} {:0.3f} {:0.3f} {:0.3f} {}".format(g, score, r_value, p, e, len(candidate)))
     else:
         c = add_group(candidate, g)
         if beam_id > -1:
@@ -336,13 +411,34 @@ def validate_clusters_func(labelled_cluster, beam_id=-1):
 
 
 # @timeit
-def validate_clusters(data, beam_id=-1):
+def validate_clusters(data, beam_id=-1, debug=False):
     labelled_clusters = data[:, 5]
     unique_labels = np.unique(labelled_clusters)
-    candidates = [(np.vstack(data[:, 0][labelled_clusters == g]), g) for g in unique_labels]
+    # candidates = [(np.vstack(data[:, 0][labelled_clusters == g]), g) for g in unique_labels]
     clusters = []
-    for c in candidates:
-        clusters.extend(validate_clusters_func(c, beam_id=beam_id))
+    ransac = linear_model.RANSACRegressor()
+    for g in unique_labels:
+        org_candidate = np.vstack(data[:, 0][labelled_clusters == g])
+        ransac.fit(org_candidate[:, 0].reshape(-1, 1), org_candidate[:, 1])
+        candidate = org_candidate[ransac.inlier_mask_]
+
+        m, intercept, r_value, p, e = linregress(candidate[:, 1], candidate[:, 0])
+
+        score = missing_score(candidate[:, 1])
+
+        if score > 0.2:
+            log.debug("Candidate {}, dropped since missing score is not high enough ({:0.3f})".format(g, score))
+        elif r_value > -.98:
+            log.debug("Candidate {}, dropped since r-value is not high enough ({:0.3f})".format(g, r_value))
+        elif p > 0.01:
+            log.debug("Candidate {}, dropped since p-value is not low enough ({:0.3f})".format(g, p))
+        elif e > 0.05:
+            log.info("Candidate {}, dropped since standard error is greater than 0.01 ({})".format(g, e))
+            log.info("Candidate {}, {:0.3f} {:0.3f} {:0.3f} {:0.3f} {}".format(g, score, r_value, p, e, len(candidate)))
+        else:
+            clusters.append(add_group(add_group(candidate, g), beam_id))
+            log.info("Candidate {} is Valid with: {:0.3f} {:0.3f} {:0.3f} {:0.3f} {}".format(g, score, r_value, p, e,
+                                                                                             len(candidate)))
 
     log.debug('Validation reduced {} to {}'.format(len(unique_labels), len(clusters)))
 

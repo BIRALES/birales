@@ -46,3 +46,10 @@ class detection:
     linearity_thold = 0.95
     gradient_thold = [-0.57, -2901.47]
     doppler_range = [-19688, 19507]
+    debug_candidates = False
+    save_tdm = False
+    enable_gradient_thold = True
+
+
+class manager:
+    profile_timeit = False

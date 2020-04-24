@@ -1,3 +1,4 @@
+import datetime
 import os
 
 import matplotlib.patches as patches
@@ -355,7 +356,7 @@ def set_limits(ax, limits):
     return ax
 
 
-def visualise_clusters(data, true_tracks, leaves, filename, limits=None, debug=False, pub=True):
+def visualise_clusters(data, true_tracks, leaves, filename, limits=None, debug=False, pub=False):
     if debug:
         # plt.clf()
         cluster_labels = data[:, 5]
@@ -416,7 +417,7 @@ def visualise_candidates(candidates, true_tracks, filename, limits=None, debug=F
         ax.figure.savefig(filename)
 
 
-def visualise_tracks(tracks, true_tracks, filename, limits=None, debug=False, pub=True):
+def visualise_tracks(tracks, true_tracks, filename, limits=None, debug=False, pub=False):
     if debug:
         # plt.clf()
         fig, ax = plt.subplots(1)
@@ -850,3 +851,78 @@ def viz_den(X, Z, threshold, labels):
     ax2.xaxis.set_major_locator(MaxNLocator(integer=True))
     print threshold
     plt.show()
+
+
+def plot_TLE(obs_info, input_data, tle_target, beam_id=15):
+    expected_transit_time = tle_target.transit_time
+    target_name = tle_target.name
+    expected_doppler = tle_target.doppler
+
+    start_window = expected_transit_time - datetime.timedelta(seconds=20)
+    end_window = expected_transit_time + datetime.timedelta(seconds=10)
+
+    print 'Current time is', obs_info['timestamp']
+    print 'TLE is between {} and {}'.format(start_window, end_window)
+    print 'Persister Within window', end_window >= obs_info['timestamp'] >= start_window, obs_info['iter_count']
+
+    if end_window >= obs_info['timestamp'] >= start_window:
+        expected_channel = (obs_info['transmitter_frequency'] * 1e6 + expected_doppler) - obs_info[
+            'start_center_frequency'] * 1e6
+        expected_channel /= obs_info['channel_bandwidth'] * 1e6
+        doppler_offset = 2392
+        expected_channel = int(expected_channel) - doppler_offset
+
+        channel_window = expected_channel - 100, expected_channel + 100
+
+        filename = '{}_TLE_prediction_{}'.format(target_name, obs_info['iter_count'])
+
+        time = [obs_info['timestamp'], datetime.timedelta(seconds=obs_info['sampling_time'] * 160) + obs_info[
+            'timestamp']]
+
+        subset = input_data[beam_id, channel_window[0]: channel_window[1], 120:]
+
+        print 'Expecting target to be between', channel_window, subset.shape
+        fig = plt.figure(figsize=(11, 8))
+        ax = fig.add_subplot(1, 1, 1)
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Channel")
+        im = ax.imshow(subset, aspect='auto', interpolation='none', origin='lower', vmin=0,
+                       extent=[120, 160, channel_window[0], channel_window[1]])
+        fig.colorbar(im)
+        fig.tight_layout()
+        plt.title(filename + ' from {:%H.%M.%S} to {:%M.%S}'.format(time[0], time[1]))
+        plt.show()
+
+        fig.savefig(filename, bbox_inches='tight')
+
+
+def plot_RSO_track(track, i):
+    fig, ax = plt.subplots(1)
+    time = track.data['time_sample']
+    channel = track.data['channel_sample']
+    ax.plot(time, channel, '.')
+    ax.set(xlabel='Sample', ylabel='Channel')
+
+    ax.annotate('RSO {}'.format(i), (np.mean(time), np.mean(channel)))
+
+    ax.xaxis.labelpad = 20
+    ax.yaxis.labelpad = 20
+    plt.grid()
+
+    # ax.figure.savefig('RSO_{}.png'.format(i))
+
+
+def plot_all_RSOs_track(tracks):
+    fig, ax = plt.subplots(1)
+
+    for i, track in enumerate(tracks):
+        time = track.data['time_sample']
+        channel = track.data['channel_sample']
+        ax.plot(time, channel, '.')
+        ax.set(xlabel='Sample', ylabel='Channel')
+
+        ax.annotate('RSO {}'.format("{}/{}".format(i, len(tracks))), (np.mean(time), np.mean(channel)))
+
+    ax.xaxis.labelpad = 20
+    ax.yaxis.labelpad = 20
+    plt.grid()

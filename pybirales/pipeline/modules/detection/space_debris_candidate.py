@@ -5,9 +5,9 @@ import logging as log
 
 import numpy as np
 import pandas as pd
-import scipy.spatial.distance as dist
 from mongoengine import *
 from scipy import stats
+from scipy.stats import linregress
 from sklearn import linear_model
 
 from pybirales import settings
@@ -18,6 +18,11 @@ from pybirales.repository.models import SpaceDebrisTrack as SpaceDebrisTrackMode
 
 _linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
 _db_model = SpaceDebrisTrackModel
+
+
+def missing_score(param):
+    missing = np.setxor1d(np.arange(min(param), max(param)), param)
+    return len(missing) / float(len(param))
 
 
 class Target:
@@ -105,6 +110,17 @@ class SpaceDebrisTrack:
         # If a beam cluster is given, add it on initialisation
         self.add(cluster)
 
+        self.cancelled = False
+        self.terminated = False
+
+    def cancel(self):
+        self.cancelled = True
+        self.terminated = False
+
+    def terminate(self):
+        self.cancelled = False
+        self.terminated = True
+
     @property
     def id(self):
         return id(self)
@@ -167,19 +183,19 @@ class SpaceDebrisTrack:
         self._to_save = True
 
     def state_str(self):
-        return "df:{:3.5f} Hz, df/dt:{:3.5f} Hz/s and SNR: {:2.3f} dB on {:%d.%m.%y @ %H:%M:%S}\n" \
-               "C: {}, T:{}, PSNR:{:2.5f} dB, NUS:{}, B:{}, Size:{}, S:{:2.2f}".format(
+        return "df:{:3.2f} Hz at {:%H:%M:%S on %d.%m.%y} across {} beams\n" \
+               "\t\t\t\t\t\t- INFO - Score: {:0.3f}, N: {}, SNR: {:2.2f} dB (PSNR:{:2.2f} dB) \n" \
+               "\t\t\t\t\t\t- INFO - df/dt:{:3.2f} Hz/s. Beams: {}".format(
             self.ref_data['doppler'],
-            self.ref_data['gradient'],
-            self.ref_data['snr'],
             self.ref_data['time'],
-            self.ref_data['channel_sample'],
-            self.ref_data['time_sample'],
-            self.ref_data['psnr'],
-            self.size,
             self.activated_beams,
-            self.beam_size,
-            self.r_value
+            self.r_value,
+            self.size,
+            self.ref_data['snr'],
+            self.ref_data['psnr'],
+            self.ref_data['gradient'],
+            str(self.data['beam_id'].unique()[:5])
+
         )
 
     def _fit(self, x, y):
@@ -198,6 +214,65 @@ class SpaceDebrisTrack:
             return False, self._linear_model
         else:
             return True, self._linear_model
+
+    def _fit2(self, candidate):
+
+        # ransac = linear_model.RANSACRegressor()
+        # ransac.fit(merged_cluster['channel_sample'].values.reshape(-1, 1), merged_cluster['time_sample'])
+        # candidate = merged_cluster[ransac.inlier_mask_]
+
+        m, intercept, r_value, p, e = linregress(candidate['channel_sample'], candidate['time_sample'])
+
+        score = missing_score(candidate['time_sample'])
+        g = 1
+        if score > 1:
+            log.debug("Candidate {}, dropped since missing score is not high enough ({:0.3f})".format(g, score))
+        elif r_value > -.98:
+            log.debug("Candidate {}, dropped since r-value is not high enough ({:0.3f})".format(g, r_value))
+        elif p > 0.01:
+            log.debug("Candidate {}, dropped since p-value is not low enough ({:0.3f})".format(g, p))
+        elif e > 0.01:
+            log.debug("Candidate {}, dropped since correlation error is greater than 0.01 ({})".format(g, e))
+        else:
+            m = 1e6 * (candidate['channel'].iloc[0] - candidate['channel'].iloc[-1]) / (
+                    candidate['time'].iloc[0] - candidate['time'].iloc[-1]).total_seconds()
+
+            if settings.detection.gradient_thold[0] >= m >= settings.detection.gradient_thold[1]:
+                return True, candidate
+
+        return False, None
+
+    def associate(self, cluster_df):
+        """
+                Associate a beam candidate with this space debris track.
+                Update the space debris track's attributes based on new data
+
+                :param cluster_df:
+                :type cluster_df: ndarray
+                :return:
+                """
+
+        def _merge_tmp_df(df, delta_df):
+            """
+            Create a temporary data frame (merge track df with cluster df)
+            :param df: The data frame of the track
+            :param delta_df: The cluster df that is to be merged
+            :return:
+            """
+
+            if df.empty:
+                return delta_df
+            return pd.concat([self.data, cluster_df])
+
+        tmp_merged_df = _merge_tmp_df(self.data, cluster_df)
+
+        is_valid, new_data = self._fit2(tmp_merged_df)
+
+        if is_valid:
+            self._update(new_data)
+        else:
+            # If fitting failed, track data remains unchanged, and raise an exception
+            raise DetectionClusterIsNotValid(cluster_df)
 
     def add(self, cluster_df):
         """
@@ -265,6 +340,7 @@ class SpaceDebrisTrack:
         """
 
         # Check that the number of beams activated is less than 2
+
         if self.data['beam_id'].unique().size < 2:
             return False
 
@@ -278,9 +354,10 @@ class SpaceDebrisTrack:
         if not self.is_gradient_valid():
             return False
 
+        if self.high_missing_score():
+            return False
+
         return True
-
-
 
     def is_linear(self):
         return np.abs(self.r_value) >= settings.detection.linearity_thold
@@ -290,6 +367,9 @@ class SpaceDebrisTrack:
         # print settings.detection.gradient_thold[0] >= self.ref_data['gradient'] >= settings.detection.gradient_thold[1]
         return settings.detection.gradient_thold[0] >= self.ref_data['gradient'] >= settings.detection.gradient_thold[
             1]
+
+    def high_missing_score(self):
+        return missing_score(self.data['time_sample']) > 0.5
 
     def is_parent_of(self, detection_cluster):
         """
@@ -304,7 +384,19 @@ class SpaceDebrisTrack:
         cluster_m, cluster_c, _, _, _ = stats.linregress(detection_cluster['channel_sample'],
                                                          detection_cluster['time_sample'])
 
-        return dist.cosine([self.m, self.intercept], [cluster_m, cluster_c]) < settings.detection.similarity_thold
+        # cos_sim = dist.cosine([self.m, self.intercept], [cluster_m, cluster_c]) < settings.detection.similarity_thold
+        m_thold = settings.detection.gradient_thold
+        x1 = np.mean(self.data['channel_sample'])
+        y1 = np.mean(self.data['time_sample'])
+
+        x2 = np.mean(detection_cluster['channel_sample'])
+        y2 = np.mean(detection_cluster['time_sample'])
+
+        m2 = (y2 - y1) / (x2 - x1)
+
+        v = np.array([self.m, cluster_m, m2])
+
+        return np.abs(np.std(v) / np.mean(v)) < 0.1 and m_thold[1] <= m2 <= m_thold[0]
 
     def _to_dict(self):
         to_save = {
@@ -336,7 +428,9 @@ class SpaceDebrisTrack:
             },
             'sampling_time': self._obs_info['sampling_time'],
             'duration': self.duration.total_seconds(),
-            'activated_beams': self.activated_beams
+            'activated_beams': self.activated_beams,
+            'cancelled': self.cancelled,
+            'terminated': self.terminated
         }
 
         return to_save
@@ -397,16 +491,34 @@ class SpaceDebrisTrack:
         return reduced_df
 
     def track_expired(self, obs_info):
-        last_time = self.data['time'].max()
-        track_length = self.data['time'].max() - self.data['time'].min()
+        # last_time = self.data['time'].max()
+        # track_length = self.data['time'].max() - self.data['time'].min()
+        #
+        # last_timestamp = obs_info['timestamp'] + datetime.timedelta(seconds=obs_info['sampling_time'] * 160)
+        # # print 'last_time', last_time
+        # # print 'track_length', track_length
+        # # print 'last_timestamp', last_timestamp
+        # # print '(current_timestamp - last_time) > track_length', (last_timestamp - last_time) > track_length
+        #
+        # if (last_timestamp - last_time) > track_length:
+        #     return True
+        #
+        # return False
+        #
 
-        last_timestamp = obs_info['timestamp'] + datetime.timedelta(seconds=obs_info['sampling_time'] * 160)
-        # print 'last_time', last_time
-        # print 'track_length', track_length
-        # print 'last_timestamp', last_timestamp
-        # print '(current_timestamp - last_time) > track_length', (last_timestamp - last_time) > track_length
+        # First time sample of the track
+        t_a = self.data['time'].min()
 
-        if (last_timestamp - last_time) > track_length:
-            return True
+        # Last time sample of the track
+        t_b = self.data['time'].min()
 
-        return False
+        # Current track time span (aka track length
+        t_l = t_b - t_a
+
+        # Last time sample of the blob (or iteration)
+        t_n = obs_info['timestamp'] + datetime.timedelta(seconds=obs_info['sampling_time'] * 160)
+
+        # Termination threshold (twice current length (t_l): t_t = t_b +t_l)
+        t_t = t_b + t_l
+
+        return t_n > t_t
