@@ -10,7 +10,7 @@ from cycler import cycler
 from matplotlib.font_manager import FontProperties
 
 from pybirales.services.scripts.analysis.analysis import COLORS
-from util import grad2
+from util import grad2, __ir, missing_score
 
 sns.set(color_codes=True)
 
@@ -315,21 +315,30 @@ def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negative
         if not pub:
             ax.text(x1 + 0.5 * (x2 - x1), y1 + 0.5 * (y2 - y1), '{}'.format(score), color='k', weight='bold',
                     fontsize=8, ha='center', va='center')
-
-        labels, _ = h_cluster(negatives, 2, min_length=3, i=i)
-        u, c = np.unique(labels, return_counts=True)
-        min_mask = c > 3
-        u_groups = u[min_mask]
-
-        if not pub:
-            # start with the smallest grouping
-            sorted_groups = u_groups[np.argsort(c[min_mask])]
-            for j, g in enumerate(sorted_groups):
+            import random
+            labels, u_groups = h_cluster(negatives, 3, min_length=5, i=i)
+            colors = ['pink', 'b', 'k', 'c', 'm', 'y']
+            for j, g in enumerate(u_groups):
                 c = negatives[np.where(labels == g)]
-                ratio, _, _ = __ir2(c, i=i)
-                ax.plot(c[:, 1], c[:, 0], '.', color='pink', zorder=2)
 
-                print 'Cluster: {}, group: {}. ratio:{}. length:{}'.format(i, g, ratio, np.shape(c))
+                ms = missing_score(negatives[:, 1])
+                ratio = __ir(c, min_n=10, i=g)
+
+                ax.plot(c[:, 1], c[:, 0], '.', color=random.choice(colors), zorder=2)
+
+                print 'Cluster: {}, group: {}. ratio:{:0.3f}, ms: {:0.3f} length:{}: bbox:{}'.format(i, g, ratio,
+                                                                                                     ms,
+                                                                                                     np.shape(c),
+                                                                                                     (x1, x2, y1, y2))
+
+            # colors = ['pink', 'b', 'k', 'c', 'm', 'y']
+            # for j, g in enumerate(sorted_groups):
+            #     c = negatives[np.where(labels == g)]
+            #     ratio, _, _ = __ir2(c, i=i)
+            #     ax.plot(c[:, 1], c[:, 0], '.', color=colors[j], zorder=2)
+            #
+            #     print 'Cluster: {}, group: {}. ratio:{}. length:{}: bbox:{}'.format(i, g, ratio, np.shape(c),
+            #                                                                         (x1, x2, y1, y2))
 
     rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=lw, edgecolor=color, facecolor='none',
                              zorder=zorder)
@@ -378,7 +387,9 @@ def visualise_clusters(data, true_tracks, leaves, filename, limits=None, debug=F
                                      zorder=-1)
 
             # Plot mean cluster
-            ax.plot(np.mean(cluster[:, 1]), np.mean(cluster[:, 0]), '*', zorder=10, color='w', markeredgecolor='k',
+            mx = np.average(cluster[:, 1], weights=cluster[:, 2])
+            my = np.average(cluster[:, 0], weights=cluster[:, 2])
+            ax.plot(mx, my, '*', zorder=10, color='w', markeredgecolor='k',
                     markersize=7.5)
 
             if not pub:
@@ -513,21 +524,21 @@ def visualise_tree_traversal(ndx, true_tracks, clusters, leaves, filename, limit
 
         ax = set_limits(ax, limits)
 
-        for i, (cluster, cluster_id, ratio, bbox) in enumerate(leaves):
+        for leaf_id, (cluster, bbox) in enumerate(leaves):
             # cluster_id = i
             x1, x2, y1, y2 = bbox
-            if x_start * 0.5 <= x1 <= x_end * 1.5 and y_start * 0.5 <= y1 <= y_end * 1.5:
+            if x_start * 0.5 < x1 < x_end * 1.5 and y_start * 0.5 < y1 < y_end * 1.5:
                 # if j != 0:
                 #     cluster_id = j
-                __plot_leaf(ax, x1, y1, x2, y2, cluster_id, ratio, False, positives=None, negatives=cluster)
+                __plot_leaf(ax, x1, y1, x2, y2, leaf_id, '', False, positives=None, negatives=cluster)
 
         for i, (cluster, cluster_id, ratio, bbox) in enumerate(clusters):
             # cluster_id = i
             x1, x2, y1, y2, = bbox
-            if x_start * 0.5 <= x1 <= x_end * 1.5 and y_start * 0.5 <= y1 <= y_end * 1.5:
+            if x_start * 0.5 < x1 < x_end * 1.5 and y_start * 0.5 < y1 < y_end * 1.5:
                 # if j != 0:
                 #     cluster_id = j
-                __plot_leaf(ax, x1, y1, x2, y2, cluster_id, ratio, True, positives=cluster, negatives=None)
+                __plot_leaf(ax, x1, y1, x2, y2, '', ratio, True, positives=cluster, negatives=None)
 
         if true_tracks:
             ax = visualise_true_tracks(ax, true_tracks)
@@ -909,7 +920,7 @@ def plot_RSO_track(track, i):
     ax.yaxis.labelpad = 20
     plt.grid()
 
-    # ax.figure.savefig('RSO_{}.png'.format(i))
+    ax.figure.savefig('{}.png'.format(i))
 
 
 def plot_all_RSOs_track(tracks):

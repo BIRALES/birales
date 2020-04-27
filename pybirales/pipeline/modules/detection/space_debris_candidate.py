@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from mongoengine import *
 from scipy import stats
-from scipy.stats import linregress
+from scipy.stats import pearsonr
 from sklearn import linear_model
 
 from pybirales import settings
@@ -108,7 +108,7 @@ class SpaceDebrisTrack:
         self._notification_sent = False
 
         # If a beam cluster is given, add it on initialisation
-        self.add(cluster)
+        self.associate(cluster)
 
         self.cancelled = False
         self.terminated = False
@@ -195,86 +195,9 @@ class SpaceDebrisTrack:
             self.ref_data['psnr'],
             self.ref_data['gradient'],
             str(self.data['beam_id'].unique()[:5])
-
         )
 
-    def _fit(self, x, y):
-        """
-        Use a RANSAC linear fitting model to remove outliers
-        todo - only apply RANSAC for clusters greater than a minimum number of data-points
-
-        :param x:
-        :param y:
-        :return:
-        """
-
-        try:
-            self._linear_model.fit(x.values.reshape(-1, 1), y)
-        except ValueError:
-            return False, self._linear_model
-        else:
-            return True, self._linear_model
-
-    def _fit2(self, candidate):
-
-        # ransac = linear_model.RANSACRegressor()
-        # ransac.fit(merged_cluster['channel_sample'].values.reshape(-1, 1), merged_cluster['time_sample'])
-        # candidate = merged_cluster[ransac.inlier_mask_]
-
-        m, intercept, r_value, p, e = linregress(candidate['channel_sample'], candidate['time_sample'])
-
-        score = missing_score(candidate['time_sample'])
-        g = 1
-        if score > 1:
-            log.debug("Candidate {}, dropped since missing score is not high enough ({:0.3f})".format(g, score))
-        elif r_value > -.98:
-            log.debug("Candidate {}, dropped since r-value is not high enough ({:0.3f})".format(g, r_value))
-        elif p > 0.01:
-            log.debug("Candidate {}, dropped since p-value is not low enough ({:0.3f})".format(g, p))
-        elif e > 0.01:
-            log.debug("Candidate {}, dropped since correlation error is greater than 0.01 ({})".format(g, e))
-        else:
-            m = 1e6 * (candidate['channel'].iloc[0] - candidate['channel'].iloc[-1]) / (
-                    candidate['time'].iloc[0] - candidate['time'].iloc[-1]).total_seconds()
-
-            if settings.detection.gradient_thold[0] >= m >= settings.detection.gradient_thold[1]:
-                return True, candidate
-
-        return False, None
-
     def associate(self, cluster_df):
-        """
-                Associate a beam candidate with this space debris track.
-                Update the space debris track's attributes based on new data
-
-                :param cluster_df:
-                :type cluster_df: ndarray
-                :return:
-                """
-
-        def _merge_tmp_df(df, delta_df):
-            """
-            Create a temporary data frame (merge track df with cluster df)
-            :param df: The data frame of the track
-            :param delta_df: The cluster df that is to be merged
-            :return:
-            """
-
-            if df.empty:
-                return delta_df
-            return pd.concat([self.data, cluster_df])
-
-        tmp_merged_df = _merge_tmp_df(self.data, cluster_df)
-
-        is_valid, new_data = self._fit2(tmp_merged_df)
-
-        if is_valid:
-            self._update(new_data)
-        else:
-            # If fitting failed, track data remains unchanged, and raise an exception
-            raise DetectionClusterIsNotValid(cluster_df)
-
-    def add(self, cluster_df):
         """
         Associate a beam candidate with this space debris track.
         Update the space debris track's attributes based on new data
@@ -296,42 +219,37 @@ class SpaceDebrisTrack:
                 return delta_df
             return pd.concat([self.data, cluster_df])
 
+        def _is_tmp_valid(candidate):
+            score = missing_score(candidate['time_sample'])
+            g = 1
+            if score > 1:
+                log.debug("Candidate {}, dropped since missing score is not high enough ({:0.3f})".format(g, score))
+                return False, None
+
+            r_value, p = pearsonr(candidate['channel_sample'], candidate['time_sample'])
+
+            if r_value > -.99:
+                log.debug("Candidate {}, dropped since r-value is not high enough ({:0.3f})".format(g, r_value))
+            elif p > 0.01:
+                log.debug("Candidate {}, dropped since p-value is not low enough ({:0.3f})".format(g, p))
+            else:
+                m = 1e6 * (candidate['channel'].iloc[0] - candidate['channel'].iloc[-1]) / (
+                        candidate['time'].iloc[0] - candidate['time'].iloc[-1]).total_seconds()
+
+                if settings.detection.gradient_thold[0] >= m >= settings.detection.gradient_thold[1]:
+                    return True, candidate
+
+            return False, None
+
         tmp_merged_df = _merge_tmp_df(self.data, cluster_df)
-        try:
-            is_valid, l_model = self._fit(tmp_merged_df['channel_sample'], tmp_merged_df['time_sample'])
-        except TypeError:
-            raise DetectionClusterIsNotValid(cluster_df)
+
+        is_valid, new_data = _is_tmp_valid(tmp_merged_df)
 
         if is_valid:
-            # Remove outliers from the merged df and update the track
-            self._update(tmp_merged_df[l_model.inlier_mask_])
-
-            # Add the SD track if the valid
-            # if self.is_linear() and self.is_gradient_valid():
-            #     # return False, self._linear_model
-            #     return True, self._linear_model
+            self._update(new_data)
         else:
             # If fitting failed, track data remains unchanged, and raise an exception
             raise DetectionClusterIsNotValid(cluster_df)
-
-    def has_transitted(self, iter_count):
-        """
-        Determine whether this track is finished based on the current iteration
-        :return:
-        """
-
-        print iter_count, self._last_iter_count
-
-        # The track is deemed to be finished if it has not been updated since N iterations
-        if (iter_count - self._last_iter_count) > self._max_candidate_iter:
-            log.debug(
-                'Track {:03d} (n: {}) has transitted outside detection window.'.format(id(self) % 1000, self.size))
-            return True
-
-        log.debug('Track {:03d} will be dropped in {} iterations'.format(id(self) % 1000, self._max_candidate_iter - (
-                iter_count - self._last_iter_count)))
-
-        return False
 
     def is_valid(self):
         """
@@ -342,34 +260,23 @@ class SpaceDebrisTrack:
         # Check that the number of beams activated is less than 2
 
         if self.data['beam_id'].unique().size < 2:
-            return False
+            return False, 'Not enough unique beams'
 
         # Check that the candidate has the minimum number of unique channel and time data points
         if self.data['channel'].unique().size < 5 or self.data['time'].unique().size < 5:
-            return False
+            return False, 'Not enough unique samples'
 
-        if not self.is_linear():
-            return False
+        if not np.abs(self.r_value) >= settings.detection.linearity_thold:
+            return False, 'Track is not linear'
 
-        if not self.is_gradient_valid():
-            return False
+        g_thold = settings.detection.gradient_thold
+        if not g_thold[0] >= self.ref_data['gradient'] >= g_thold[1]:
+            return False, 'Gradient is not within valid range'
 
-        if self.high_missing_score():
-            return False
+        if missing_score(self.data['time_sample']) > 0.5:
+            return False, 'High missing score'
 
-        return True
-
-    def is_linear(self):
-        return np.abs(self.r_value) >= settings.detection.linearity_thold
-
-    def is_gradient_valid(self):
-        # print settings.detection.gradient_thold[0], self.ref_data['gradient'], settings.detection.gradient_thold[1],
-        # print settings.detection.gradient_thold[0] >= self.ref_data['gradient'] >= settings.detection.gradient_thold[1]
-        return settings.detection.gradient_thold[0] >= self.ref_data['gradient'] >= settings.detection.gradient_thold[
-            1]
-
-    def high_missing_score(self):
-        return missing_score(self.data['time_sample']) > 0.5
+        return True, None
 
     def is_parent_of(self, detection_cluster):
         """
@@ -491,21 +398,6 @@ class SpaceDebrisTrack:
         return reduced_df
 
     def track_expired(self, obs_info):
-        # last_time = self.data['time'].max()
-        # track_length = self.data['time'].max() - self.data['time'].min()
-        #
-        # last_timestamp = obs_info['timestamp'] + datetime.timedelta(seconds=obs_info['sampling_time'] * 160)
-        # # print 'last_time', last_time
-        # # print 'track_length', track_length
-        # # print 'last_timestamp', last_timestamp
-        # # print '(current_timestamp - last_time) > track_length', (last_timestamp - last_time) > track_length
-        #
-        # if (last_timestamp - last_time) > track_length:
-        #     return True
-        #
-        # return False
-        #
-
         # First time sample of the track
         t_a = self.data['time'].min()
 

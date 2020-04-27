@@ -102,53 +102,6 @@ def aggregate_clusters_old(candidates, new_clusters, obs_info, notifications=Fal
     return candidates
 
 
-# @timeit
-def active_tracks_old(obs_info, candidates, n_rso, iter_count):
-    """
-
-    :param candidates:
-    :param iter_count:
-    :return:
-    """
-
-    temp_candidates = []
-    # Tracks that were deleted should not count as 'track transitted'
-    invalid_tracks = 0
-    transitted = 0
-    for candidate in candidates:
-        if not candidate.is_valid():
-            candidate.delete()
-
-            invalid_tracks += 1
-            continue
-
-        if candidate.track_expired(obs_info):
-            # print iter_count
-
-            # if candidate.has_transitted(iter_count=iter_count):
-            # If the candidate is not valid delete it else it won't be added to the list
-            # if not candidate.is_valid:
-            #     candidate.delete()
-            # else:
-
-            # Track has transitted outside the field of view of the instrument
-            publish(TrackTransittedEvent(candidate))
-            transitted += 1
-
-            if settings.detection.save_tdm:
-                persist(obs_info, candidate, debug=settings.detection.debug_candidates)
-        else:
-            temp_candidates.append(candidate)
-
-    # transitted = len(self._candidates) - len(temp_candidates) - invalid_tracks
-    n_rso += transitted
-    log.info('Result: {} tracks have transitted. {} tracks are currently in detection window.'.format(transitted,
-                                                                                                      len(
-                                                                                                          temp_candidates)))
-
-    return temp_candidates, n_rso
-
-
 @timeit
 def data_association(tracks, tentative_tracks, obs_info, notifications=False, save_candidates=False):
     """
@@ -208,10 +161,11 @@ def active_tracks(obs_info, tracks, iter_count):
     """
 
     for track in tracks:
-        if not track.is_valid():
+        valid, reason = track.is_valid()
+        if not valid:
             track.cancel()
             # delete from database but keep it in memory
-            log.info("Track {} was cancelled in iteration {}".format(track.id, iter_count))
+            log.info("Track {} was cancelled in iteration {}. Reason: {}".format(track.id, iter_count, reason))
             continue
 
         if track.track_expired(obs_info):
@@ -224,43 +178,6 @@ def active_tracks(obs_info, tracks, iter_count):
                 persist(obs_info, track, debug=settings.detection.debug_candidates)
 
     return tracks
-
-    temp_candidates = []
-    # Tracks that were deleted should not count as 'track transitted'
-    invalid_tracks = 0
-    transitted = 0
-    for candidate in candidates:
-        if not candidate.is_valid():
-            candidate.delete()
-
-            invalid_tracks += 1
-            continue
-
-        if candidate.track_expired(obs_info):
-            # print iter_count
-
-            # if candidate.has_transitted(iter_count=iter_count):
-            # If the candidate is not valid delete it else it won't be added to the list
-            # if not candidate.is_valid:
-            #     candidate.delete()
-            # else:
-
-            # Track has transitted outside the field of view of the instrument
-            publish(TrackTransittedEvent(candidate))
-            transitted += 1
-
-            if settings.detection.save_tdm:
-                persist(obs_info, candidate, debug=settings.detection.debug_candidates)
-        else:
-            temp_candidates.append(candidate)
-
-    # transitted = len(self._candidates) - len(temp_candidates) - invalid_tracks
-    n_rso += transitted
-    log.info('Result: {} tracks have transitted. {} tracks are currently in detection window.'.format(transitted,
-                                                                                                      len(
-                                                                                                          temp_candidates)))
-
-    return temp_candidates, n_rso
 
 
 def create_candidate(cluster_data, channels, iter_count, n_samples, t0, td, channel_noise, beam_id):

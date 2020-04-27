@@ -4,8 +4,6 @@ space debris tracks from the filtered data
 
 """
 
-import multiprocessing
-
 from astride.utils.edge import EDGE
 from astropy.stats import sigma_clipped_stats
 from hdbscan import HDBSCAN
@@ -140,17 +138,12 @@ def naive_dbscan(test_image, true_tracks, noise_estimate):
 @timeit
 def msds_q(test_image, true_tracks, noise_est):
     limits = get_limits(test_image, true_tracks)
-    debug = True
+    debug = False
     ext = '.pdf'
 
     # limits = (0, 100, 5900, 6000)
-    limits = (40, 150, 60, 170)
+    # limits = (40, 150, 60, 170)
     # limits = None
-    pool = multiprocessing.Pool(processes=8)
-    # Pre-process the input data
-    # debug= False
-
-    # positives = []
 
     ndx = pre_process_data(test_image, noise_estimate=noise_est)
 
@@ -161,20 +154,14 @@ def msds_q(test_image, true_tracks, noise_est):
 
     # Traverse the tree and identify valid linear streaks
     leaves = traverse(k_tree.tree, ndx,
-                      bbox=(0, test_image.shape[1], 0, test_image.shape[0]),
-                      distance_thold=3., min_length=2., cluster_size_thold=10.)
+                      bbox=(0, test_image.shape[1], 0, test_image.shape[0]), min_length=2.)
 
-    positives, negatives = process_leaves(leaves, pool)
-
-    pool.close()
+    positives = process_leaves(leaves)
 
     print "Processed {} leaves. Of which {} were positives.".format(len(leaves), len(positives))
 
-    visualise_tree_traversal(ndx, true_tracks, positives, negatives, '2_processed_leaves' + ext, limits=limits,
+    visualise_tree_traversal(ndx, true_tracks, positives, leaves, '2_processed_leaves' + ext, limits=limits,
                              vis=debug)
-
-    # positives.extend(pos)
-
     eps = estimate_leave_eps(positives)
 
     print 'eps is:', eps

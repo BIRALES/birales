@@ -16,17 +16,6 @@ from pybirales.pipeline.modules.detection.util import *
 from pybirales.pipeline.modules.persisters.fits_persister import TLE_Target
 
 
-def triangle_filter_old(beam_data):
-    noise_est = np.mean(beam_data)
-
-    local_thresh = threshold_triangle(beam_data, nbins=2048)
-    local_filter_mask = beam_data < local_thresh
-
-    beam_data[local_filter_mask] = -100
-
-    return beam_data, noise_est
-
-
 def triangle_filter(input_data, obs_info):
     for b in range(0, input_data.shape[0]):
         beam_data = input_data[b, ...]
@@ -53,9 +42,9 @@ def serial_msds(data):
     # beam_seg_input_data, noise_est = sigma_clip(beam_data)
     # beam_seg_input_data, noise_est = triangle_filter(beam_data)
 
-    debug = b == 23 and iter == 9  # 41182
+    debug = b == 22 and iter == 9  # 41182
     limits = (80, 160, 1750, 1850)  # 41182
-    limits = (80, 115, 3600, 3750)
+    # limits = (80, 115, 3600, 3750)
     limits = None
     debug = False
 
@@ -71,16 +60,11 @@ def serial_msds(data):
     visualise_filtered_data(ndx, true_tracks, '1_filtered_data' + ext, limits=limits, debug=debug)
 
     # Traverse the tree and identify valid linear streaks
-    leaves = traverse(k_tree.tree, ndx, bbox=(0, beam_data.shape[1], 0, beam_data.shape[0]),
-                      distance_thold=3., min_length=2., cluster_size_thold=10.)
+    leaves = traverse(k_tree.tree, ndx, bbox=(0, beam_data.shape[1], 0, beam_data.shape[0]), min_length=2.)
 
-    # positives, negatives = process_leaves2(leaves, pool=False, debug=debug)
-    positives = []
-    negatives = []
-    for i in range(len(leaves)):
-        positives += linear_clusterf(leave_pair=(leaves[i], i))
+    positives = process_leaves(leaves)
 
-    visualise_tree_traversal(ndx, true_tracks, positives, negatives, '2_processed_leaves' + ext, limits=limits,
+    visualise_tree_traversal(ndx, true_tracks, positives, leaves, '2_processed_leaves' + ext, limits=limits,
                              vis=debug)
 
     if not positives:
@@ -349,7 +333,7 @@ class Detector(ProcessingModule):
 
         if True:
             obs_name = settings.observation.name
-            obs_name = 'norad_1328'
+            obs_name = 'norad_41128'
             out_dir = os.path.join(os.environ['HOME'], '.birales/debug/detection', obs_name)
             self.dump_detection_data(input_data, obs_info, out_dir)
 
@@ -388,17 +372,17 @@ def msds_standalone(pool, _iter_count, input_data, obs_info, channels):
     # [Feature Extraction] Process the input data and identify the detection clusters
     beam_clusters = []
     # for b in [22, 23]:
-    #     beam_clusters += serial_msds((input_data[b, ...], b, _iter_count))
+    #     beam_clusters += serial_msds((input_data[b, ...], b, _iter_count, np.mean(obs_info['channel_noise'][b])))
 
     for c in pool.map(serial_msds, [(input_data[b, ...], b, _iter_count, np.mean(obs_info['channel_noise'][b])) for b in
                                     range(0, 32)]):
         beam_clusters += c
 
-    beam_candidates = [
+    new_tracks = [
         create_candidate(c, channels, _iter_count, 160, t0, td, obs_info['channel_noise'], int(c[:, 4][0])) for c in
         beam_clusters]
 
-    return beam_candidates
+    return new_tracks
 
 
 def dbscan_standalone(pool, _iter_count, input_data, obs_info, channels):
@@ -424,11 +408,11 @@ if __name__ == '__main__':
     detection = msds_standalone
     filtering = triangle_filter
 
-    detection = dbscan_standalone
-    filtering = sigma_clip
+    # detection = dbscan_standalone
+    # filtering = sigma_clip
 
     targets = [
-        TLE_Target(name='norad_41182', transit_time='05 MAR 2019 11:23:28.73', doppler=-3226.36329),
+        TLE_Target(name='norad_41128', transit_time='05 MAR 2019 11:23:28.73', doppler=-3226.36329),  # iteration 9
         TLE_Target(name='norad_1328', transit_time='05 MAR 2019 10:37:53.01', doppler=-1462.13774)
     ]
 
@@ -444,7 +428,7 @@ if __name__ == '__main__':
     target = targets[1]
     in_dir = os.path.join(root, target.name)
     channels = pickle.load(open(os.path.join(in_dir, 'channels.pkl'), 'rb'))
-    for _iter_count in range(5, 9):
+    for _iter_count in range(4, 9):
         t0 = time.time()
         input_data = np.load(os.path.join(in_dir, 'input_data_{}.pkl.npy'.format(_iter_count)))
         obs_info = pickle.load(open(os.path.join(in_dir, 'obs_info_{}.pkl'.format(_iter_count)), 'rb'))
@@ -491,8 +475,8 @@ if __name__ == '__main__':
     for j, candidate in enumerate(tracks):
         i = j + 1
         log.info("%s RSO %d: %s" % (algo_name, i, candidate.state_str()))
-        plot_RSO_track(candidate, "{}/{}".format(i, len(tracks)))
+        plot_RSO_track(candidate, "RSO_{}".format(i))
 
     plot_all_RSOs_track(tracks)
-
-    plt.show()
+    # plt.interactive(False)
+    # plt.show(block=False)

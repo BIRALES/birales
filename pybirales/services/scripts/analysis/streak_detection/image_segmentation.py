@@ -109,7 +109,7 @@ if __name__ == '__main__':
     np.random.seed(SEED)
     random.seed(SEED)
 
-    SAVE = True
+    SAVE = False
     USE_CACHE = False
     VISUALISE = False
     DEBUG_DETECTOR = False
@@ -118,7 +118,7 @@ if __name__ == '__main__':
     N_CHANS = 4110
     N_SAMPLES = 160
     N_TRACKS = 10
-    N_TESTS = 2
+    N_TESTS = 1
     ROOT = "/home/denis/.birales/visualisation/fits/bkg_noise_dataset_casa_20190914"
     ROOT = "/home/denis/.birales/visualisation/fits/detection_raw_data"
     EXT = '.pdf'
@@ -132,9 +132,10 @@ if __name__ == '__main__':
     detection_metrics_df = pd.DataFrame()
 
     snr = np.arange(0, 12, 0.5)
+    snr = np.arange(0, 8, 0.25)
     # snr = [2, 3, 5, 10]
     # snr = [5, 10, 15, 30]
-    # snr = [5, 10, 15]
+    # snr = [2, 3, 5, 8, 10, 15]
     snr = [5]
     # snr = np.arange(0, 10.5, 0.5)
 
@@ -227,6 +228,6 @@ if __name__ == '__main__':
 
     # agg_df = show_results_filter(metrics_df, im_algorithms, 'image_seg_results')
 
-    # agg_df = show_results_detector(detection_metrics_df, detection_algorithms, 'detection_results')
+    agg_df = show_results_detector(detection_metrics_df, detection_algorithms, 'detection_results')
 
     plt.show()

@@ -68,7 +68,7 @@ DETECTION_TESTS = TestSuite('detection_tests', [
 
 DETECTION_TESTS_DEBUG = TestSuite('detection_tests', [
     Test(triangle_filter, [msds_detector]),
-    # Test(triangle_filter, [msds_detector, dbscan_detector, hough_detector]),
+    # Test(triangle_filter, [msds_detector, dbscan_detector]),
     # Test(no_filter, [astride_detector])
 ])
 
