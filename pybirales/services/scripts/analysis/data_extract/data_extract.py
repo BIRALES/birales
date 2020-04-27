@@ -1,11 +1,30 @@
+import datetime
 import os
 
-FILES = ['data.merged.tree', 'data2017.tree']
-EXT = '_raw.dat'
-LOCAL_DATA_DIR = '/media/denis/backup/birales/'
-REMOTE_DATA_DIRS = ['/data/birales/', '/data2/birales/', '/data2/']
-observations = {'cas': [], 'cyg': [], 'tau': [], 'vir': [], 'rso': [], 'test': []}
+import pandas as pd
 
+
+def get_target_observations(observations):
+    t_obs = []
+    for obs in observations:
+        if 'norad' not in obs.lower():
+            continue
+        t_obs.append(obs)
+
+    obs_df = pd.DataFrame(columns=['date', 'obs_name', 'raw_filepath'])
+    # sort the observations by date
+    for t in t_obs:
+        splits = t.split('/')
+        date_folder = splits[-3]
+        date = datetime.datetime.strptime(date_folder, "%Y_%m_%d")
+
+        obs_df = obs_df.append({
+            'date': date,
+            'obs_name': splits[-2].lower(),
+            'raw_filepath': t
+        }, ignore_index=True)
+
+    return obs_df
 
 def get_obs_type(file_str):
     for s in observations.keys():
@@ -38,6 +57,12 @@ def get_synced_files(rso_files):
 
 
 if __name__ == '__main__':
+    FILES = ['data.merged.tree', 'data2017.tree']
+    EXT = '_raw.dat'
+    LOCAL_DATA_DIR = '/media/denis/backup/birales/'
+    REMOTE_DATA_DIRS = ['/data/birales/', '/data2/birales/', '/data2/']
+    observations = {'cas': [], 'cyg': [], 'tau': [], 'vir': [], 'rso': [], 'test': []}
+
     rso_campaign = []
     calib_campaign = {}
     for _file in FILES:
@@ -49,7 +74,7 @@ if __name__ == '__main__':
 
                 obs_type = get_obs_type(line)
                 observations[obs_type].append(line)
-
+    """
     for k in observations.keys():
         print "Found {} raw data files for {} observation type".format(len(observations[k]), k)
 
@@ -63,4 +88,10 @@ if __name__ == '__main__':
 
     print '\nThe following files were found on remote only (and should be backed up)'
     for raw_file in synced_files['remote_only']:
-        print os.path.basename(raw_file)
+        print raw_file
+    """
+    # get the detection observations
+
+    target_obs_df = get_target_observations(observations["rso"])
+
+    print target_obs_df.sort_values(by='date', ascending=True)

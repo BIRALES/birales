@@ -213,8 +213,22 @@ def visualise_calibration_coefficients(df, data_key, label, save_filepath):
     plt.savefig(save_filepath)
 
 
-if __name__ == '__main__':
+def calibration_coefficients_analysis(cache, observations, parameters, config_file_path):
+    if os.path.exists(cache):
+        df = pd.read_pickle(cache)
+    else:
+        df = run_calibration_observations(observations=observations, config_filepath=config_file_path,
+                                          parameters=parameters)
+        df.to_pickle(cache)
 
+    visualise_calibration_coefficients(df, data_key='amplitude_db', label='Amplitude (dB)',
+                                       save_filepath='calib_amp.png')
+    visualise_calibration_coefficients(df, data_key='phase', label='Phase (deg)', save_filepath='calib_phase.png')
+
+    plt.show()
+
+
+if __name__ == '__main__':
     OBSERVATIONS = []
 
     INVALID = [
@@ -278,15 +292,18 @@ if __name__ == '__main__':
     config_filepath = [os.path.join(CONFIG_ROOT, 'birales.ini'),
                        os.path.join(CONFIG_ROOT, 'offline_calibration.ini')]
 
-    if os.path.exists(CACHE):
-        df = pd.read_pickle(CACHE)
-    else:
-        df = run_calibration_observations(observations=OBSERVATIONS, config_filepath=config_filepath,
-                                          parameters=PARAMETERS)
-        df.to_pickle(CACHE)
+    # Visualise the calibration coefficients outputted by the calibration algorithm
+    # calibration_coefficients_analysis(CACHE, OBSERVATIONS, PARAMETERS, config_filepath)
 
-    visualise_calibration_coefficients(df, data_key='amplitude_db', label='Amplitude (dB)',
-                                       save_filepath='calib_amp.png')
-    visualise_calibration_coefficients(df, data_key='phase', label='Phase (deg)', save_filepath='calib_phase.png')
+    # Calibrate an observation offline
+    # To be used for detection campaign
+    CALIBRATORS = [
+        '???/????',  # 28/02/2018 to 05/03/2018 (check new data)
+        '2019_02_21/cas_21_02_2019',
+        '2019_02_22/vir_21_02_2019',  # Campaign for 27/02/2019 to 05/03/2019
+        '2019_03_06/cyg_06_03_2019',  # Campaign for 01/04/2018 to 10/04/2019 (source not close)
+        '2019_08_14/CAS_A_FES',  # Campaign for 30/07/2019 to 25/08/2019
 
-    plt.show()
+    ]
+    df = run_calibration_observations(observations=CALIBRATORS, config_filepath=config_filepath,
+                                      parameters=PARAMETERS)

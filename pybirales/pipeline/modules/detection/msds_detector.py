@@ -413,7 +413,7 @@ if __name__ == '__main__':
 
     targets = [
         TLE_Target(name='norad_41128', transit_time='05 MAR 2019 11:23:28.73', doppler=-3226.36329),  # iteration 9
-        TLE_Target(name='norad_1328', transit_time='05 MAR 2019 10:37:53.01', doppler=-1462.13774)
+        TLE_Target(name='norad_1328', transit_time='05 MAR 2019 10:37:53.01', doppler=-1462.13774)  # iteration 4
     ]
 
     # Tracks, that are valid and have transitted.
