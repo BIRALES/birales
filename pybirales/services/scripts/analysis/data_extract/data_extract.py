@@ -3,6 +3,11 @@ import os
 
 import pandas as pd
 
+FILES = ['data.merged.tree', 'data2017.tree']
+EXT = '_raw.dat'
+LOCAL_DATA_DIR = '/media/denis/backup/birales/'
+REMOTE_DATA_DIRS = ['/data/birales/', '/data2/birales/', '/data2/']
+
 
 def get_target_observations(observations):
     t_obs = []
@@ -26,7 +31,8 @@ def get_target_observations(observations):
 
     return obs_df
 
-def get_obs_type(file_str):
+
+def get_obs_type(file_str, observations):
     for s in observations.keys():
         if s in file_str.lower():
             return s
@@ -56,15 +62,8 @@ def get_synced_files(rso_files):
     return synced_files
 
 
-if __name__ == '__main__':
-    FILES = ['data.merged.tree', 'data2017.tree']
-    EXT = '_raw.dat'
-    LOCAL_DATA_DIR = '/media/denis/backup/birales/'
-    REMOTE_DATA_DIRS = ['/data/birales/', '/data2/birales/', '/data2/']
+def get_observations():
     observations = {'cas': [], 'cyg': [], 'tau': [], 'vir': [], 'rso': [], 'test': []}
-
-    rso_campaign = []
-    calib_campaign = {}
     for _file in FILES:
         with open(_file, 'rb') as f:
             for line in f:
@@ -72,9 +71,13 @@ if __name__ == '__main__':
                 if not line.endswith(EXT):
                     continue
 
-                obs_type = get_obs_type(line)
+                obs_type = get_obs_type(line, observations)
                 observations[obs_type].append(line)
-    """
+
+    return observations
+
+
+def output_birales_stats(observations):
     for k in observations.keys():
         print "Found {} raw data files for {} observation type".format(len(observations[k]), k)
 
@@ -89,9 +92,15 @@ if __name__ == '__main__':
     print '\nThe following files were found on remote only (and should be backed up)'
     for raw_file in synced_files['remote_only']:
         print raw_file
-    """
-    # get the detection observations
 
+
+if __name__ == '__main__':
+    observations = get_observations()
+
+    # Check which files are synced locally, and which need to be backed up
+    output_birales_stats(observations)
+
+    # get the detection observations
     target_obs_df = get_target_observations(observations["rso"])
 
     print target_obs_df.sort_values(by='date', ascending=True)

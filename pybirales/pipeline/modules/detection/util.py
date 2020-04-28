@@ -5,7 +5,6 @@ from scipy import stats
 
 from msds.util import timeit
 from msds.visualisation import *
-from pybirales import settings
 from pybirales.events.events import TrackTransittedEvent
 from pybirales.events.publisher import publish
 from pybirales.pipeline.modules.detection.exceptions import DetectionClusterIsNotValid
@@ -174,8 +173,7 @@ def active_tracks(obs_info, tracks, iter_count):
 
             publish(TrackTransittedEvent(track))
 
-            if settings.detection.save_tdm:
-                persist(obs_info, track, debug=settings.detection.debug_candidates)
+            persist(obs_info, track)
 
     return tracks
 

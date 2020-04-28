@@ -12,7 +12,7 @@ from pybirales.events.publisher import publish
 from pybirales.utilities.singleton import Singleton
 
 
-def persist(obs_info, track, debug=False):
+def persist(obs_info, track):
     """
 
     :param obs_info:
@@ -23,7 +23,7 @@ def persist(obs_info, track, debug=False):
     :return:
     """
 
-    _tdm_persister.persist_track(obs_info, track, debug)
+    _tdm_persister.persist_track(obs_info, track)
 
 
 @Singleton
@@ -67,6 +67,21 @@ class TDMPersister:
 
         return os.path.join(out_dir, self._filename_mask.format(min(sd_track.data['time']), detection_num))
 
+    def _get_debug_filename(self, obs_name, detection_num):
+        """
+
+        :param sd_track:
+        :param detection_num:
+        :return:
+        """
+        utc_now = datetime.utcnow()
+        created_date = '{:%Y%m%d}'.format(utc_now)
+        out_dir = os.path.join(os.environ['HOME'], '.birales/debug/detection/', created_date, obs_name)
+
+        out_dir = self._create_out_dir(out_dir)
+
+        return os.path.join(out_dir, 'RSO_{}'.format(detection_num))
+
     def _write(self, obs_info, sd_track, detection_num):
         """
 
@@ -75,7 +90,7 @@ class TDMPersister:
         :return:
         """
 
-        filepath = self._get_filename(sd_track, detection_num)
+        filepath = self._get_debug_filename(settings.observation.name, detection_num)
         beam_noise = list(np.mean(obs_info['channel_noise'], axis=1))
         data = dict(
             filename=settings.observation.name,
@@ -111,10 +126,12 @@ class TDMPersister:
 
         io.savemat(filepath, dict(
             filename=settings.observation.name,
+            raw_filepath=settings.rawdatareader.filepath,
             beam_noise=list(np.mean(obs_info['channel_noise'], axis=1)),
             creation_date=datetime.utcnow().isoformat('T'),
             beams=np.unique(sd_track.data['beam_id']),
             detection=list(sd_track.reduce_data(remove_duplicate_epoch=True, remove_duplicate_channel=True)),
+            data=sd_track.data.to_dict(),
             target_name=settings.observation.target_name,
             tx=obs_info['transmitter_frequency'],
             pointings={
@@ -122,14 +139,17 @@ class TDMPersister:
                 'az_el': obs_info['beam_az_el'].tolist(),
                 'declination': obs_info['declination']
             },
+            reference=sd_track.ref_data.to_dict(),
             integration_interval=obs_info['sampling_time']
         ), do_compression=True)
 
-    def persist_track(self, obs_info, track, debug):
+    def persist_track(self, obs_info, track):
         # Save TDM file
-        self._write(obs_info, track, self._detection_num)
 
-        if debug:
+        if settings.detection.save_tdm:
+            self._write(obs_info, track, self._detection_num)
+
+        if settings.detection.debug_candidates:
             # Save MAT file
             self.save_mat(obs_info, track, self._detection_num)
 

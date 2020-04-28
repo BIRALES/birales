@@ -369,15 +369,24 @@ class Pointing(object):
         Read the calibration coefficients from file.
         :return:
         """
+        obs = Observation.objects.get(id=settings.observation.id)
+        obs_start = obs.principal_created_at
 
-        calib_obs = CalibrationObservation.objects.order_by('-created_at').first()
+        # Find the calibration algorithm whose principal start time is closest to this observation's principal start time
+        calib_obs = CalibrationObservation.objects(principal_created_at__lte=obs_start, status="finished").order_by(
+            'principal_created_at').first()
+
+        if len(calib_obs) < 1:
+            obs_start = obs.created_at
+            calib_obs = CalibrationObservation.objects(created_at__lte=obs_start, status="finished").order_by(
+                'created_at').first()
 
         if len(calib_obs) < 1:
             raise InvalidCalibrationCoefficientsException("No suitable calibration coefficients files were found")
 
         log.info(
-            'Using the calibration coefficients generated on {:%d-%m-%Y %H:%M:%S} by {}'.format(
-                calib_obs.created_at, calib_obs.name))
+            'Selected Calibration obs: {}. Created At: {:%d-%m-%Y %H:%M:%S}. Principal: {:%d-%m-%Y %H:%M:%S}.'.format(
+                calib_obs.name, calib_obs.created_at, calib_obs.principal_created_at))
 
         calib_coeffs = np.array(calib_obs.real) + np.array(calib_obs.imag) * 1j
 
@@ -390,7 +399,6 @@ class Pointing(object):
 
         log.info('Calibration coefficients loaded successfully')
 
-        obs = Observation.objects.get(id=settings.observation.id)
         obs.calibration_observation = calib_obs.id
         obs.save()
 

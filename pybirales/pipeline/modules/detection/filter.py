@@ -3,9 +3,30 @@ from abc import abstractmethod
 
 import numpy as np
 from scipy.ndimage import binary_hit_or_miss
+from skimage.filters import threshold_triangle
 
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
+
+
+def triangle_filter(input_data, obs_info):
+    for b in range(0, input_data.shape[0]):
+        beam_data = input_data[b, ...]
+        local_thresh = threshold_triangle(beam_data, nbins=2048)
+        local_filter_mask = beam_data < local_thresh
+
+        beam_data[local_filter_mask] = -100
+
+    return input_data
+
+
+def sigma_clip(input_data, obs_info):
+    threshold = 3 * obs_info['channel_noise_std'][:, obs_info['doppler_mask'], ...] + obs_info['channel_noise'][:,
+                                                                                      obs_info['doppler_mask'], ...]
+    t2 = np.expand_dims(threshold, axis=2)
+    input_data[input_data <= t2] = 0
+
+    return input_data
 
 
 class InputDataFilter:
@@ -102,7 +123,7 @@ class RemoveTransmitterChannelFilter(InputDataFilter):
     def __init__(self):
         InputDataFilter.__init__(self)
 
-        self._n_rfi_samples_thold = 0.6 # ~ 90 samples
+        self._n_rfi_samples_thold = 0.6  # ~ 90 samples
 
     def apply(self, data, obs_info):
         """
@@ -135,6 +156,22 @@ class RemoveTransmitterChannelFilter(InputDataFilter):
                     data[b, c, :] = beam_noise
 
 
+class TriangleFilter(InputDataFilter):
+    def __init__(self):
+        InputDataFilter.__init__(self)
+
+    def apply(self, data, obs_info):
+        triangle_filter(data, obs_info)
+
+
+class SigmaClipFilter(InputDataFilter):
+    def __init__(self):
+        InputDataFilter.__init__(self)
+
+    def apply(self, data, obs_info):
+        sigma_clip(data, obs_info)
+
+
 class Filter(ProcessingModule):
     _valid_input_blobs = [ChannelisedBlob]
 
@@ -143,10 +180,25 @@ class Filter(ProcessingModule):
         self._validate_data_blob(input_blob, valid_blobs=[ChannelisedBlob])
 
         # The filters to be applied on the data. Filters will be applied in order.
+
+        # self._filters = [
+        #     RemoveTransmitterChannelFilter(),
+        #     RemoveBackgroundNoiseFilter(std_threshold=4.),
+        #     PepperNoiseFilter(),
+        # ]
+
+        # # For DBSCAN
+        # self._filters = [
+        #     RemoveTransmitterChannelFilter(),
+        #     SigmaClipFilter(),
+        #     PepperNoiseFilter(),
+        # ]
+
+        # For MSDS
         self._filters = [
-            # RemoveTransmitterChannelFilter(),
-            RemoveBackgroundNoiseFilter(std_threshold=4.),
-            # PepperNoiseFilter(),
+            RemoveTransmitterChannelFilter(),
+            TriangleFilter(),
+            PepperNoiseFilter(),
         ]
 
         super(Filter, self).__init__(config, input_blob)

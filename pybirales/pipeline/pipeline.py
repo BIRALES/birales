@@ -356,7 +356,6 @@ class DataTruncatorPipelineMangerBuilder(PipelineManagerBuilder):
         """
         # Generate and equal number of antennas and beams
 
-
         receiver = RawDataReader(settings.rawdatareader)
         self.manager.name += ' (Offline)'
 
@@ -419,14 +418,16 @@ class MSDSDetectionPipelineManagerBuilder(PipelineManagerBuilder):
         preprocessor = PreProcessor(settings.detection, pp_input)
         self.manager.add_module("preprocessor", preprocessor)
 
-        detector_input = preprocessor.output_blob
+        filtering_input = preprocessor.output_blob
         if settings.fits_persister.visualise_raw_beams:
             raw_fits_persister = RawDataFitsPersister(settings.fits_persister, preprocessor.output_blob)
             self.manager.add_module("raw_fits_persister", raw_fits_persister)
-            detector_input = raw_fits_persister.output_blob
+            filtering_input = raw_fits_persister.output_blob
 
-        detector = MSDSDetector(settings.detection, detector_input)
+        filtering = Filter(settings.detection, filtering_input)
+        detector = MSDSDetector(settings.detection, filtering.output_blob)
+        terminator = Terminator(None, detector.output_blob)
+
+        self.manager.add_module("filtering", filtering)
         self.manager.add_module("detector", detector)
-
-        terminator = Terminator(settings.terminator, detector.output_blob)
         self.manager.add_module("terminator", terminator)
