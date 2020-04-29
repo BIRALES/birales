@@ -1,3 +1,4 @@
+import csv
 import logging as log
 import os
 from datetime import datetime
@@ -90,7 +91,7 @@ class TDMPersister:
         :return:
         """
 
-        filepath = self._get_debug_filename(settings.observation.name, detection_num)
+        filepath = self._get_filename(sd_track, detection_num)
         beam_noise = list(np.mean(obs_info['channel_noise'], axis=1))
         data = dict(
             filename=settings.observation.name,
@@ -122,7 +123,7 @@ class TDMPersister:
             publish(TDMCreatedEvent(sd_track, filepath))
 
     def save_mat(self, obs_info, sd_track, detection_num):
-        filepath = self._get_filename(sd_track, detection_num)
+        filepath = self._get_debug_filename(settings.observation.name, detection_num)
 
         io.savemat(filepath, dict(
             filename=settings.observation.name,
@@ -139,9 +140,38 @@ class TDMPersister:
                 'az_el': obs_info['beam_az_el'].tolist(),
                 'declination': obs_info['declination']
             },
-            reference=sd_track.ref_data.to_dict(),
+            reference=sd_track.ref_data,
             integration_interval=obs_info['sampling_time']
         ), do_compression=True)
+
+        # Save a summary of the detection data to csv
+        summary_filepath = os.path.join(os.path.dirname(filepath), 'summary.csv')
+
+        mid = sd_track.data['snr'].idxmax()
+
+        doppler = (sd_track.data['channel'] - obs_info['transmitter_frequency']) * 1e6
+        row = {
+            'name': settings.observation.name,
+            'psnr_doppler': doppler.iloc[mid],
+            'psnr_timestamp': sd_track.data.iloc[mid]['time'].isoformat('T'),
+            'psnr': sd_track.data['snr'].max(),
+            'mean_snr': np.mean(sd_track.data['snr']),
+            'activated_beams': ','.join([str(b) for b in sd_track.data['beam_id'].unique().tolist()]),
+            'n': len(sd_track.data['channel']),
+            'r_value': sd_track.r_value,
+            'filepath': filepath,
+            'created_at': sd_track._created_at,
+            'ref_doppler': sd_track.ref_data['doppler'],
+            'ref_time': sd_track.ref_data['time'].isoformat('T'),
+            'ref_snr': sd_track.ref_data['snr']
+        }
+
+        with open(summary_filepath, 'a') as f:
+            writer = csv.DictWriter(f, fieldnames=row.keys())
+            if f.tell() == 0:
+                writer.writeheader()
+
+            writer.writerow(row)
 
     def persist_track(self, obs_info, track):
         # Save TDM file

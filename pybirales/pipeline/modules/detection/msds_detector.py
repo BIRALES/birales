@@ -5,6 +5,7 @@ from multiprocessing import Pool
 from sys import stdout
 
 from msds.msds import *
+from pybirales import settings
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.modules.detection.dbscan_detection import detect
@@ -69,23 +70,34 @@ def serial_msds(data):
     return valid_tracks
 
 
-def msds_standalone(pool, _iter_count, input_data, obs_info, channels):
+# @profile
+def msds_standalone(_iter_count, input_data, obs_info, channels):
     t0 = np.datetime64(obs_info['timestamp'])
     td = np.timedelta64(int(obs_info['sampling_time'] * 1e9), 'ns')
-    print "\nIteration {}. From {} to {}".format(_iter_count, str(t0), str(t0 + td * 160))
-
-    # [Feature Extraction] Process the input data and identify the detection clusters
+    # print "Iteration {}. From {} to {}".format(_iter_count, str(t0), str(t0 + td * 160))
+    t1 = time.time()
     beam_clusters = []
+    # [Feature Extraction] Process the input data and identify the detection clusters
+
     # for b in [22, 23]:
     #     beam_clusters += serial_msds((input_data[b, ...], b, _iter_count, np.mean(obs_info['channel_noise'][b])))
 
-    for c in pool.map(serial_msds, [(input_data[b, ...], b, _iter_count, np.mean(obs_info['channel_noise'][b])) for b in
-                                    range(0, input_data.shape[0])]):
+    size = input_data.shape[0]
+    # size = 32
+    chunks = [(input_data[b, ...], b, _iter_count, np.mean(obs_info['channel_noise'][b])) for b in range(0, size)]
+    for c in POOL.map(serial_msds, chunks):
         beam_clusters += c
 
+    # for b in [22]:
+    #     beam_clusters += serial_msds((input_data[b, ...], b, _iter_count, np.mean(obs_info['channel_noise'][b])))
+
+    # print "Iteration {}. FE finished in {:0.2f} seconds".format(_iter_count, time.time() - t1)
+
+    t2 = time.time()
     new_tracks = [
         create_candidate(c, channels, _iter_count, 160, t0, td, obs_info['channel_noise'], int(c[:, 4][0])) for c in
         beam_clusters]
+    # print "Iteration {}. Cluster Creation finished in {:0.2f} seconds".format(_iter_count, time.time() - t2)
 
     return new_tracks
 
@@ -116,7 +128,7 @@ def _get_clusters_naive(input_data, channels, obs_info, iter_counter):
     return clusters
 
 
-def dbscan_standalone(pool, _iter_count, input_data, obs_info, channels):
+def dbscan_standalone(_iter_count, input_data, obs_info, channels):
     # [Feature Extraction] Process the input data and identify the detection clusters
     beam_clusters = _get_clusters_naive(input_data, channels, obs_info, _iter_count)
     return beam_clusters
@@ -131,22 +143,23 @@ class Detector(ProcessingModule):
 
         super(Detector, self).__init__(config, input_blob)
 
-        self.pool = Pool(12)
+        # self.pool = Pool(3, maxtasksperchild=500)
+        # self.pool = Pool(3)
 
-        self.channels = None
-
-        self._doppler_mask = None
+        # self.channels = None
+        #
+        # self._doppler_mask = None
 
         self.data_dump = False
-
-        # Tracks, that are valid and have transitted.
-        self.terminated_tracks = []
 
         # Track which are currently valid and have not transitted/terminated yet
         self.pending_tracks = []
 
         # Tracks that were valid but validation failed later on
-        self.cancelled_tracks = []
+        self.n_cancelled_tracks = 0
+
+        # Tracks, that are valid and have transitted.
+        self.n_terminated_tracks = 0
 
         self.detection_algorithm = dbscan_standalone
         self.detection_algorithm = msds_standalone
@@ -159,7 +172,9 @@ class Detector(ProcessingModule):
         :return:
         """
         # if settings.detection.multi_proc:
-        self.pool.close()
+        POOL.close()
+        # self.pool.close()
+        # self.pool.join()
 
     def process(self, obs_info, input_data, output_data):
         """
@@ -173,33 +188,25 @@ class Detector(ProcessingModule):
         """
 
         obs_info['iter_count'] = self._iter_count
-        obs_info['transitted_tracks'] = []
-        obs_info['transitted_tracks_msds'] = []
 
         # Skip the first few blobs (to allow for an accurate noise estimation to be determined)
         if self._iter_count < 2:
             return obs_info
 
-        self.channels, self._doppler_mask = apply_doppler_mask(self._doppler_mask, self.channels,
-                                                               settings.detection.doppler_range,
-                                                               obs_info)
-
-        obs_info['doppler_mask'] = self._doppler_mask
-
         if not self.data_dump:
-            filtered_data = filtering(input_data, obs_info)
 
+            # self.pool = Pool(3, maxtasksperchild=500)
             # plot_TLE(obs_info, input_data, tle_target)
-            new_tracks = detection(pool, _iter_count, filtered_data, obs_info, channels)
+            new_tracks = self.detection_algorithm(self._iter_count, input_data, obs_info, obs_info['channels'])
 
-            log.info('[Iter {}]. Found {} beam_candidates'.format(_iter_count, len(new_tracks)))
+            log.info('[Iter {}]. Found {} beam_candidates'.format(self._iter_count, len(new_tracks)))
 
             # [Track Association] Create new tracks from clusters or merge clusters into existing
             tracks = data_association(self.pending_tracks, new_tracks, obs_info, notifications=False,
                                       save_candidates=False)
 
             # [Track Termination] Check each track and determine if the detection object has transitted outside FoV
-            tracks = active_tracks(obs_info, tracks, _iter_count)
+            tracks = active_tracks(obs_info, tracks, self._iter_count)
 
             # reset pending tracks
             pending_tracks = []
@@ -217,14 +224,20 @@ class Detector(ProcessingModule):
             total = len(pending_tracks) + len(terminated_tracks) + len(cancelled_tracks)
 
             log.info('[Iteration {:d}]. Pending {:d}, Terminated: {:d}, Cancelled: {:d}. Total: {:d}' \
-                     .format(_iter_count, len(pending_tracks), len(terminated_tracks), len(cancelled_tracks), total))
+                     .format(self._iter_count, len(pending_tracks), len(terminated_tracks), len(cancelled_tracks),
+                             total))
 
             self.pending_tracks = pending_tracks
-            self.terminated_tracks = terminated_tracks
-            self.cancelled_tracks = cancelled_tracks
+            self.n_terminated_tracks += len(terminated_tracks)
+            self.n_cancelled_tracks += len(cancelled_tracks)
 
-            obs_info['terminated_tracks'] = self.terminated_tracks
-            obs_info['cancelled_tracks'] = self.cancelled_tracks
+            for j, candidate in enumerate(pending_tracks):
+                i = j + self.n_terminated_tracks + self.n_cancelled_tracks
+                log.info("RSO %d (PENDING): %s" % (i, candidate.state_str()))
+
+            for j, candidate in enumerate(terminated_tracks):
+                i = j + self.n_terminated_tracks + self.n_cancelled_tracks
+                log.info("RSO %d (TERMINATED): %s" % (i, candidate.state_str()))
         else:
             obs_name = settings.observation.name
             # obs_name = 'norad_41128'
@@ -246,10 +259,12 @@ class Detector(ProcessingModule):
 
         pickle.dump(obs_info, open('{}/obs_info_{}.pkl'.format(out_dir, self._iter_count), "wb"))
 
-        np.save('{}/{}_{}.pkl'.format(out_dir, 'input_data', self._iter_count), input_data[:, self._doppler_mask, :])
+        np.save('{}/{}_{}.pkl'.format(out_dir, 'input_data', self._iter_count), input_data)
 
         return obs_info
 
+
+POOL = Pool(8, maxtasksperchild=500)
 
 if __name__ == '__main__':
     log = logging.getLogger('')
@@ -259,7 +274,7 @@ if __name__ == '__main__':
     ch.setFormatter(str_format)
     log.addHandler(ch)
 
-    pool = Pool(12)
+    pool = POOL
     root = '/home/denis/.birales/debug/detection/'
 
     detection = dbscan_standalone
@@ -285,7 +300,7 @@ if __name__ == '__main__':
     target = targets[1]
     in_dir = os.path.join(root, target.name)
     channels = pickle.load(open(os.path.join(in_dir, 'channels.pkl'), 'rb'))
-    for _iter_count in range(4, 9):
+    for _iter_count in range(2, 9):
         t0 = time.time()
         input_data = np.load(os.path.join(in_dir, 'input_data_{}.pkl.npy'.format(_iter_count)))
         obs_info = pickle.load(open(os.path.join(in_dir, 'obs_info_{}.pkl'.format(_iter_count)), 'rb'))
@@ -295,7 +310,7 @@ if __name__ == '__main__':
         filtered_data = filtering(input_data, obs_info)
 
         # plot_TLE(obs_info, input_data, tle_target)
-        new_tracks = detection(pool, _iter_count, filtered_data, obs_info, channels)
+        new_tracks = detection(_iter_count, filtered_data, obs_info, channels)
 
         log.info('[Iter {}]. Found {} beam_candidates'.format(_iter_count, len(new_tracks)))
 

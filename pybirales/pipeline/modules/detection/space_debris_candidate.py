@@ -317,7 +317,7 @@ class SpaceDebrisTrack:
             'intercept': self.intercept,
             'r_value': self.r_value,
             'tx': self._obs_info['transmitter_frequency'],
-            'created_at': datetime.datetime.utcnow(),
+            'created_at': self._created_at,
             'track_size': self.size,
             'ref_data': {
                 'd': self.ref_data['doppler'],

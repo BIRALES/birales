@@ -12,7 +12,7 @@ from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 def triangle_filter(input_data, obs_info):
     for b in range(0, input_data.shape[0]):
         beam_data = input_data[b, ...]
-        local_thresh = threshold_triangle(beam_data, nbins=2048)
+        local_thresh = threshold_triangle(beam_data, nbins=1024)
         local_filter_mask = beam_data < local_thresh
 
         beam_data[local_filter_mask] = -100
@@ -21,8 +21,7 @@ def triangle_filter(input_data, obs_info):
 
 
 def sigma_clip(input_data, obs_info):
-    threshold = 3 * obs_info['channel_noise_std'][:, obs_info['doppler_mask'], ...] + obs_info['channel_noise'][:,
-                                                                                      obs_info['doppler_mask'], ...]
+    threshold = 3 * obs_info['channel_noise_std'] + obs_info['channel_noise']
     t2 = np.expand_dims(threshold, axis=2)
     input_data[input_data <= t2] = 0
 
@@ -137,8 +136,8 @@ class RemoveTransmitterChannelFilter(InputDataFilter):
         mean_bs = np.mean(bs, axis=1)
         std_bs = np.std(bs, axis=1)
 
-        mean_bsr = np.repeat(mean_bs[:, np.newaxis], 8192, axis=1)
-        std_bsr = np.repeat(std_bs[:, np.newaxis], 8192, axis=1)
+        mean_bsr = np.repeat(mean_bs[:, np.newaxis], data.shape[1], axis=1)
+        std_bsr = np.repeat(std_bs[:, np.newaxis], data.shape[1], axis=1)
 
         ndx = np.column_stack(np.where(bs > mean_bsr + 3 * std_bsr))
 
@@ -216,14 +215,17 @@ class Filter(ProcessingModule):
         """
 
         # Skip the first blob
-        if self._iter_count < 2:
+        if self._iter_count < 0:
             return
 
+        # print '\nbefore filter', self._iter_count, input_data[input_data > 0].shape
         # Apply the filters on the data
         for f in self._filters:
             f.apply(input_data, obs_info)
 
         output_data[:] = input_data
+
+        # print '\nafter filter', self._iter_count, input_data[input_data > 0].shape
 
         return obs_info
 

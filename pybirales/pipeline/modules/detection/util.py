@@ -3,13 +3,16 @@ import logging as log
 import pandas as pd
 from scipy import stats
 
-from msds.util import timeit
 from msds.visualisation import *
 from pybirales.events.events import TrackTransittedEvent
 from pybirales.events.publisher import publish
 from pybirales.pipeline.modules.detection.exceptions import DetectionClusterIsNotValid
 from pybirales.pipeline.modules.detection.space_debris_candidate import SpaceDebrisTrack
 from pybirales.services.post_processing.tdm_persister import persist
+
+
+def __id(obj):
+    return id(obj) % 1000
 
 
 def apply_doppler_mask(doppler_mask, channels, doppler_range, obs_info):
@@ -54,54 +57,6 @@ def _debug_msg(cluster, iter_count):
 
 
 # @timeit
-def aggregate_clusters_old(candidates, new_clusters, obs_info, notifications=False, save_candidates=False):
-    """
-    Create Space Debris Tracks from the detection clusters identified in each beam
-
-    :param clusters:
-    :return:
-    """
-
-    for cluster in new_clusters:
-        for candidate in candidates:
-            # If beam candidate is similar to candidate, merge it.
-            if candidate.is_parent_of(cluster):
-                try:
-                    candidate.add(cluster)
-                except DetectionClusterIsNotValid:
-                    log.debug('Beam candidate {} could not be added to track {:03}'.format(
-                        _debug_msg(cluster, obs_info['iter_count']), id(candidate) % 1000))
-                else:
-                    log.debug(
-                        'Beam candidate {} added to track {:03}'.format(_debug_msg(cluster, obs_info['iter_count']),
-                                                                        id(candidate) % 1000))
-
-                    break
-        else:
-            # Beam cluster does not match any candidate. Create a new candidate track from it.
-            try:
-                sd = SpaceDebrisTrack(obs_info=obs_info, cluster=cluster)
-            except DetectionClusterIsNotValid:
-                continue
-
-            log.debug('Created new track {} from Beam candidate {}'.format(id(sd),
-                                                                           _debug_msg(cluster, obs_info['iter_count'])))
-
-            # Add the space debris track to the candidates list
-            candidates.append(sd)
-
-    # Notify the listeners, that a new detection was made
-    if notifications:
-        [candidate.send_notification() for candidate in candidates]
-
-    # Save candidates that were updated
-    if save_candidates:
-        [candidate.save() for candidate in candidates if not candidate.saved]
-
-    return candidates
-
-
-@timeit
 def data_association(tracks, tentative_tracks, obs_info, notifications=False, save_candidates=False):
     """
     Create Space Debris Tracks from the detection clusters identified in each beam
@@ -109,22 +64,31 @@ def data_association(tracks, tentative_tracks, obs_info, notifications=False, sa
     :param clusters:
     :return:
     """
-
+    print len(tentative_tracks), len(tracks)
     for tentative_track in tentative_tracks:
         for track in tracks:
+            print "Comparing track {} with tentative {}".format(__id(track), __id(tentative_track))
             # do not compare with cancelled or terminated tracks
             if track.cancelled or track.terminated:
+                print "track {} {} {}".format(__id(track), track.cancelled, track.cancelled)
                 continue
 
             if track.is_parent_of(tentative_track):
                 try:
+                    old = __id(track)
                     track.associate(tentative_track)
+                    print "track {} is parent with tentative {}. new: {}".format(old, __id(tentative_track),
+                                                                                 __id(track))
                 except DetectionClusterIsNotValid:
                     # Upon association, the track is no longer valid
+                    print "track {} is parent with tentative {}. DetectionClusterIsNotValid".format(__id(track), __id(
+                        tentative_track), )
                     pass
                 else:
-                    # no need to check the other candidates. Tentative track is added to the first matching track
+                    # no need to check the other tracks. Tentative track is added to the first matching track
                     break
+            else:
+                print "track {} is not parent with tentative {}".format(__id(track), __id(tentative_track))
         else:
             # Beam cluster does not match any candidate. Create a new candidate track from it.
             try:
@@ -132,9 +96,8 @@ def data_association(tracks, tentative_tracks, obs_info, notifications=False, sa
             except DetectionClusterIsNotValid:
                 continue
 
-            log.debug('Created new track {} from Beam candidate {}'.format(id(new_track),
-                                                                           _debug_msg(tentative_track,
-                                                                                      obs_info['iter_count'])))
+            print('Created new track {} from Beam candidate {}'.format(id(new_track), _debug_msg(tentative_track,
+                                                                                                 obs_info['iter_count'])))
 
             # Add the space debris track to the candidates list
             tracks.append(new_track)
@@ -150,7 +113,7 @@ def data_association(tracks, tentative_tracks, obs_info, notifications=False, sa
     return tracks
 
 
-@timeit
+# @timeit
 def active_tracks(obs_info, tracks, iter_count):
     """
 

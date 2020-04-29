@@ -56,7 +56,7 @@ class RawDataReader(ProcessingModule):
 
         self._base_filepath = config.filepath.split('.')[0]
 
-        self._read_count = 0
+        self._read_count = 48
         self._raw_file_counter = 0
 
         # Call superclass initialiser

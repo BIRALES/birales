@@ -43,7 +43,9 @@ def get_synced_files(rso_files):
     synced_files = {
         'local_and_remote': [],
         'remote_only': [],
-        'local_only': []
+        'local_only': [],
+        'all_local': [],
+        'all_remote': []
     }
 
     for raw_rso_file in rso_files:
@@ -53,11 +55,15 @@ def get_synced_files(rso_files):
 
                 if os.path.exists(os.path.join(LOCAL_DATA_DIR, truncated_raw_rso_file)):
                     synced_files['local_and_remote'].append(raw_rso_file)
+                    synced_files['all_local'].append(os.path.join(LOCAL_DATA_DIR, truncated_raw_rso_file))
+                    synced_files['all_remote'].append(raw_rso_file)
                 else:
                     synced_files['remote_only'].append(raw_rso_file)
+                    synced_files['all_remote'].append(raw_rso_file)
                 break
         else:
             synced_files['local_only'].append(raw_rso_file)
+            synced_files['all_local'].append(raw_rso_file)
 
     return synced_files
 

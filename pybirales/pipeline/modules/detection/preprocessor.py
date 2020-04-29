@@ -5,6 +5,7 @@ import numpy as np
 from pybirales import settings
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
+from pybirales.pipeline.modules.detection.util import apply_doppler_mask
 from pybirales.repository.models import Observation
 
 
@@ -19,11 +20,14 @@ class PreProcessor(ProcessingModule):
 
         self._moving_avg_period = settings.detection.n_noise_samples
 
-        self.channel_noise = np.zeros(shape=(32, 8192, self._moving_avg_period))
+        self.channel_noise = np.zeros(shape=(settings.beamformer.nbeams, 4110, self._moving_avg_period))
 
-        self.channel_noise_std = np.zeros(shape=(32, 8192, self._moving_avg_period))
+        self.channel_noise_std = np.zeros(shape=(settings.beamformer.nbeams, 4110, self._moving_avg_period))
 
         self._observation = None
+
+        self.channels = None
+        self._doppler_mask = None
 
         # Flag that indicates whether the configuration was persisted
         self._config_persisted = False
@@ -39,6 +43,7 @@ class PreProcessor(ProcessingModule):
         :param iter_count:
         :return:
         """
+        # print power_data.shape
         self.channel_noise[:, :, iter_count % self._moving_avg_period] = np.mean(power_data, axis=2)
         self.channel_noise_std[:, :, iter_count % self._moving_avg_period] = np.std(power_data, axis=2)
 
@@ -61,18 +66,28 @@ class PreProcessor(ProcessingModule):
         """
 
         # Skip the first blob
-        if self._iter_count < 2:
+        if self._iter_count < 0:
             return
 
+        self.channels, self._doppler_mask = apply_doppler_mask(self._doppler_mask, self.channels,
+                                                               settings.detection.doppler_range,
+                                                               obs_info)
+        if not 'doppler_mask' in obs_info:
+            obs_info['doppler_mask'] = self._doppler_mask
+            obs_info['channels'] = self.channels
+
+        # print input_data.shape
+        # print len(self._doppler_mask)
         # Process only 1 polarisation
-        data = input_data[0, :, :, :]
-
-
+        data = input_data[0, :, 2392:6502, :]
+        # print data.shape
         power_data = self._power(data)
 
         # Recalculate channel noise in db
         obs_info['channel_noise'], obs_info['channel_noise_std'] = self._get_noise_estimation(power_data, self.counter)
         obs_info['mean_noise'] = np.mean(obs_info['channel_noise'])
+
+        power_data = power_data - obs_info['channel_noise'][..., np.newaxis]
 
         # If the configuration was not saved AND the number of noise samples is sufficient, save the noise value.
         if not self._config_persisted and self.counter >= settings.detection.n_noise_samples:
@@ -127,6 +142,7 @@ class PreProcessor(ProcessingModule):
         # Generate output blob
         return ChannelisedBlob(self._config, [
             ('nbeams', input_shape['nbeams']),
-            ('nchans', input_shape['nchans']),
+            # ('nchans', input_shape['nchans']),
+            ('nchans', 4110),
             ('nsamp', input_shape['nsamp'])
         ], datatype=np.float)
