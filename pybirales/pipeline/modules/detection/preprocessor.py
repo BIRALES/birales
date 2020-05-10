@@ -79,8 +79,10 @@ class PreProcessor(ProcessingModule):
         # print input_data.shape
         # print len(self._doppler_mask)
         # Process only 1 polarisation
-        data = input_data[0, :, 2392:6502, :]
-        # print data.shape
+
+        # data = input_data[0, :, 2392:6502, :]
+        data = input_data[0][:, self._doppler_mask, :]
+
         power_data = self._power(data)
 
         # Recalculate channel noise in db

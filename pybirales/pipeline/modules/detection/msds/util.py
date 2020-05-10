@@ -164,9 +164,39 @@ def _create_cluster(cluster_data, channels, obs_info, beam_id, iter_count):
     })
 
 
-def grad2(cluster):
+# @njit("float64[:, :, :](float64[:,:, :], int32)")
+def agg(cluster, axis):
+    xx = cluster[:, axis]
+
+    u = np.unique(xx)
+
+    if len(u) == len(xx):
+        # no aggregations to be made
+        return cluster
+
+    new_cluster = np.zeros(shape=(len(u), 3))
+    j = 0
+    for group in u:
+        x = cluster[xx == group]
+        new_cluster[j] = np.median(x, axis=0)
+        j += 1
+
+    return new_cluster
+
+
+def grad2(cluster, ir=None):
+    if ir == -0.09123:
+        return -0.09123
+
     _, i = np.unique(cluster[:, 1], return_index=True)
     cluster = cluster[i]
+
+    _, i = np.unique(cluster[:, 0], return_index=True)
+    cluster = cluster[i]
+
+    # cluster = agg(cluster, 1)
+    # cluster = agg(cluster, 0)
+
     cov = np.cov(cluster[:, 1], cluster[:, 0]).flatten()
 
     return cov[0] / (cov[1] + 1e-9)

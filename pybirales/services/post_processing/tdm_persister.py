@@ -125,6 +125,7 @@ class TDMPersister:
     def save_mat(self, obs_info, sd_track, detection_num):
         filepath = self._get_debug_filename(settings.observation.name, detection_num)
 
+        reduced = sd_track.reduce_data()
         io.savemat(filepath, dict(
             filename=settings.observation.name,
             raw_filepath=settings.rawdatareader.filepath,
@@ -132,20 +133,35 @@ class TDMPersister:
             creation_date=datetime.utcnow().isoformat('T'),
             beams=np.unique(sd_track.data['beam_id']),
             detection=list(sd_track.reduce_data(remove_duplicate_epoch=True, remove_duplicate_channel=True)),
-            data=sd_track.data.to_dict(),
+            data={
+                'time': [str(t) for t in sd_track.data['time']],
+                'time_sample': sd_track.data['time_sample'].tolist(),
+                'channel': sd_track.data['channel'].tolist(),
+                'channel_sample': sd_track.data['channel_sample'].tolist(),
+                'snr': sd_track.data['snr'].tolist(),
+                'beam_id': sd_track.data['beam_id'].tolist(),
+            },
             target_name=settings.observation.target_name,
             tx=obs_info['transmitter_frequency'],
             pointings={
                 'ra_dec': obs_info['pointings'],
-                'az_el': obs_info['beam_az_el'].tolist(),
+                'az_el': obs_info['beam_az_el'],
                 'declination': obs_info['declination']
             },
             reference=sd_track.ref_data,
-            integration_interval=obs_info['sampling_time']
+            sampling_time=obs_info['sampling_time'],
+            reduced_data={
+                'time': [str(t) for t in reduced['time']],
+                'time_sample': reduced['time_sample'].tolist(),
+                'channel': reduced['channel'].tolist(),
+                'channel_sample': reduced['channel_sample'].tolist(),
+                'snr': reduced['snr'].tolist(),
+                'beam_id': reduced['beam_id'].tolist(),
+            }
         ), do_compression=True)
 
         # Save a summary of the detection data to csv
-        summary_filepath = os.path.join(os.path.dirname(filepath), 'summary.csv')
+        summary_filepath = os.path.join(os.path.dirname(filepath), '../summary.csv')
 
         mid = sd_track.data['snr'].idxmax()
 
@@ -163,7 +179,8 @@ class TDMPersister:
             'created_at': sd_track._created_at,
             'ref_doppler': sd_track.ref_data['doppler'],
             'ref_time': sd_track.ref_data['time'].isoformat('T'),
-            'ref_snr': sd_track.ref_data['snr']
+            'ref_snr': sd_track.ref_data['snr'],
+            'iterations': ','.join([str(b) for b in sd_track.data['iter'].unique().tolist()]),
         }
 
         with open(summary_filepath, 'a') as f:

@@ -32,14 +32,25 @@ def apply_doppler_mask(doppler_mask, channels, doppler_range, obs_info):
 
         doppler_mask = np.bitwise_and(channels < b, channels > a)
 
+
         # print a
         # print b
         # print len(channels)
         # print np.argmin(channels < b)
         # print np.argmax(channels > a)
+        # print doppler_range
         # print channels[2392], channels[6502]
 
+        # print "tx is at:", np.argmin(channels <= obs_info['transmitter_frequency'])
+        # print "tx is at:", np.argmax(channels <= obs_info['transmitter_frequency'])
+        # print "tx is at:", np.argmin(channels >= obs_info['transmitter_frequency'])
+        # print "tx is at:", np.argmax(channels >= obs_info['transmitter_frequency'])
+
         channels = channels[doppler_mask]
+
+        # print min(channels), max(channels), len(channels)
+
+
 
     return channels, doppler_mask
 
@@ -64,31 +75,23 @@ def data_association(tracks, tentative_tracks, obs_info, notifications=False, sa
     :param clusters:
     :return:
     """
-    print len(tentative_tracks), len(tracks)
-    for tentative_track in tentative_tracks:
-        for track in tracks:
+    # print len(tentative_tracks), len(tracks)
+    for i, tentative_track in enumerate(tentative_tracks):
+        for j, track in enumerate(tracks):
             print "Comparing track {} with tentative {}".format(__id(track), __id(tentative_track))
             # do not compare with cancelled or terminated tracks
             if track.cancelled or track.terminated:
-                print "track {} {} {}".format(__id(track), track.cancelled, track.cancelled)
+                print "track {} was terminated or cancelled {} {}".format(__id(track), track.cancelled, track.cancelled)
                 continue
 
             if track.is_parent_of(tentative_track):
-                try:
-                    old = __id(track)
-                    track.associate(tentative_track)
-                    print "track {} is parent with tentative {}. new: {}".format(old, __id(tentative_track),
-                                                                                 __id(track))
-                except DetectionClusterIsNotValid:
-                    # Upon association, the track is no longer valid
-                    print "track {} is parent with tentative {}. DetectionClusterIsNotValid".format(__id(track), __id(
-                        tentative_track), )
-                    pass
-                else:
-                    # no need to check the other tracks. Tentative track is added to the first matching track
+                print "track {} associated m={:0.2f}".format(__id(track), track.m)
+                associated = track.associate(tentative_track)
+                if associated:
                     break
             else:
-                print "track {} is not parent with tentative {}".format(__id(track), __id(tentative_track))
+                print "Track {} and tentative {} do not match".format(__id(track), __id(tentative_track))
+
         else:
             # Beam cluster does not match any candidate. Create a new candidate track from it.
             try:
@@ -96,8 +99,8 @@ def data_association(tracks, tentative_tracks, obs_info, notifications=False, sa
             except DetectionClusterIsNotValid:
                 continue
 
-            print('Created new track {} from Beam candidate {}'.format(id(new_track), _debug_msg(tentative_track,
-                                                                                                 obs_info['iter_count'])))
+            print "Created new track {} m={:0.2f} from {}".format(__id(new_track), new_track.m, __id(tentative_track))
+            log.info('New track initiated {}'.format(__id(new_track)))
 
             # Add the space debris track to the candidates list
             tracks.append(new_track)

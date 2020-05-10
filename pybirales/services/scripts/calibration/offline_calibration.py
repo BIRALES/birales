@@ -55,6 +55,8 @@ def calibrate(obs_root, config_filepath, parameters):
 
     model = calibration_obs.model
 
+    model.save()
+
     return np.array(model.real), np.array(model.imag), source, obs_name, obs_info, corr_matrix_filepath
 
 
@@ -296,7 +298,8 @@ if __name__ == '__main__':
     CONFIG_ROOT = '/home/denis/.birales/configuration/'
     DATA_ROOT = '/media/denis/backup/birales/2019'
     config_filepath = [os.path.join(CONFIG_ROOT, 'birales.ini'),
-                       os.path.join(CONFIG_ROOT, 'offline_calibration.ini')]
+                       os.path.join(CONFIG_ROOT, 'offline_calibration.ini'),
+                       os.path.join(CONFIG_ROOT, 'detection_old.ini')]
 
     # [Chapter 2] Visualise the calibration coefficients outputted by the calibration algorithm
     # calibration_coefficients_analysis(CACHE, OBSERVATIONS, PARAMETERS, config_filepath)
@@ -304,7 +307,7 @@ if __name__ == '__main__':
     # [Chapter 5] Calibrate an observation offline
     # To be used for detection campaign
     CALIBRATORS = [
-        '../2018/2018_02_27/FesTauA1',  # 28/02/2018 to 05/03/2018 [VALID]
+        '../2018/2018_02_27/FesTauA1',  # 28/02/2018 to 05/03/2018 [VALID] (needs detection old for old scf)
         # '2019_02_22/vir_21_02_2019',    # Campaign for 27/02/2019 to 05/03/2019 [VALID]
         # '2019_03_06/cyg_06_03_2019',    # Campaign for 01/04/2018 to 10/04/2019 [VALID - not close]
         # '2019_08_14/CAS_A_FES',         # Campaign for 30/07/2019 to 25/08/2019 [VALID]

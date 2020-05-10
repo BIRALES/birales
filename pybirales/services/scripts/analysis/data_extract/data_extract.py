@@ -13,7 +13,8 @@ def get_target_observations(observations):
     t_obs = []
     for obs in observations:
         if 'norad' not in obs.lower():
-            continue
+            if 'tiangong' not in obs.lower():
+                continue
         t_obs.append(obs)
 
     obs_df = pd.DataFrame(columns=['date', 'obs_name', 'raw_filepath'])

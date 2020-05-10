@@ -61,14 +61,14 @@ IMAGE_SEG_TESTS = TestSuite('filter_tests', [
 
 DETECTION_TESTS = TestSuite('detection_tests', [
     Test(triangle_filter, [msds_detector, dbscan_detector, hough_detector]),
-    Test(sc_3_filter, [msds_detector, dbscan_detector, hough_detector]),
-    Test(sc_4_filter, [msds_detector, dbscan_detector, hough_detector]),
-    Test(None, [astride_detector, cfar_detector])
+    # Test(sc_3_filter, [msds_detector, dbscan_detector, hough_detector]),
+    # Test(sc_4_filter, [msds_detector, dbscan_detector, hough_detector]),
+    Test(no_filter, [astride_detector])
 ])
 
 DETECTION_TESTS_DEBUG = TestSuite('detection_tests', [
-    Test(triangle_filter, [msds_detector]),
-    # Test(triangle_filter, [msds_detector, dbscan_detector]),
+    # Test(triangle_filter, [msds_detector]),
+    Test(triangle_filter, [msds_detector, dbscan_detector]),
     # Test(no_filter, [astride_detector])
 ])
 

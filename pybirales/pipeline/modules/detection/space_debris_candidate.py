@@ -7,13 +7,11 @@ import numpy as np
 import pandas as pd
 from mongoengine import *
 from scipy import stats
-from scipy.stats import pearsonr
 from sklearn import linear_model
 
 from pybirales import settings
 from pybirales.events.events import TrackCreatedEvent, TrackModifiedEvent
 from pybirales.events.publisher import EventsPublisher
-from pybirales.pipeline.modules.detection.exceptions import DetectionClusterIsNotValid
 from pybirales.repository.models import SpaceDebrisTrack as SpaceDebrisTrackModel
 
 _linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
@@ -71,10 +69,6 @@ class SpaceDebrisTrack:
 
         # The radar cross section of the track
         self._rcs = None
-
-        # Doppler shift at
-
-        #
 
         # The target we are trying to track
         self._target = None
@@ -163,7 +157,7 @@ class SpaceDebrisTrack:
 
     def _update(self, new_df):
         self.data = new_df
-        self.m, self.intercept, self.r_value, self.p_value, self.std_err = stats.linregress(
+        self.m, self.intercept, self.r_value, self.p_value, self.std_err = self.linear_model(
             self.data['channel_sample'], self.data['time_sample'])
 
         self._last_iter_count = self.data['iter'].max()
@@ -176,25 +170,28 @@ class SpaceDebrisTrack:
         self.ref_data['channel'] = self.data.iloc[mid]['channel']
         self.ref_data['channel_sample'] = self.data.iloc[mid]['channel_sample']
         self.ref_data['doppler'] = (self.data.iloc[mid]['channel'] - self._obs_info['transmitter_frequency']) * 1e6
-        self.ref_data['gradient'] = 1e6 * (self.data['channel'].iloc[0] - self.data['channel'].iloc[-1]) / (
-                self.data['time'].iloc[0] - self.data['time'].iloc[-1]).total_seconds()
-        self.ref_data['snr'] = float(np.median(self.data['snr']))
+        self.ref_data['gradient'] = self.m
+        self.ref_data['snr'] = float(np.mean(self.data['snr']))
         self.ref_data['psnr'] = float(np.max(self.data['snr']))
         self._to_save = True
 
     def state_str(self):
         return "df:{:3.2f} Hz at {:%H:%M:%S on %d.%m.%y} across {} beams\n" \
-               "\t\t\t\t\t\t- INFO - Score: {:0.3f}, N: {}, SNR: {:2.2f} dB (PSNR:{:2.2f} dB) \n" \
-               "\t\t\t\t\t\t- INFO - df/dt:{:3.2f} Hz/s. Beams: {}".format(
+               "\t\t\t\t\t\t- INFO - Score: {:0.3f}, N: {} ({} unique), SNR: {:2.2f} dB (PSNR:{:2.2f} dB) \n" \
+               "\t\t\t\t\t\t- INFO - df/dt:{:3.2f} Hz/s. Beams: {}, C:{:3.2f}, T:{:3.2f}, TN:{:3.2f}".format(
             self.ref_data['doppler'],
             self.ref_data['time'],
             self.activated_beams,
             self.r_value,
+            len(self.data['beam_id']),
             self.size,
             self.ref_data['snr'],
             self.ref_data['psnr'],
             self.ref_data['gradient'],
-            str(self.data['beam_id'].unique()[:5])
+            str(self.data['beam_id'].unique()[:5]),
+            np.mean(self.data['channel_sample']),
+            np.mean(self.data['time_sample']),
+            np.max(self.data['time_sample'])
         )
 
     def associate(self, cluster_df):
@@ -226,15 +223,13 @@ class SpaceDebrisTrack:
                 log.debug("Candidate {}, dropped since missing score is not high enough ({:0.3f})".format(g, score))
                 return False, None
 
-            r_value, p = pearsonr(candidate['channel_sample'], candidate['time_sample'])
+            m, c, r_value, p, _ = self.linear_model(candidate['channel_sample'], candidate['time_sample'])
 
             if r_value > -.99:
                 log.debug("Candidate {}, dropped since r-value is not high enough ({:0.3f})".format(g, r_value))
             elif p > 0.01:
                 log.debug("Candidate {}, dropped since p-value is not low enough ({:0.3f})".format(g, p))
             else:
-                m = 1e6 * (candidate['channel'].iloc[0] - candidate['channel'].iloc[-1]) / (
-                        candidate['time'].iloc[0] - candidate['time'].iloc[-1]).total_seconds()
 
                 if settings.detection.gradient_thold[0] >= m >= settings.detection.gradient_thold[1]:
                     return True, candidate
@@ -247,9 +242,11 @@ class SpaceDebrisTrack:
 
         if is_valid:
             self._update(new_data)
-        else:
-            # If fitting failed, track data remains unchanged, and raise an exception
-            raise DetectionClusterIsNotValid(cluster_df)
+
+        return is_valid
+        # else:
+        #     # If fitting failed, track data remains unchanged, and raise an exception
+        #     raise DetectionClusterIsNotValid(cluster_df)
 
     def is_valid(self):
         """
@@ -273,12 +270,12 @@ class SpaceDebrisTrack:
         if not g_thold[0] >= self.ref_data['gradient'] >= g_thold[1]:
             return False, 'Gradient is not within valid range'
 
-        if missing_score(self.data['time_sample']) > 0.5:
-            return False, 'High missing score'
+        if missing_score(self.data['time_sample']) > 0.6:
+            return False, 'High missing score {:0.3f}'.format(missing_score(self.data['time_sample']))
 
         return True, None
 
-    def is_parent_of(self, detection_cluster):
+    def is_parent_of_old(self, cluster):
         """
         Determine whether a detection cluster should be associated with this space debris track by giving
         a similarity score. Similarity between beam candidate and space debris track is determined by
@@ -288,22 +285,54 @@ class SpaceDebrisTrack:
         :return:
         """
 
-        cluster_m, cluster_c, _, _, _ = stats.linregress(detection_cluster['channel_sample'],
-                                                         detection_cluster['time_sample'])
+        track_data = self.aggregate_data(self.data, remove_duplicate_epoch=True, remove_duplicate_channel=True)
+        cluster_data = self.aggregate_data(cluster, remove_duplicate_epoch=True, remove_duplicate_channel=True)
+
+        cluster_m, cluster_c, _, _, _ = self.linear_model(cluster_data['channel_sample'], cluster_data['time_sample'])
+        track_m, track_c, _, _, _ = self.linear_model(track_data['channel_sample'], track_data['time_sample'])
+
+        m2, _, _, _, _ = self.linear_model(track_data['channel_sample'] + cluster_data['channel_sample'],
+                                           track_data['time_sample'] + cluster_data['time_sample'])
 
         # cos_sim = dist.cosine([self.m, self.intercept], [cluster_m, cluster_c]) < settings.detection.similarity_thold
         m_thold = settings.detection.gradient_thold
-        x1 = np.mean(self.data['channel_sample'])
-        y1 = np.mean(self.data['time_sample'])
+        y1 = np.mean(track_data['channel_sample'])
+        x1 = np.mean(track_data['time_sample'])
 
-        x2 = np.mean(detection_cluster['channel_sample'])
-        y2 = np.mean(detection_cluster['time_sample'])
+        y2 = np.mean(cluster_data['channel_sample'])
+        x2 = np.mean(cluster_data['time_sample'])
 
-        m2 = (y2 - y1) / (x2 - x1)
+        # Gradient in terms of Hz/s
+        m2 = (y2 - y1) / (x2 - x1) * (self._obs_info['channel_bandwidth'] * 1e6) / self._obs_info['sampling_time']
 
-        v = np.array([self.m, cluster_m, m2])
+        v = np.array([track_m, cluster_m, m2])
 
-        return np.abs(np.std(v) / np.mean(v)) < 0.1 and m_thold[1] <= m2 <= m_thold[0]
+        print 'mean gradient', v, np.abs(np.std(v) / np.mean(v))
+        print x1, y1, x2, y2
+
+        return np.abs(np.std(v) / np.mean(v)) < 0.2 and m_thold[1] <= m2 <= m_thold[0]
+
+    def is_parent_of(self, cluster):
+        """
+        Determine whether a detection cluster should be associated with this space debris track by giving
+        a similarity score. Similarity between beam candidate and space debris track is determined by
+        cosine distance.
+
+        :param detection_cluster: The detection cluster with which the track is being compared
+        :return:
+        """
+        m_thold = settings.detection.gradient_thold
+        track_data = self.aggregate_data(self.data, remove_duplicate_epoch=True, remove_duplicate_channel=True)
+        cluster_data = self.aggregate_data(cluster, remove_duplicate_epoch=True, remove_duplicate_channel=True)
+
+        cluster_m, _, _, _, _ = self.linear_model(cluster_data['channel_sample'], cluster_data['time_sample'])
+        track_m, _, _, _, _ = self.linear_model(track_data['channel_sample'], track_data['time_sample'])
+        m2, _, _, _, _ = self.linear_model(pd.concat([track_data['channel_sample'], cluster_data['channel_sample']]),
+                                           pd.concat([track_data['time_sample'], cluster_data['time_sample']]))
+
+        v = np.array([track_m, cluster_m, m2])
+
+        return np.abs(np.std(v) / np.mean(v)) < 0.2 and m_thold[1] <= m2 <= m_thold[0]
 
     def _to_dict(self):
         to_save = {
@@ -397,12 +426,32 @@ class SpaceDebrisTrack:
 
         return reduced_df
 
+    def aggregate_data(self, data, remove_duplicate_epoch=True, remove_duplicate_channel=True):
+        """
+
+        :param remove_duplicate_epoch:
+        :param remove_duplicate_channel:
+        :return:
+        """
+
+        reduced_df = data
+
+        if remove_duplicate_epoch:
+            reduced_df = data.sort_values('snr', ascending=False).drop_duplicates(
+                subset=['time_sample', 'beam_id']).sort_values(by=['time_sample'])
+
+        if remove_duplicate_channel:
+            reduced_df = data.sort_values('snr', ascending=False).drop_duplicates(
+                subset=['time_sample', 'beam_id']).sort_values(by=['time_sample'])
+
+        return reduced_df
+
     def track_expired(self, obs_info):
         # First time sample of the track
         t_a = self.data['time'].min()
 
         # Last time sample of the track
-        t_b = self.data['time'].min()
+        t_b = self.data['time'].max()
 
         # Current track time span (aka track length
         t_l = t_b - t_a
@@ -414,3 +463,9 @@ class SpaceDebrisTrack:
         t_t = t_b + t_l
 
         return t_n > t_t
+
+    def linear_model(self, channel, time):
+        ds = self._obs_info['channel_bandwidth'] * 1e6
+        dt = self._obs_info['sampling_time']
+
+        return stats.linregress(x=time * dt, y=channel * ds)

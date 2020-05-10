@@ -253,17 +253,18 @@ def visualise_ir2_pub(data, org_data, group, ratio2):
     x_v1, y_v1 = eigen_vectors[:, sort_indices[0]]  # Eigenvector with largest eigenvalue
     x_v2, y_v2 = eigen_vectors[:, sort_indices[1]]  # Eigenvector with the second largest eigenvalue
 
-    scale_1 = 6
+    scale_1 = 25
     scale_2 = 2
 
-    ax = plt.axes()
-    plt.plot([x_v1 * -scale_1 * 1 + ms, x_v1 * scale_1 * 1 + ms],
-             [y_v1 * -scale_1 * 1 + mc, y_v1 * scale_1 * 1 + mc], color='black')
-    plt.plot([x_v2 * -scale_2 + ms, x_v2 * scale_2 + ms],
-             [y_v2 * -scale_2 + mc, y_v2 * scale_2 + mc], color='gray')
+    # ax = plt.axes()
+    fig, ax = plt.subplots(1)
+    ax.plot([x_v1 * -scale_1 * 1 + ms, x_v1 * scale_1 * 1 + ms],
+            [y_v1 * -scale_1 * 1 + mc, y_v1 * scale_1 * 1 + mc], color='black')
+    ax.plot([x_v2 * -scale_2 + ms, x_v2 * scale_2 + ms],
+            [y_v2 * -scale_2 + mc, y_v2 * scale_2 + mc], color='gray')
 
     # plt.plot(org_data[:, 1], org_data[:, 0], '.', color='red', markersize=15, zorder=1)
-    plt.plot(data[:, 1], data[:, 0], '.', color='k', markersize=12, zorder=2)
+    ax.plot(data[:, 1], data[:, 0], '.', color='k', markersize=12, zorder=2)
     ratio, _, _ = __ir2(data, min_n=15)
 
     # ax.text(0.05, 0.95,
@@ -275,21 +276,22 @@ def visualise_ir2_pub(data, org_data, group, ratio2):
     ax.xaxis.labelpad = 20
     ax.yaxis.labelpad = 20
     ax.set(xlabel='Sample', ylabel='Channel')
-
+    plt.tight_layout()
     plt.grid()
-    ax.figure.savefig('g={}_ir={:2.3}.pdf'.format(group, ratio))
+    ax.figure.savefig('5_g={}_ir={:2.3}.pdf'.format(group, ratio))
 
 
 def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negatives=None, pub=False):
     from msds import h_cluster
     color = 'r'
     zorder = 1
-    lw = 1
+    lw = 2
     figure_limits = (70, 4010)
-    if not pub:
+    # if not False:
+    if not positive:
         ax.text(x1 + 0.95 * (x2 - x1), y1 + 0.95 * (y2 - y1), i, color='k', fontsize=8, ha='right', va='top', zorder=10)
 
-    # if i == 1085:
+    # if i == 96 and positive:
     #     visualise_ir2_pub(positives, positives, i, -1)
 
     if positive:
@@ -310,13 +312,13 @@ def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negative
             ax.text(x1 + 0.5 * (x2 - x1), y1 + 0.5 * (y2 - y1), msg, color='blue', weight='bold',
                     fontsize=8, ha='center', va='center')
     else:
-        ax.plot(negatives[:, 1], negatives[:, 0], 'r.', zorder=1)
+        # ax.plot(negatives[:, 1], negatives[:, 0], '.', color='gray', zorder=1)
 
         if not pub:
             ax.text(x1 + 0.5 * (x2 - x1), y1 + 0.5 * (y2 - y1), '{}'.format(score), color='k', weight='bold',
                     fontsize=8, ha='center', va='center')
             import random
-            labels, u_groups = h_cluster(negatives, 3, min_length=5, i=i)
+            labels, u_groups = h_cluster(negatives, 4, min_length=5, i=i)
             colors = ['pink', 'b', 'k', 'c', 'm', 'y']
             for j, g in enumerate(u_groups):
                 c = negatives[np.where(labels == g)]
@@ -326,10 +328,9 @@ def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negative
 
                 ax.plot(c[:, 1], c[:, 0], '.', color=random.choice(colors), zorder=2)
 
-                print 'Cluster: {}, group: {}. ratio:{:0.3f}, ms: {:0.3f} length:{}: bbox:{}'.format(i, g, ratio,
-                                                                                                     ms,
-                                                                                                     np.shape(c),
-                                                                                                     (x1, x2, y1, y2))
+                print 'Leave: {}, group: {}. ratio:{:0.3f}, ms: {:0.3f} length:{}:'.format(i, g, ratio,
+                                                                                           ms,
+                                                                                           np.shape(c))
 
             # colors = ['pink', 'b', 'k', 'c', 'm', 'y']
             # for j, g in enumerate(sorted_groups):
@@ -339,7 +340,7 @@ def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negative
             #
             #     print 'Cluster: {}, group: {}. ratio:{}. length:{}: bbox:{}'.format(i, g, ratio, np.shape(c),
             #                                                                         (x1, x2, y1, y2))
-
+    print (x1, y1), x2 - x1, y2 - y1
     rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=lw, edgecolor=color, facecolor='none',
                              zorder=zorder)
 
@@ -392,9 +393,9 @@ def visualise_clusters(data, true_tracks, leaves, filename, limits=None, debug=F
             ax.plot(mx, my, '*', zorder=10, color='w', markeredgecolor='k',
                     markersize=7.5)
 
-            if not pub:
-                ax.text(x1 + 0.95 * (x2 - x1), y1 + 0.95 * (y2 - y1), j, color='k', fontsize=8, ha='right', va='top',
-                        zorder=10)
+            # if not pub:
+            ax.text(x1 + 0.95 * (x2 - x1), y1 + 0.95 * (y2 - y1), j, color='k', fontsize=8, ha='right', va='top',
+                    zorder=10)
             # Add the patch to the Axes
             ax.add_patch(rect)
 
@@ -424,7 +425,7 @@ def visualise_candidates(candidates, true_tracks, filename, limits=None, debug=F
         ax = set_limits(ax, limits)
         ax.xaxis.labelpad = 20
         ax.yaxis.labelpad = 20
-        plt.grid()
+
         ax.figure.savefig(filename)
 
 
@@ -444,7 +445,8 @@ def visualise_tracks(tracks, true_tracks, filename, limits=None, debug=False, pu
         ax = set_limits(ax, limits)
         ax.xaxis.labelpad = 20
         ax.yaxis.labelpad = 20
-        plt.grid()
+        plt.tight_layout()
+        ax.grid(b=True, which='major', color='#e0e0e0', linestyle='--')
         ax.figure.savefig(filename)
 
 
@@ -491,7 +493,7 @@ def visualise_post_processed_tracks(tracks, true_tracks, filename, limits=None, 
         ax.figure.savefig(filename)
 
 
-def visualise_filtered_data(ndx, true_tracks, filename, limits=None, debug=False):
+def visualise_filtered_data(ndx, true_tracks, filename, limits=None, debug=False, pub=False):
     if debug:
         fig, ax = plt.subplots(1)
         if limits:
@@ -508,11 +510,13 @@ def visualise_filtered_data(ndx, true_tracks, filename, limits=None, debug=False
             ax = visualise_true_tracks(ax, true_tracks)
         ax.set(xlabel='Sample', ylabel='Channel')
         ax = set_limits(ax, limits)
-        plt.grid()
+
+        ax.grid(b=True, which='major', color='#e0e0e0', linestyle='--')
+        plt.tight_layout()
         ax.figure.savefig(filename)
 
 
-def visualise_tree_traversal(ndx, true_tracks, clusters, leaves, filename, limits=None, vis=False):
+def visualise_tree_traversal(ndx, true_tracks, clusters, leaves, filename, limits=None, vis=False, pub=False):
     if vis:
         # plt.clf()
         fig, ax = plt.subplots(1)
@@ -520,31 +524,36 @@ def visualise_tree_traversal(ndx, true_tracks, clusters, leaves, filename, limit
         if limits:
             x_start, x_end, y_start, y_end = limits
             ndx = _partition(ndx, x_start, x_end, y_start, y_end)
+
         ax.plot(ndx[:, 1], ndx[:, 0], 'r.')
 
         ax = set_limits(ax, limits)
 
+        # print  x_start, x_end, y_start, y_end
         for leaf_id, (cluster, bbox) in enumerate(leaves):
             # cluster_id = i
             x1, x2, y1, y2 = bbox
-            if x_start * 0.5 < x1 < x_end * 1.5 and y_start * 0.5 < y1 < y_end * 1.5:
+            if x_start * 0.4 <= x1 <= x_end * 1.5 and y_start * 0.5 <= y1 <= y_end * 1.5:
                 # if j != 0:
                 #     cluster_id = j
-                __plot_leaf(ax, x1, y1, x2, y2, leaf_id, '', False, positives=None, negatives=cluster)
+                __plot_leaf(ax, x1, y1, x2, y2, leaf_id, '', False, positives=None, negatives=cluster, pub=pub)
 
         for i, (cluster, cluster_id, ratio, bbox) in enumerate(clusters):
             # cluster_id = i
             x1, x2, y1, y2, = bbox
-            if x_start * 0.5 < x1 < x_end * 1.5 and y_start * 0.5 < y1 < y_end * 1.5:
+            if x_start * 0.4 <= x1 <= x_end * 1.5 and y_start * 0.5 <= y1 <= y_end * 1.5:
                 # if j != 0:
                 #     cluster_id = j
-                __plot_leaf(ax, x1, y1, x2, y2, '', ratio, True, positives=cluster, negatives=None)
+                __plot_leaf(ax, x1, y1, x2, y2, i, ratio, True, positives=cluster, negatives=None, pub=pub)
 
         if true_tracks:
             ax = visualise_true_tracks(ax, true_tracks)
         ax.set(xlabel='Sample', ylabel='Channel')
         ax = set_limits(ax, limits)
-        plt.grid()
+
+        plt.tight_layout()
+        ax.grid(b=False)
+
         ax.figure.savefig(filename)
 
 
@@ -727,7 +736,7 @@ def plot_metric(metrics_df, metric, file_name=None):
 
 def mono_cylcer():
     return (cycler('color', ['k']) * cycler('markerfacecolor', ['w']) * cycler('markeredgecolor', ['k']) * cycler(
-        'linestyle', ['-']) * cycler('marker', ['.', '+', 'o', '^', 'x', '']))
+        'linestyle', ['-']) * cycler('marker', ['o', '+', 'x', '^', '.', '']))
     # return (cycler('color', ['k', 'gray']) * cycler('linestyle', ['-', '--', ':', '=.']) * cycler('marker', ['^', ',', '.']))
 
 
@@ -809,7 +818,11 @@ def plot_timings_detector(metrics_df, algorithms, file_name=None):
     fig, ax = plt.subplots(1)
     # algorithms = metrics_df.index.unique()
     errors_kw = dict(capsize=9, capthick=3, elinewidth=3, zorder=4, ecolor='#666666')
-    snrs = [1, 5, 10]
+    # snrs = [1, 5, 10]
+
+    u = metrics_df['snr'].unique()
+    snrs = [u.min(), np.median(u), u.max()]
+    snrs = [1.0, 3.0, 7.]
 
     bw = 0.4
     left = bw / 2.
@@ -829,7 +842,7 @@ def plot_timings_detector(metrics_df, algorithms, file_name=None):
         left += bw
 
         # legend['labels'].append('SNR = {} dB'.format(snr))
-    print l
+
     plt.xticks([0.6, 2.2, 3.8, 5.4], algorithms)
     plt.legend(['SNR = {:1.0f} dB'.format(snr) for snr in snrs])
 
@@ -909,12 +922,52 @@ def plot_TLE(obs_info, input_data, tle_target, beam_id=15):
 
 def plot_RSO_track(track, i):
     fig, ax = plt.subplots(1)
-    time = track.data['time_sample']
-    channel = track.data['channel_sample']
+    mask = track.data['beam_id'] == 14
+    time = track.data[mask]['time_sample']
+    channel = track.data[mask]['channel_sample']
     ax.plot(time, channel, '.')
+
+    reduced_track = track.reduce_data()
+
+    mask = reduced_track['beam_id'] == 14
+    t1 = reduced_track[mask]['time_sample']
+    c1 = reduced_track[mask]['channel_sample']
+    ax.plot(t1, c1, 'r+')
+
+    mean_x = np.mean(time)
+    mean_y = np.mean(channel)
+    ax.plot(mean_x, mean_y, '*')
     ax.set(xlabel='Sample', ylabel='Channel')
 
     ax.annotate('RSO {}'.format(i), (np.mean(time), np.mean(channel)))
+
+    ax.xaxis.labelpad = 20
+    ax.yaxis.labelpad = 20
+    plt.grid()
+
+    ax.figure.savefig('{}.png'.format(i))
+
+
+def plot_RSO_track_snr(track, i):
+    fig, ax = plt.subplots(1)
+    mask = track.data['beam_id'] == 14
+    time = track.data[mask]['time_sample']
+    snr = track.data[mask]['snr']
+    ax.plot(time, snr, '.')
+
+    reduced_track = track.reduce_data()
+
+    mask = reduced_track['beam_id'] == 14
+    t1 = reduced_track[mask]['time_sample']
+    c1 = reduced_track[mask]['snr']
+    ax.plot(t1, c1, 'r+')
+
+    mean_x = np.mean(time)
+    mean_y = np.mean(snr)
+    ax.plot(mean_x, mean_y, '*')
+    ax.set(xlabel='Sample', ylabel='SNR')
+
+    ax.annotate('RSO {}'.format(i), (np.mean(time), np.mean(snr)))
 
     ax.xaxis.labelpad = 20
     ax.yaxis.labelpad = 20
@@ -931,8 +984,11 @@ def plot_all_RSOs_track(tracks):
         channel = track.data['channel_sample']
         ax.plot(time, channel, '.')
         ax.set(xlabel='Sample', ylabel='Channel')
+        mean_x = np.mean(time)
+        mean_y = np.mean(channel)
+        ax.plot(mean_x, mean_y, '*', markersize=20, zorder=10)
 
-        ax.annotate('RSO {}'.format("{}/{}".format(i, len(tracks))), (np.mean(time), np.mean(channel)))
+        ax.annotate('{}'.format("{}/{}".format(i + 1, len(tracks))), (np.mean(time), np.mean(channel)))
 
     ax.xaxis.labelpad = 20
     ax.yaxis.labelpad = 20

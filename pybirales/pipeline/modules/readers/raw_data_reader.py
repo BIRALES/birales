@@ -56,7 +56,8 @@ class RawDataReader(ProcessingModule):
 
         self._base_filepath = config.filepath.split('.')[0]
 
-        self._read_count = 48
+        self._read_count = 15
+        self._read_count_end = None
         self._raw_file_counter = 0
 
         # Call superclass initialiser
@@ -180,6 +181,13 @@ class RawDataReader(ProcessingModule):
         :param output_data:
         :return:
         """
+        if self._read_count_end:
+            if self._read_count > self._read_count_end:
+                obs_info['stop_pipeline_at'] = self._iter_count
+                self.stop()
+
+                return
+
 
         data = self._f.read(self._nsamp * self._nants * 8)
 
@@ -219,6 +227,9 @@ class RawDataReader(ProcessingModule):
 
         obs_info['transmitter_frequency'] = self._config['settings']['observation']['transmitter_frequency']
         obs_info['start_center_frequency'] = self._config['start_center_frequency']
+
+        settings.observation.start_center_frequency = obs_info['start_center_frequency']
+        # print obs_info['start_center_frequency'], settings.observation.start_center_frequency
 
         obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
         obs_info['timestamp'] = self._config['timestamp'] + datetime.timedelta(

@@ -139,29 +139,29 @@ def naive_dbscan(test_image, true_tracks, noise_estimate):
 def msds_q(test_image, true_tracks, noise_est):
     limits = get_limits(test_image, true_tracks)
     debug = False
+    pub = False
     ext = '.pdf'
 
-    # limits = (0, 100, 5900, 6000)
-    # limits = (40, 150, 60, 170)
+    # limits = (0, 70, 2000, 2160)   # limits for crossing streaks
+    # limits = (40, 129, 550, 750)
     # limits = None
 
-    ndx = pre_process_data(test_image, noise_estimate=noise_est)
+    ndx = pre_process_data(test_image)
 
     # Build quad/nd tree that spans all the data points
     k_tree = build_tree(ndx, leave_size=40, n_axis=2)
 
-    visualise_filtered_data(ndx, true_tracks, '1_filtered_data' + ext, limits=limits, debug=debug)
+    visualise_filtered_data(ndx, true_tracks, '1_filtered_data' + ext, limits=limits, debug=debug, pub=pub)
 
     # Traverse the tree and identify valid linear streaks
-    leaves = traverse(k_tree.tree, ndx,
-                      bbox=(0, test_image.shape[1], 0, test_image.shape[0]), min_length=2.)
+    leaves = traverse(k_tree.tree, ndx, bbox=(0, test_image.shape[1], 0, test_image.shape[0]), min_length=2.)
 
     positives = process_leaves(leaves)
 
     print "Processed {} leaves. Of which {} were positives.".format(len(leaves), len(positives))
 
     visualise_tree_traversal(ndx, true_tracks, positives, leaves, '2_processed_leaves' + ext, limits=limits,
-                             vis=debug)
+                             vis=debug, pub=pub)
     eps = estimate_leave_eps(positives)
 
     print 'eps is:', eps
@@ -170,10 +170,10 @@ def msds_q(test_image, true_tracks, noise_est):
     visualise_clusters(cluster_data, true_tracks, positives,
                        filename='3_clusters' + ext,
                        limits=limits,
-                       debug=debug)
+                       debug=debug, pub=pub)
     # Filter invalid clusters
     tracks = validate_clusters(cluster_data)
 
-    visualise_tracks(tracks, true_tracks, '4_tracks' + ext, limits=limits, debug=debug)
+    visualise_tracks(tracks, true_tracks, '4_tracks' + ext, limits=limits, debug=debug, pub=pub)
 
     return tracks

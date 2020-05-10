@@ -9,21 +9,16 @@ from sklearn import linear_model
 
 from util import __ir, grad2, missing_score
 
-P_VALUE = 0.05
-INF_DIST = 10000.
 MIN_CLST_DIST = 3
-MIN_MBR_LNGTH = 2
 MIN_CHILDREN = 3
-MIN_UNQ_SMPLS = 15
 MIN_IR = 0.001
-MIN_SPAN_THLD = 15
-MIN_CORR = -0.99
-MIN_UNQ_SMPLS_2 = 30
-MAX_MISSING_DATA = 0.4
-MIN_R = -2901 * 0.10485 / 9.5367  # (min gradient / (channel-bandwidth)) * sampling_rate
+# MIN_R = -2901 * 0.10485 / 9.5367  # (min gradient / (channel-bandwidth)) * sampling_rate
+# MIN_R *= 1.1  # buffer
+
+MIN_R = -291 * 0.10485 / 9.5367  # (min gradient / (channel-bandwidth)) * sampling_rate
 MIN_R *= 1.1  # buffer
 
-SLOPE_ANGLE_RANGE = (MIN_R, 0)
+MAX_R = 1.1 * -57 * 0.10485 / 9.5367
 
 
 # this does not include SNR in the diff calc
@@ -31,6 +26,7 @@ SLOPE_ANGLE_RANGE = (MIN_R, 0)
 def dm(X, m, dm, min_r, cid):
     k = 0
     min_r = MIN_R
+    # min_r = -35e3
     for i in xrange(0, m - 1):
         for j in xrange(i + 1, m):
             diff = X[i] - X[j]
@@ -64,7 +60,9 @@ def dm_grad(X, m, dm):
                 v[1] = X[i][0]  # slope of point 1
                 v[2] = X[j][0]  # slope of point 2
 
-                if -0.2 <= np.std(v) / np.mean(v) <= 0.2:
+                if v[1] == -0.09123 or v[2] == -0.09123:
+                    dm[k] = (diff[1] ** 2 + diff[2] ** 2) ** 0.5
+                elif -0.3 <= np.std(v) / np.mean(v) <= 0.3:
                     dm[k] = (diff[1] ** 2 + diff[2] ** 2) ** 0.5
             k = k + 1
     return dm
@@ -92,7 +90,7 @@ def fclusterdata(X, threshold, criterion, min_r=-1e9, check_grad=False, cluster_
 # @profile
 def h_cluster_leaves(leaves, distance_thold):
     X = np.vstack(
-        [(cluster, cluster_id, grad2(cluster),
+        [(cluster, cluster_id, grad2(cluster, ratio),
           np.average(cluster[:, 1], weights=cluster[:, 2]),
           np.average(cluster[:, 0], weights=cluster[:, 2])) for
          (cluster, cluster_id, ratio, bbox) in
@@ -133,7 +131,7 @@ def h_cluster_leaves(leaves, distance_thold):
 
 
 def h_cluster(X, distance_thold, min_length, i=None):
-    cluster_labels = fclusterdata(X, distance_thold, criterion='distance', min_r=-1e9, check_grad=False,
+    cluster_labels = fclusterdata(X, distance_thold, criterion='distance', check_grad=False,
                                   cluster_id=i)
 
     u, c = np.unique(cluster_labels, return_counts=True)
@@ -206,13 +204,11 @@ def linear_cluster(leave_pair):
     leave, cluster_id = leave_pair
 
     (data, bbox) = leave
-    labels, u_groups = h_cluster(data, 3, min_length=5, i=cluster_id)
+    labels, u_groups = h_cluster(data, 4, min_length=5, i=cluster_id)
 
     n_data = []
     for g in u_groups:
-
         c = data[np.where(labels == g)]
-
         if missing_score(c[:, 1]) > 0.5:
             continue
 
@@ -258,47 +254,46 @@ def validate_clusters(data, beam_id=-1, debug=False):
     for g in unique_labels:
         org_candidate = np.vstack(data[:, 0][labelled_clusters == g])
         r = ransac.fit(org_candidate[:, 0].reshape(-1, 1), org_candidate[:, 1])
-        candidate = org_candidate[r.inlier_mask_]
 
-        score = missing_score(candidate[:, 1])
-        if score > 0.1:
-            log.debug("Candidate {}, dropped since missing score is not high enough ({:0.3f})".format(g, score))
-            continue
+        c1 = is_valid(org_candidate[r.inlier_mask_], g, beam_id)
+        if np.any(c1):
+            clusters.append(c1)
 
-        r_value, p = pearsonr(candidate[:, 1], candidate[:, 0])
+        c2 = is_valid(org_candidate[~r.inlier_mask_], g, beam_id)
 
-        if r_value > -.99:
-            log.debug("Candidate {}, dropped since r-value is not high enough ({:0.3f})".format(g, r_value))
-        elif p > 0.01:
-            log.debug("Candidate {}, dropped since p-value is not low enough ({:0.3f})".format(g, p))
-        else:
-            clusters.append(add_group(add_group(candidate, g), beam_id))
-            log.info(
-                "Candidate {} is Valid with: {:0.3f} {:0.3f} {:0.3f} {}".format(g, score, r_value, p, len(candidate)))
-        #
-        # m, intercept, r_value, p, e = linregress(candidate[:, 1], candidate[:, 0])
-        # if r_value > -.99:
-        #     log.debug("Candidate {}, dropped since r-value is not high enough ({:0.3f})".format(g, r_value))
-        # elif p > 0.01:
-        #     log.debug("Candidate {}, dropped since p-value is not low enough ({:0.3f})".format(g, p))
-        # elif e > 0.05:
-        #     log.info("Candidate {}, dropped since standard error is greater than 0.01 ({})".format(g, e))
-        #     log.info("Candidate {}, {:0.3f} {:0.3f} {:0.3f} {:0.3f} {}".format(g, score, r_value, p, e, len(candidate)))
-        # else:
-        #     clusters.append(add_group(add_group(candidate, g), beam_id))
-        #     log.info("Candidate {} is Valid with: {:0.3f} {:0.3f} {:0.3f} {:0.3f} {}".format(g, score, r_value, p, e,
-        #                                                                                      len(candidate)))
+        if np.any(c2):
+            clusters.append(c2)
 
     log.debug('Validation reduced {} to {}'.format(len(unique_labels), len(clusters)))
 
     return clusters
 
 
-# @timeit
-def pre_process_data(test_image, noise_estimate=None):
-    if noise_estimate:
-        test_image -= noise_estimate
+def is_valid(candidate, g, beam_id):
+    if len(candidate) < 1:
+        return False
 
+    score = missing_score(candidate[:, 1])
+    if score > 0.25:
+        log.debug("Candidate {}, dropped since missing score is not high enough ({:0.3f})".format(g, score))
+        return False
+
+    r_value, p = pearsonr(candidate[:, 1], candidate[:, 0])
+
+    if r_value > -.99:
+        log.debug("Candidate {}, dropped since r-value is not high enough ({:0.3f})".format(g, r_value))
+        return False
+    elif p > 0.01:
+        log.debug("Candidate {}, dropped since p-value is not low enough ({:0.3f})".format(g, p))
+        return False
+
+    log.info("Candidate {} is Valid with: {:0.3f} {:0.3f} {:0.3f} {}".format(g, score, r_value, p, len(candidate)))
+
+    return add_group(add_group(candidate, g * -1), beam_id)
+
+
+# @timeit
+def pre_process_data(test_image):
     ndx = np.column_stack(np.where(test_image > 0.))
     power = test_image[test_image > 0.]
 

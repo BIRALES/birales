@@ -86,7 +86,7 @@ class Beamformer(ProcessingModule):
         datatype = self._input.datatype
 
         # Initialise pointing
-        self._initialise(input_shape['nsubs'], input_shape['nants'])
+        # self._initialise(input_shape['nsubs'], input_shape['nants'])
 
         # Create output blob
         return BeamformedBlob(self._config, [('npols', input_shape['npols']),
@@ -114,6 +114,7 @@ class Beamformer(ProcessingModule):
 
         # If pointing is not initialise, initialise
         if self._pointing is None:
+            # print 'pointing is none'
             self._initialise(nsubs, nants)
 
         # Apply pointing coefficients
@@ -154,6 +155,8 @@ class Pointing(object):
         self._start_center_frequency = settings.observation.start_center_frequency
         self._reference_location = config.reference_antenna_location
         self._reference_declination = config.reference_declination
+
+        # print 'beamformer scf', self._start_center_frequency
 
         self._pointings = config.pointings
         self._bandwidth = settings.observation.channel_bandwidth
@@ -374,7 +377,7 @@ class Pointing(object):
 
         # Find the calibration algorithm whose principal start time is closest to this observation's principal start time
         calib_obs = CalibrationObservation.objects(principal_created_at__lte=obs_start, status="finished").order_by(
-            'principal_created_at').first()
+            'principal_created_at', '-created_at').first()
 
         if len(calib_obs) < 1:
             obs_start = obs.created_at

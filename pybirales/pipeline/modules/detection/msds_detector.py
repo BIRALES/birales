@@ -18,17 +18,17 @@ def serial_msds(data):
     t1 = time.time()
     beam_data, b, iter, noise_est = data
 
-    debug = b == 22 and iter == 9  # 41182
+    debug = b == 26 and iter == 5  # tiangong
     limits = (80, 160, 1750, 1850)  # 41182
-    # limits = (80, 115, 3600, 3750)
-    limits = None
+    limits = (0, 150, 1500, 1650)  # tiangong
     debug = False
+    limits = None
 
     true_tracks = None
 
     ext = '__{}_{}.png'.format(iter, b)
 
-    ndx = pre_process_data(beam_data, noise_estimate=noise_est)
+    ndx = pre_process_data(beam_data)
 
     # Create tree on the merged input data
     k_tree = build_tree(ndx, leave_size=40, n_axis=2)
@@ -71,29 +71,26 @@ def serial_msds(data):
 
 
 # @profile
-def msds_standalone(_iter_count, input_data, obs_info, channels):
+def msds_standalone(_iter_count, input_data, obs_info, channels, pool=None):
     t0 = np.datetime64(obs_info['timestamp'])
     td = np.timedelta64(int(obs_info['sampling_time'] * 1e9), 'ns')
     # print "Iteration {}. From {} to {}".format(_iter_count, str(t0), str(t0 + td * 160))
-    t1 = time.time()
+
     beam_clusters = []
     # [Feature Extraction] Process the input data and identify the detection clusters
 
-    # for b in [22, 23]:
+    # for b in [26,27]:
     #     beam_clusters += serial_msds((input_data[b, ...], b, _iter_count, np.mean(obs_info['channel_noise'][b])))
+
 
     size = input_data.shape[0]
-    # size = 32
     chunks = [(input_data[b, ...], b, _iter_count, np.mean(obs_info['channel_noise'][b])) for b in range(0, size)]
-    for c in POOL.map(serial_msds, chunks):
-        beam_clusters += c
 
-    # for b in [22]:
-    #     beam_clusters += serial_msds((input_data[b, ...], b, _iter_count, np.mean(obs_info['channel_noise'][b])))
+    for c in pool.map(serial_msds, chunks):
+        beam_clusters += c
 
     # print "Iteration {}. FE finished in {:0.2f} seconds".format(_iter_count, time.time() - t1)
 
-    t2 = time.time()
     new_tracks = [
         create_candidate(c, channels, _iter_count, 160, t0, td, obs_info['channel_noise'], int(c[:, 4][0])) for c in
         beam_clusters]
@@ -128,7 +125,7 @@ def _get_clusters_naive(input_data, channels, obs_info, iter_counter):
     return clusters
 
 
-def dbscan_standalone(_iter_count, input_data, obs_info, channels):
+def dbscan_standalone(_iter_count, input_data, obs_info, channels, pool=None):
     # [Feature Extraction] Process the input data and identify the detection clusters
     beam_clusters = _get_clusters_naive(input_data, channels, obs_info, _iter_count)
     return beam_clusters
@@ -143,7 +140,7 @@ class Detector(ProcessingModule):
 
         super(Detector, self).__init__(config, input_blob)
 
-        # self.pool = Pool(3, maxtasksperchild=500)
+        self.pool = Pool(8, maxtasksperchild=500)
         # self.pool = Pool(3)
 
         # self.channels = None
@@ -172,9 +169,8 @@ class Detector(ProcessingModule):
         :return:
         """
         # if settings.detection.multi_proc:
-        POOL.close()
-        # self.pool.close()
-        # self.pool.join()
+        self.pool.close()
+        self.pool.join()
 
     def process(self, obs_info, input_data, output_data):
         """
@@ -197,7 +193,8 @@ class Detector(ProcessingModule):
 
             # self.pool = Pool(3, maxtasksperchild=500)
             # plot_TLE(obs_info, input_data, tle_target)
-            new_tracks = self.detection_algorithm(self._iter_count, input_data, obs_info, obs_info['channels'])
+            new_tracks = self.detection_algorithm(self._iter_count, input_data, obs_info, obs_info['channels'],
+                                                  self.pool)
 
             log.info('[Iter {}]. Found {} beam_candidates'.format(self._iter_count, len(new_tracks)))
 
@@ -238,6 +235,10 @@ class Detector(ProcessingModule):
             for j, candidate in enumerate(terminated_tracks):
                 i = j + self.n_terminated_tracks + self.n_cancelled_tracks
                 log.info("RSO %d (TERMINATED): %s" % (i, candidate.state_str()))
+
+                # plot_RSO_track(candidate, "RSO_{} ({})".format(i, id(candidate) % 1000))
+                # plot_RSO_track_snr(candidate, "RSO_{} ({})".format(i, id(candidate) % 1000))
+                # plt.show()
         else:
             obs_name = settings.observation.name
             # obs_name = 'norad_41128'
@@ -255,7 +256,7 @@ class Detector(ProcessingModule):
             if not os.path.exists(out_dir):
                 os.makedirs(out_dir)
 
-            pickle.dump(self.channels, open('{}/channels.pkl'.format(out_dir, self._iter_count), "wb"))
+            pickle.dump(obs_info['channels'], open('{}/channels.pkl'.format(out_dir, self._iter_count), "wb"))
 
         pickle.dump(obs_info, open('{}/obs_info_{}.pkl'.format(out_dir, self._iter_count), "wb"))
 
@@ -263,8 +264,6 @@ class Detector(ProcessingModule):
 
         return obs_info
 
-
-POOL = Pool(8, maxtasksperchild=500)
 
 if __name__ == '__main__':
     log = logging.getLogger('')
@@ -274,7 +273,7 @@ if __name__ == '__main__':
     ch.setFormatter(str_format)
     log.addHandler(ch)
 
-    pool = POOL
+    pool = Pool(8, maxtasksperchild=500)
     root = '/home/denis/.birales/debug/detection/'
 
     detection = dbscan_standalone
@@ -284,8 +283,13 @@ if __name__ == '__main__':
     filtering = triangle_filter
 
     targets = [
-        TLE_Target(name='norad_41128', transit_time='05 MAR 2019 11:23:28.73', doppler=-3226.36329),  # iteration 9
-        TLE_Target(name='norad_1328', transit_time='05 MAR 2019 10:37:53.01', doppler=-1462.13774)  # iteration 4
+        # TLE_Target(name='norad_41128', transit_time='05 MAR 2019 11:23:28.73', doppler=-3226.36329),  # iteration 9
+        # TLE_Target(name='norad_1328', transit_time='05 MAR 2019 10:37:53.01', doppler=-1462.13774),  # iteration 4
+
+        # TLE_Target(name='norad_1328_tess', transit_time='05 MAR 2019 10:37:53.01', doppler=-1462.13774),  # iteration 5
+        TLE_Target(name='norad_41128_tess', transit_time='05 MAR 2019 11:23:28.73', doppler=-3226.36329),  # iteration 9
+        # TLE_Target(name='tiangong1_offline', transit_time='29 MAR 2018 07:56:14.755', doppler=-4425.9636),
+        # iteration 22
     ]
 
     # Tracks, that are valid and have transitted.
@@ -297,48 +301,60 @@ if __name__ == '__main__':
     # Tracks that were valid but validation failed later on
     cancelled_tracks = []
 
-    target = targets[1]
-    in_dir = os.path.join(root, target.name)
-    channels = pickle.load(open(os.path.join(in_dir, 'channels.pkl'), 'rb'))
-    for _iter_count in range(2, 9):
-        t0 = time.time()
-        input_data = np.load(os.path.join(in_dir, 'input_data_{}.pkl.npy'.format(_iter_count)))
-        obs_info = pickle.load(open(os.path.join(in_dir, 'obs_info_{}.pkl'.format(_iter_count)), 'rb'))
-        tr = time.time() - t0
-        t1 = time.time()
+    for target in targets:
+        in_dir = os.path.join(root, target.name)
+        channels = pickle.load(open(os.path.join(in_dir, 'channels.pkl'), 'rb'))
+        for _iter_count in range(9, 12):
+            t0 = time.time()
+            try:
+                input_data = np.load(os.path.join(in_dir, 'input_data_{}.pkl.npy'.format(_iter_count)))
 
-        filtered_data = filtering(input_data, obs_info)
+                obs_info = pickle.load(open(os.path.join(in_dir, 'obs_info_{}.pkl'.format(_iter_count)), 'rb'))
+            except IOError:
+                log.info('[Iter {}]. File not found. Target processing stopped.'.format(_iter_count))
+                break
 
-        # plot_TLE(obs_info, input_data, tle_target)
-        new_tracks = detection(_iter_count, filtered_data, obs_info, channels)
+            tr = time.time() - t0
+            t1 = time.time()
 
-        log.info('[Iter {}]. Found {} beam_candidates'.format(_iter_count, len(new_tracks)))
+            # filtered_data = filtering(input_data, obs_info)
 
-        # [Track Association] Create new tracks from clusters or merge clusters into existing
-        tracks = data_association(pending_tracks, new_tracks, obs_info, notifications=False, save_candidates=False)
+            # If filtering algorithm did not reduce the problem enough, pass it through another filter.
+            if input_data[input_data > 0].size > 1e6:
+                input_data = sigma_clip(input_data, obs_info)
 
-        # [Track Termination] Check each track and determine if the detection object has transitted outside FoV
-        tracks = active_tracks(obs_info, tracks, _iter_count)
+            # plot_TLE(obs_info, input_data, tle_target)
+            new_tracks = detection(_iter_count, input_data, obs_info, channels, pool)
 
-        # reset pending tracks
-        pending_tracks = []
-        for t in tracks:
-            if t.cancelled:
-                cancelled_tracks.append(t)
-            elif t.terminated:
-                terminated_tracks.append(t)
-            else:
-                pending_tracks.append(t)
+            log.info('[Iter {}]. Found {} beam_candidates'.format(_iter_count, len(new_tracks)))
 
-        total = len(pending_tracks) + len(terminated_tracks) + len(cancelled_tracks)
+            # [Track Association] Create new tracks from clusters or merge clusters into existing
+            tracks = data_association(pending_tracks, new_tracks, obs_info, notifications=False, save_candidates=False)
 
-        log.info('[Iteration {:d}]. Pending {:d}, Terminated: {:d}, Cancelled: {:d}. Total: {:d}' \
-                 .format(_iter_count, len(pending_tracks), len(terminated_tracks), len(cancelled_tracks), total))
+            # [Track Termination] Check each track and determine if the detection object has transitted outside FoV
+            tracks = active_tracks(obs_info, tracks, _iter_count)
 
-        print "Iteration {}: Processing finished in {:0.3f}. Reading took {:0.3f}".format(_iter_count, time.time() - t1,
-                                                                                          tr)
+            # reset pending tracks
+            pending_tracks = []
+            for t in tracks:
+                if t.cancelled:
+                    cancelled_tracks.append(t)
+                elif t.terminated:
+                    terminated_tracks.append(t)
+                else:
+                    pending_tracks.append(t)
+
+            total = len(pending_tracks) + len(terminated_tracks) + len(cancelled_tracks)
+
+            log.info('[Iteration {:d}]. Pending {:d}, Terminated: {:d}, Cancelled: {:d}. Total: {:d}' \
+                     .format(_iter_count, len(pending_tracks), len(terminated_tracks), len(cancelled_tracks), total))
+
+            print "Iteration {}: Processing finished in {:0.3f}. Reading took {:0.3f}".format(_iter_count,
+                                                                                              time.time() - t1,
+                                                                                              tr)
 
     pool.close()
+    pool.join()
 
     algo_name = detection.__name__.title()
 
@@ -347,8 +363,7 @@ if __name__ == '__main__':
     for j, candidate in enumerate(tracks):
         i = j + 1
         log.info("%s RSO %d: %s" % (algo_name, i, candidate.state_str()))
-        plot_RSO_track(candidate, "RSO_{}".format(i))
+        plot_RSO_track(candidate, "RSO_{} ({})".format(i, id(candidate) % 1000))
 
     plot_all_RSOs_track(tracks)
-    # plt.interactive(False)
-    # plt.show(block=False)
+    plt.show(block=False)

@@ -18,9 +18,9 @@ from detection import *
 from evaluation import *
 from filters import hit_and_miss
 from receiver import *
-from test_case import IMAGE_SEG_TESTS, DETECTION_TESTS_DEBUG, DETECTION_ALG
+from test_case import IMAGE_SEG_TESTS, DETECTION_ALG, DETECTION_TESTS
 from configuration import *
-from pybirales.pipeline.modules.detection.msds.util import snr_calc
+from pybirales.pipeline.modules.detection.msds.util import snr_calc, is_valid
 
 
 # Plot the metrics
@@ -32,7 +32,7 @@ def test_detector(detector, data, true_tracks, noise_estimate, debug=True, visua
     start = time.time()
     candidates = detector.func(data, true_tracks, noise_estimate)
 
-    candidates = [snr_calc(candidate, noise_estimate=noise_mean) for candidate in candidates]
+    candidates = [snr_calc(candidate, noise_estimate=noise_mean) for candidate in candidates if is_valid(candidate)]
     timing = time.time() - start
     print "The {} detection algorithm, found {} candidates in {:2.3f}s".format(detector.name, len(candidates), timing)
 
@@ -84,6 +84,7 @@ def str_join(params):
 
 
 def show_results_detector(metrics_df, algorithms, directory):
+    # print metrics_df[['name', 'snr', 'dt', 'recall', 'precision', 'f1', 'tpr', 'fpr']]
     agg_df = metrics_df.groupby(['snr', 'name']).agg(['mean', 'std']).reset_index()
 
     snrs = agg_df['snr'].unique()
@@ -95,7 +96,7 @@ def show_results_detector(metrics_df, algorithms, directory):
     plot_metric_combined(agg_df, ['recall', 'precision', 'f1'],
                          file_name=directory + '/' + file_name + '__combined_v_snr' + EXT)
 
-    # plot_timings_detector(agg_df, algorithms=algorithms, file_name=directory + '/' + file_name + '__timings' + EXT)
+    plot_timings_detector(agg_df, algorithms=algorithms, file_name=directory + '/' + file_name + '__timings' + EXT)
 
     print agg_df[['name', 'snr', 'dt', 'recall', 'precision', 'f1', 'tpr', 'fpr']].sort_values(by=['snr'])
 
@@ -109,22 +110,22 @@ if __name__ == '__main__':
     np.random.seed(SEED)
     random.seed(SEED)
 
-    SAVE = False
+    SAVE = True
     USE_CACHE = False
     VISUALISE = False
     DEBUG_DETECTOR = False
     POST_PROCESS = True
-    TRACK_THICKNESS = 1
+    TRACK_THICKNESS = 2
     N_CHANS = 4110
     N_SAMPLES = 160
-    N_TRACKS = 10
-    N_TESTS = 1
+    N_TRACKS = 5
+    N_TESTS = 10
     ROOT = "/home/denis/.birales/visualisation/fits/bkg_noise_dataset_casa_20190914"
     ROOT = "/home/denis/.birales/visualisation/fits/detection_raw_data"
     EXT = '.pdf'
     TEST_SUITE = IMAGE_SEG_TESTS
-    # TEST_SUITE = DETECTION_TESTS
-    TEST_SUITE = DETECTION_TESTS_DEBUG
+    TEST_SUITE = DETECTION_TESTS
+    # TEST_SUITE = DETECTION_TESTS_DEBUG
 
     im_algorithms = [t.image_seg_algo.name for t in TEST_SUITE.tests]
     detection_algorithms = [d.name for d in DETECTION_ALG]
@@ -132,12 +133,15 @@ if __name__ == '__main__':
     detection_metrics_df = pd.DataFrame()
 
     snr = np.arange(0, 12, 0.5)
-    snr = np.arange(0, 8, 0.25)
+    snr = np.arange(0, 7.25, 0.25)
+    # snr = np.arange(0, 7.5, 1)
+    # snr = np.arange(0, 10, 2)
     # snr = [2, 3, 5, 10]
-    # snr = [5, 10, 15, 30]
+    # snr = [5, 10, 15]
     # snr = [2, 3, 5, 8, 10, 15]
-    snr = [5]
-    # snr = np.arange(0, 10.5, 0.5)
+    # snr = [3,]
+
+    # snr = [1, 5, 10]
 
     OUTPUT_DF = 'output_' + str(len(TEST_SUITE.name)) + str(N_CHANS) + str(N_SAMPLES) + str(N_TRACKS) + '_'.join(
         map(str, snr)) + '.pkl'
@@ -149,7 +153,8 @@ if __name__ == '__main__':
     count = 0
     t1 = time.time()
     for t in range(0, N_TESTS):
-
+        # if t < 3:
+        #     continue
         org_test_img = generate_test_image(ROOT, N_SAMPLES)
 
         # Estimate the noise
@@ -158,9 +163,10 @@ if __name__ == '__main__':
         # Make a copy of the data such that if it is mutated by the filter, the original is not affected
         test_img_s = org_test_img.copy()
 
-        print np.mean(test_img_s)
         # Generate a number of tracks
         tracks = get_test_tracks(N_TRACKS, GRADIENT_RANGE, TRACK_LENGTH_RANGE, test_img_s.shape, TRACK_THICKNESS)
+
+        # tracks = get_test_tracks_crossing(N_TRACKS, GRADIENT_RANGE, TRACK_LENGTH_RANGE, test_img_s.shape, TRACK_THICKNESS)
 
         # Add tracks to the true data
 
@@ -180,10 +186,14 @@ if __name__ == '__main__':
             # Add tracks to the simulated data
             test_img = add_tracks(test_img_s, tracks, noise_mean, s)
 
+            # preprocessing - remove noise estimate from image
+            # test_img -= noise_mean
+            test_img -= np.mean(test_img, axis=1)[..., np.newaxis]
+
             visualise_image(test_img, 'Test Image: %d tracks at SNR %d dB' % (N_TRACKS, s), tracks,
                             visualise=VISUALISE,  # VISUALISE,
                             file_name="test_image_{}dB.png".format(s))
-
+            # continue
             # Filter the data in generate metrics
             for test in TEST_SUITE.tests:
                 data = test_img.copy()
@@ -193,7 +203,6 @@ if __name__ == '__main__':
                 test_filter = test.image_seg_algo
                 f_name = test_filter.name
                 filter_func = test_filter.func
-                # f_name, filter_func = test_filter.name, test_filter.func
 
                 try:
                     mask, threshold = filter_func(data)
