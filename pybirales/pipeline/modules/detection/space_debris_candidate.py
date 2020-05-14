@@ -101,11 +101,14 @@ class SpaceDebrisTrack:
         # Flag, to mark if a notification was sent
         self._notification_sent = False
 
-        # If a beam cluster is given, add it on initialisation
-        self.associate(cluster)
-
         self.cancelled = False
         self.terminated = False
+
+        # If a beam cluster is given, add it on initialisation
+        valid = self.associate(cluster)
+
+        if not valid:
+            self.cancel()
 
     def cancel(self):
         self.cancelled = True
@@ -242,6 +245,8 @@ class SpaceDebrisTrack:
 
         if is_valid:
             self._update(new_data)
+        # else:
+        #     self.cancel()
 
         return is_valid
         # else:
@@ -257,21 +262,22 @@ class SpaceDebrisTrack:
         # Check that the number of beams activated is less than 2
 
         if self.data['beam_id'].unique().size < 2:
-            return False, 'Not enough unique beams'
+            return False, 'Not enough unique beams {}'.format(id(self) % 1000)
 
         # Check that the candidate has the minimum number of unique channel and time data points
         if self.data['channel'].unique().size < 5 or self.data['time'].unique().size < 5:
-            return False, 'Not enough unique samples'
+            return False, 'Not enough unique samples {}'.format(id(self) % 1000)
 
         if not np.abs(self.r_value) >= settings.detection.linearity_thold:
-            return False, 'Track is not linear'
+            return False, 'Track is not linear {}'.format(id(self) % 1000)
 
         g_thold = settings.detection.gradient_thold
         if not g_thold[0] >= self.ref_data['gradient'] >= g_thold[1]:
-            return False, 'Gradient is not within valid range'
+            return False, 'Gradient is not within valid range {}'.format(id(self) % 1000)
 
-        if missing_score(self.data['time_sample']) > 0.6:
-            return False, 'High missing score {:0.3f}'.format(missing_score(self.data['time_sample']))
+        if missing_score(self.data['time_sample']) > 0.15:
+            return False, 'High missing score {:0.3f} {}'.format(missing_score(self.data['time_sample']),
+                                                                 id(self) % 1000)
 
         return True, None
 

@@ -44,7 +44,7 @@ class observation:
 class detection:
     similarity_thold = 0.1
     linearity_thold = 0.95
-    gradient_thold = [-0.57, -2901.47]
+    gradient_thold = [-57, -291.47]
     doppler_range = [-19688, 19507]
     debug_candidates = False
     save_tdm = False

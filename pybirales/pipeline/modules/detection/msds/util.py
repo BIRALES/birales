@@ -164,26 +164,6 @@ def _create_cluster(cluster_data, channels, obs_info, beam_id, iter_count):
     })
 
 
-# @njit("float64[:, :, :](float64[:,:, :], int32)")
-def agg(cluster, axis):
-    xx = cluster[:, axis]
-
-    u = np.unique(xx)
-
-    if len(u) == len(xx):
-        # no aggregations to be made
-        return cluster
-
-    new_cluster = np.zeros(shape=(len(u), 3))
-    j = 0
-    for group in u:
-        x = cluster[xx == group]
-        new_cluster[j] = np.median(x, axis=0)
-        j += 1
-
-    return new_cluster
-
-
 def grad2(cluster, ir=None):
     if ir == -0.09123:
         return -0.09123
@@ -194,8 +174,8 @@ def grad2(cluster, ir=None):
     _, i = np.unique(cluster[:, 0], return_index=True)
     cluster = cluster[i]
 
-    # cluster = agg(cluster, 1)
-    # cluster = agg(cluster, 0)
+    if len(cluster) == 1:
+        return -0.09123
 
     cov = np.cov(cluster[:, 1], cluster[:, 0]).flatten()
 
@@ -203,7 +183,10 @@ def grad2(cluster, ir=None):
 
 
 def snr_calc(track, noise_estimate):
-    track[:, 2] = 10 * np.log10((track[:, 2] - noise_estimate) / noise_estimate)
+    diff = (track[:, 2] - noise_estimate)
+    diff[diff <= 0] = np.nan
+
+    track[:, 2] = 10 * np.log10(diff / noise_estimate)
 
     return track
 
@@ -212,7 +195,7 @@ def _validate_clusters(clusters):
     return [c for c in clusters if is_valid(c, r_thold=-0.9, min_span_thold=1)]
 
 
-def is_valid(cluster, r_thold=-0.9, min_span_thold=1, group=-1):
+def is_valid(cluster, r_thold=-0.98, min_span_thold=1, group=-1):
     c = cluster[:, 0]
     s = cluster[:, 1]
 
@@ -230,8 +213,7 @@ def is_valid(cluster, r_thold=-0.9, min_span_thold=1, group=-1):
 
     if pear[1] < 0.05 and pear[0] < r_thold:
         return True
-    else:
-        pass
+
     return False
 
 

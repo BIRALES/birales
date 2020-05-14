@@ -18,7 +18,7 @@ def serial_msds(data):
     t1 = time.time()
     beam_data, b, iter, noise_est = data
 
-    debug = b == 26 and iter == 5  # tiangong
+    debug = b == 15 and iter == 7  # tiangong
     limits = (80, 160, 1750, 1850)  # 41182
     limits = (0, 150, 1500, 1650)  # tiangong
     debug = False
@@ -30,13 +30,19 @@ def serial_msds(data):
 
     ndx = pre_process_data(beam_data)
 
+    # print np.shape(ndx), iter, b
+
+    if np.shape(ndx)[0] < 1:
+        return []
+
     # Create tree on the merged input data
     k_tree = build_tree(ndx, leave_size=40, n_axis=2)
 
     visualise_filtered_data(ndx, true_tracks, '1_filtered_data' + ext, limits=limits, debug=debug)
 
     # Traverse the tree and identify valid linear streaks
-    leaves = traverse(k_tree.tree, ndx, bbox=(0, beam_data.shape[1], 0, beam_data.shape[0]), min_length=2.)
+    leaves = traverse(k_tree.tree, ndx, bbox=(0, beam_data.shape[1], 0, beam_data.shape[0]), min_length=2.,
+                      noise_est=noise_est)
 
     positives = process_leaves(leaves)
 
@@ -67,6 +73,8 @@ def serial_msds(data):
                                                                                             len(cluster_data),
                                                                                             len(valid_tracks),
                                                                                             time.time() - t1))
+    if debug:
+        plt.show()
     return valid_tracks
 
 
@@ -79,8 +87,9 @@ def msds_standalone(_iter_count, input_data, obs_info, channels, pool=None):
     beam_clusters = []
     # [Feature Extraction] Process the input data and identify the detection clusters
 
-    # for b in [26,27]:
-    #     beam_clusters += serial_msds((input_data[b, ...], b, _iter_count, np.mean(obs_info['channel_noise'][b])))
+    for b in [15]:
+        # for b in range(0, 29):
+        beam_clusters += serial_msds((input_data[b, ...], b, _iter_count, np.mean(obs_info['channel_noise'][b])))
 
 
     size = input_data.shape[0]
@@ -228,17 +237,23 @@ class Detector(ProcessingModule):
             self.n_terminated_tracks += len(terminated_tracks)
             self.n_cancelled_tracks += len(cancelled_tracks)
 
+            def missing_score(param):
+                missing = np.setxor1d(np.arange(min(param), max(param)), param)
+                return len(missing) / float(len(param))
+
             for j, candidate in enumerate(pending_tracks):
                 i = j + self.n_terminated_tracks + self.n_cancelled_tracks
-                log.info("RSO %d (PENDING): %s" % (i, candidate.state_str()))
+                log.info("RSO %d [%d] (PENDING): %s" % (i, id(candidate) % 1000, candidate.state_str()))
 
             for j, candidate in enumerate(terminated_tracks):
                 i = j + self.n_terminated_tracks + self.n_cancelled_tracks
-                log.info("RSO %d (TERMINATED): %s" % (i, candidate.state_str()))
+                log.info("RSO %d [%d] (TERMINATED): %s" % (i, id(candidate) % 1000, candidate.state_str()))
 
-                # plot_RSO_track(candidate, "RSO_{} ({})".format(i, id(candidate) % 1000))
-                # plot_RSO_track_snr(candidate, "RSO_{} ({})".format(i, id(candidate) % 1000))
-                # plt.show()
+                # print "RSO_{} ({})".format(i, id(candidate) % 1000), missing_score(candidate.data['time_sample'])
+                #
+                plot_RSO_track(candidate, "RSO_{} ({})".format(i, id(candidate) % 1000))
+                plot_RSO_track_snr(candidate, "RSO_{} ({})".format(i, id(candidate) % 1000))
+                plt.show()
         else:
             obs_name = settings.observation.name
             # obs_name = 'norad_41128'
@@ -287,8 +302,8 @@ if __name__ == '__main__':
         # TLE_Target(name='norad_1328', transit_time='05 MAR 2019 10:37:53.01', doppler=-1462.13774),  # iteration 4
 
         # TLE_Target(name='norad_1328_tess', transit_time='05 MAR 2019 10:37:53.01', doppler=-1462.13774),  # iteration 5
-        TLE_Target(name='norad_41128_tess', transit_time='05 MAR 2019 11:23:28.73', doppler=-3226.36329),  # iteration 9
-        # TLE_Target(name='tiangong1_offline', transit_time='29 MAR 2018 07:56:14.755', doppler=-4425.9636),
+        # TLE_Target(name='norad_41128_tess', transit_time='05 MAR 2019 11:23:28.73', doppler=-3226.36329),  # iteration 9
+        TLE_Target(name='tiangong1_offline', transit_time='29 MAR 2018 07:56:14.755', doppler=-4425.9636),
         # iteration 22
     ]
 
@@ -304,7 +319,7 @@ if __name__ == '__main__':
     for target in targets:
         in_dir = os.path.join(root, target.name)
         channels = pickle.load(open(os.path.join(in_dir, 'channels.pkl'), 'rb'))
-        for _iter_count in range(9, 12):
+        for _iter_count in range(7, 9):
             t0 = time.time()
             try:
                 input_data = np.load(os.path.join(in_dir, 'input_data_{}.pkl.npy'.format(_iter_count)))
@@ -320,8 +335,8 @@ if __name__ == '__main__':
             # filtered_data = filtering(input_data, obs_info)
 
             # If filtering algorithm did not reduce the problem enough, pass it through another filter.
-            if input_data[input_data > 0].size > 1e6:
-                input_data = sigma_clip(input_data, obs_info)
+            # if input_data[input_data > 0].size > 1e6:
+            #     input_data = sigma_clip(input_data, obs_info)
 
             # plot_TLE(obs_info, input_data, tle_target)
             new_tracks = detection(_iter_count, input_data, obs_info, channels, pool)

@@ -78,19 +78,22 @@ def data_association(tracks, tentative_tracks, obs_info, notifications=False, sa
     # print len(tentative_tracks), len(tracks)
     for i, tentative_track in enumerate(tentative_tracks):
         for j, track in enumerate(tracks):
-            print "Comparing track {} with tentative {}".format(__id(track), __id(tentative_track))
+            # print "Comparing track {} with tentative {}".format(__id(track), __id(tentative_track))
             # do not compare with cancelled or terminated tracks
             if track.cancelled or track.terminated:
-                print "track {} was terminated or cancelled {} {}".format(__id(track), track.cancelled, track.cancelled)
+                # print "track {} was terminated or cancelled {} {}".format(__id(track), track.cancelled, track.cancelled)
                 continue
 
             if track.is_parent_of(tentative_track):
-                print "track {} associated m={:0.2f}".format(__id(track), track.m)
+
                 associated = track.associate(tentative_track)
+
+                # print "track {} associated with cluster {}".format(__id(track), __id(tentative_track))
+
                 if associated:
                     break
-            else:
-                print "Track {} and tentative {} do not match".format(__id(track), __id(tentative_track))
+            # else:
+            #     print "Track {} and tentative {} do not match".format(__id(track), __id(tentative_track))
 
         else:
             # Beam cluster does not match any candidate. Create a new candidate track from it.
@@ -99,7 +102,7 @@ def data_association(tracks, tentative_tracks, obs_info, notifications=False, sa
             except DetectionClusterIsNotValid:
                 continue
 
-            print "Created new track {} m={:0.2f} from {}".format(__id(new_track), new_track.m, __id(tentative_track))
+            # print "Created new track {} m={} from {}".format(__id(new_track), new_track.m, __id(tentative_track))
             log.info('New track initiated {}'.format(__id(new_track)))
 
             # Add the space debris track to the candidates list
@@ -130,11 +133,11 @@ def active_tracks(obs_info, tracks, iter_count):
         if not valid:
             track.cancel()
             # delete from database but keep it in memory
-            log.info("Track {} was cancelled in iteration {}. Reason: {}".format(track.id, iter_count, reason))
+            log.info("Track {} was cancelled in iteration {}. Reason: {}".format(track.id % 1000, iter_count, reason))
             continue
 
         if track.track_expired(obs_info):
-            log.info("Track {} was terminated in iteration {}".format(track.id, iter_count))
+            log.info("Track {} was terminated in iteration {}".format(track.id % 1000, iter_count))
             track.terminate()
 
             publish(TrackTransittedEvent(track))

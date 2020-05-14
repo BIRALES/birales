@@ -168,7 +168,7 @@ class TriangleFilter(InputDataFilter):
         if n_points > self.max_points:
             sigma_clip(data, obs_info)
 
-            log.warning(
+            log.debug(
                 "Number of data points after triangle filter exceeded maximum allowed {}/{}. Applying sigma filter".format(
                     n_points, self.max_points))
 
@@ -205,7 +205,7 @@ class Filter(ProcessingModule):
 
         # For MSDS
         self._filters = [
-            # RemoveTransmitterChannelFilter(),
+            RemoveTransmitterChannelFilter(),
             TriangleFilter(),
             PepperNoiseFilter(),
         ]

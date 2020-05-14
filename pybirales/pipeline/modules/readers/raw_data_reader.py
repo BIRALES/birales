@@ -37,6 +37,7 @@ class RawDataReader(ProcessingModule):
         self._nsubs = config.nsubs
         self._npols = config.npols
         self._filepath = config.filepath
+        self._raw_file_counter = 0
 
         self._read_count = 48  # norad 1328 on 03/05/2019
         self._read_count = 53  # norad 41182 on 03/05/2019 @ 11
@@ -56,9 +57,13 @@ class RawDataReader(ProcessingModule):
 
         self._base_filepath = config.filepath.split('.')[0]
 
-        self._read_count = 15
-        self._read_count_end = None
-        self._raw_file_counter = 0
+        self._read_count = 0
+        self._read_count_end = 30
+
+        if settings.rawdatareader.skip > 0:
+            self._read_count = settings.rawdatareader.skip
+
+            log.info("Raw data reader will skip {} iterations".format(self._read_count))
 
         # Call superclass initialiser
         super(RawDataReader, self).__init__(config, input_blob)

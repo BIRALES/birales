@@ -127,7 +127,6 @@ def evaluate_filter_old(truth_img, test_img, positives, exec_time, snr, thicknes
         'score': score
     }
 
-
 def evaluate_detector(truth_img, test_img, candidates, exec_time, snr, thickness, name):
     # # truth = truth_img.ravel()
     # # truth[truth > 0.] = True

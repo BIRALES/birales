@@ -64,6 +64,9 @@ def dm_grad(X, m, dm):
                     dm[k] = (diff[1] ** 2 + diff[2] ** 2) ** 0.5
                 elif -0.3 <= np.std(v) / np.mean(v) <= 0.3:
                     dm[k] = (diff[1] ** 2 + diff[2] ** 2) ** 0.5
+
+                # if -0.3 <= np.std(v) / np.mean(v) <= 0.3:
+                #     dm[k] = (diff[1] ** 2 + diff[2] ** 2) ** 0.5
             k = k + 1
     return dm
 
@@ -83,7 +86,11 @@ def fclusterdata(X, threshold, criterion, min_r=-1e9, check_grad=False, cluster_
     Z = linkage(distances, 'single')
 
     # Determine to which cluster each initial point would belong given a distance threshold
-    return fcluster(Z, threshold, criterion=criterion)
+    labels = fcluster(Z, threshold, criterion=criterion)
+
+    # plt.scatter(X[:, 1], X[:, 0], c=labels)
+
+    return labels
 
 
 # @timeit
@@ -110,24 +117,18 @@ def h_cluster_leaves(leaves, distance_thold):
                                   check_grad=True)
 
     u, i, c = np.unique(cluster_labels, return_counts=True, return_index=True)
-    min_labels = 1  # was 2
-    min_leaves = 1  # was 1
+    min_labels = 3  # was 2
     unique_groups = u[c >= min_labels].astype(int)
 
     f_groups = []
     for i in range(len(unique_groups)):
         g = unique_groups[i]
         g_i = np.where(cluster_labels == g)
-        leave_ids = X[cluster_labels == g][:, 1].astype(int)
-        ul, cl = np.unique(leave_ids, return_counts=True)
 
-        # if we have a single big leaf, we consider this as being correct (useful for high SNR)
-        if len(ul) > min_leaves or len(X[g_i][0][0]) > 40 * .9:
-            f_groups.extend(g_i[0])
+        f_groups.extend(g_i[0])
+
     u_mask = np.array(f_groups).astype(int)
     return np.append(X[u_mask], cluster_labels[u_mask].reshape(-1, 1), axis=1)
-
-    # return filter_groups(cluster_data, cluster_labels)
 
 
 def h_cluster(X, distance_thold, min_length, i=None):
@@ -135,7 +136,7 @@ def h_cluster(X, distance_thold, min_length, i=None):
                                   cluster_id=i)
 
     u, c = np.unique(cluster_labels, return_counts=True)
-    unique_groups = u[c > min_length]
+    unique_groups = u[c >= min_length]
 
     return cluster_labels, unique_groups
 
@@ -148,7 +149,7 @@ def _partition(data, x1, x2, y1, y2):
 
 
 # @timeit
-def traverse(root, ndx, bbox, min_length=2):
+def traverse(root, ndx, bbox, noise_est, min_length=2):
     """
 
     :param root: The tree node
@@ -173,7 +174,7 @@ def traverse(root, ndx, bbox, min_length=2):
                 _x1, _x2 = x1, root.split
 
             partition = _partition(ndx, _x1, _x2, _y1, _y2)
-            ll = traverse(root.less, partition, (_x1, _x2, _y1, _y2), min_length)
+            ll = traverse(root.less, partition, (_x1, _x2, _y1, _y2), noise_est, min_length)
 
             if root.split_dim == 0:
                 _y1, _y2 = root.split, y2
@@ -182,7 +183,7 @@ def traverse(root, ndx, bbox, min_length=2):
 
             partition = _partition(ndx, _x1, _x2, _y1, _y2)
 
-            lr = traverse(root.greater, partition, (_x1, _x2, _y1, _y2), min_length)
+            lr = traverse(root.greater, partition, (_x1, _x2, _y1, _y2), noise_est, min_length)
             # rectangles = rectangles + left
             # rectangles = rectangles + right
 
@@ -192,19 +193,27 @@ def traverse(root, ndx, bbox, min_length=2):
         else:
             if root.children > min_length:
                 # print len(leaves)
-                leaves.append((ndx, bbox))
+
+                p5 = noise_est * 10 ** (5 / 10.)  # power at SNR = 5
+                pm = np.mean(ndx[:, 2])  # mean power of leaf
+
+                ndx = ndx[ndx[:, 2] > (pm - p5)]
+
+                if np.any(ndx):
+                    leaves.append((ndx, bbox))
 
     return leaves
 
 
 def linear_cluster(leave_pair):
-    # better at handling crossing streaks
-    # no rejections
+    (data, bbox), leaf_id = leave_pair
 
-    leave, cluster_id = leave_pair
+    min_length = 5
 
-    (data, bbox) = leave
-    labels, u_groups = h_cluster(data, 4, min_length=5, i=cluster_id)
+    if len(data) < 2:
+        return [[data, leaf_id, -0.09321, bbox]]
+
+    labels, u_groups = h_cluster(data, 4, min_length=min_length, i=leaf_id)
 
     n_data = []
     for g in u_groups:
@@ -212,16 +221,12 @@ def linear_cluster(leave_pair):
         if missing_score(c[:, 1]) > 0.5:
             continue
 
-        ratio = __ir(c, min_n=10, i=cluster_id)
+        ratio = __ir(c, min_n=20, i=leaf_id)
 
-        if 0. >= ratio >= -0.1:
-            n_data.append([c, cluster_id, ratio, bbox])
+        if 0. >= ratio >= -0.15:
+            n_data.append([c, leaf_id, ratio, bbox])
 
     return n_data
-
-
-def density_check2(data, threshold, cluster_id):
-    return missing_score(data[:, 1]) < threshold
 
 
 def process_leaves(leaves, debug=False):
@@ -249,8 +254,12 @@ def validate_clusters(data, beam_id=-1, debug=False):
     labelled_clusters = data[:, 5]
     unique_labels = np.unique(labelled_clusters)
     clusters = []
-    ransac = linear_model.RANSACRegressor(linear_model.LinearRegression(), residual_threshold=2)
-    # ransac = linear_model.RANSACRegressor()
+
+    # random seed for ransac is so that results are consistent
+
+    ransac = linear_model.RANSACRegressor(linear_model.LinearRegression(),
+                                          residual_threshold=2, random_state=500)
+
     for g in unique_labels:
         org_candidate = np.vstack(data[:, 0][labelled_clusters == g])
         r = ransac.fit(org_candidate[:, 0].reshape(-1, 1), org_candidate[:, 1])
@@ -259,10 +268,14 @@ def validate_clusters(data, beam_id=-1, debug=False):
         if np.any(c1):
             clusters.append(c1)
 
-        c2 = is_valid(org_candidate[~r.inlier_mask_], g, beam_id)
+            c2 = org_candidate[~r.inlier_mask_]
+            if len(c2) > 3 and missing_score(c2[:, 1]) < 2:
+                r = ransac.fit(c2[:, 0].reshape(-1, 1), c2[:, 1])
+                c2 = c2[r.inlier_mask_]
+                c2 = is_valid(c2, g * -1, beam_id)
 
-        if np.any(c2):
-            clusters.append(c2)
+                if np.any(c2):
+                    clusters.append(c2)
 
     log.debug('Validation reduced {} to {}'.format(len(unique_labels), len(clusters)))
 
@@ -274,8 +287,8 @@ def is_valid(candidate, g, beam_id):
         return False
 
     score = missing_score(candidate[:, 1])
-    if score > 0.25:
-        log.debug("Candidate {}, dropped since missing score is not high enough ({:0.3f})".format(g, score))
+    if score > 0.5:
+        log.debug("Candidate {}, dropped since missing score is high ({:0.3f})".format(g, score))
         return False
 
     r_value, p = pearsonr(candidate[:, 1], candidate[:, 0])
@@ -289,7 +302,7 @@ def is_valid(candidate, g, beam_id):
 
     log.info("Candidate {} is Valid with: {:0.3f} {:0.3f} {:0.3f} {}".format(g, score, r_value, p, len(candidate)))
 
-    return add_group(add_group(candidate, g * -1), beam_id)
+    return add_group(add_group(candidate, g), beam_id)
 
 
 # @timeit

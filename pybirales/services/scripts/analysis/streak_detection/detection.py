@@ -22,7 +22,7 @@ def _viz_cluster(bb, fclust1):
         print b[0], b[1], b[2], g
 
 
-def hough_transform(test_image, true_tracks, noise_est):
+def hough_transform(test_image, true_tracks, noise_est, debug):
     """
     Hough feature detection
 
@@ -51,7 +51,7 @@ def hough_transform(test_image, true_tracks, noise_est):
     return clusters
 
 
-def astride(test_image, true_tracks, noise_est):
+def astride(test_image, true_tracks, noise_est, debug):
     mean, med, std = sigma_clipped_stats(test_image)
     test_image -= med
     contours = measure.find_contours(test_image, std * 3, fully_connected='high')
@@ -92,7 +92,7 @@ def astride(test_image, true_tracks, noise_est):
     return clusters
 
 
-def hdbscan(test_image):
+def hdbscan(test_image, debug):
     hdbscan = HDBSCAN(algorithm='prims_kdtree', alpha=1.0, approx_min_span_tree=True,
                       gen_min_span_tree=False, leaf_size=50, metric='euclidean',
                       min_cluster_size=5, min_samples=None, p=None)
@@ -111,7 +111,7 @@ def hdbscan(test_image):
     return clusters
 
 
-def naive_dbscan(test_image, true_tracks, noise_estimate):
+def naive_dbscan(test_image, true_tracks, noise_estimate, debug):
     db_scan = DBSCAN(eps=5, min_samples=5, algorithm='kd_tree', n_jobs=-1)
 
     ndx = np.column_stack(np.where(test_image > 0.))
@@ -136,14 +136,14 @@ def naive_dbscan(test_image, true_tracks, noise_estimate):
 
 # @profile
 @timeit
-def msds_q(test_image, true_tracks, noise_est):
+def msds_q(test_image, true_tracks, noise_est, debug):
     limits = get_limits(test_image, true_tracks)
-    debug = False
-    pub = False
+
+    pub = True
     ext = '.pdf'
 
-    # limits = (0, 70, 2000, 2160)   # limits for crossing streaks
-    # limits = (40, 129, 550, 750)
+    # limits = (0, 70, 2000, 2160)   #s limits for crossing streaks
+    # limits = (50,120, 1100, 1400)
     # limits = None
 
     ndx = pre_process_data(test_image)
@@ -154,7 +154,8 @@ def msds_q(test_image, true_tracks, noise_est):
     visualise_filtered_data(ndx, true_tracks, '1_filtered_data' + ext, limits=limits, debug=debug, pub=pub)
 
     # Traverse the tree and identify valid linear streaks
-    leaves = traverse(k_tree.tree, ndx, bbox=(0, test_image.shape[1], 0, test_image.shape[0]), min_length=2.)
+    leaves = traverse(k_tree.tree, ndx, bbox=(0, test_image.shape[1], 0, test_image.shape[0]), min_length=2.,
+                      noise_est=noise_est)
 
     positives = process_leaves(leaves)
 
@@ -176,4 +177,5 @@ def msds_q(test_image, true_tracks, noise_est):
 
     visualise_tracks(tracks, true_tracks, '4_tracks' + ext, limits=limits, debug=debug, pub=pub)
 
+    visualise_tracks(tracks, true_tracks, '5_tracks' + ext, limits=None, debug=debug, pub=pub)
     return tracks

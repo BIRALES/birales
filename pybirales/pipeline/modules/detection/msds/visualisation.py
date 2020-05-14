@@ -130,7 +130,7 @@ def visualise_image(image, title, tracks, visualise=False, file_name=None, bar=T
         print "Visualising a subset of the image {} from {}".format(image[y_start:y_end, x_start:x_end].shape,
                                                                     prev_shape)
 
-        ax = sns.heatmap(image[y_start:y_end, x_start:x_end], xticklabels=20, yticklabels=10, cbar=True)
+        ax = sns.heatmap(image[y_start:y_end, x_start:x_end], xticklabels=20, yticklabels=50, cbar=True)
         ax.invert_yaxis()
 
         ax.set(xlabel='Time sample', ylabel='Channel')
@@ -158,7 +158,7 @@ def visualise_filter(data, mask, tracks, f_name, snr, threshold=None, visualise=
         x_start, x_end, y_start, y_end = get_limits(data, tracks)
         ax = sns.heatmap(data[y_start:y_end, x_start:x_end],
                          xticklabels=20,
-                         yticklabels=10,
+                         yticklabels=50,
                          mask=mask[y_start:y_end, x_start:x_end])
         # ax.set(ylim=(y_start, y_end), xlim=(x_start, x_end))
         ax.invert_yaxis()
@@ -291,7 +291,7 @@ def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negative
     if not positive:
         ax.text(x1 + 0.95 * (x2 - x1), y1 + 0.95 * (y2 - y1), i, color='k', fontsize=8, ha='right', va='top', zorder=10)
 
-    # if i == 96 and positive:
+    # if i == 343 and positive:
     #     visualise_ir2_pub(positives, positives, i, -1)
 
     if positive:
@@ -308,7 +308,7 @@ def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negative
         ax.plot(positives[:, 1], positives[:, 0], 'g.', zorder=3)
 
         if not pub:
-            msg = '{:0.2f}\n{:0.2f}'.format(score, grad2(positives))
+            msg = '{:0.4f}\n{:0.3f}'.format(score, grad2(positives))
             ax.text(x1 + 0.5 * (x2 - x1), y1 + 0.5 * (y2 - y1), msg, color='blue', weight='bold',
                     fontsize=8, ha='center', va='center')
     else:
@@ -326,7 +326,7 @@ def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negative
                 ms = missing_score(negatives[:, 1])
                 ratio = __ir(c, min_n=10, i=g)
 
-                ax.plot(c[:, 1], c[:, 0], '.', color=random.choice(colors), zorder=2)
+                ax.plot(c[:, 1], c[:, 0], '.', color=random.choice(colors), zorder=20)
 
                 print 'Leave: {}, group: {}. ratio:{:0.3f}, ms: {:0.3f} length:{}:'.format(i, g, ratio,
                                                                                            ms,
@@ -340,7 +340,7 @@ def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negative
             #
             #     print 'Cluster: {}, group: {}. ratio:{}. length:{}: bbox:{}'.format(i, g, ratio, np.shape(c),
             #                                                                         (x1, x2, y1, y2))
-    print (x1, y1), x2 - x1, y2 - y1
+    # print (x1, y1), x2 - x1, y2 - y1
     rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=lw, edgecolor=color, facecolor='none',
                              zorder=zorder)
 
@@ -480,7 +480,7 @@ def visualise_post_processed_tracks(tracks, true_tracks, filename, limits=None, 
 
             missing = c[c[:, 3] == -2]
             thickened = c[c[:, 3] == -3]
-            detected = c[c[:, 3] >= 0]
+            detected = c
             ax = sns.scatterplot(detected[:, 1], detected[:, 0], color='green', marker=".", zorder=4)
             ax = sns.scatterplot(thickened[:, 1], thickened[:, 0], marker=".", color='pink', zorder=2, edgecolor="k")
             ax = sns.scatterplot(missing[:, 1], missing[:, 0], marker="+", color='red', zorder=3, edgecolor="k")
@@ -544,7 +544,7 @@ def visualise_tree_traversal(ndx, true_tracks, clusters, leaves, filename, limit
             if x_start * 0.4 <= x1 <= x_end * 1.5 and y_start * 0.5 <= y1 <= y_end * 1.5:
                 # if j != 0:
                 #     cluster_id = j
-                __plot_leaf(ax, x1, y1, x2, y2, i, ratio, True, positives=cluster, negatives=None, pub=pub)
+                __plot_leaf(ax, x1, y1, x2, y2, cluster_id, ratio, True, positives=cluster, negatives=None, pub=pub)
 
         if true_tracks:
             ax = visualise_true_tracks(ax, true_tracks)
@@ -821,14 +821,15 @@ def plot_timings_detector(metrics_df, algorithms, file_name=None):
     # snrs = [1, 5, 10]
 
     u = metrics_df['snr'].unique()
-    snrs = [u.min(), np.median(u), u.max()]
+    snrs = [u.min(), np.argsort(u)[len(u) // 2], u.max()]
     snrs = [1.0, 3.0, 7.]
 
     bw = 0.4
     left = bw / 2.
     ng = len(algorithms)
     l = [bw + i * bw * (ng + 1) for i in np.arange(ng)]
-    algorithms = ['Astride', 'DBSCAN', 'MSDS', 'Hough']
+    # algorithms = ['Astride', 'DBSCAN', 'MSDS', 'Hough']
+    algorithms = list(metrics_df['name'].unique())
     for i, name in enumerate(algorithms):
         for j, snr in enumerate(snrs):
             data = metrics_df[metrics_df['snr'] == snr][metrics_df['name'] == name]
@@ -920,16 +921,23 @@ def plot_TLE(obs_info, input_data, tle_target, beam_id=15):
         fig.savefig(filename, bbox_inches='tight')
 
 
-def plot_RSO_track(track, i):
+def plot_RSO_track(track, i, beam_id=None):
     fig, ax = plt.subplots(1)
-    mask = track.data['beam_id'] == 14
+
+    mask = track.data['beam_id'] > -1
+    if beam_id:
+        mask = track.data['beam_id'] == beam_id
+
     time = track.data[mask]['time_sample']
     channel = track.data[mask]['channel_sample']
-    ax.plot(time, channel, '.')
+    ax.plot(time, channel, 'g.')
 
     reduced_track = track.reduce_data()
 
-    mask = reduced_track['beam_id'] == 14
+    mask = reduced_track['beam_id'] > -1
+    if beam_id:
+        mask = reduced_track['beam_id'] == beam_id
+
     t1 = reduced_track[mask]['time_sample']
     c1 = reduced_track[mask]['channel_sample']
     ax.plot(t1, c1, 'r+')
@@ -948,16 +956,23 @@ def plot_RSO_track(track, i):
     ax.figure.savefig('{}.png'.format(i))
 
 
-def plot_RSO_track_snr(track, i):
+def plot_RSO_track_snr(track, i, beam_id=None):
     fig, ax = plt.subplots(1)
-    mask = track.data['beam_id'] == 14
+
+    mask = track.data['beam_id'] > -1
+    if beam_id:
+        mask = track.data['beam_id'] == beam_id
+
     time = track.data[mask]['time_sample']
     snr = track.data[mask]['snr']
     ax.plot(time, snr, '.')
 
     reduced_track = track.reduce_data()
 
-    mask = reduced_track['beam_id'] == 14
+    mask = reduced_track['beam_id'] > -1
+    if beam_id:
+        mask = reduced_track['beam_id'] == beam_id
+
     t1 = reduced_track[mask]['time_sample']
     c1 = reduced_track[mask]['snr']
     ax.plot(t1, c1, 'r+')
