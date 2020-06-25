@@ -14,8 +14,6 @@ from pybirales.pipeline.pipeline import get_builder_by_id, CorrelatorPipelineMan
 from pybirales.services.calibration.calibration import CalibrationFacade
 from pybirales.services.post_processing.processor import PostProcessor
 from pybirales.services.scheduler.exceptions import SchedulerException
-import datetime
-import pytz
 
 
 class ObservationManager:
@@ -245,6 +243,8 @@ class CalibrationObservationManager(ObservationManager):
                 observation.model.status = 'failed'
                 observation.save()
                 publish(CalibrationObservationFailedEvent(observation, "Calibration observation failed"))
+
+                raise
             else:
                 observation.model.status = 'finished'
                 observation.save()
@@ -274,8 +274,8 @@ class CalibrationObservationManager(ObservationManager):
             real, imag, fringe_image = self._calibration_facade.calibrate(self.calibration_dir, corr_matrix_filepath)
         except IOError as e:
             raise CalibrationFailedException(e)
-        except IndexError as e:
-            raise CalibrationFailedException(e)
+        # except IndexError as e:
+        #     raise CalibrationFailedException(e)
         else:
             observation.model.real = real.tolist()
             observation.model.imag = imag.tolist()

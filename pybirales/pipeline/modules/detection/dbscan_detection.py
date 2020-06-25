@@ -1,5 +1,3 @@
-import logging as log
-
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -7,8 +5,9 @@ from sklearn import linear_model
 from sklearn.cluster import DBSCAN
 
 from pybirales import settings
-from pybirales.pipeline.modules.detection.exceptions import NoDetectionClustersFound
 from pybirales.pipeline.base.timing import timeit
+from pybirales.pipeline.modules.detection.exceptions import NoDetectionClustersFound
+from pybirales.pipeline.modules.detection.util import create_candidate
 
 _eps = 5
 _min_samples = 5
@@ -16,6 +15,7 @@ _algorithm = 'kd_tree'
 _linear_model = linear_model.RANSACRegressor(linear_model.LinearRegression())
 db_scan = DBSCAN(eps=_eps, min_samples=_min_samples, algorithm=_algorithm, n_jobs=-1)
 N_SAMPLES = 32
+N_SAMPLES = 160
 
 
 def _validate(channel, time_sample, td):
@@ -52,7 +52,7 @@ def _validate(channel, time_sample, td):
     return True
 
 
-def _create(snr_data, cluster_data, channels, t0, td, beam_id, iter_count):
+def _create(snr_data, cluster_data, channels, t0, td, beam_id, iter_count, channel_noise):
     """
 
     :param cluster_data: The labelled cluster data
@@ -76,7 +76,11 @@ def _create(snr_data, cluster_data, channels, t0, td, beam_id, iter_count):
         return False, None
 
     # Calculate the time of the sample from the time index
-    time = t0 + (time_sample - 32 * iter_count) * td
+    time = t0 + (time_sample - 160 * iter_count) * td
+
+    cluster_data = np.append(cluster_data, np.expand_dims(np.full(len(cluster_data), beam_id), axis=1), axis=1)
+
+    return True, create_candidate(cluster_data, channels, iter_count, 160, t0, td, channel_noise, beam_id)
 
     return True, pd.DataFrame({
         'time_sample': time_sample,
@@ -100,7 +104,7 @@ def partition_input_data(input_data, channel_noise, beam_id):
 
     # Process part of the input_data
     beam_data = input_data[beam_id, :, :]
-    
+
     # Get the channel noise for this beam
     beam_noise = channel_noise[beam_id]
 
@@ -116,26 +120,28 @@ def partition_input_data(input_data, channel_noise, beam_id):
     
     """
 
+    #
+    # beam_data = beam_data - np.mean(beam_noise)
+    # ndx = np.where(beam_data > 0.)
+    # power = beam_data[ndx]
+    # return np.column_stack(ndx), power
+
     # Remove filtered data from the calculation
-    snr_data = beam_data / beam_noise[:, np.newaxis]
+    noise_estimate = np.mean(beam_noise)
+
+    # snr_data = (beam_data - noise_estimate) / noise_estimate
+
+    # Noise estimate already removed in pre-processor module
+    snr_data = beam_data / noise_estimate
 
     # Remove filtered data from the calculation
     ndx = np.where(snr_data > 0.)
     snr_data = snr_data[ndx]
 
     # Convert SNR to dB
-    snr_data = 10*np.log10(snr_data)
+    snr_data = 10 * np.log10(snr_data)
 
     return np.column_stack(ndx), snr_data
-    #
-    # # Calculate the SNR
-    # snr = beam_data - beam_noise[:, np.newaxis]
-    #
-    # # Ignore values where SNR < 0. Ie. where signal power is < than background noise
-    # ndx = np.where(snr > 0.)
-    #
-    # # Transform them in a time (x), channel (y) nd-array and snr
-    # return np.column_stack(ndx), snr[ndx]
 
 
 def dbscan_clustering(beam_ndx, snr_data):
@@ -160,12 +166,11 @@ def dbscan_clustering(beam_ndx, snr_data):
     # Cluster mask to remove noise clusters
     denoise_mask = labelled_data[:, 2] > -1
 
-
     # Select only those labels which were not classified as noise was(-1)
     return labelled_data[denoise_mask], snr_data[denoise_mask]
 
 
-def create_clusters(snr_data, labelled_data, channels, t0, td, beam_id, iter_count):
+def create_clusters(snr_data, labelled_data, channels, t0, td, beam_id, iter_count, channel_noise):
     """
     Group the data points in clusters
     :param snr_data:
@@ -185,12 +190,13 @@ def create_clusters(snr_data, labelled_data, channels, t0, td, beam_id, iter_cou
     for label in unique_cluster_labels:
         label_mask = labelled_data[:, 2] == label
         valid, cluster = _create(snr_data[label_mask], labelled_data[label_mask], channels, t0, td, beam_id,
-                                 iter_count)
+                                 iter_count, channel_noise)
 
         if valid:
             clusters.append(cluster)
 
     return clusters
+
 
 @timeit
 def detect(input_data, channels, t0, td, iter_count, channel_noise, beam_id):
@@ -220,7 +226,6 @@ def detect(input_data, channels, t0, td, iter_count, channel_noise, beam_id):
         return []
 
     # Validate and create linear detection clusters
-    clusters = create_clusters(snr_data, labelled_data, channels, t0, td, beam_id, iter_count)
-    # log.debug('Beam %s: %s: %s valid clusters remain after validation', beam_id, iter_count, len(clusters))
+    clusters = create_clusters(snr_data, labelled_data, channels, t0, td, beam_id, iter_count, channel_noise)
 
     return clusters

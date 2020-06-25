@@ -28,7 +28,7 @@ class FringeImager:
 
         counter = 0
 
-        plt.rcParams["figure.figsize"] = (12, 7.416408)
+        # plt.rcParams["figure.figsize"] = (12, 7.416408)
         f, (ax1, ax2) = plt.subplots(2, 1, sharex='col')
 
         for i in range(self.no_of_antennas):
@@ -43,8 +43,10 @@ class FringeImager:
         ax2.set_xlabel('Time sample')
         ax2.set_ylabel('Amplitude')
 
-        plt.tight_layout()
+        # plt.tight_layout()
         # Save the calibration check image to disk
-        plt.savefig(self.calibration_check_path, dpi=300)
+        plt.savefig(self.calibration_check_path)
+
+        plt.close()
 
         return self.calibration_check_path

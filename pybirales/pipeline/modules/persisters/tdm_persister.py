@@ -4,6 +4,7 @@ from datetime import datetime
 
 import numpy as np
 from jinja2 import Environment, FileSystemLoader
+from scipy import io
 
 from pybirales import settings
 from pybirales.events.events import TDMCreatedEvent
@@ -104,6 +105,28 @@ class TDMPersister(ProcessingModule):
         else:
             publish(TDMCreatedEvent(sd_track, filepath))
 
+        if settings.detection.debug_candidates:
+            np.save(filepath + '.npy', sd_track)
+
+            self.save_mat(filepath + '.mat', obs_name, target_name, obs_info, sd_track)
+
+    def save_mat(self, filename, obs_name, target_name, obs_info, sd_track):
+        io.savemat(filename, dict(
+            filename=obs_name,
+            beam_noise=list(np.mean(obs_info['channel_noise'], axis=1)),
+            creation_date=datetime.utcnow().isoformat('T'),
+            beams=np.unique(sd_track.data['beam_id']),
+            detection=list(sd_track.reduce_data(remove_duplicate_epoch=True, remove_duplicate_channel=True)),
+            target_name=target_name,
+            tx=obs_info['transmitter_frequency'],
+            pointings={
+                'ra_dec': obs_info['pointings'],
+                'az_el': obs_info['beam_az_el'].tolist(),
+                'declination': obs_info['declination']
+            },
+            integration_interval=obs_info['sampling_time']
+        ), do_compression=True)
+
     def process(self, obs_info, input_data, output_data):
         """
 
@@ -117,12 +140,16 @@ class TDMPersister(ProcessingModule):
         if self._iter_count < 1:
             return
 
+
         tracks_to_output = obs_info['transitted_tracks']
+        tracks_to_output = tracks_to_output.extend(obs_info['transitted_tracks_msds'])
 
         obs_name = settings.observation.name
         target_name = settings.observation.target_name
 
-        for sd_track in tracks_to_output:
-            self._write(obs_info, obs_name, target_name, sd_track, self._detection_num)
+        # print tracks_to_output, obs_info['transitted_tracks'], obs_info['transitted_tracks_msds']
+        if tracks_to_output:
+            for sd_track in tracks_to_output:
+                self._write(obs_info, obs_name, target_name, sd_track, self._detection_num)
 
         return obs_info

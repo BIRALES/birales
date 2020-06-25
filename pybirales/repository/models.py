@@ -32,7 +32,7 @@ class BIRALESObservation(Document):
     log_filepath = StringField()
 
     # These are updated during a detection observation
-    noise_mean= FloatField()
+    noise_mean = FloatField()
     noise_beams = ListField()
     sampling_time = FloatField()
 
@@ -40,7 +40,12 @@ class BIRALESObservation(Document):
     noise_stats = DynamicField()
 
     status = StringField()
+
+    # Time at which the observation was created
     created_at = DateTimeField(required=True, default=datetime.datetime.utcnow)
+
+    # Time at which the observation was originally created (useful for offline processing)
+    principal_created_at = DateTimeField(required=True, default=datetime.datetime.utcnow)
 
     antenna_dec = FloatField()
 

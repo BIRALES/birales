@@ -11,7 +11,7 @@ from pybirales.pipeline.base.definitions import ObservationInfo
 class DataBlob(object):
     """ Data blob super class """
 
-    def __init__(self, config, shape, datatype, nof_blocks=4):
+    def __init__(self, config, shape, datatype, nof_blocks=3):
         """ Class constructor
         :param config: Blob configuration
         :param shape: The shape of the underlying data type

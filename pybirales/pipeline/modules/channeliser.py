@@ -1,15 +1,15 @@
+import math
+from multiprocessing.pool import ThreadPool
+
+import numba
+import numpy as np
+
 from pybirales.pipeline.base.definitions import PipelineError
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.beamformed_data import BeamformedBlob
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.blobs.dummy_data import DummyBlob
 from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
-
-from multiprocessing.pool import ThreadPool
-import numpy as np
-import logging
-import numba
-import math
 
 
 @numba.jit(nopython=True, nogil=True)
@@ -163,6 +163,7 @@ class PFB(ProcessingModule):
         obs_info['channel_bandwidth'] /= self._nchans
         obs_info['start_center_frequency'] -= obs_info['channel_bandwidth'] * self._nchans / 2.0
 
+
         # print  obs_info['start_center_frequency']
 
         # print 'Channeliser {:0.7f}s shape:{}, iter:{}'.format(obs_info['sampling_time'], np.shape(output_data), self._iter_count)
@@ -227,5 +228,6 @@ class PFB(ProcessingModule):
                     # Fourier transform and save output
                     self._current_output[p, b, c * self._nchans: (c + 1) * self._nchans] = np.flipud(
                         np.fft.fft(self._filtered[p, b, c, :], axis=0))
+
                     # self._current_output[p, b, c * self._nchans: (c + 1) * self._nchans] = np.flipud(
                     # np.fft.fftshift(np.fft.fft(self._filtered[p, b, c, :], axis=0), axes=0))

@@ -1,6 +1,7 @@
-import numpy as np
-from logging.config import dictConfig
 import logging as log
+from logging.config import dictConfig
+
+import numpy as np
 
 DEBUG = True
 LOGGING_CONFIG = dict(
@@ -31,14 +32,23 @@ N_TRACKS = 1
 TD = 262144 / 78125 / 32.
 CD = 78125 / 8192.
 F = (1. / TD) / (1. / CD)
+F = CD / TD
 GRADIENT_RANGE = np.array([-0.057, -100.47]) / F
 # GRADIENT_RANGE = np.array([-0.057, -200.47]) / F
-TRACK_LENGTH_RANGE = np.array([5, 15]) / TD  # in seconds
-TRACK_THICKNESS = 5
+GRADIENT_RANGE = np.array([-55, -291.47]) / F
+
+TRACK_LENGTH_RANGE = np.array([3, 10]) / TD  # in seconds
+TRACK_THICKNESS = 1
 # FITS_FILE = "norad_1328/norad_1328_raw_0.fits"
 FITS_FILE = "filter_test/filter_test_raw_0.fits"
-FITS_FILE = "Observation_2019-05-17T1202/Observation_2019-05-17T1202_raw_1.fits"
+FITS_FILE = "detection_raw_data/detection_raw_data_1.fits"
 VISUALISE = True
 SAVE_FIGURES = False
-SEED = 567890
-np.random.seed(SEED)
+
+
+def m2doppler_rate(m):
+    return m * CD / TD
+
+
+def doppler_rate2m(doppler_rate):
+    return doppler_rate * TD / CD

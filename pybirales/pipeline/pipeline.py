@@ -8,6 +8,7 @@ from pybirales.pipeline.modules.channeliser import PFB
 from pybirales.pipeline.modules.correlator import Correlator
 from pybirales.pipeline.modules.detection.detector import Detector
 from pybirales.pipeline.modules.detection.filter import Filter
+from pybirales.pipeline.modules.detection.msds_detector import Detector as MSDSDetector
 from pybirales.pipeline.modules.detection.preprocessor import PreProcessor
 from pybirales.pipeline.modules.generator import DummyDataGenerator
 from pybirales.pipeline.modules.persisters.beam_persister import BeamPersister
@@ -20,7 +21,7 @@ from pybirales.pipeline.modules.receivers.receiver import Receiver
 from pybirales.pipeline.modules.rso_simulator import RSOGenerator
 from pybirales.pipeline.modules.terminator import Terminator
 
-AVAILABLE_PIPELINES_BUILDERS = ['detection_pipeline',
+AVAILABLE_PIPELINES_BUILDERS = ['detection_pipeline', 'msds_detection_pipeline',
                                 'correlation_pipeline',
                                 'standalone_pipeline', 'test_receiver_pipeline', 'dummy_data_pipeline',
                                 'rso_generator_pipeline', 'raw_data_truncator_pipeline']
@@ -42,6 +43,8 @@ def get_builder_by_id(builder_id):
 
     if builder_id == 'detection_pipeline':
         return DetectionPipelineMangerBuilder()
+    if builder_id == 'msds_detection_pipeline':
+        return MSDSDetectionPipelineManagerBuilder()
     elif builder_id == 'correlation_pipeline':
         return CorrelatorPipelineManagerBuilder()
     elif builder_id == 'standalone_pipeline':
@@ -86,12 +89,6 @@ l
         :return:
         """
 
-        # import faulthandler
-        # faulthandler.enable(all_threads=True)
-        #
-        # import ctypes
-        # ctypes.string_at(0)
-
         # Pipeline Reader or Receiver input
         if settings.manager.offline:
             receiver = RawDataReader(settings.rawdatareader)
@@ -122,6 +119,18 @@ l
             self.manager.add_module("persister_beam", persister_beam)
 
             pp_input = persister_beam.output_blob
+
+        preprocessor = PreProcessor(settings.detection, pp_input)
+        self.manager.add_module("preprocessor", preprocessor)
+
+        # added to output raw fits only
+        raw_fits_persister = RawDataFitsPersister(settings.fits_persister, preprocessor.output_blob)
+        self.manager.add_module("raw_fits_persister", raw_fits_persister)
+        terminator = Terminator(settings.terminator, raw_fits_persister.output_blob)
+        self.manager.add_module("terminator", terminator)
+        # added to output raw fits only
+
+        return
 
         # Detection
         if settings.manager.detector_enabled:
@@ -347,7 +356,6 @@ class DataTruncatorPipelineMangerBuilder(PipelineManagerBuilder):
         """
         # Generate and equal number of antennas and beams
 
-
         receiver = RawDataReader(settings.rawdatareader)
         self.manager.name += ' (Offline)'
 
@@ -357,4 +365,69 @@ class DataTruncatorPipelineMangerBuilder(PipelineManagerBuilder):
         # Add modules to pipeline manager
         self.manager.add_module("receiver", receiver)
         self.manager.add_module("persister", persister)
+        self.manager.add_module("terminator", terminator)
+
+
+class MSDSDetectionPipelineManagerBuilder(PipelineManagerBuilder):
+    def __init__(self):
+        PipelineManagerBuilder.__init__(self)
+
+        self.manager.name = 'MSDS Detection Pipeline'
+
+        self._id = 'msds_detection_pipeline_builder'
+
+    def build(self):
+        """
+        This script runs the multi-pixel pipeline with debris detection enabled,
+        using the specified CONFIGURATION.
+
+        :return:
+        """
+
+        # Pipeline Reader or Receiver input
+        if settings.manager.offline:
+            receiver = RawDataReader(settings.rawdatareader)
+            self.manager.name += ' (Offline)'
+        else:
+            receiver = Receiver(settings.receiver)
+
+        self.manager.add_module("receiver", receiver)
+
+        # Beam former
+        if settings.manager.save_raw:
+            persister_raw = RawPersister(settings.rawpersister, receiver.output_blob)
+            beamformer = Beamformer(settings.beamformer, persister_raw.output_blob)
+            self.manager.add_module("persister_raw", persister_raw)
+        else:
+            beamformer = Beamformer(settings.beamformer, receiver.output_blob)
+
+        self.manager.add_module("beamformer", beamformer)
+
+        # Channeliser
+        ppf = PFB(settings.channeliser, beamformer.output_blob)
+        self.manager.add_module("ppf", ppf)
+
+        # Beam persister
+        pp_input = ppf.output_blob
+        if settings.manager.save_beam:
+            persister_beam = BeamPersister(settings.persister, ppf.output_blob)
+            self.manager.add_module("persister_beam", persister_beam)
+
+            pp_input = persister_beam.output_blob
+
+        preprocessor = PreProcessor(settings.detection, pp_input)
+        self.manager.add_module("preprocessor", preprocessor)
+
+        filtering_input = preprocessor.output_blob
+        if settings.fits_persister.visualise_raw_beams:
+            raw_fits_persister = RawDataFitsPersister(settings.fits_persister, preprocessor.output_blob)
+            self.manager.add_module("raw_fits_persister", raw_fits_persister)
+            filtering_input = raw_fits_persister.output_blob
+
+        filtering = Filter(settings.detection, filtering_input)
+        detector = MSDSDetector(settings.detection, filtering.output_blob)
+        terminator = Terminator(None, detector.output_blob)
+
+        self.manager.add_module("filtering", filtering)
+        self.manager.add_module("detector", detector)
         self.manager.add_module("terminator", terminator)

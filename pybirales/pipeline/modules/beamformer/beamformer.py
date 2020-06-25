@@ -1,9 +1,7 @@
 import ctypes
 import logging
 import logging as log
-import os
 import warnings
-from datetime import datetime
 from math import cos, sin, atan2, asin
 
 import numpy as np
@@ -12,6 +10,7 @@ from astropy import units as u
 from astropy.coordinates import Angle
 from astropy.units import Quantity
 from astropy.utils.exceptions import AstropyWarning
+from numba import njit, prange
 from numpy import ctypeslib
 
 from pybirales import settings
@@ -24,6 +23,13 @@ from pybirales.repository.models import CalibrationObservation, Observation
 
 # Mute Astropy Warnings
 warnings.simplefilter('ignore', category=AstropyWarning)
+
+
+@njit(parallel=True, fastmath=True)
+def beamformer_python(nbeams, data, weights, output):
+    for b in prange(nbeams):
+        x = np.dot(data, weights[0, b, :])
+        output[:, b, :, :] = np.sum(np.power(np.abs(x), 2))
 
 
 class Beamformer(ProcessingModule):
@@ -80,7 +86,7 @@ class Beamformer(ProcessingModule):
         datatype = self._input.datatype
 
         # Initialise pointing
-        self._initialise(input_shape['nsubs'], input_shape['nants'])
+        # self._initialise(input_shape['nsubs'], input_shape['nants'])
 
         # Create output blob
         return BeamformedBlob(self._config, [('npols', input_shape['npols']),
@@ -108,11 +114,15 @@ class Beamformer(ProcessingModule):
 
         # If pointing is not initialise, initialise
         if self._pointing is None:
+            # print 'pointing is none'
             self._initialise(nsubs, nants)
 
         # Apply pointing coefficients
         self._beamformer.beamform(input_data.ravel(), self._pointing.weights.ravel(), output_data.ravel(),
                                   nsamp, nsubs, self._nbeams, nants, npols, self._nthreads)
+
+        # input_data_bkp = np.ascontiguousarray(input_data_bkp[0, 0, :, :], dtype=np.complex64)
+        # beamformer_python(self._nbeams, input_data_bkp, self._pointing.weights, output_data_bkp)
 
         # Update observation information
         obs_info['nbeams'] = self._nbeams
@@ -145,6 +155,8 @@ class Pointing(object):
         self._start_center_frequency = settings.observation.start_center_frequency
         self._reference_location = config.reference_antenna_location
         self._reference_declination = config.reference_declination
+
+        # print 'beamformer scf', self._start_center_frequency
 
         self._pointings = config.pointings
         self._bandwidth = settings.observation.channel_bandwidth
@@ -271,7 +283,7 @@ class Pointing(object):
 
         # Point beam to required ALT AZ
         log.debug("LAT: {}, HA: {}, DEC: {}, EL: {}, AZ: {}".format(self._reference_location[1], ha.deg, ref_dec +
-                                                                     delta_dec, beam_el.deg, beam_az.deg))
+                                                                    delta_dec, beam_el.deg, beam_az.deg))
         self.point_array_static(beam, beam_el, beam_az)
 
     def point_array(self, beam, ref_dec, ha, delta_dec):
@@ -360,15 +372,24 @@ class Pointing(object):
         Read the calibration coefficients from file.
         :return:
         """
+        obs = Observation.objects.get(id=settings.observation.id)
+        obs_start = obs.principal_created_at
 
-        calib_obs = CalibrationObservation.objects.order_by('-created_at').first()
+        # Find the calibration algorithm whose principal start time is closest to this observation's principal start time
+        calib_obs = CalibrationObservation.objects(principal_created_at__lte=obs_start, status="finished").order_by(
+            'principal_created_at', '-created_at').first()
+
+        if len(calib_obs) < 1:
+            obs_start = obs.created_at
+            calib_obs = CalibrationObservation.objects(created_at__lte=obs_start, status="finished").order_by(
+                'created_at').first()
 
         if len(calib_obs) < 1:
             raise InvalidCalibrationCoefficientsException("No suitable calibration coefficients files were found")
 
         log.info(
-            'Using the calibration coefficients generated on {:%d-%m-%Y %H:%M:%S} by {}'.format(
-                calib_obs.created_at, calib_obs.name))
+            'Selected Calibration obs: {}. Created At: {:%d-%m-%Y %H:%M:%S}. Principal: {:%d-%m-%Y %H:%M:%S}.'.format(
+                calib_obs.name, calib_obs.created_at, calib_obs.principal_created_at))
 
         calib_coeffs = np.array(calib_obs.real) + np.array(calib_obs.imag) * 1j
 
@@ -381,7 +402,6 @@ class Pointing(object):
 
         log.info('Calibration coefficients loaded successfully')
 
-        obs = Observation.objects.get(id=settings.observation.id)
         obs.calibration_observation = calib_obs.id
         obs.save()
 

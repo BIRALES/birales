@@ -1,11 +1,10 @@
 import numpy as np
-from astropy.stats import sigma_clipped_stats
+from astropy.stats import SigmaClip
+from numpy import mean
 from photutils import Background2D, MedianBackground
 from scipy.ndimage import binary_hit_or_miss, binary_opening
 from skimage.feature import canny
 from skimage.filters import *
-from astropy.stats import SigmaClip
-from numpy import mean
 
 
 def get_moving_average(chunked_data, iter, n=5):
@@ -45,7 +44,6 @@ def chunked_filtering(test_img, filter_func):
         if filter_func is global_thres_running:
             channel_noise, std = get_moving_average(c_test_img, i)
             mask, threshold = filter_func(np.array(c), channel_noise, std)
-
         elif filter_func is local_thres_running:
             channel_noise, std = get_moving_average_local(c_test_img, i)
             # print channel_noise, std
@@ -59,7 +57,7 @@ def chunked_filtering(test_img, filter_func):
     return result_mask, threshold
 
 
-def no_filter(test_img):
+def dummy_filter(test_img):
     return np.zeros(test_img.shape, dtype=bool), None
 
 
@@ -157,7 +155,7 @@ def minimum(test_img):
 
 
 def triangle(test_img):
-    local_thresh = threshold_triangle(test_img, nbins=1024)
+    local_thresh = threshold_triangle(test_img, nbins=2048)
     local_filter_mask = test_img < local_thresh
 
     return local_filter_mask, local_thresh
@@ -170,18 +168,21 @@ def isodata(test_img):
     return local_filter_mask, local_thresh
 
 
-def hit_and_miss(data, test_img, mask):
+def hit_and_miss(data, test_img, nd_mask):
     structure = np.zeros((5, 5))
     structure[2, 2] = 1
 
-    mask += binary_hit_or_miss(data, structure1=structure)
+    data[nd_mask] = 0
 
-    data[~mask] = test_img[~mask]
+    nd_mask += binary_hit_or_miss(data, structure1=structure)
 
-    return mask, None
+    data[~nd_mask] = test_img[~nd_mask]
+
+    return nd_mask, None
 
 
 def morph_opening(data, test_img, mask):
+    data[mask] = 0
     tmp = binary_opening(data, structure=np.ones((2, 2))).astype(np.int)
     mask += tmp < 1
 
@@ -277,15 +278,16 @@ def cfar(test_image):
 
 
 def sigma_clipping(test_img):
-    s_clip = SigmaClip(cenfunc=mean, iters=5, sigma_upper=3., sigma_lower=70.)
+    s_clip = SigmaClip(cenfunc=np.median, iters=3, sigma_upper=3., sigma_lower=70.)
 
     # print np.mean(test_img) - 3.*np.std(test_img), np.mean(test_img)+ 60.*np.std(test_img), np.max(test_img)
     mask = s_clip(test_img)
 
     return ~mask.mask, None
 
+
 def sigma_clipping4(test_img):
-    s_clip = SigmaClip(cenfunc=mean, iters=5, sigma_upper=4., sigma_lower=70.)
+    s_clip = SigmaClip(cenfunc=mean, iters=5, sigma_upper=4., sigma_lower=10.)
 
     # print np.mean(test_img) - 3.*np.std(test_img), np.mean(test_img)+ 60.*np.std(test_img), np.max(test_img)
     mask = s_clip(test_img)
@@ -295,7 +297,7 @@ def sigma_clipping4(test_img):
 
 def sigma_clipping_map(test_img):
     # from:  https://photutils.readthedocs.io/en/stable/segmentation.html#centroids-photometry-and-morphological-properties
-    sigma_clip = SigmaClip(sigma=3., cenfunc=mean, iters=3)
+    sigma_clip = SigmaClip(cenfunc=mean, iters=3, sigma_upper=3., sigma_lower=10.)
     bkg_estimator = MedianBackground()
     bkg = Background2D(test_img, (50, 50), filter_size=(30, 30), sigma_clip=sigma_clip, bkg_estimator=bkg_estimator)
 
@@ -304,3 +306,4 @@ def sigma_clipping_map(test_img):
     mask = test_img <= threshold
 
     return mask, np.mean(threshold)
+

@@ -41,7 +41,7 @@ class RawPersister(ProcessingModule):
 
         self._base_filepath = file_path.split('.')[0]
         self._current_filepath = file_path
-        self._chunk_size = 10  # number of data blobs to save in a raw file
+        self._chunk_size = 4  # number of data blobs to save in a raw file
         self._raw_file_counter = 1
 
         # Open file (if file exists, remove first)

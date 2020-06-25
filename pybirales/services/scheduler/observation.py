@@ -58,7 +58,8 @@ class ScheduledObservation(object):
                 type=self.TYPE,
                 status='pending',
                 config_parameters=self.parameters,
-                config_file=self.config_file
+                config_file=self.config_file,
+                principal_created_at=self.principal_created_at(self.parameters)
             )
         else:
             self.model = model.objects.get(id=model_id)
@@ -72,6 +73,7 @@ class ScheduledObservation(object):
             self.config_file = self.model.config_file
             self.duration = self._duration()
             self.created_at = self.model.created_at
+            self.principal_created_at = self.model.principal_created_at
 
         if self.pipeline_name not in AVAILABLE_PIPELINES_BUILDERS:
             raise PipelineBuilderIsNotAvailableException(self.pipeline_name, AVAILABLE_PIPELINES_BUILDERS)
@@ -84,6 +86,14 @@ class ScheduledObservation(object):
 
     def save(self):
         self.model.save()
+
+    def principal_created_at(self, parameters):
+        if 'observation' in parameters:
+            if 'principal_created_at' in parameters['observation']:
+                return datetime.datetime.strptime(parameters['observation']['principal_created_at'],
+                                                  '%Y-%m-%d %H:%M:%S.%f')
+
+        return datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
 
     def _declination(self):
         """
@@ -199,7 +209,6 @@ class ScheduledCalibrationObservation(ScheduledObservation):
         pipeline_name = 'correlation_pipeline'
 
         ScheduledObservation.__init__(self, name, pipeline_name, config_parameters, config_file, model_id)
-
 
     def is_calibration_needed(self, obs):
         """

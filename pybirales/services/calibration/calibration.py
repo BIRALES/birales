@@ -43,7 +43,7 @@ class CalibrationFacade:
         self.obs_info = self.load_pkl_file(corr_matrix_filepath)
 
         log.info('Running the calibration routine.')
-
+        # print self.obs_info['start_center_frequency'] , 'scf'
         cal_input = {
             'no_of_antennas': len(settings.beamformer.antenna_locations),
             'gaincal': True,

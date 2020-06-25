@@ -4,23 +4,25 @@ space debris tracks from the filtered data
 
 """
 
-from astride import Streak
 from astride.utils.edge import EDGE
+from astropy.stats import sigma_clipped_stats
+from hdbscan import HDBSCAN
 from skimage import measure
 from skimage.transform import probabilistic_hough_line
 from sklearn.cluster import DBSCAN
 
-from configuration import *
-from evaluation import *
-from filters import *
-from msds import *
+from pybirales.pipeline.modules.detection.msds.msds import *
+from pybirales.pipeline.modules.detection.msds.util import get_clusters, _validate_clusters, timeit
+from pybirales.pipeline.modules.detection.msds.visualisation import *
 from receiver import *
-from util import get_clusters
-from visualisation import *
-from hdbscan import HDBSCAN
 
 
-def hough_transform(test_image, unfiltered_image=None):
+def _viz_cluster(bb, fclust1):
+    for b, g in zip(bb, fclust1):
+        print b[0], b[1], b[2], g
+
+
+def hough_transform(test_image, true_tracks, noise_est, debug):
     """
     Hough feature detection
 
@@ -49,7 +51,7 @@ def hough_transform(test_image, unfiltered_image=None):
     return clusters
 
 
-def astride(test_image):
+def astride(test_image, true_tracks, noise_est, debug):
     mean, med, std = sigma_clipped_stats(test_image)
     test_image -= med
     contours = measure.find_contours(test_image, std * 3, fully_connected='high')
@@ -70,21 +72,27 @@ def astride(test_image):
 
     clusters = []
     for i, streak in enumerate(streaks):
-        # cluster = np.column_stack([streak['y'], streak['x'], np.full(len(streak['x']), i)])
-
-        cluster_df = pd.DataFrame(columns=['channel', 'sample', 'snr'])
-        cluster_df['channel'] = streak['y']
-        cluster_df['sample'] = streak['x']
-        cluster_df['snr'] = 1
-
-        clusters.append(cluster_df)
+        cluster = np.column_stack(
+            [streak['y'], streak['x'], test_image[streak['y'].astype(int), streak['x'].astype(int)],
+             np.full(len(streak['x']), i)])
+        clusters.append(cluster)
+    #
+    # for i, streak in enumerate(streaks):
+    #     # cluster = np.column_stack([streak['y'], streak['x'], np.full(len(streak['x']), i)])
+    #
+    #     cluster_df = pd.DataFrame(columns=['channel', 'sample', 'snr'])
+    #     cluster_df['channel'] = streak['y']
+    #     cluster_df['sample'] = streak['x']
+    #     cluster_df['snr'] = test_image[streak['y'].astype(int), streak['x'].astype(int)]
+    #
+    #     clusters.append(cluster_df)
 
     # clusters = _validate_clusters(clusters)
 
     return clusters
 
 
-def hdbscan(test_image):
+def hdbscan(test_image, debug):
     hdbscan = HDBSCAN(algorithm='prims_kdtree', alpha=1.0, approx_min_span_tree=True,
                       gen_min_span_tree=False, leaf_size=50, metric='euclidean',
                       min_cluster_size=5, min_samples=None, p=None)
@@ -103,7 +111,7 @@ def hdbscan(test_image):
     return clusters
 
 
-def naive_dbscan(test_image):
+def naive_dbscan(test_image, true_tracks, noise_estimate, debug):
     db_scan = DBSCAN(eps=5, min_samples=5, algorithm='kd_tree', n_jobs=-1)
 
     ndx = np.column_stack(np.where(test_image > 0.))
@@ -126,220 +134,48 @@ def naive_dbscan(test_image):
     return clusters
 
 
-def _viz_cluster(bb, fclust1):
-    for b, g in zip(bb, fclust1):
-        print b[0], b[1], b[2], g
-
-
-def _validate_clusters(clusters):
-    return [c for c in clusters if is_valid(c, r_thold=-0.9, min_length=10, min_span_thold=1)]
-
-
 # @profile
-def msds_q(test_image):
+@timeit
+def msds_q(test_image, true_tracks, noise_est, debug):
     limits = get_limits(test_image, true_tracks)
-    limits = (0, 100, 0, 1000)
-    # limits = (0, 200, 70, 200)
-    # limits = (50, 175, 4000, 7100)
+
+    pub = True
+    ext = '.pdf'
+
+    # limits = (0, 70, 2000, 2160)   #s limits for crossing streaks
+    # limits = (50,120, 1100, 1400)
     # limits = None
 
-    # Pre-process the input data
-    ndx = pre_process_data(test_image, noise_estimate=0.93711)
+    ndx = pre_process_data(test_image)
 
     # Build quad/nd tree that spans all the data points
-    k_tree = build_tree(ndx, leave_size=30, n_axis=2, true_tracks=true_tracks, limits=limits, debug=debug,
-                        visualisation=vis)
+    k_tree = build_tree(ndx, leave_size=40, n_axis=2)
+
+    visualise_filtered_data(ndx, true_tracks, '1_filtered_data' + ext, limits=limits, debug=debug, pub=pub)
 
     # Traverse the tree and identify valid linear streaks
-    leaves = traverse(k_tree.tree, ndx,
-                      bbox=(0, test_image.shape[1], 0, test_image.shape[0]),
-                      distance_thold=3., min_length=2., cluster_size_thold=10.)
+    leaves = traverse(k_tree.tree, ndx, bbox=(0, test_image.shape[1], 0, test_image.shape[0]), min_length=2.,
+                      noise_est=noise_est)
 
-    clusters = process_leaves2(leaves)
+    positives = process_leaves(leaves)
 
-    visualise_tree_traversal(ndx, true_tracks, clusters, leaves, '2_processed_leaves.png', limits=limits, vis=vis)
+    print "Processed {} leaves. Of which {} were positives.".format(len(leaves), len(positives))
 
-    # Cluster the leaves based on their vicinity to each other
-    cluster_data, unique_labels = cluster_leaves(clusters, distance_thold=estimate_leave_eps(clusters))
-    cluster_labels = cluster_data[:, 5]
+    visualise_tree_traversal(ndx, true_tracks, positives, leaves, '2_processed_leaves' + ext, limits=limits,
+                             vis=debug, pub=pub)
+    eps = estimate_leave_eps(positives)
 
-    visualise_clusters(cluster_data, cluster_labels, unique_labels, true_tracks, filename='3_clusters.png',
+    print 'eps is:', eps
+    cluster_data = h_cluster_leaves(positives, distance_thold=eps)
+
+    visualise_clusters(cluster_data, true_tracks, positives,
+                       filename='3_clusters' + ext,
                        limits=limits,
-                       debug=debug)
+                       debug=debug, pub=pub)
     # Filter invalid clusters
-    tracks = validate_clusters3(cluster_data, unique_labels=unique_labels)
+    tracks = validate_clusters(cluster_data)
 
-    # tracks = _validate_clusters(clusters)
+    visualise_tracks(tracks, true_tracks, '4_tracks' + ext, limits=limits, debug=debug, pub=pub)
 
-    visualise_tracks(tracks, true_tracks, '5_tracks.png', limits=limits, debug=debug)
-
-    # Fill any missing data (increase recall)
-    valid_tracks = fill_clusters2(tracks, test_image, true_tracks=true_tracks, visualisation=debug)
-
-    return valid_tracks
-
-
-def test_detector(filtered_test_img, noise_mean, true_tracks, detector, thickness, snr):
-    # Estimate the noise
-    t = thickness
-    s = snr
-    d_name, detect, (f_name, filter_func) = detector
-
-    metrics[s] = {}
-
-    print "\nEvaluating filters with tracks at SNR={:0.2f} dB".format(s)
-
-    # Add tracks to the true data
-    true_image = add_tracks(np.zeros(shape=filtered_test_img.shape), true_tracks, noise_mean, s)
-
-    data = filtered_test_img.copy()
-
-    # Add tracks to the simulated data
-    data = add_tracks(data, true_tracks, noise_mean, s)
-
-    if filter_func != no_filter:
-        # Filter the data in generate metrics
-        # Split data in chunks
-        start = time.time()
-        mask, threshold = chunked_filtering(data, filter_func)
-        # mask, _ = hit_and_miss(data, test_img, mask)
-        timing = time.time() - start
-        print "The {} filtering algorithm, finished in {:2.3f}s".format(f_name, timing)
-
-        visualise_filter(data, mask, true_tracks, f_name, s, threshold, visualise=False)
-
-        data[mask] = -100
-
-    # feature extraction - detection
-    print "Running {} algorithm".format(d_name)
-    start = time.time()
-    candidates = detect(data)
-    timing = time.time() - start
-    print "The {} detection algorithm, found {} candidates in {:2.3f}s".format(d_name, len(candidates),
-                                                                               timing)
-
-    # evaluation
-    metrics[s][d_name] = evaluate_detector(true_image, data, candidates, timing, s, t)
-
-    return metrics
-
-
-if __name__ == '__main__':
-    debug = False
-    vis = False
-    plot_results = True
-    from_file = False
-
-    if from_file:
-        metrics_df = pd.read_pickle("metrics_df.pkl")
-        plot_metrics(metrics_df)
-
-        exit()
-
-    N_TRACKS = 15
-    N_CHANS = 8192
-    N_SAMPLES = 256
-
-    track_thickness = [1, 2, 5]
-    # track_thickness = [1]
-
-    # snr = [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55]
-    snr = [25]
-    snr = [2, 3, 5, 10, 15, 20, 25]
-    # snr = [5, 10]
-
-    metrics = {}
-    metrics_df = pd.DataFrame()
-
-    detectors = [
-        ('Naive DBSCAN', naive_dbscan, ('Filter', sigma_clipping4)),
-        ## ('HDBSCAN', hdbscan, ('Filter', sigma_clipping4)),
-        ('msds_q', msds_q, ('Filter', sigma_clipping)),
-        ('Hough Transform', hough_transform, ('Filter', global_thres)),
-        ('Astride', astride, ('No Filter', no_filter)),
-        # ('CFAR', None, ('No Filter', cfar)),
-    ]
-
-    # Create image from real data
-    test_img = create_test_img(os.path.join(ROOT, FITS_FILE), nchans=N_CHANS, nsamples=N_SAMPLES)
-
-    # Reduce the input problem to speed up computation - use for debugging only
-    # test_img = test_img[0: 1000, :]
-
-    # Remove channels with RFI
-    filtered_test_img = rfi_filter(test_img)
-    # visualise_image(test_img, 'Test Image: no tracks', tracks=None)
-
-    # Estimate the noise
-    noise_mean = np.mean(test_img)
-
-    print 'Mean power (noise): ', noise_mean
-    for t in track_thickness:
-        np.random.seed(SEED)
-        # Generate a number of tracks
-        true_tracks = get_test_tracks(N_TRACKS, GRADIENT_RANGE, TRACK_LENGTH_RANGE, filtered_test_img.shape, t)
-
-        for d_name, detect, (f_name, filter_func) in detectors:
-            # filtering_algorithm = ('Filter', filter_func)
-
-            for s in snr:
-                metrics[s] = {}
-                metrics_tmp_df = pd.DataFrame()
-
-                print "\nEvaluating filters with tracks at SNR={:0.2f} dB".format(s)
-
-                # Add tracks to the true data
-                true_image = add_tracks(np.zeros(shape=filtered_test_img.shape), true_tracks, noise_mean, s)
-
-                data = filtered_test_img.copy()
-
-                # Add tracks to the simulated data
-                data = add_tracks(data, true_tracks, noise_mean, s)
-
-                # visualise_image(data, 'Test Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks, visualise=True )
-
-                # visualise_image(true_image, 'Truth Image: %d tracks at SNR %dW' % (N_TRACKS, s), tracks)
-
-                if filter_func != no_filter:
-                    # Filter the data in generate metrics
-                    # data = test_img.copy()
-
-                    # Split data in chunks
-                    start = time.time()
-                    mask, threshold = chunked_filtering(data, filter_func)
-                    # mask, _ = hit_and_miss(data, test_img, mask)
-                    timing = time.time() - start
-                    print "The {} filtering algorithm, finished in {:2.3f}s".format(f_name, timing)
-
-                    visualise_filter(data, mask, true_tracks, f_name, s, threshold, visualise=False)
-
-                    # metrics[s][f_name] = evaluate_filter(true_image, data, ~mask, timing, s, TRACK_THICKNESS)
-
-                    # data[:] = False
-                    # data[~mask] = True
-                    data[mask] = -100
-
-                    # print np.mean(mask), s, threshold
-                    # continue
-                # continue
-                # feature extraction - detection
-                print "Running {} algorithm".format(d_name)
-                start = time.time()
-                candidates = detect(data)
-                timing = time.time() - start
-                print "The {} detection algorithm, found {} candidates in {:2.3f}s".format(d_name, len(candidates),
-                                                                                           timing)
-
-                # visualise candidates
-                # visualise_detector(data, candidates, tracks, d_name, s, visualise=True)
-
-                # evaluation
-                metrics[s][d_name] = evaluate_detector(true_image, data, candidates, timing, s, t)
-
-                metrics_df = metrics_df.append(pd.DataFrame.from_dict(metrics[s], orient='index'))
-
-    print metrics_df[['snr', 'f1', 'N', 'dt', 'precision', 'recall', 'dx']].sort_values(by=['dx', 'snr', 'f1'])
-
-    if plot_results:
-        metrics_df.to_pickle("metrics_df.pkl")
-        plot_metrics(metrics_df)
+    visualise_tracks(tracks, true_tracks, '5_tracks' + ext, limits=None, debug=debug, pub=pub)
+    return tracks
