@@ -282,7 +282,8 @@ def visualise_ir2_pub(data, org_data, group, ratio2):
 
 
 def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negatives=None, pub=False):
-    from msds import h_cluster
+    from msds import h_cluster, dm
+    from scipy.cluster.hierarchy import linkage, fcluster
     color = 'r'
     zorder = 1
     lw = 2
@@ -291,8 +292,18 @@ def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negative
     if not positive:
         ax.text(x1 + 0.95 * (x2 - x1), y1 + 0.95 * (y2 - y1), i, color='k', fontsize=8, ha='right', va='top', zorder=10)
 
-    # if i == 343 and positive:
-    #     visualise_ir2_pub(positives, positives, i, -1)
+    if i == 343 and positive:
+        visualise_ir2_pub(positives, positives, i, -1)
+        m = positives.shape[0]
+        empty_dm = np.full((m * (m - 1)) // 2, 10000, dtype=np.float)
+        distances = dm(positives, m, empty_dm, -3.51929755, i)
+
+        # Perform single linkage clustering
+        Z = linkage(distances, 'single')
+
+        # Determine to which cluster each initial point would belong given a distance threshold
+        labels = fcluster(Z, 4, criterion='distance')
+        viz_den(positives, Z, 4, labels)
 
     if positive:
         color = 'g'
@@ -874,7 +885,7 @@ def viz_den(X, Z, threshold, labels):
         ax2.plot(X[labels == u][:, 1].astype(int), X[labels == u][:, 0], '.', ms=15)
 
     ax2.xaxis.set_major_locator(MaxNLocator(integer=True))
-    print threshold
+
     plt.show()
 
 
@@ -969,13 +980,18 @@ def plot_RSO_track_snr(track, i, beam_id=None):
 
     reduced_track = track.reduce_data()
 
-    mask = reduced_track['beam_id'] > -1
     if beam_id:
         mask = reduced_track['beam_id'] == beam_id
-
-    t1 = reduced_track[mask]['time_sample']
-    c1 = reduced_track[mask]['snr']
-    ax.plot(t1, c1, 'r+')
+        t1 = reduced_track[mask]['time_sample']
+        c1 = reduced_track[mask]['snr']
+        ax.plot(t1, c1, 'r+')
+    else:
+        beams = np.unique(reduced_track['beam_id'])
+        for b in beams:
+            mask = reduced_track['beam_id'] == b
+            t1 = reduced_track[mask]['time_sample']
+            c1 = reduced_track[mask]['snr']
+            ax.plot(t1, c1, '-')
 
     mean_x = np.mean(time)
     mean_y = np.mean(snr)

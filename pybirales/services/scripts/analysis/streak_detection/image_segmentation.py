@@ -19,7 +19,7 @@ import time
 from evaluation import evaluate_detector, evaluate_filter
 from filters import hit_and_miss
 from receiver import get_test_tracks, generate_test_image, add_tracks
-from test_case import IMAGE_SEG_TESTS, DETECTION_ALG
+from test_case import IMAGE_SEG_TESTS, DETECTION_ALG, DETECTION_TESTS_DEBUG
 from configuration import GRADIENT_RANGE, TRACK_LENGTH_RANGE
 from pybirales.pipeline.modules.detection.msds.util import snr_calc, is_valid
 from pybirales.pipeline.modules.detection.msds.visualisation import *
@@ -126,7 +126,7 @@ if __name__ == '__main__':
     EXT = '.pdf'
     TEST_SUITE = IMAGE_SEG_TESTS
     # TEST_SUITE = DETECTION_TESTS
-    # TEST_SUITE = DETECTION_TESTS_DEBUG
+    TEST_SUITE = DETECTION_TESTS_DEBUG
 
     im_algorithms = [t.image_seg_algo.name for t in TEST_SUITE.tests]
     detection_algorithms = [d.name for d in DETECTION_ALG]
@@ -145,8 +145,10 @@ if __name__ == '__main__':
     # snr = [1, 5, 10]
     # snr = [5]
     snr = np.arange(0, 6.5, 0.5)
+    snr = [2]
     DEBUG_DETECTOR = False
-    N_TESTS = 10
+
+    N_TESTS = 1
     VISUALISE = False
 
     OUTPUT_DF = 'output_' + str(len(TEST_SUITE.name)) + str(N_CHANS) + str(N_SAMPLES) + str(N_TRACKS) + '_'.join(
@@ -244,7 +246,7 @@ if __name__ == '__main__':
                     results = test_detector(detector, data2, tracks, noise_mean, debug=DEBUG_DETECTOR)
                     detection_metrics_df = detection_metrics_df.append(results, ignore_index=True)
 
-    agg_df = show_results_filter(metrics_df, im_algorithms, 'image_seg_results')
+    # agg_df = show_results_filter(metrics_df, im_algorithms, 'image_seg_results')
 
     # agg_df = show_results_detector(detection_metrics_df, detection_algorithms, 'detection_results')
 

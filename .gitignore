@@ -17,4 +17,11 @@ pybirales/pipeline/plots/*
 pybirales/services/calibrator
 pybirales/app/static/node_modules
 
-pybirales/services/scripts/calibration/*.png
+pybirales/pipeline/modules/detection/*.png
+pybirales/services/scripts/**/*.png
+pybirales/services/scripts/**/*.csv
+pybirales/services/scripts/**/*.npy
+pybirales/services/scripts/**/*.mat
+pybirales/services/scripts/**/*.lprof
+pybirales/services/scripts/**/*.pdf
+pybirales/services/scripts/**/*.tree

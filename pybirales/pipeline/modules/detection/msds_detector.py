@@ -91,7 +91,6 @@ def msds_standalone(_iter_count, input_data, obs_info, channels, pool=None):
         # for b in range(0, 29):
         beam_clusters += serial_msds((input_data[b, ...], b, _iter_count, np.mean(obs_info['channel_noise'][b])))
 
-
     size = input_data.shape[0]
     chunks = [(input_data[b, ...], b, _iter_count, np.mean(obs_info['channel_noise'][b])) for b in range(0, size)]
 
@@ -150,11 +149,6 @@ class Detector(ProcessingModule):
         super(Detector, self).__init__(config, input_blob)
 
         self.pool = Pool(8, maxtasksperchild=500)
-        # self.pool = Pool(3)
-
-        # self.channels = None
-        #
-        # self._doppler_mask = None
 
         self.data_dump = False
 
@@ -237,10 +231,6 @@ class Detector(ProcessingModule):
             self.n_terminated_tracks += len(terminated_tracks)
             self.n_cancelled_tracks += len(cancelled_tracks)
 
-            def missing_score(param):
-                missing = np.setxor1d(np.arange(min(param), max(param)), param)
-                return len(missing) / float(len(param))
-
             for j, candidate in enumerate(pending_tracks):
                 i = j + self.n_terminated_tracks + self.n_cancelled_tracks
                 log.info("RSO %d [%d] (PENDING): %s" % (i, id(candidate) % 1000, candidate.state_str()))
@@ -249,14 +239,11 @@ class Detector(ProcessingModule):
                 i = j + self.n_terminated_tracks + self.n_cancelled_tracks
                 log.info("RSO %d [%d] (TERMINATED): %s" % (i, id(candidate) % 1000, candidate.state_str()))
 
-                # print "RSO_{} ({})".format(i, id(candidate) % 1000), missing_score(candidate.data['time_sample'])
-                #
                 # plot_RSO_track(candidate, "RSO_{} ({})".format(i, id(candidate) % 1000))
                 # plot_RSO_track_snr(candidate, "RSO_{} ({})".format(i, id(candidate) % 1000))
                 # plt.show()
         else:
             obs_name = settings.observation.name
-            # obs_name = 'norad_41128'
             out_dir = os.path.join(os.environ['HOME'], '.birales/debug/detection', obs_name)
             self.dump_detection_data(input_data, obs_info, out_dir)
 
@@ -372,7 +359,6 @@ if __name__ == '__main__':
             for j, candidate in enumerate(terminated_tracks):
                 i = j + len(terminated_tracks) + len(cancelled_tracks)
                 log.info("RSO %d [%d] (TERMINATED): %s" % (i, id(candidate) % 1000, candidate.state_str()))
-
 
             print "Iteration {}: Processing finished in {:0.3f}. Reading took {:0.3f}".format(_iter_count,
                                                                                               time.time() - t1,
