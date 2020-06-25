@@ -22,7 +22,7 @@ from pybirales.pipeline.modules.rso_simulator import RSOGenerator
 from pybirales.pipeline.modules.terminator import Terminator
 
 AVAILABLE_PIPELINES_BUILDERS = ['detection_pipeline', 'msds_detection_pipeline',
-                                'correlation_pipeline',
+                                'correlation_pipeline', 'dbscan_detection_pipeline',
                                 'standalone_pipeline', 'test_receiver_pipeline', 'dummy_data_pipeline',
                                 'rso_generator_pipeline', 'raw_data_truncator_pipeline']
 
@@ -42,8 +42,10 @@ def get_builder_by_id(builder_id):
         raise PipelineBuilderIsNotAvailableException(builder_id, AVAILABLE_PIPELINES_BUILDERS)
 
     if builder_id == 'detection_pipeline':
+        return MSDSDetectionPipelineManagerBuilder()
+    elif builder_id == 'dbscan_detection_pipeline':
         return DetectionPipelineMangerBuilder()
-    if builder_id == 'msds_detection_pipeline':
+    elif builder_id == 'msds_detection_pipeline':
         return MSDSDetectionPipelineManagerBuilder()
     elif builder_id == 'correlation_pipeline':
         return CorrelatorPipelineManagerBuilder()
@@ -119,18 +121,6 @@ l
             self.manager.add_module("persister_beam", persister_beam)
 
             pp_input = persister_beam.output_blob
-
-        preprocessor = PreProcessor(settings.detection, pp_input)
-        self.manager.add_module("preprocessor", preprocessor)
-
-        # added to output raw fits only
-        raw_fits_persister = RawDataFitsPersister(settings.fits_persister, preprocessor.output_blob)
-        self.manager.add_module("raw_fits_persister", raw_fits_persister)
-        terminator = Terminator(settings.terminator, raw_fits_persister.output_blob)
-        self.manager.add_module("terminator", terminator)
-        # added to output raw fits only
-
-        return
 
         # Detection
         if settings.manager.detector_enabled:
