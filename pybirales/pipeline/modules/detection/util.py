@@ -67,6 +67,10 @@ def _debug_msg(cluster, iter_count):
                                                                         iter_count)
 
 
+def missing_score(param):
+    missing = np.setxor1d(np.arange(min(param), max(param)), param)
+    return len(missing) / float(len(param))
+
 # @timeit
 def data_association(tracks, tentative_tracks, obs_info, notifications=False, save_candidates=False):
     """
@@ -91,6 +95,10 @@ def data_association(tracks, tentative_tracks, obs_info, notifications=False, sa
                 # print "track {} associated with cluster {}".format(__id(track), __id(tentative_track))
 
                 if associated:
+                    # td = (track.data['time_sample'].max() - tentative_track['time_sample'].min()) * 0.1048576
+                    # ms = missing_score(track.data['time_sample'])
+                    # log.debug("track {} associated with cluster {}, td={:2.3f}, ms={:2.3f}".format(
+                    #     __id(track), __id(tentative_track), td, ms))
                     break
             # else:
             #     print "Track {} and tentative {} do not match".format(__id(track), __id(tentative_track))

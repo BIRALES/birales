@@ -58,7 +58,7 @@ class RawDataReader(ProcessingModule):
         self._base_filepath = config.filepath.split('.')[0]
 
         self._read_count = 0
-        self._read_count_end = 30
+        self._read_count_end = None
 
         if settings.rawdatareader.skip > 0:
             self._read_count = settings.rawdatareader.skip

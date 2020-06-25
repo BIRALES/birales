@@ -275,48 +275,11 @@ class SpaceDebrisTrack:
         if not g_thold[0] >= self.ref_data['gradient'] >= g_thold[1]:
             return False, 'Gradient is not within valid range {}'.format(id(self) % 1000)
 
-        if missing_score(self.data['time_sample']) > 0.15:
+        if missing_score(self.data['time_sample']) > 0.25:
             return False, 'High missing score {:0.3f} {}'.format(missing_score(self.data['time_sample']),
                                                                  id(self) % 1000)
 
         return True, None
-
-    def is_parent_of_old(self, cluster):
-        """
-        Determine whether a detection cluster should be associated with this space debris track by giving
-        a similarity score. Similarity between beam candidate and space debris track is determined by
-        cosine distance.
-
-        :param detection_cluster: The detection cluster with which the track is being compared
-        :return:
-        """
-
-        track_data = self.aggregate_data(self.data, remove_duplicate_epoch=True, remove_duplicate_channel=True)
-        cluster_data = self.aggregate_data(cluster, remove_duplicate_epoch=True, remove_duplicate_channel=True)
-
-        cluster_m, cluster_c, _, _, _ = self.linear_model(cluster_data['channel_sample'], cluster_data['time_sample'])
-        track_m, track_c, _, _, _ = self.linear_model(track_data['channel_sample'], track_data['time_sample'])
-
-        m2, _, _, _, _ = self.linear_model(track_data['channel_sample'] + cluster_data['channel_sample'],
-                                           track_data['time_sample'] + cluster_data['time_sample'])
-
-        # cos_sim = dist.cosine([self.m, self.intercept], [cluster_m, cluster_c]) < settings.detection.similarity_thold
-        m_thold = settings.detection.gradient_thold
-        y1 = np.mean(track_data['channel_sample'])
-        x1 = np.mean(track_data['time_sample'])
-
-        y2 = np.mean(cluster_data['channel_sample'])
-        x2 = np.mean(cluster_data['time_sample'])
-
-        # Gradient in terms of Hz/s
-        m2 = (y2 - y1) / (x2 - x1) * (self._obs_info['channel_bandwidth'] * 1e6) / self._obs_info['sampling_time']
-
-        v = np.array([track_m, cluster_m, m2])
-
-        print 'mean gradient', v, np.abs(np.std(v) / np.mean(v))
-        print x1, y1, x2, y2
-
-        return np.abs(np.std(v) / np.mean(v)) < 0.2 and m_thold[1] <= m2 <= m_thold[0]
 
     def is_parent_of(self, cluster):
         """
@@ -331,14 +294,24 @@ class SpaceDebrisTrack:
         track_data = self.aggregate_data(self.data, remove_duplicate_epoch=True, remove_duplicate_channel=True)
         cluster_data = self.aggregate_data(cluster, remove_duplicate_epoch=True, remove_duplicate_channel=True)
 
-        cluster_m, _, _, _, _ = self.linear_model(cluster_data['channel_sample'], cluster_data['time_sample'])
-        track_m, _, _, _, _ = self.linear_model(track_data['channel_sample'], track_data['time_sample'])
-        m2, _, _, _, _ = self.linear_model(pd.concat([track_data['channel_sample'], cluster_data['channel_sample']]),
-                                           pd.concat([track_data['time_sample'], cluster_data['time_sample']]))
+        cluster_m, c1, _, _, _ = self.linear_model(cluster_data['channel_sample'], cluster_data['time_sample'])
+        track_m, c2, _, _, _ = self.linear_model(track_data['channel_sample'], track_data['time_sample'])
+        m2, c3, _, _, e = self.linear_model(pd.concat([track_data['channel_sample'], cluster_data['channel_sample']]),
+                                            pd.concat([track_data['time_sample'], cluster_data['time_sample']]))
 
         v = np.array([track_m, cluster_m, m2])
+        c = np.array([c1, c2, c3])
 
-        return np.abs(np.std(v) / np.mean(v)) < 0.2 and m_thold[1] <= m2 <= m_thold[0]
+        slope_diff = np.abs(np.std(v) / np.mean(v))
+        i_diff = np.abs(np.std(c) / np.mean(c))
+
+        thres = 0.1
+        is_parent = slope_diff < thres and i_diff < thres and m_thold[1] <= m2 <= m_thold[0]
+
+        # log.debug(
+        #     "Track {}: {:2.3f}. {:2.3f} {:2.3f} Result: {}".format(id(self) % 1000, slope_diff, i_diff, e, is_parent))
+
+        return is_parent
 
     def _to_dict(self):
         to_save = {
@@ -461,6 +434,8 @@ class SpaceDebrisTrack:
 
         # Current track time span (aka track length
         t_l = t_b - t_a
+
+        t_l = datetime.timedelta(seconds=3)
 
         # Last time sample of the blob (or iteration)
         t_n = obs_info['timestamp'] + datetime.timedelta(seconds=obs_info['sampling_time'] * 160)

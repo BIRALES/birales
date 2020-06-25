@@ -162,7 +162,7 @@ def msds_q(test_image, true_tracks, noise_est, debug):
     print "Processed {} leaves. Of which {} were positives.".format(len(leaves), len(positives))
 
     visualise_tree_traversal(ndx, true_tracks, positives, leaves, '2_processed_leaves' + ext, limits=limits,
-                             vis=debug, pub=pub)
+                             vis=True, pub=True)
     eps = estimate_leave_eps(positives)
 
     print 'eps is:', eps
