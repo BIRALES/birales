@@ -32,7 +32,6 @@ def apply_doppler_mask(doppler_mask, channels, doppler_range, obs_info):
 
         doppler_mask = np.bitwise_and(channels < b, channels > a)
 
-
         # print a
         # print b
         # print len(channels)
@@ -49,8 +48,6 @@ def apply_doppler_mask(doppler_mask, channels, doppler_range, obs_info):
         channels = channels[doppler_mask]
 
         # print min(channels), max(channels), len(channels)
-
-
 
     return channels, doppler_mask
 
@@ -70,6 +67,7 @@ def _debug_msg(cluster, iter_count):
 def missing_score(param):
     missing = np.setxor1d(np.arange(min(param), max(param)), param)
     return len(missing) / float(len(param))
+
 
 # @timeit
 def data_association(tracks, tentative_tracks, obs_info, notifications=False, save_candidates=False):

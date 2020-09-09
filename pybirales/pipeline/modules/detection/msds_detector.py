@@ -203,7 +203,7 @@ class Detector(ProcessingModule):
 
             # [Track Association] Create new tracks from clusters or merge clusters into existing
             tracks = data_association(self.pending_tracks, new_tracks, obs_info, notifications=False,
-                                      save_candidates=False)
+                                      save_candidates=settings.detection.save_candidates)
 
             # [Track Termination] Check each track and determine if the detection object has transitted outside FoV
             tracks = active_tracks(obs_info, tracks, self._iter_count)
