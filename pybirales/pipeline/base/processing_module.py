@@ -200,8 +200,8 @@ class ProcessingModule(Module):
                         obs_info = res
                 tt = time.time() - s
 
-                nsamp = settings.rawdatareader.nsamp
-                # nsamp = settings.receiver.nsamp
+                # nsamp = settings.rawdatareader.nsamp
+                nsamp = settings.receiver.nsamp
 
                 if tt < float(nsamp) / settings.observation.samples_per_second:
                     log.info('[Iteration {}] {} finished in {:0.3f}s'.format(self._iter_count, self.name, tt))
