@@ -62,7 +62,7 @@ class TDMPersister:
         """
         utc_now = datetime.utcnow()
         created_date = '{:%Y%m%d}'.format(utc_now)
-        out_dir = os.path.join(os.environ['HOME'], '.birales/tdm/out', created_date)
+        out_dir = os.path.join(os.environ['HOME'], '.birales/tdm/out', created_date, settings.observation.name)
 
         out_dir = self._create_out_dir(out_dir)
 
