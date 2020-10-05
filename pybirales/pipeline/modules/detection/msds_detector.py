@@ -38,7 +38,7 @@ def serial_msds(data):
     # Create tree on the merged input data
     k_tree = build_tree(ndx, leave_size=40, n_axis=2)
 
-    visualise_filtered_data(ndx, true_tracks, '1_filtered_data' + ext, limits=limits, debug=debug)
+    # visualise_filtered_data(ndx, true_tracks, '1_filtered_data' + ext, limits=limits, debug=debug)
 
     # Traverse the tree and identify valid linear streaks
     leaves = traverse(k_tree.tree, ndx, bbox=(0, beam_data.shape[1], 0, beam_data.shape[0]), min_length=2.,
@@ -46,8 +46,8 @@ def serial_msds(data):
 
     positives = process_leaves(leaves)
 
-    visualise_tree_traversal(ndx, true_tracks, positives, leaves, '2_processed_leaves' + ext, limits=limits,
-                             vis=debug)
+    # visualise_tree_traversal(ndx, true_tracks, positives, leaves, '2_processed_leaves' + ext, limits=limits,
+    #                          vis=debug)
 
     if not positives:
         return []
@@ -56,15 +56,15 @@ def serial_msds(data):
 
     cluster_data = h_cluster_leaves(positives, distance_thold=eps)
 
-    visualise_clusters(cluster_data, true_tracks, positives,
-                       filename='3_clusters' + ext,
-                       limits=limits,
-                       debug=debug)
+    # visualise_clusters(cluster_data, true_tracks, positives,
+    #                    filename='3_clusters' + ext,
+    #                    limits=limits,
+    #                    debug=debug)
 
     # print 'Beam {}. h_cluster_leaves Finished in {:0.3f}'.format(b, time.time() - t3)
     valid_tracks = validate_clusters(cluster_data, beam_id=b, debug=debug)
 
-    visualise_tracks(valid_tracks, None, '4_tracks' + ext, limits=limits, debug=debug)
+    # visualise_tracks(valid_tracks, None, '4_tracks' + ext, limits=limits, debug=debug)
 
     # print 'Beam {}. Noise: {:0.3f}. Finished in {:0.3f}'.format(b, noise_est, time.time() - t1)
 
@@ -73,8 +73,8 @@ def serial_msds(data):
                                                                                             len(cluster_data),
                                                                                             len(valid_tracks),
                                                                                             time.time() - t1))
-    if debug:
-        plt.show()
+    # if debug:
+    #     plt.show()
     return valid_tracks
 
 
