@@ -74,6 +74,10 @@ class CalibrationFacade:
             'antennas': settings.beamformer.antenna_locations,
         }
 
+        # ensure that the directory structure exists.
+        if not os.path.exists(os.path.dirname(cal_input['calib_check_path'])):
+            os.makedirs(os.path.dirname(cal_input['calib_check_path']))
+
         cr = 0
         no_of_baselines = np.int(0.5 * ((cal_input['no_of_antennas'] ** 2) - cal_input['no_of_antennas']))
         bas_ant_no = np.zeros((no_of_baselines, 2), dtype=np.int)

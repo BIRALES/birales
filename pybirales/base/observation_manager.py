@@ -273,6 +273,7 @@ class CalibrationObservationManager(ObservationManager):
         try:
             real, imag, fringe_image = self._calibration_facade.calibrate(self.calibration_dir, corr_matrix_filepath)
         except IOError as e:
+            log.exception("An IO error has occured")
             raise CalibrationFailedException(e)
         # except IndexError as e:
         #     raise CalibrationFailedException(e)
