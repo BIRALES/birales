@@ -130,8 +130,8 @@ class RawDataReader(ProcessingModule):
         while os.path.exists(raw_file):
             c_blobs = n_blobs
             n_blobs += os.stat(raw_file).st_size / (self._nsamp * self._nants * 8)
-            print  os.path.basename(raw_file), t0 + td * c_blobs, ' to ', t0 + td * n_blobs, (
-                        n_blobs - c_blobs), 'blobs', td * (n_blobs - c_blobs)
+            # print  os.path.basename(raw_file), t0 + td * c_blobs, ' to ', t0 + td * n_blobs, (
+            #             n_blobs - c_blobs), 'blobs', td * (n_blobs - c_blobs)
 
             _raw_file_counter += 1
             raw_file = '{}_{}.dat'.format(self._base_filepath, _raw_file_counter)
