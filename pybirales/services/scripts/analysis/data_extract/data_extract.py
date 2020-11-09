@@ -9,9 +9,9 @@ LOCAL_DATA_DIR = '/media/denis/backup/birales/'
 REMOTE_DATA_DIRS = ['/data/birales/', '/data2/birales/', '/data2/']
 
 
-def get_target_observations(observations):
+def get_target_observations(o):
     t_obs = []
-    for obs in observations:
+    for obs in o:
         if 'norad' not in obs.lower():
             if 'tiangong' not in obs.lower():
                 continue
@@ -33,8 +33,8 @@ def get_target_observations(observations):
     return obs_df
 
 
-def get_obs_type(file_str, observations):
-    for s in observations.keys():
+def get_obs_type(file_str, o):
+    for s in o.keys():
         if s in file_str.lower():
             return s
     return 'rso'
@@ -70,7 +70,7 @@ def get_synced_files(rso_files):
 
 
 def get_observations():
-    observations = {'cas': [], 'cyg': [], 'tau': [], 'vir': [], 'rso': [], 'test': []}
+    o = {'cas': [], 'cyg': [], 'tau': [], 'vir': [], 'rso': [], 'test': []}
     for _file in FILES:
         with open(_file, 'rb') as f:
             for line in f:
@@ -78,27 +78,27 @@ def get_observations():
                 if not line.endswith(EXT):
                     continue
 
-                obs_type = get_obs_type(line, observations)
-                observations[obs_type].append(line)
+                obs_type = get_obs_type(line, o)
+                o[obs_type].append(line)
 
-    return observations
+    return o
 
 
-def output_birales_stats(observations):
-    for k in observations.keys():
-        print "Found {} raw data files for {} observation type".format(len(observations[k]), k)
+def output_birales_stats(o):
+    for k in o.keys():
+        print("Found {} raw data files for {} observation type".format(len(o[k]), k))
 
-    rso_files = observations['rso']
+    rso_files = o['rso']
 
     synced_files = get_synced_files(rso_files)
 
-    print
+    print()
     for k in synced_files.keys():
-        print '{} files where found {}'.format(len(synced_files[k]), k)
+        print('{} files where found {}'.format(len(synced_files[k]), k))
 
-    print '\nThe following files were found on remote only (and should be backed up)'
+    print('\nThe following files were found on remote only (and should be backed up)')
     for raw_file in synced_files['remote_only']:
-        print raw_file
+        print(raw_file)
 
 
 if __name__ == '__main__':
@@ -110,4 +110,4 @@ if __name__ == '__main__':
     # get the detection observations
     target_obs_df = get_target_observations(observations["rso"])
 
-    print target_obs_df.sort_values(by='date', ascending=True)
+    print(target_obs_df.sort_values(by='date', ascending=True))

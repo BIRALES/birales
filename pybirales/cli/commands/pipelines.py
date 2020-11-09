@@ -90,6 +90,27 @@ def msds_detection_pipeline(ctx, config_file_path, tx, pointing):
     __detection_pipeline(ctx, config_file_path, tx, pointing, 'msds_detection_pipeline')
 
 
+@pipelines.command(short_help='Run the DBSCAN Detection Pipeline')
+@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+              help='The BIRALES configuration file', multiple=True)
+@click.option('--tx', 'tx', type=float, help='The transmission frequency in MHz')
+@click.option('--pointing', 'pointing', type=float, help='Reference Declination of the Beam Former')
+@click.pass_context
+def dbscan_detection_pipeline(ctx, config_file_path, tx, pointing):
+    """
+
+    Run the Detection Pipeline
+
+    :param ctx:
+    :param tx:
+    :param pointing:
+    :param config_file_path: The default configuration file to be used.
+    :return:
+    """
+
+    __detection_pipeline(ctx, config_file_path, tx, pointing, 'dbscan_detection_pipeline')
+
+
 @pipelines.command(short_help='Run the Correlation Pipeline')
 @click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
               help='The BIRALES configuration file', multiple=True)
@@ -100,6 +121,8 @@ def correlation_pipeline(ctx, config_file_path, pointing):
     """
     Run the Correlation Pipeline
 
+    :param pointing:
+    :type pointing:
     :param ctx:
     :param config_file_path: The default configuration file to be used.
     :return:

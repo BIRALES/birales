@@ -19,7 +19,7 @@ from receiver import *
 
 def _viz_cluster(bb, fclust1):
     for b, g in zip(bb, fclust1):
-        print b[0], b[1], b[2], g
+        print(b[0], b[1], b[2], g)
 
 
 def hough_transform(test_image, true_tracks, noise_est, debug):
@@ -139,7 +139,7 @@ def naive_dbscan(test_image, true_tracks, noise_estimate, debug):
 def msds_q(test_image, true_tracks, noise_est, debug):
     limits = get_limits(test_image, true_tracks)
 
-    pub = True
+    pub = False
     ext = '.pdf'
 
     # limits = (0, 70, 2000, 2160)   #s limits for crossing streaks
@@ -159,13 +159,13 @@ def msds_q(test_image, true_tracks, noise_est, debug):
 
     positives = process_leaves(leaves)
 
-    print "Processed {} leaves. Of which {} were positives.".format(len(leaves), len(positives))
+    print("Processed {} leaves. Of which {} were positives.".format(len(leaves), len(positives)))
 
     visualise_tree_traversal(ndx, true_tracks, positives, leaves, '2_processed_leaves' + ext, limits=limits,
                              vis=True, pub=True)
     eps = estimate_leave_eps(positives)
 
-    print 'eps is:', eps
+    print('eps is:', eps)
     cluster_data = h_cluster_leaves(positives, distance_thold=eps)
 
     visualise_clusters(cluster_data, true_tracks, positives,

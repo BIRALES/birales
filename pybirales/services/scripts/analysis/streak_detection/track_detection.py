@@ -23,6 +23,7 @@ from test_case import IMAGE_SEG_TESTS, DETECTION_ALG, DETECTION_TESTS_DEBUG
 from configuration import GRADIENT_RANGE, TRACK_LENGTH_RANGE
 from pybirales.pipeline.modules.detection.msds.util import snr_calc, is_valid
 from pybirales.pipeline.modules.detection.msds.visualisation import *
+import random
 
 
 # Plot the metrics
@@ -30,13 +31,13 @@ from pybirales.pipeline.modules.detection.msds.visualisation import *
 # Filters as a function of speed
 
 def test_detector(detector, data, true_tracks, noise_estimate, debug=True, visualise=False):
-    print "Running {} algorithm".format(detector.name)
+    print("Running {} algorithm".format(detector.name))
     start = time.time()
     candidates = detector.func(data, true_tracks, noise_estimate, debug)
 
     candidates = [snr_calc(candidate, noise_estimate=noise_mean) for candidate in candidates if is_valid(candidate)]
     timing = time.time() - start
-    print "The {} detection algorithm, found {} candidates in {:2.3f}s".format(detector.name, len(candidates), timing)
+    print("The {} detection algorithm, found {} candidates in {:2.3f}s".format(detector.name, len(candidates), timing))
 
     visualise_post_processed_tracks(candidates, true_tracks, '6_post-processed-tracks.png', limits=None,
                                     groups=None,
@@ -55,7 +56,7 @@ def show_results_filter(metrics_df, im_algorithms, directory):
     # print metrics_df[['name', 'snr', 'dt', 'score', 'recall', 'specificity', 'reduction', 'fpr']].sort_values(
     #     by=['score', 'recall', 'specificity'], ascending=False).groupby(['snr', 'name']).agg(['mean', 'std'])
 
-    print "{} tests took {} seconds".format(len(TEST_SUITE.tests), time.time() - t1)
+    print("{} tests took {} seconds".format(len(TEST_SUITE.tests), time.time() - t1))
 
     agg_df = metrics_df.groupby(['snr', 'name']).agg(['mean', 'std']).reset_index()
 
@@ -72,7 +73,7 @@ def show_results_filter(metrics_df, im_algorithms, directory):
     plot_timings(agg_df, algorithms=im_algorithms, include_pp=True,
                  file_name=directory + '/' + file_name + '__timings' + EXT)
 
-    print agg_df[['name', 'snr', 'dt', 'score', 'recall', 'specificity', 'reduction', 'fpr']]
+    print(agg_df[['name', 'snr', 'dt', 'score', 'recall', 'specificity', 'reduction', 'fpr']])
 
     agg_df.to_csv(directory + '/' + file_name + '__export.csv')
 
@@ -97,9 +98,9 @@ def show_results_detector(metrics_df, algorithms, directory):
     plot_metric_combined(agg_df, ['recall', 'precision', 'f1'],
                          file_name=directory + '/' + file_name + '__combined_v_snr' + EXT)
 
-    plot_timings_detector(agg_df, algorithms=algorithms, file_name=directory + '/' + file_name + '__timings' + EXT)
+    # plot_timings_detector(agg_df, algorithms=algorithms, file_name=directory + '/' + file_name + '__timings' + EXT)
 
-    print agg_df[['name', 'snr', 'dt', 'recall', 'precision', 'f1']].sort_values(by=['snr'])
+    print(agg_df[['name', 'snr', 'dt', 'recall', 'precision', 'f1']].sort_values(by=['snr']))
 
     agg_df.to_csv(directory + '/' + file_name + '__export.csv')
 
@@ -111,7 +112,7 @@ if __name__ == '__main__':
     np.random.seed(SEED)
     random.seed(SEED)
 
-    SAVE = True
+    SAVE = False
     USE_CACHE = False
     VISUALISE = False
 
@@ -121,7 +122,6 @@ if __name__ == '__main__':
     N_SAMPLES = 160
     N_TRACKS = 5
 
-    ROOT = "/home/denis/.birales/visualisation/fits/bkg_noise_dataset_casa_20190914"
     ROOT = "/home/denis/.birales/visualisation/fits/detection_raw_data"
     EXT = '.pdf'
     TEST_SUITE = IMAGE_SEG_TESTS
@@ -133,36 +133,20 @@ if __name__ == '__main__':
     metrics_df = pd.DataFrame()
     detection_metrics_df = pd.DataFrame()
 
-    snr = np.arange(0, 6, 0.5)
-    snr = np.arange(0, 7.25, 0.25)
+    snr = np.arange(0, 7, 1)
 
-    # snr = np.arange(0, 7.5, 1)
-    # snr = np.arange(0, 10, 2)
-    snr = [1]
-    # snr = [5, 10, 15]
-    # snr = [2, 3, 5, 8, 10, 15]
-    # snr = [0.5, 1, 2]
-    # snr = [1, 5, 10]
-    # snr = [5]
-    snr = np.arange(0, 6.5, 0.5)
-    snr = [2]
     DEBUG_DETECTOR = False
 
-    N_TESTS = 1
-    VISUALISE = False
+    N_TESTS = 5
 
     OUTPUT_DF = 'output_' + str(len(TEST_SUITE.name)) + str(N_CHANS) + str(N_SAMPLES) + str(N_TRACKS) + '_'.join(
         map(str, snr)) + '.pkl'
-
-    # Create image from real data
-    # org_test_img = create_test_img(os.path.join(ROOT, FITS_FILE), nchans=N_CHANS, nsamples=N_SAMPLES)
 
     # visualise_image(test_img, 'Test Image: no tracks', tracks=None)
     count = 0
     t1 = time.time()
     for t in range(0, N_TESTS):
-        # if t < 4:
-        #     continue
+        # Create image from real data
         org_test_img = generate_test_image(ROOT, N_SAMPLES)
 
         # Estimate the noise
@@ -180,23 +164,14 @@ if __name__ == '__main__':
         visualise_image(true_image, 'Truth Image: %d tracks at SNR %dW' % (N_TRACKS, 1), tracks,
                         visualise=VISUALISE,
                         file_name="true_track.png", bar=False)
-        #
-        # if t < 3:
-        #     continue
-        #
-        # if t == 4:
-        #     DEBUG_DETECTOR = True
-        # else:
-        #     DEBUG_DETECTOR = False
 
         for s in snr:
-            print "Evaluating filters with tracks at SNR {:0.2f} dB and noise {:0.3f}".format(s, noise_mean)
+            print("Evaluating filters with tracks at SNR {:0.2f} dB and noise {:0.3f}".format(s, noise_mean))
 
             # Add tracks to the simulated data
             test_img = add_tracks(org_test_img.copy(), tracks, noise_mean, s)
 
             # preprocessing - remove noise estimate from image
-            # test_img -= noise_mean
             test_img -= np.mean(test_img, axis=1)[..., np.newaxis]
 
             visualise_image(test_img, 'Test Image: %d tracks at SNR %d dB' % (N_TRACKS, s), tracks,
@@ -216,7 +191,7 @@ if __name__ == '__main__':
                 try:
                     mask, threshold = filter_func(data)
                 except Exception:
-                    print "warning. The following filter failed: ", f_name, "at an snr of ", s
+                    print("warning. The following filter failed: ", f_name, "at an snr of ", s)
                     continue
                 timing = time.time() - start
 
@@ -242,12 +217,12 @@ if __name__ == '__main__':
                 # Detection stuff here
                 for detector in test.detectors:
                     data2 = data.copy()
-                    # print 'dd',  detector.name, np.mean(data2), np.mean(test_img), snr, s
                     results = test_detector(detector, data2, tracks, noise_mean, debug=DEBUG_DETECTOR)
                     detection_metrics_df = detection_metrics_df.append(results, ignore_index=True)
 
-    # agg_df = show_results_filter(metrics_df, im_algorithms, 'image_seg_results')
+    # agg_f_df = show_results_filter(metrics_df, im_algorithms, 'image_seg_results')
 
-    # agg_df = show_results_detector(detection_metrics_df, detection_algorithms, 'detection_results')
+    agg_d_df = show_results_detector(detection_metrics_df, detection_algorithms, 'detection_results')
 
-    plt.show()
+    if VISUALISE:
+        plt.show()

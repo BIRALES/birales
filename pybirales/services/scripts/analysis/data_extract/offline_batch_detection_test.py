@@ -65,19 +65,20 @@ if __name__ == '__main__':
 
     CAMPAIGNS = [
         # ('29/03/2018', '29/03/2018', [('tiangong1', 15)]),
-        ('05/03/2019', '05/03/2019', [('norad_1328', 50)]),
+        # ('05/03/2019', '05/03/2019', [('norad_1328', 50)]),
         # ('29/03/2018', '29/03/2018', [('norad_31114', 0)]),
         # ('27/02/2019', '27/02/2019', [('norad_41765', 58)]),
         # ('05/03/2019', '05/03/2019', [('norad_41765', 35)]),
         # ('27/02/2019', '27/02/2019', [('norad_27944', 60)]),
         # ('05/04/2019', '05/04/2019', [('norad_2874', 30)]),
         # ('29/03/2018', '29/03/2018', [('norad_25876', 0)]),
-        # ('27/02/2019', '27/02/2019', [('norad_1328', 10)]),
+        ('27/02/2019', '27/02/2019', [('norad_1328', 10)]),
         # ('05/03/2019', '05/03/2019', [('norad_41182', 50)]),
         # ('29/03/2018', '29/03/2018', [('norad_16864', 0)]),
         # ('29/03/2018', '29/03/2018', [('norad_4071', 0)]),
         # ('29/03/2018', '29/03/2018', [('norad_37820', 0)]),
         # ('29/03/2018', '29/03/2018', [('norad_31114', 0)]),
+
     ]
 
     om = ObservationManager()
@@ -96,7 +97,7 @@ if __name__ == '__main__':
 
             for index, row in target_obs1.iterrows():
                 obs_name = '{}_offline'.format(row.obs_name)
-                print "Running observation {} from raw file path: {}".format(obs_name, row.raw_filepath)
+                print("Running observation {} from raw file path: {}".format(obs_name, row.raw_filepath))
 
                 observation = get_observation(CONFIG, PIPELINE, obs_name=obs_name, raw_filepath=row.raw_filepath,
                                               skip=skip)

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from skimage.measure import compare_ssim as ssim
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score, confusion_matrix, \
-    jaccard_similarity_score, mean_squared_error
+    mean_squared_error
 
 
 def new_e(truth_img, positives):

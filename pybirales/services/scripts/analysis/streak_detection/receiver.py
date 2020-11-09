@@ -90,8 +90,8 @@ def generate_test_image(directory, nsamples):
 
     test_img = fits_file[0].data[0, DOPPLER_RANGE[0]:DOPPLER_RANGE[1], start: start + nsamples]
 
-    print 'Test Image of size {} was generated from Raw File {}. Noise estimate at {:0.3f}W'. \
-        format(test_img.shape, base_file, np.mean(test_img))
+    print('Test Image of size {} was generated from Raw File {}. Noise estimate at {:0.3f}W'. \
+          format(test_img.shape, base_file, np.mean(test_img)))
 
     # Remove channels with RFI
     test_img = rfi_filter(test_img)
@@ -116,8 +116,8 @@ def get_test_tracks0(n_tracks, gradient, track_length, image_shape, thickness):
         c = np.random.randint(low=0, high=4110 - m * min(x))
         x, y = create_track(x, m, c, image_shape, thickness)
 
-        print 'Created track with m={:0.2f}, c={:0.1f}, of {}px at ({},{}) to ({},{})'.format(m, c, (
-                max(x) - start), start, max(y), end, min(y))
+        print("Created track with m={:0.2f}, c={:0.1f}, of {}px at ({},{}) to ({},{})".format(m, c, (
+                max(x) - start), start, max(y), end, min(y)))
         # beams = range(nbeams)
         # reps = np.ceil(len(x) / float(len(beams)))
         #
@@ -125,7 +125,7 @@ def get_test_tracks0(n_tracks, gradient, track_length, image_shape, thickness):
 
         tracks.append(np.array([x, y]))
 
-    print 'Created {} tracks'.format(n_tracks)
+    print('Created {} tracks'.format(n_tracks))
 
     return tracks
 
@@ -163,13 +163,13 @@ def get_test_tracks11(n_tracks, gradient, track_length, image_shape, thickness):
         x = np.arange(start, end)
         x, y = create_track(x, slope_, c, image_shape, thickness)
 
-        print "Created track of length {:0.2f} seconds and doppler={:0.2f} Hz and slope={:0.2f} Hz/s\n" \
+        print("Created track of length {:0.2f} seconds and doppler={:0.2f} Hz and slope={:0.2f} Hz/s\n"
               "This translates to {} pixels, y={:0.2f} and slope={:0.2f}".format(len(x) * dt, doppler, slope, len(x),
-                                                                                 doppler_, slope_)
+                                                                                 doppler_, slope_))
 
         tracks.append(np.array([x, y]))
 
-    print 'Created {} tracks'.format(n_tracks)
+    print('Created {} tracks'.format(n_tracks))
 
     return tracks
 
@@ -189,9 +189,9 @@ def generate_track(slope, doppler, ds, dt, tx_idx, track_length, image_shape, th
     x = np.arange(start, end)
     x, y = create_track(x, slope_, c, image_shape, thickness)
 
-    print "Created track of length {:0.2f} seconds and doppler={:0.2f} Hz and slope={:0.2f} Hz/s\n" \
+    print("Created track of length {:0.2f} seconds and doppler={:0.2f} Hz and slope={:0.2f} Hz/s\n"
           "This translates to {} pixels, y={:0.2f} and slope={:0.2f}".format(len(x) * dt, doppler, slope, len(x),
-                                                                             doppler_, slope_)
+                                                                             doppler_, slope_))
 
     return x, y
 
@@ -215,7 +215,7 @@ def get_test_tracks_crossing(n_tracks, gradient, track_length, image_shape, thic
 
         tracks.append(np.array([x, y]))
 
-    print 'Created {} tracks'.format(n_tracks)
+    print('Created {} tracks'.format(n_tracks))
 
     return tracks
 
@@ -239,7 +239,7 @@ def get_test_tracks(n_tracks, gradient, track_length, image_shape, thickness):
 
         tracks.append(np.array([x, y]))
 
-    print 'Created {} tracks'.format(n_tracks)
+    print('Created {} tracks'.format(n_tracks))
 
     return tracks
 
@@ -256,8 +256,8 @@ def get_test_tracks(n_tracks, gradient, track_length, image_shape, thickness):
         c = np.random.randint(low=0, high=4110 - m * min(x))
         x, y = create_track(x, m, c, image_shape, thickness)
 
-        print 'Created track with m={:0.2f}, c={:0.1f}, of {}px at ({},{}) to ({},{})'.format(m, c, (
-                max(x) - start), start, max(y), end, min(y))
+        print('Created track with m={:0.2f}, c={:0.1f}, of {}px at ({},{}) to ({},{})'.format(m, c, (
+                max(x) - start), start, max(y), end, min(y)))
         # beams = range(nbeams)
         # reps = np.ceil(len(x) / float(len(beams)))
         #
@@ -265,7 +265,7 @@ def get_test_tracks(n_tracks, gradient, track_length, image_shape, thickness):
 
         tracks.append(np.array([x, y]))
 
-    print 'Created {} tracks'.format(n_tracks)
+    print('Created {} tracks'.format(n_tracks))
 
     return tracks
 
@@ -285,8 +285,8 @@ def get_test_tracks_old(n_tracks, gradient, track_length, image_shape, thickness
         c = np.random.randint(low=0, high=4110 - m * min(x))
         x, y = create_track(x, m, c, image_shape, thickness)
 
-        print 'Created track with m={:0.2f}, c={:0.1f}, of {}px at ({},{}) to ({},{})'.format(m, c, (
-                max(x) - start), start, max(y), end, min(y))
+        print('Created track with m={:0.2f}, c={:0.1f}, of {}px at ({},{}) to ({},{})'.format(m, c, (
+                max(x) - start), start, max(y), end, min(y)))
         # beams = range(nbeams)
         # reps = np.ceil(len(x) / float(len(beams)))
         #
@@ -294,7 +294,7 @@ def get_test_tracks_old(n_tracks, gradient, track_length, image_shape, thickness
 
         tracks.append(np.array([x, y]))
 
-    print 'Created {} tracks'.format(n_tracks)
+    print('Created {} tracks'.format(n_tracks))
 
     return tracks
 

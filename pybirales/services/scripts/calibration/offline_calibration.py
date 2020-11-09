@@ -12,7 +12,7 @@ from pybirales.pipeline.base.definitions import CalibrationFailedException
 from pybirales.services.scheduler.observation import ScheduledCalibrationObservation
 
 
-def calibrate(obs_root, config_filepath, parameters):
+def calibrate(obs_root, c_filepath, parameters):
     source = find_source(obs_root)
     # obs_base = os.path.join(root, observation)
 
@@ -20,7 +20,7 @@ def calibrate(obs_root, config_filepath, parameters):
         corr_matrix_filepath = get_file_by_extension(obs_root, '_corr.h5')
         obs_info = pickle.load(open(get_file_by_extension(obs_root, '.pkl')))
     except IOError:
-        print 'File not found in observation {}. Skipping observation'.format(obs_root)
+        print('File not found in observation {}. Skipping observation'.format(obs_root))
         raise
 
     obs_name = source + '_' + obs_info['created_at'] + '_offline'
@@ -44,7 +44,7 @@ def calibrate(obs_root, config_filepath, parameters):
     # Create a new calibration observation
     calibration_obs = ScheduledCalibrationObservation(name=obs_name,
                                                       pipeline_name='correlation_pipeline',
-                                                      config_file=config_filepath,
+                                                      config_file=c_filepath,
                                                       config_parameters=parameters)
     # Initialise the calibration manager
     om = CalibrationObservationManager()
@@ -61,8 +61,8 @@ def calibrate(obs_root, config_filepath, parameters):
 
 
 def find_source(obs_name):
-    SOURCES = ['cas', 'cyg', 'tau', 'vir']
-    for s in SOURCES:
+    sources = ['cas', 'cyg', 'tau', 'vir']
+    for s in sources:
         if s in obs_name.lower():
             return s
 
@@ -86,7 +86,7 @@ def sources_map():
     }
 
 
-def run_calibration_observations(observations, config_filepath, parameters):
+def run_calibration_observations(observations, c_filepath, parameters):
     def get_antenna_id(n_antennas):
         cylinders = n_antennas // 4
 
@@ -101,17 +101,17 @@ def run_calibration_observations(observations, config_filepath, parameters):
 
         return antenna_ids
 
-    df = pd.DataFrame(columns=['date', 'source', 'phase', 'amplitude'])
+    _df = pd.DataFrame(columns=['date', 'source', 'phase', 'amplitude'])
 
     labels = sources_map()
     for observation in observations:
 
         try:
             real, imag, source, obs_name, obs_info, corr_matrix_filepath = calibrate(
-                os.path.join(DATA_ROOT, observation), config_filepath,
+                os.path.join(DATA_ROOT, observation), c_filepath,
                 parameters)
         except CalibrationFailedException:
-            print 'Calibration {} failed. Skipping observation.'.format(observation)
+            print('Calibration {} failed. Skipping observation.'.format(observation))
             continue
         # except BaseException:
         #     print 'Something went wrong. Skipping observation.'
@@ -131,20 +131,20 @@ def run_calibration_observations(observations, config_filepath, parameters):
              'phase': phase},
             name=obs_name)
 
-        df = df.append(obs_series)
+        _df = _df.append(obs_series)
 
         if PLOT_FRINGE_IMAGE:
             title = '{} on {:%d/%m/%Y at %H:%M}'.format(labels[source], obs_info['timestamp'])
             plot_fringe_image(corr_matrix_filepath, '',
                               title.replace(' ', '_').replace('/', '.') + '_validate_fringes.png')
 
-    return df
+    return _df
 
 
 def plot_fringe_image(cm_filepath, title, save_filepath):
     def read_corr_matrix(filepath):
-        with h5py.File(filepath, "r") as f:
-            return f["Vis"][:]
+        with h5py.File(filepath, "r") as _f:
+            return _f["Vis"][:]
 
     def truncate_baselines_data(b_data):
         a = b_data[:, 1]
@@ -184,7 +184,7 @@ def plot_fringe_image(cm_filepath, title, save_filepath):
     return save_filepath
 
 
-def visualise_calibration_coefficients(df, data_key, label, save_filepath):
+def visualise_calibration_coefficients(_df, data_key, label, save_filepath):
     marker = {
         'cas': itertools.cycle(['b' + char for char in ['s', 'D', 'o', '^', 'v']]),
         'cyg': itertools.cycle(['g' + char for char in ['s', 'D', 'o', '^', 'v']]),
@@ -222,15 +222,15 @@ def visualise_calibration_coefficients(df, data_key, label, save_filepath):
 
 def calibration_coefficients_analysis(cache, observations, parameters, config_file_path):
     if os.path.exists(cache):
-        df = pd.read_pickle(cache)
+        _df = pd.read_pickle(cache)
     else:
-        df = run_calibration_observations(observations=observations, config_filepath=config_file_path,
-                                          parameters=parameters)
-        df.to_pickle(cache)
+        _df = run_calibration_observations(observations=observations, c_filepath=config_file_path,
+                                           parameters=parameters)
+        _df.to_pickle(cache)
 
-    visualise_calibration_coefficients(df, data_key='amplitude_db', label='Amplitude (dB)',
+    visualise_calibration_coefficients(_df, data_key='amplitude_db', label='Amplitude (dB)',
                                        save_filepath='calib_amp.png')
-    visualise_calibration_coefficients(df, data_key='phase', label='Phase (deg)', save_filepath='calib_phase.png')
+    visualise_calibration_coefficients(_df, data_key='phase', label='Phase (deg)', save_filepath='calib_phase.png')
 
     plt.show()
 
@@ -307,13 +307,13 @@ if __name__ == '__main__':
     # [Chapter 5] Calibrate an observation offline
     # To be used for detection campaign
     CALIBRATORS = [
-        '../2018/2018_02_27/FesTauA1',  # 28/02/2018 to 05/03/2018 [VALID] (needs detection old for old scf)
-        # '2019_02_22/vir_21_02_2019',    # Campaign for 27/02/2019 to 05/03/2019 [VALID]
+        # '../2018/2018_02_27/FesTauA1',  # 28/02/2018 to 05/03/2018 [VALID] (needs detection old for old scf)
+        '2019_02_22/vir_21_02_2019',  # Campaign for 27/02/2019 to 05/03/2019 [VALID]
         # '2019_03_06/cyg_06_03_2019',    # Campaign for 01/04/2018 to 10/04/2019 [VALID - not close]
         # '2019_08_14/CAS_A_FES',         # Campaign for 30/07/2019 to 25/08/2019 [VALID]
     ]
 
-    df = run_calibration_observations(observations=CALIBRATORS, config_filepath=config_filepath,
+    df = run_calibration_observations(observations=CALIBRATORS, c_filepath=config_filepath,
                                       parameters=PARAMETERS)
 
     plt.show()
