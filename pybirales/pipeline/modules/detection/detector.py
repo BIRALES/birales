@@ -1,5 +1,6 @@
 from multiprocessing import Pool
 
+from pybirales import settings
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.modules.detection.dbscan_detection import detect
@@ -90,7 +91,8 @@ class Detector(ProcessingModule):
 
         obs_info['doppler_mask'] = self._doppler_mask
 
-        obs_info = self.__process_dbscan(input_data[:, self._doppler_mask, :], obs_info, self.channels)
+        # obs_info = self.__process_dbscan(input_data[:, self._doppler_mask, :], obs_info, self.channels)
+        obs_info = self.__process_dbscan(input_data, obs_info, self.channels)
 
         return obs_info
 
