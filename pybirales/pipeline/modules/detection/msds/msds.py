@@ -7,7 +7,7 @@ from scipy.spatial import KDTree
 from scipy.stats import pearsonr
 from sklearn import linear_model
 
-from util import __ir, grad2, missing_score
+from pybirales.pipeline.modules.detection.msds.util import __ir, grad2, missing_score
 
 MIN_CLST_DIST = 3
 MIN_CHILDREN = 3
@@ -27,8 +27,8 @@ def dm(X, m, dm, min_r, cid):
     k = 0
     min_r = MIN_R
     # min_r = -35e3
-    for i in xrange(0, m - 1):
-        for j in xrange(i + 1, m):
+    for i in range(0, m - 1):
+        for j in range(i + 1, m):
             diff = X[i] - X[j]
 
             # perfectly horizontal and distance is large  (> 1 px)
@@ -50,8 +50,8 @@ def dm_grad(X, m, dm):
     k = 0
     v = np.zeros(shape=3)
 
-    for i in xrange(0, m - 1):
-        for j in xrange(i + 1, m):
+    for i in range(0, m - 1):
+        for j in range(i + 1, m):
             diff = X[i] - X[j] + 1e-6
             v[0] = diff[1] / diff[2]
             dm[k] = 10000

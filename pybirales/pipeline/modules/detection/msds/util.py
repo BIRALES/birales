@@ -35,7 +35,7 @@ def timeit(method):
         ts = time.time()
         result = method(*args, **kw)
         te = time.time()
-        print '{} finished in {:2.4f} seconds'.format(method.__name__, (te - ts))
+        print('{} finished in {:2.4f} seconds'.format(method.__name__, (te - ts)))
 
         return result
 

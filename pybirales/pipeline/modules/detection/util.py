@@ -3,10 +3,10 @@ import logging as log
 import pandas as pd
 from scipy import stats
 
-from msds.visualisation import *
 from pybirales.events.events import TrackTransittedEvent
 from pybirales.events.publisher import publish
 from pybirales.pipeline.modules.detection.exceptions import DetectionClusterIsNotValid
+from pybirales.pipeline.modules.detection.msds.visualisation import *
 from pybirales.pipeline.modules.detection.space_debris_candidate import SpaceDebrisTrack
 from pybirales.services.post_processing.tdm_persister import persist
 
@@ -120,7 +120,7 @@ def data_association(tracks, tentative_tracks, obs_info, notifications=False, sa
 
     # Save candidates that were updated
     if save_candidates:
-        [track.save() for track in tracks if not track.saved]
+        [track.save() for track in tracks if not track.cancelled and not track.saved]
 
     return tracks
 

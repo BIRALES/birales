@@ -7,7 +7,6 @@ from sklearn.cluster import DBSCAN
 from pybirales import settings
 from pybirales.pipeline.base.timing import timeit
 from pybirales.pipeline.modules.detection.exceptions import NoDetectionClustersFound
-from pybirales.pipeline.modules.detection.util import create_candidate
 
 _eps = 5
 _min_samples = 5
@@ -80,14 +79,14 @@ def _create(snr_data, cluster_data, channels, t0, td, beam_id, iter_count, chann
 
     cluster_data = np.append(cluster_data, np.expand_dims(np.full(len(cluster_data), beam_id), axis=1), axis=1)
 
-    return True, create_candidate(cluster_data, channels, iter_count, 160, t0, td, channel_noise, beam_id)
+    # return True, create_candidate(cluster_data, channels, iter_count, 160, t0, td, channel_noise, beam_id)
 
     return True, pd.DataFrame({
         'time_sample': time_sample,
         'channel_sample': channel_ndx,
         'time': time,
         'channel': channel,
-        'snr': snr_data,
+        'snr': 10 * np.log10(snr_data / np.mean(channel_noise[beam_id])),
         'beam_id': np.full(time_ndx.shape[0], beam_id),
         'iter': np.full(time_ndx.shape[0], iter_count),
     })
@@ -120,11 +119,10 @@ def partition_input_data(input_data, channel_noise, beam_id):
     
     """
 
-    #
     # beam_data = beam_data - np.mean(beam_noise)
-    # ndx = np.where(beam_data > 0.)
-    # power = beam_data[ndx]
-    # return np.column_stack(ndx), power
+    ndx = np.where(beam_data > 0.)
+    power = beam_data[ndx]
+    return np.column_stack(ndx), power
 
     # Remove filtered data from the calculation
     noise_estimate = np.mean(beam_noise)
@@ -166,6 +164,8 @@ def dbscan_clustering(beam_ndx, snr_data):
     # Cluster mask to remove noise clusters
     denoise_mask = labelled_data[:, 2] > -1
 
+    # if len(snr_data[denoise_mask]) != 0:
+    #     print(snr_data[denoise_mask])
     # Select only those labels which were not classified as noise was(-1)
     return labelled_data[denoise_mask], snr_data[denoise_mask]
 

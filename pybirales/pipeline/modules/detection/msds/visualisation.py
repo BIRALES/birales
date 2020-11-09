@@ -9,8 +9,9 @@ import seaborn as sns
 from cycler import cycler
 from matplotlib.font_manager import FontProperties
 
+from pybirales.pipeline.modules.detection.msds.msds import h_cluster
+from pybirales.pipeline.modules.detection.msds.util import grad2, __ir, missing_score
 from pybirales.services.scripts.analysis.analysis import COLORS
-from util import grad2, __ir, missing_score
 
 sns.set(color_codes=True)
 
@@ -127,8 +128,8 @@ def visualise_image(image, title, tracks, visualise=False, file_name=None, bar=T
         x_start, x_end, y_start, y_end = get_limits(image, tracks)
         prev_shape = image.shape
 
-        print "Visualising a subset of the image {} from {}".format(image[y_start:y_end, x_start:x_end].shape,
-                                                                    prev_shape)
+        print("Visualising a subset of the image {} from {}".format(image[y_start:y_end, x_start:x_end].shape,
+                                                                    prev_shape))
 
         ax = sns.heatmap(image[y_start:y_end, x_start:x_end], xticklabels=20, yticklabels=50, cbar=True)
         ax.invert_yaxis()
@@ -170,7 +171,7 @@ def visualise_filter(data, mask, tracks, f_name, snr, threshold=None, visualise=
         for _, spine in ax.spines.items():
             spine.set_visible(True)
 
-        print 'Showing: ' + filter_str
+        print('Showing: ' + filter_str)
 
         if file_name:
             plt.tight_layout()
@@ -282,8 +283,6 @@ def visualise_ir2_pub(data, org_data, group, ratio2):
 
 
 def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negatives=None, pub=False):
-    from msds import h_cluster, dm
-    from scipy.cluster.hierarchy import linkage, fcluster
     color = 'r'
     zorder = 1
     lw = 2
@@ -292,18 +291,18 @@ def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negative
     if not positive:
         ax.text(x1 + 0.95 * (x2 - x1), y1 + 0.95 * (y2 - y1), i, color='k', fontsize=8, ha='right', va='top', zorder=10)
 
-    if i == 343 and positive:
-        visualise_ir2_pub(positives, positives, i, -1)
-        m = positives.shape[0]
-        empty_dm = np.full((m * (m - 1)) // 2, 10000, dtype=np.float)
-        distances = dm(positives, m, empty_dm, -3.51929755, i)
-
-        # Perform single linkage clustering
-        Z = linkage(distances, 'single')
-
-        # Determine to which cluster each initial point would belong given a distance threshold
-        labels = fcluster(Z, 4, criterion='distance')
-        viz_den(positives, Z, 4, labels)
+    # if i == 343 and positive:
+    #     visualise_ir2_pub(positives, positives, i, -1)
+    #     m = positives.shape[0]
+    #     empty_dm = np.full((m * (m - 1)) // 2, 10000, dtype=np.float)
+    #     distances = dm(positives, m, empty_dm, -3.51929755, i)
+    #
+    #     # Perform single linkage clustering
+    #     Z = linkage(distances, 'single')
+    #
+    #     # Determine to which cluster each initial point would belong given a distance threshold
+    #     labels = fcluster(Z, 4, criterion='distance')
+    #     viz_den(positives, Z, 4, labels)
 
     if positive:
         color = 'g'
@@ -339,9 +338,9 @@ def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negative
 
                 ax.plot(c[:, 1], c[:, 0], '.', color=random.choice(colors), zorder=20)
 
-                print 'Leave: {}, group: {}. ratio:{:0.3f}, ms: {:0.3f} length:{}:'.format(i, g, ratio,
+                print('Leave: {}, group: {}. ratio:{:0.3f}, ms: {:0.3f} length:{}:'.format(i, g, ratio,
                                                                                            ms,
-                                                                                           np.shape(c))
+                                                                                           np.shape(c)))
 
             # colors = ['pink', 'b', 'k', 'c', 'm', 'y']
             # for j, g in enumerate(sorted_groups):
@@ -481,8 +480,9 @@ def visualise_post_processed_tracks(tracks, true_tracks, filename, limits=None, 
             param = c[:, 1]
             missing = np.setxor1d(np.arange(min(param), max(param)), param)
             score = len(missing) / float(len(param))
-            print group, 'S:{:0.5f} R:{:0.5f} P:{:0.5f} E:{:0.5f} I:{:0.5f} N:{} M:{:0.4f} C:{:0.4f} X:{:0.4f} Y:{:0.4f} SNR:{:0.2f}' \
-                .format(score, r_value, p, e, ratio[0], len(c), m, intercept, x, y, np.mean(c[:, 2]))
+            print(group,
+                  'S:{:0.5f} R:{:0.5f} P:{:0.5f} E:{:0.5f} I:{:0.5f} N:{} M:{:0.4f} C:{:0.4f} X:{:0.4f} Y:{:0.4f} SNR:{:0.2f}'
+                  .format(score, r_value, p, e, ratio[0], len(c), m, intercept, x, y, np.mean(c[:, 2])))
 
             ax.annotate('{:0.0f}'.format(group), (x, 1.01 * y), zorder=3)
             if groups:
@@ -624,7 +624,7 @@ def plot_metrics(metrics_df):
 
     plt.show()
 
-    print metrics_df[['precision', 'recall', 'snr', 'f1']]
+    print(metrics_df[['precision', 'recall', 'snr', 'f1']])
 
 
 def compare_algorithms(db_scan_clusters, msds_clusters, iteration, limits=None,
@@ -815,7 +815,7 @@ def plot_timings(metrics_df, algorithms, include_pp=False, file_name=None):
     # plt.legend((b1[0], b2[0]), ('Men', 'Women'))
     ax.invert_yaxis()
     ax.set(xlabel='Processing Time (s)')
-    ax.grid(which='x')
+    ax.grid(which='major')
 
     ax.set_axisbelow(True)
     plt.rc('axes', labelsize=45)
@@ -860,7 +860,7 @@ def plot_timings_detector(metrics_df, algorithms, file_name=None):
 
     # ax.invert_yaxis()
     ax.set(xlabel='Processing Time (s)')
-    ax.grid(which='x')
+    ax.grid(which='major')
 
     ax.set_axisbelow(True)
     plt.rc('axes', labelsize=45)
@@ -897,9 +897,9 @@ def plot_TLE(obs_info, input_data, tle_target, beam_id=15):
     start_window = expected_transit_time - datetime.timedelta(seconds=20)
     end_window = expected_transit_time + datetime.timedelta(seconds=10)
 
-    print 'Current time is', obs_info['timestamp']
-    print 'TLE is between {} and {}'.format(start_window, end_window)
-    print 'Persister Within window', end_window >= obs_info['timestamp'] >= start_window, obs_info['iter_count']
+    print('Current time is', obs_info['timestamp'])
+    print('TLE is between {} and {}'.format(start_window, end_window))
+    print('Persister Within window', end_window >= obs_info['timestamp'] >= start_window, obs_info['iter_count'])
 
     if end_window >= obs_info['timestamp'] >= start_window:
         expected_channel = (obs_info['transmitter_frequency'] * 1e6 + expected_doppler) - obs_info[
@@ -917,7 +917,7 @@ def plot_TLE(obs_info, input_data, tle_target, beam_id=15):
 
         subset = input_data[beam_id, channel_window[0]: channel_window[1], 120:]
 
-        print 'Expecting target to be between', channel_window, subset.shape
+        print('Expecting target to be between', channel_window, subset.shape)
         fig = plt.figure(figsize=(11, 8))
         ax = fig.add_subplot(1, 1, 1)
         ax.set_xlabel("Time")

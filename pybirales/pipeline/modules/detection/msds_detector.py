@@ -4,12 +4,12 @@ import time
 from multiprocessing import Pool
 from sys import stdout
 
-from msds.msds import *
 from pybirales import settings
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.modules.detection.dbscan_detection import detect
 from pybirales.pipeline.modules.detection.filter import triangle_filter, sigma_clip
+from pybirales.pipeline.modules.detection.msds.msds import *
 from pybirales.pipeline.modules.detection.util import *
 from pybirales.pipeline.modules.persisters.fits_persister import TLE_Target
 
@@ -162,7 +162,7 @@ class Detector(ProcessingModule):
         self.n_terminated_tracks = 0
 
         self.detection_algorithm = dbscan_standalone
-        self.detection_algorithm = msds_standalone
+        # self.detection_algorithm = msds_standalone
 
         self.name = "MSDS Detector"
 
@@ -360,9 +360,9 @@ if __name__ == '__main__':
                 i = j + len(terminated_tracks) + len(cancelled_tracks)
                 log.info("RSO %d [%d] (TERMINATED): %s" % (i, id(candidate) % 1000, candidate.state_str()))
 
-            print "Iteration {}: Processing finished in {:0.3f}. Reading took {:0.3f}".format(_iter_count,
+            print("Iteration {}: Processing finished in {:0.3f}. Reading took {:0.3f}".format(_iter_count,
                                                                                               time.time() - t1,
-                                                                                              tr)
+                                                                                              tr))
 
     pool.close()
     pool.join()
