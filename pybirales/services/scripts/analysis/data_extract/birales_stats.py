@@ -103,8 +103,8 @@ def obs_msg(observations, obs_type):
 
 @timeit
 def plot_tracks(df):
-    print "Found {} tracks. From {:%d/%m/%y} to {:%d/%m/%y}".format(len(df), df['created_at'].min(),
-                                                                    df['created_at'].max())
+    print("Found {} tracks. From {:%d/%m/%y} to {:%d/%m/%y}".format(len(df), df['created_at'].min(),
+                                                                    df['created_at'].max()))
 
     df = df.set_index('created_at')
     df = df.resample('M').count()
@@ -166,8 +166,8 @@ if __name__ == '__main__':
         detect_obs = get_observation(type='observation', duration=600)
         calibration_obs = get_observation(type='calibration', duration=1000)
 
-        print obs_msg(detect_obs, 'detection')
-        print obs_msg(calibration_obs, 'calibration')
+        print(obs_msg(detect_obs, 'detection'))
+        print(obs_msg(calibration_obs, 'calibration'))
 
         tracks_df = get_tracks(CACHE, use_cache=True)
         ax = plot_tracks(tracks_df)
@@ -175,8 +175,8 @@ if __name__ == '__main__':
         plt.show()
 
     except KeyboardInterrupt:
-        print "Exiting."
+        print("Exiting.")
     finally:
-        print "Tear down"
+        print("Tear down")
         db_connection.close()
         server.stop()
