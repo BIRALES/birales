@@ -36,7 +36,7 @@ class EventsPublisher:
             log.debug('{} published on #{} across {} subscribers'.format(event.name, channel, s))
 
         # Save the event to the database
-        # self.save(event)
+        self.save(event)
 
     def save(self, event):
         """
