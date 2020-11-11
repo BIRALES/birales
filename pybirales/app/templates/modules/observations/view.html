@@ -151,19 +151,28 @@
                 });
             }
 
-            {% if tracks|length > 1 %}
-                update('{{ tracks[0].id }}', 1);
-                detection_links.first().toggleClass('btn-primary');
-            {% endif %}
+            {#            {% if tracks|length > 1 %}#}
+            {#                update('{{ tracks[0].id }}', 1);#}
+            {#                detection_links.first().toggleClass('btn-primary');#}
+            {#            {% endif %}#}
 
 
             detection_links.click(function () {
                 let track_id = $(this).attr('id');
 
-                update(track_id, $(this).text());
+                // If track_id was already activated, get all tracks again
+                if ($(this).hasClass('btn-primary')) {
+                    doppler_plotter.update(observation_id, undefined, undefined);
+                    snr_plotter.update(observation_id, undefined, undefined);
 
-                detection_links.not(this).removeClass('btn-primary');
-                $(this).toggleClass('btn-primary');
+                    $(this).removeClass('btn-primary');
+                } else {
+                    // Get the data for this track id only
+                    update(track_id, $(this).text());
+
+                    detection_links.not(this).removeClass('btn-primary');
+                    $(this).addClass('btn-primary');
+                }
             });
         });
     </script>

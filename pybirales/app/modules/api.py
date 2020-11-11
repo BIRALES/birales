@@ -28,9 +28,15 @@ def track(track_id):
     df = df.sort_values('snr', ascending=False).drop_duplicates(subset=['channel_sample', 'beam_id']).sort_values(
         by=['time_sample'])
 
-    track.data = df
+    response = {
+        'tx': track.tx,
+        'data': {
+            'channel': df['channel'].tolist(),
+            'time': [t.replace(tzinfo=pytz.utc).isoformat('T') for t in df['time'].tolist()],
+            'snr': df['snr'].tolist()
+        }}
 
-    return track.to_json()
+    return json.dumps(response)
 
 
 @api_page.route('/api/live/data', methods=['POST'])
@@ -44,12 +50,8 @@ def observation_track_data(observation_id=None, from_date=None, to_date=None):
     if request.values.get('observation_id'):
         observation_id = request.values.get('observation_id')
 
-    # print from_date, to_date, observation_id
-
     detected_candidates = SpaceDebrisTrack.get(observation_id=observation_id, to_time=to_date,
-                                               from_time=from_date).limit(5)
-
-    # print detected_candidates
+                                               from_time=from_date)
 
     response = []
 

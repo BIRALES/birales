@@ -156,7 +156,7 @@ def observation_logs(observation_id):
 @observations_page.route('/observations/<observation_id>/logs/tail')
 def observation_logs_tail(observation_id):
     try:
-        observation = Observation.objects(class_check=False).get(id=observation_id)
+        observation = Observation.objects.get(id=observation_id)
     except mongoengine.DoesNotExist:
         log.exception('Database error')
         abort(503)

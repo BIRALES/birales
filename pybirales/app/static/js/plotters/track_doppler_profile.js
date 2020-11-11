@@ -24,10 +24,10 @@ function TrackDopplerProfilePlotter(selector) {
         tooltips: {
             callbacks: {
                 label: function (tooltip) {
-                    let d = moment(tooltip.xLabel).toDate();
-                    let date_string = d.getUTCHours() + ':' + d.getUTCMinutes() + ':' + d.getUTCSeconds();
+                    // let d = moment(tooltip.xLabel).toDate();
+                    // let date_string = d.getUTCHours() + ':' + d.getUTCMinutes() + ':' + d.getUTCSeconds();
 
-                    return Math.round(tooltip.yLabel) + ' Hz at ' + date_string;
+                    return Math.round(tooltip.yLabel) + ' Hz on ' + tooltip.xLabel;
                 }
             }
         },
@@ -98,27 +98,27 @@ TrackDopplerProfilePlotter.prototype = {
         });
 
 
-        if (self.plot === undefined) {
-            if (tracks.length > 0) {
-                notifications.publish("Showing " + tracks.length + " tracks", 'success');
-            }
-            // else {
-            //     notifications.publish("No detections were made", 'warning');
-            // }
-        } else {
-            if (self.pixels === n_pixels) {
-                self.options.animation = false;
-            } else {
-                let delta = n_pixels - self.pixels;
-
-                if (delta > 0) {
-                    notifications.publish("Showing " + delta + " new tracks", 'success');
-                } else {
-                    notifications.publish(Math.abs(delta) + " tracks removed from view", 'info');
-                }
-
-            }
-        }
+        // if (self.plot === undefined) {
+        //     if (tracks.length > 0) {
+        //         notifications.publish("Showing " + tracks.length + " tracks", 'success');
+        //     }
+        //     // else {
+        //     //     notifications.publish("No detections were made", 'warning');
+        //     // }
+        // } else {
+        //     if (self.pixels === n_pixels) {
+        //         self.options.animation = false;
+        //     } else {
+        //         let delta = n_pixels - self.pixels;
+        //
+        //         if (delta > 0) {
+        //             notifications.publish("Showing " + delta + " new tracks", 'success');
+        //         } else {
+        //             notifications.publish(Math.abs(delta) + " tracks removed from view", 'info');
+        //         }
+        //
+        //     }
+        // }
 
         if (self.plot) {
             self.plot.destroy();
