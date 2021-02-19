@@ -67,7 +67,7 @@ class Tile(object):
 
         self.tpm.connect(ip=self._ip, port=self._port, initialise=initialise,
                          simulator=simulation, enable_ada=enable_ada, fsample=self._sampling_rate,
-                         ddc=True, fddc=self._ddc_frequency)
+                         ddc=True, fddc=self._ddc_frequency, adc_low_bitrate=True)
 
         # Load tpm debris firmware for both FPGAs (no need to load in simulation)
         if not simulation and self.tpm.is_programmed():
