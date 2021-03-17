@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 #from pymexart.digital_backend.tile_mexart import Tile
-from tile_debris import Tile
-
+from pybirales.digital_backend.tile_debris import Tile
 from pyfabil import Device
 
 from multiprocessing import Pool
@@ -30,6 +29,7 @@ configuration = {'tiles': None,
                      'ada_gain': None
                      },
                  'observation': {
+                     'sampling_frequency': 700e6,
                      'bandwidth': 12.5e6,
                      'ddc_frequency': 139.65e6
                      },
@@ -139,6 +139,16 @@ def initialise_tile(params):
             station_tile.configure_integrated_channel_data(
                 config['station']['channel_integration_time'])
 
+        # Enable SPEAD transmission
+        station_tile['fpga1.dsp_regfile.spead_tx_enable'] = 1
+        station_tile['fpga2.dsp_regfile.spead_tx_enable'] = 1
+
+        # Configure polyphase filterbank and set 1G stream
+        station_tile.download_polyfilter_coeffs("hann")
+        station_tile.set_lmc_download("1g")
+        station_tile.set_lmc_integrated_download("1g")
+        station_tile['board.regfile.ethernet_pause'] = 0x1000
+
         return True
     except Exception as e:
         logging.warning("Could not initialise Tile {}: {}".format(config['tiles'][tile_number], e))
@@ -166,9 +176,6 @@ class Station(object):
 
         # Set if the station is properly configured
         self.properly_formed_station = None
-
-        # Cache plugin directory
-        # __import__("./tpm_debris_firmware", fromlist=[None])
 
     def add_tile(self, tile_ip):
         """ Add a new tile to the station
@@ -254,15 +261,10 @@ class Station(object):
 
             logging.info("Initializing Channelizer")
             center_channel = 256
-            nof_channels =  1 #max(int(round(self.configuration['observation']['bandwidth'] / (50e6 / 2048.0))), 8)
-            first_channel = center_channel - nof_channels / 2
-            last_channel = center_channel + nof_channels / 2 - 1
 
             for i, tile in enumerate(self.tiles):
-                tile['fpga1.dsp_regfile.channelizer_sel.lo_channel'] = first_channel
-                tile['fpga2.dsp_regfile.channelizer_sel.lo_channel'] = first_channel
-                tile['fpga1.dsp_regfile.channelizer_sel.hi_channel'] = last_channel
-                tile['fpga2.dsp_regfile.channelizer_sel.hi_channel'] = last_channel
+                tile['fpga1.dsp_regfile.channelizer_sel.lo_channel'] = center_channel
+                tile['fpga2.dsp_regfile.channelizer_sel.lo_channel'] = center_channel
 
             for tile in self.tiles:
                 tile.tpm.tpm_pattern_generator[0].initialise()
@@ -277,22 +279,23 @@ class Station(object):
 
                 for tile in self.tiles:
                     for gen in tile.tpm.test_generator:
-                        gen.set_tone(0, 139648437.5, 0.02)
+                        gen.set_tone(0, 139624023.438 + 1e3, 1)
                         gen.channel_select(0xFFFF)
-#                        gen.enable_prdg(ampl=0.01)
 
             # Set ADA gain if required
             if self.configuration["station"]["ada_gain"] is not None:
                 # Check if the provided file is valid
 
-                if not os.path.isfile(self.configuration["station"]["ada_gain"]):
+                if type(self.configuration["station"]["ada_gain"]) == int:
+                    self.equalize_ada_gain(self.configuration["station"]["ada_gain"])
+                elif not os.path.isfile(self.configuration["station"]["ada_gain"]):
                     logging.warning("Provided ada gain file is invalid ({})".format(self.configuration["station"]["ada_gain"]))
                 else:
                     # Try loading file
                     with open(self.configuration["station"]["ada_gain"], 'r') as f:
                         try:
                             gains = yaml.load(f, yaml.FullLoader)
-                            if not (gains.has_key('tpm_1') and gains.has_key('tpm_2')):
+                            if not ('tpm_1' in gains and 'tpm_2' in gains):
                                 logging.warning("Ada gains file should have entries for TPM 1 and TPM 2")
 
                             # Set gain
@@ -329,7 +332,6 @@ class Station(object):
         else:
             self.check_station_status()
 
-
     def check_station_status(self):
         """ Check that the station is still valid """
         tile_ids = []
@@ -352,61 +354,10 @@ class Station(object):
 
     def _form_station(self):
         """ Forms the station """
-
         # Assign station and tile id, and tweak transceivers
         for i, tile in enumerate(self.tiles):
             tile.set_station_id(self._station_id, i)
             tile.tweak_transceivers()
-
-        # Loop over tiles and configure 10g cores
-        # Note that 10G lanes already have a correct source IP, MAC and port,
-        # all that is required is to change their destination parameters
-
-        # # Loop over tiles and configure 10g cores
-        # if len(self.tiles) > 1:
-        #     # Chain up TPMs
-        #     for i in range(len(self.tiles) - 1):
-        #         for core_id in range(8):
-        #             next_tile_config = self.tiles[i + 1].get_10g_core_configuration(core_id)
-        #             self.tiles[i].configure_10g_core(core_id,
-        #                                              dst_mac=next_tile_config['src_mac'],
-        #                                              dst_ip=next_tile_config['src_ip'])
-        # Create initialise configuration
-        csp_ingest_network = {}
-        for core_id in range(8):
-            csp_ingest_network[core_id] = {'dst_mac': self.configuration['network']['csp_ingest']['dst_mac'],
-                                           'dst_ip': self.configuration['network']['csp_ingest']['dst_ip'],
-                                           'dst_port': self.configuration['network']['csp_ingest']['dst_port'],
-                                           'src_mac': self.configuration['network']['csp_ingest']['src_mac'],
-                                           'src_ip': self.configuration['network']['csp_ingest']['src_ip'],
-                                           'src_port': self.configuration['network']['csp_ingest']['src_port']}
-
-        # # For the last TPM, if CSP ingest parameters are not specified for the lanes
-        # # loop them back to the first TPM in the chain
-        # for core_id in range(8):
-        #     if csp_ingest_network[core_id]['dst_ip'] == "0.0.0.0":
-        #         next_tile_config = self.tiles[0].get_10g_core_configuration(core_id)
-        #         self.tiles[-1].configure_10g_core(core_id,
-        #                                           dst_mac=next_tile_config['src_mac'],
-        #                                           dst_ip=next_tile_config['src_ip'])
-        #     else:
-        #         self.tiles[-1].configure_10g_core(core_id,
-        #                                           dst_mac=csp_ingest_network[core_id]['dst_mac'],
-        #                                           dst_ip=csp_ingest_network[core_id]['dst_ip'],
-        #                                           dst_port=csp_ingest_network[core_id]['dst_port'],
-        #                                           src_mac=csp_ingest_network[core_id]['src_mac'],
-        #                                           src_ip=csp_ingest_network[core_id]['src_ip'],
-        #                                           src_port=csp_ingest_network[core_id]['src_port'])
-
-        for i in range(len(self.tiles)):
-            for core_id in range(8):
-                self.tiles[i].configure_10g_core(core_id,
-                                                 dst_mac=csp_ingest_network[core_id]['dst_mac'],
-                                                 dst_ip=csp_ingest_network[core_id]['dst_ip'],
-                                                 dst_port=csp_ingest_network[core_id]['dst_port'],
-                                                 src_mac=csp_ingest_network[core_id]['src_mac'],
-                                                 src_ip=csp_ingest_network[core_id]['src_ip'],
-                                                 src_port=csp_ingest_network[core_id]['src_port'])
 
     def _synchronise_adc_clk(self):
         sampling_frequency = self.configuration['observation']['sampling_frequency']
@@ -422,9 +373,9 @@ class Station(object):
         for tile in self.tiles:
             tile.set_fpga_sysref_gen(sysref_period)
 
-            tile['pll', 0x402] = 0x8 #0xD0
-            tile['pll', 0x403] = 0x0 #0xA2
-            tile['pll', 0x404] = 0x1 #0x4
+            tile['pll', 0x402] = 0x8 # 0xD0
+            tile['pll', 0x403] = 0x0 # 0xA2
+            tile['pll', 0x404] = 0x1 # 0x4
             tile['pll', 0xF] = 0x1
             while tile['pll', 0xF] & 0x1 == 0x1:
                 time.sleep(0.1)
@@ -505,8 +456,6 @@ class Station(object):
 
             if len(times) == 1:
                 break
-            else:
-                print times
 
         # Tiles synchronised
         curr_time = self.tiles[0].get_fpga_time(Device.FPGA_1)
@@ -655,9 +604,11 @@ class Station(object):
             tile.tpm.tpm_ada.set_ada_gain(attenuation)
 
     # ------------------------------------------------------------------------------------------------
-    def calculate_center_frequency(ddc_frequency):
-        sampling_frequency = self.configuration['observation']['sampling_frequency']
-        return int(ddc_frequency / sampling_frequency * 4096) / 4096.0 * sampling_frequency
+    def calculate_center_frequency(self):
+        decimation_ratio = 8
+        sampling_frequency = self.configuration['observation']['sampling_frequency'] / decimation_ratio
+        ddc_frequency = self.configuration['observation']['ddc_frequency']
+        return int(ddc_frequency / sampling_frequency * 1024) / 1024.0 * sampling_frequency
 
     def test_generator_set_tone(self, dds, frequency=100e6, ampl=0.0, phase=0.0, delay=512):
         decimation_ratio = 8
@@ -669,6 +620,7 @@ class Station(object):
         for tile in self.tiles:
             for gen in tile.tpm.test_generator:
                 gen.set_tone(dds, translated_frequency, ampl, phase, t0)
+
         t1 = self.tiles[0]["fpga1.pps_manager.timestamp_read_val"]
         if t1 > t0:
             logging.info("Set tone test pattern generators synchronisation failed.")
@@ -750,11 +702,11 @@ class Station(object):
             for adc in tile.tpm.tpm_adc:
                 adc.adc_set_fast_detect(threshold << 6)
 
-    @staticmethod
-    def disable_adc_trigger():
+    def disable_adc_trigger(self):
         """ Disable ADC trigger """
-        self['fpga1.lmc_gen.raw_ext_trigger_enable'] = 0
-        self['fpga2.lmc_gen.raw_ext_trigger_enable'] = 0
+        for tile in self.tiles:
+            tile['fpga1.lmc_gen.raw_ext_trigger_enable'] = 0
+            tile['fpga2.lmc_gen.raw_ext_trigger_enable'] = 0
 
     def set_channelizer_truncation(self, trunc):
         for tile in self.tiles:
@@ -777,51 +729,6 @@ class Station(object):
         for tile in self.tiles:
             tile.send_raw_data_synchronised(period=period, timeout=timeout, timestamp=t0, seconds=self._seconds)
         return self._check_data_sync(t0)
-
-    # def send_channelised_data(self, number_of_samples=128, first_channel=0, last_channel=511, period=0, timeout=0):
-    #     """ Send channelised data from all Tiles """
-    #     self._wait_available()
-    #     t0 = self.tiles[0].get_fpga_timestamp(Device.FPGA_1)
-    #     for tile in self.tiles:
-    #         tile.send_channelised_data(number_of_samples=number_of_samples, first_channel=first_channel,
-    #                                    last_channel=last_channel, period=period,
-    #                                    timeout=timeout, timestamp=t0, seconds=self._seconds)
-    #     return self._check_data_sync(t0)
-
-    # def send_csp_data(self, samples_per_packet, number_of_samples):
-    #     """ Send CSP data from all Tiles """
-    #     self._wait_available()
-    #     t0 = self.tiles[0].get_fpga_timestamp(Device.FPGA_1)
-    #     for tile in self.tiles:
-    #         tile.send_csp_data(samples_per_packet=samples_per_packet, number_of_samples=number_of_samples,
-    #                            timestamp=t0, seconds=0.5)
-    #     return self._check_data_sync(t0)
-
-    # def send_channelised_data_continuous(self, channel_id, number_of_samples=65536, timeout=0):
-    #     """ Send continuous channelised data from all Tiles """
-    #     self.stop_data_transmission()
-    #     self._wait_available()
-    #     t0 = self.tiles[0].get_fpga_timestamp(Device.FPGA_1)
-    #     for tile in self.tiles:
-    #         tile.send_channelised_data_continuous(channel_id=channel_id, number_of_samples=number_of_samples,
-    #                                               timeout=timeout, timestamp=t0, seconds=self._seconds)
-    #     return self._check_data_sync(t0)
-
-    # def send_channelised_data_narrowband(self, frequency, round_bits, number_of_samples=256, timeout=0):
-    #     """ Send narrowband continuous channel data """
-    #     # Check if feature is available
-    #     if len(self.tiles[0].find_register("fpga1.lmc_gen.channelized_ddc_mode")) == 0:
-    #         logging.warning("Downloaded firwmare does not support narrowband channels")
-    #         return
-    #
-    #     self.stop_data_transmission()
-    #     self._wait_available()
-    #     t0 = self.tiles[0].get_fpga_timestamp(Device.FPGA_1)
-    #     for tile in self.tiles:
-    #         tile.send_channelised_data_narrowband(frequency=frequency, round_bits=round_bits,
-    #                                               number_of_samples=number_of_samples,
-    #                                               timeout=timeout, timestamp=t0, seconds=self._seconds)
-    #     return self._check_data_sync(t0)
 
     def stop_data_transmission(self):
         """ Stop data transmission """
@@ -1051,7 +958,7 @@ if __name__ == "__main__":
     parser.add_option("--ddc_frequency", action="store", dest="ddc_frequency",
                       type="float", default=None, help="DDC frequency [default: None]")
     parser.add_option("--sampling_frequency", action="store", dest="sampling_frequency",
-                      type="float", default=800e6, help="ADC sampling frequency. Supported frequency are 700e6, 800e6 [default: 800e6]")
+                      type="float", default=700e6, help="ADC sampling frequency. Supported frequency are 700e6, 800e6 [default: 700e6]")
     (conf, args) = parser.parse_args(argv[1:])
 
     # Set logging
@@ -1078,13 +985,15 @@ if __name__ == "__main__":
     if conf.equalize_signals:
         station.equalize_ada_gain(16)
 
-    station['fpga1.dsp_regfile.spead_tx_enable'] = 1
-    station['fpga2.dsp_regfile.spead_tx_enable'] = 1
+    for tile in station.tiles:
+        tile.set_channeliser_truncation(configuration['station']['channel_truncation'])
 
     for tile in station.tiles:
-        tile.download_polyfilter_coeffs("hann")
-        tile.set_lmc_download("1g")
-        tile.set_lmc_integrated_download("1g")
-        tile['board.regfile.ethernet_pause']=0x1000
+        for gen in tile.tpm.test_generator:
+            gen.channel_select(0x0000)
+            gen.disable_prdg()
 
-
+    for tile in station.tiles:
+        for gen in tile.tpm.test_generator:
+            gen.set_tone(0, 139624023.438 + 1e3, 2)
+            gen.channel_select(0xFFFF)

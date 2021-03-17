@@ -5,7 +5,7 @@ set to None so as to remove warnings in source code.
 
 
 """
-
+digital_backend = None
 channeliser = None
 beamformer = None
 persister = None
@@ -30,6 +30,7 @@ roach_config_files = None
 feng_configuration = None
 generator = None
 rso_generator = None
+tpm_receiver = None
 
 
 class receiver:

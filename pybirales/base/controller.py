@@ -7,7 +7,7 @@ from pybirales.services.instrument.backend import Backend
 from pybirales.services.instrument.best2 import BEST2
 
 
-class BackendController():
+class BackendController:
 
     def __init__(self):
         """
@@ -42,7 +42,8 @@ class BackendController():
         if self.is_enabled:
             self._backend.stop()
 
-class InstrumentController():
+
+class InstrumentController:
     def __init__(self):
         self._online = not settings.manager.offline
 

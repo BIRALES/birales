@@ -1,17 +1,12 @@
 import functools
 import logging
+import os
 import socket
 import threading
-import os
-
-from datetime import datetime
-from sys import stdout
-import numpy as np
 import time
-import struct
 
+import numpy as np
 from pyfabil.base.definitions import *
-from pyfabil.base.utils import ip2long
 from pyfabil.boards.tpm import TPM
 
 
@@ -29,7 +24,7 @@ def connected(f):
 
 
 class Tile(object):
-    def __init__(self, ip="10.0.10.2", port=10000, lmc_ip="10.0.10.1", lmc_port=4660, 
+    def __init__(self, ip="10.0.10.2", port=10000, lmc_ip="10.0.10.1", lmc_port=4660,
                  sampling_rate=800e6, ddc_frequency=139.65e6):
         self._lmc_port = lmc_port
         self._lmc_ip = socket.gethostbyname(lmc_ip)
@@ -60,8 +55,8 @@ class Tile(object):
         self.tpm = TPM()
 
         # Add plugin directory (load module locally)
-        #from pymexart.digital_backend import tpm_mexart_firmware
-        #self.tpm.add_plugin_directory(os.path.dirname(tpm_mexart_firmware.__file__))
+        # from pymexart.digital_backend import tpm_mexart_firmware
+        # self.tpm.add_plugin_directory(os.path.dirname(tpm_mexart_firmware.__file__))
         import tpm_debris_firmware
         self.tpm.add_plugin_directory(os.path.dirname(tpm_debris_firmware.__file__))
 
@@ -71,8 +66,10 @@ class Tile(object):
 
         # Load tpm debris firmware for both FPGAs (no need to load in simulation)
         if not simulation and self.tpm.is_programmed():
-            self.tpm.load_plugin("TpmDebrisFirmware", device=Device.FPGA_1, fsample=self._sampling_rate, fddc=self._ddc_frequency, decimation=self._decimation_ratio)
-            self.tpm.load_plugin("TpmDebrisFirmware", device=Device.FPGA_2, fsample=self._sampling_rate, fddc=self._ddc_frequency, decimation=self._decimation_ratio)
+            self.tpm.load_plugin("TpmDebrisFirmware", device=Device.FPGA_1, fsample=self._sampling_rate,
+                                 fddc=self._ddc_frequency, decimation=self._decimation_ratio)
+            self.tpm.load_plugin("TpmDebrisFirmware", device=Device.FPGA_2, fsample=self._sampling_rate,
+                                 fddc=self._ddc_frequency, decimation=self._decimation_ratio)
         elif not self.tpm.is_programmed():
             logging.warn("TPM is not programmed! No plugins loaded")
 
@@ -101,8 +98,8 @@ class Tile(object):
         for firmware in self.tpm.tpm_debris_firmware:
             firmware.initialise_firmware()
 
-        self['fpga1.jesd204_if.regfile_axi4_tlast_period'] = 1024-1
-        self['fpga2.jesd204_if.regfile_axi4_tlast_period'] = 1024-1
+        self['fpga1.jesd204_if.regfile_axi4_tlast_period'] = 1024 - 1
+        self['fpga2.jesd204_if.regfile_axi4_tlast_period'] = 1024 - 1
         self['fpga1.dsp_regfile.spead_tx_enable'] = 1
         self['fpga2.dsp_regfile.spead_tx_enable'] = 1
 
@@ -136,45 +133,44 @@ class Tile(object):
                 generator.enable_prdg(0.4)
                 generator.channel_select(0xFFFF)
 
-
         # Set destination and source IP/MAC/ports for 10G cores
         # This will create a loopback between the two FPGAs
-        ip_octets = self._ip.split('.')
-        for n in range(8):
-            src_ip = "10.{}.{}.{}".format(ip_octets[2], n + 1, ip_octets[3])
-            dst_ip = "10.{}.{}.{}".format(ip_octets[2], (1 + n) + (4 if n < 4 else -4), ip_octets[3])
-            self.configure_10g_core(n,
-                                    src_mac=0x620000000000 + ip2long(src_ip),
-                                    dst_mac=0x620000000000 + ip2long(dst_ip),
-                                    src_ip=src_ip,
-                                    dst_ip=dst_ip,
-                                    src_port=0xF0D0,
-                                    dst_port=4660)
-
-        # wait UDP link up
-        logging.info("Waiting for 10G link...")
-        try:
-            times = 0
-            while True:
-                linkup = 1
-                for n in [0, 1, 2, 4, 5, 6]:
-                    core_status = self.tpm.tpm_10g_core[n].get_arp_table_status(0, silent_mode=True)
-                    if core_status & 0x4 == 0:
-                        linkup = 0
-                if linkup == 1:
-                    logging.info("10G Link established! ARP table populated!")
-                    break
-                else:
-                    times += 1
-                    time.sleep(0.5)
-                    if times == 20:
-                        logging.warning("10G Links not established after 10 seconds! ARP table not populated!")
-                        break
-        except:
-            time.sleep(4)
-            self.mii_exec_test(10, False)
-            self['fpga1.regfile.eth10g_ctrl'] = 0x0
-            self['fpga2.regfile.eth10g_ctrl'] = 0x0
+        # ip_octets = self._ip.split('.')
+        # for n in range(8):
+        #     src_ip = "10.{}.{}.{}".format(ip_octets[2], n + 1, ip_octets[3])
+        #     dst_ip = "10.{}.{}.{}".format(ip_octets[2], (1 + n) + (4 if n < 4 else -4), ip_octets[3])
+        #     self.configure_10g_core(n,
+        #                             src_mac=0x620000000000 + ip2long(src_ip),
+        #                             dst_mac=0x620000000000 + ip2long(dst_ip),
+        #                             src_ip=src_ip,
+        #                             dst_ip=dst_ip,
+        #                             src_port=0xF0D0,
+        #                             dst_port=4660)
+        #
+        # # wait UDP link up
+        # logging.info("Waiting for 10G link...")
+        # try:
+        #     times = 0
+        #     while True:
+        #         linkup = 1
+        #         for n in [0, 1, 2, 4, 5, 6]:
+        #             core_status = self.tpm.tpm_10g_core[n].get_arp_table_status(0, silent_mode=True)
+        #             if core_status & 0x4 == 0:
+        #                 linkup = 0
+        #         if linkup == 1:
+        #             logging.info("10G Link established! ARP table populated!")
+        #             break
+        #         else:
+        #             times += 1
+        #             time.sleep(0.5)
+        #             if times == 20:
+        #                 logging.warning("10G Links not established after 10 seconds! ARP table not populated!")
+        #                 break
+        # except:
+        #     time.sleep(4)
+        #     self.mii_exec_test(10, False)
+        #     self['fpga1.regfile.eth10g_ctrl'] = 0x0
+        #     self['fpga2.regfile.eth10g_ctrl'] = 0x0
 
         self.configure_channeliser()
 
@@ -293,7 +289,7 @@ class Tile(object):
             instances[n].mii_test(pkt_num, show_result=False, wait_result=False)
 
         if wait_result:
-            instances[nof_cores-1].mii_wait_idle()
+            instances[nof_cores - 1].mii_wait_idle()
             result = []
             for n in sel_range:
                 result.append(instances[n].mii_test_result())
@@ -557,8 +553,8 @@ class Tile(object):
         if self['fpga1.regfile.feature.xg_eth_implemented'] == 1:
             logging.info("Checking ARP table...")
             if self.tpm.tpm_debris_firmware[0].xg_40g_eth:
-                core_id = [0,1]
-                arp_table_id = [0,1]
+                core_id = [0, 1]
+                arp_table_id = [0, 1]
             else:
                 core_id = [0, 1, 2, 4, 5, 6]
                 arp_table_id = [0]
@@ -579,7 +575,8 @@ class Tile(object):
                     if times % 10 == 0:
                         logging.warning("10G Links not established after %d seconds! Waiting... " % int(0.1 * times))
                     if times == 60:
-                        logging.warning("10G Links not established after %d seconds! ARP table not populated!" % int(0.5 * times))
+                        logging.warning(
+                            "10G Links not established after %d seconds! ARP table not populated!" % int(0.5 * times))
                         break
         else:
             # time.sleep(2)
@@ -634,7 +631,7 @@ class Tile(object):
         for f in ['fpga1', 'fpga2']:
             for n in range(4):
                 try:
-                    add = int(self.tpm.memory_map['%s.eth_10g_drp.gth_channel_%i' % (f, n)].address) + 4*0x7C
+                    add = int(self.tpm.memory_map['%s.eth_10g_drp.gth_channel_%i' % (f, n)].address) + 4 * 0x7C
                 except:
                     add = int(self.tpm.memory_map['%s.eth_drp.gth_channel_%i' % (f, n)].address) + 4 * 0x7C
                 self[add] = 0x6060
@@ -705,7 +702,6 @@ class Tile(object):
 
     @connected
     def download_polyfilter_coeffs(self, window="hann", bin_width_scaling=1.0):
-        self.tpm.polyfilter[0].get_available_windows()
         for n in range(2):
             self.tpm.polyfilter[n].set_window(window, bin_width_scaling)
             self.tpm.polyfilter[n].download_coeffs()
@@ -715,19 +711,17 @@ class Tile(object):
     @connected
     def configure_channeliser(self):
         logging.info("Configuring channeliser...")
-        # self.load_default_poly_coeffs()
         self['fpga1.dsp_regfile.adc_remap.enable'] = 1
         self['fpga2.dsp_regfile.adc_remap.enable'] = 1
         self['fpga1.dsp_regfile.adc_remap.lsb_discard'] = 6
         self['fpga2.dsp_regfile.adc_remap.lsb_discard'] = 6
-
 
     @connected
     def set_channeliser_truncation(self, trunc):
         """ Set channeliser truncation scale """
         self['fpga1.dsp_regfile.channelizer_out_bit_round'] = trunc
         self['fpga2.dsp_regfile.channelizer_out_bit_round'] = trunc
-        trunc16 = 4 
+        trunc16 = 4
         self['fpga1.dsp_regfile.channelizer_out_bit_round16'] = trunc16
         self['fpga2.dsp_regfile.channelizer_out_bit_round16'] = trunc16
         return
@@ -763,24 +757,23 @@ class Tile(object):
         for f in devices:
             self.tpm['%s.pps_manager.pps_gen_tc' % f] = int(self._sampling_rate) / 1 - 1
 
-        # try:
-        #     self.tpm['fpga1.regfile.spi_sync_function'] = 1
-        #     self.tpm['fpga2.regfile.spi_sync_function'] = 1
-        #     self.tpm['fpga1.pps_manager.pps_gen_sync'] = 0
-        #     self.tpm['fpga2.pps_manager.pps_gen_sync'] = 0
-        #     self.tpm['fpga1.pps_manager.pps_gen_sync.enable'] = 1
-        #     self.tpm['fpga2.pps_manager.pps_gen_sync.enable'] = 1
-        #     time.sleep(0.1)
-        #     self.tpm['fpga1.pps_manager.pps_gen_sync.act'] = 1
-        #     time.sleep(0.1)
-        #     self.tpm['fpga1.pps_manager.pps_gen_sync'] = 0
-        #     self.tpm['fpga2.pps_manager.pps_gen_sync'] = 0
-        #     self.tpm['fpga1.regfile.spi_sync_function'] = 1
-        #     self.tpm['fpga2.regfile.spi_sync_function'] = 1
-        #     logging.info("Internal PPS generator synchronised.")
-        # except:
-        #     logging.info("Current FPGA firmware doesn't support PPS generator synchronisation.")
-        
+        # TODO: This is only valid when no PPS is present. Remove on deployed system
+        try:
+            self.tpm['fpga1.regfile.spi_sync_function'] = 1
+            self.tpm['fpga2.regfile.spi_sync_function'] = 1
+            self.tpm['fpga1.pps_manager.pps_gen_sync'] = 0
+            self.tpm['fpga2.pps_manager.pps_gen_sync'] = 0
+            time.sleep(0.1)
+            self.tpm['fpga1.pps_manager.pps_gen_sync.act'] = 1
+            time.sleep(0.1)
+            self.tpm['fpga1.pps_manager.pps_gen_sync'] = 0
+            self.tpm['fpga2.pps_manager.pps_gen_sync'] = 0
+            self.tpm['fpga1.regfile.spi_sync_function'] = 1
+            self.tpm['fpga2.regfile.spi_sync_function'] = 1
+            logging.info("Internal PPS generator synchronised")
+        except:
+            logging.info("Current FPGA firmware does not support PPS generator synchronisation")
+
         # Setting sync time
         for f in devices:
             self.tpm["%s.pps_manager.curr_time_write_val" % f] = int(time.time())
@@ -814,7 +807,7 @@ class Tile(object):
         elif pll_status == 0xF2:
             logging.warning("PLL locked to internal reference clock.")
         else:
-            logging.error("PLL is not locked! - Status Readback 0 (0x508): 0x%x"%pll_status)
+            logging.error("PLL is not locked! - Status Readback 0 (0x508): 0x%x" % pll_status)
             result = False
 
         # check PPS detection
@@ -894,7 +887,7 @@ class Tile(object):
         # Set arm timestamp
         # delay = number of frames to delay * frame time (shift by 8)
         frame_time = 1.0 / (700e6 / 8.0) * 1024
-        delay = seconds * (1 / frame_time ) / 256
+        delay = seconds * (1 / frame_time) / 256
         t1 = t0 + int(delay)
         for fpga in self.tpm.tpm_fpga:
             fpga.fpga_apply_sync_delay(t1)
@@ -913,7 +906,8 @@ class Tile(object):
         """ Configure continuous integrated channel data """
         for i in range(len(self.tpm.tpm_integrator)):
             self.tpm.tpm_integrator[i].configure("channel", integration_time, first_channel=0, last_channel=2048,
-                                                 time_mux_factor=1, carousel_enable=0x0, download_bit_width=32, data_bit_width=12)
+                                                 time_mux_factor=1, carousel_enable=0x0, download_bit_width=32,
+                                                 data_bit_width=12)
 
     @connected
     def stop_integrated_channel_data(self):
@@ -1084,7 +1078,7 @@ class Tile(object):
 
     def test_generator_set_tone(self, dds, frequency=100e6, ampl=0.0, phase=0.0, delay=128):
         """ Set test generator tone """
-        translated_frequency = frequency - self._ddc_frequency + self._sampling_rate/(self._decimation_ratio*4.0)
+        translated_frequency = frequency - self._ddc_frequency + self._sampling_rate / (self._decimation_ratio * 4.0)
         logging.info("DDC Frequency: {}, translated frequency: {}".format(self._ddc_frequency, translated_frequency))
 
         t0 = self.tpm["fpga1.pps_manager.timestamp_read_val"]
@@ -1095,7 +1089,7 @@ class Tile(object):
             logging.info("Set tone test pattern generators synchronisation failed.")
             logging.info("Start Time   = " + str(t0))
             logging.info("Finish time  = " + str(t1))
-            logging.info("Maximum time = " + str(t0+delay))
+            logging.info("Maximum time = " + str(t0 + delay))
             return -1
         return 0
 
@@ -1108,7 +1102,7 @@ class Tile(object):
             logging.info("Set tone test pattern generators synchronisation failed.")
             logging.info("Start Time   = " + str(t0))
             logging.info("Finish time  = " + str(t1))
-            logging.info("Maximum time = " + str(t0+delay))
+            logging.info("Maximum time = " + str(t0 + delay))
             return -1
         return 0
 
@@ -1121,7 +1115,7 @@ class Tile(object):
             logging.info("Set tone test pattern generators synchronisation failed.")
             logging.info("Start Time   = " + str(t0))
             logging.info("Finish time  = " + str(t1))
-            logging.info("Maximum time = " + str(t0+delay))
+            logging.info("Maximum time = " + str(t0 + delay))
             return -1
         return 0
 
@@ -1140,7 +1134,7 @@ class Tile(object):
         for n in range(4):
             for c in range(8):
                 if rd[n] & 0x7 != 0:
-                    print "Lane %s error detected! Error code: %d" % (str(n*8 + c), rd[n] & 0x7)
+                    print "Lane %s error detected! Error code: %d" % (str(n * 8 + c), rd[n] & 0x7)
                 rd[n] = rd[n] >> 3
 
     def reset_jesd_error_counter(self):
@@ -1159,7 +1153,7 @@ class Tile(object):
         self['fpga2.jesd204_if.core_id_0_error_reporting'] = 1
         self['fpga2.jesd204_if.core_id_1_error_reporting'] = 1
 
-    def check_jesd_error_counter(self, show_result = True):
+    def check_jesd_error_counter(self, show_result=True):
         errors = []
         for lane in range(32):
             fpga_id = lane / 16
@@ -1181,7 +1175,7 @@ class Tile(object):
         C = self['fpga1.poly.config2.coeff_data_width']
         MUX_PER_RAM = self['fpga1.poly.config2.coeff_mux_per_ram']
         NOF_RAM_PER_STAGE = MUX / MUX_PER_RAM
-        M = N*S
+        M = N * S
 
         base_width = C
         while base_width > 32:
@@ -1192,21 +1186,21 @@ class Tile(object):
         for i in range(M):
             real_val = np.sinc((float(i) - float(M / 2)) / float(N))  # sinc
             real_val *= 0.5 - 0.5 * np.cos(2 * np.pi * float(i) / float(M))  # window
-            real_val *= 2**(C - 1) - 1  # rescaling
+            real_val *= 2 ** (C - 1) - 1  # rescaling
             coeff[i] = int(real_val)
 
-        coeff_ram = np.zeros(N/NOF_RAM_PER_STAGE, dtype=int)
+        coeff_ram = np.zeros(N / NOF_RAM_PER_STAGE, dtype=int)
         for s in range(S):
             for ram in range(NOF_RAM_PER_STAGE):
                 idx = 0
                 for n in range(N):
                     if (n % MUX) / MUX_PER_RAM == ram:
-                        coeff_ram[idx] = coeff[N*s + n]
+                        coeff_ram[idx] = coeff[N * s + n]
                         idx += 1
 
                 if aspect_ratio_coeff > 1:
-                    coeff_ram_arc = np.zeros(N/NOF_RAM_PER_STAGE*aspect_ratio_coeff, dtype=int)
-                    for n in range(N/NOF_RAM_PER_STAGE):
+                    coeff_ram_arc = np.zeros(N / NOF_RAM_PER_STAGE * aspect_ratio_coeff, dtype=int)
+                    for n in range(N / NOF_RAM_PER_STAGE):
                         for m in range(aspect_ratio_coeff):
                             coeff_ram_arc[n * aspect_ratio_coeff + m] = coeff_ram[n] >> (m * C / aspect_ratio_coeff)
                 else:
@@ -1220,8 +1214,8 @@ class Tile(object):
                 self['fpga2.poly.coeff'] = coeff_ram_arc.tolist()
 
     def set_fpga_sysref_gen(self, sysref_period):
-        self['fpga1.pps_manager.sysref_gen_period'] = sysref_period-1
-        self['fpga1.pps_manager.sysref_gen_duty'] = sysref_period/2-1
+        self['fpga1.pps_manager.sysref_gen_period'] = sysref_period - 1
+        self['fpga1.pps_manager.sysref_gen_duty'] = sysref_period / 2 - 1
         self['fpga1.pps_manager.sysref_gen.enable'] = 1
         self['fpga1.pps_manager.sysref_gen.spi_sync_enable'] = 1
         self['fpga1.pps_manager.sysref_gen.sysref_pol_invert'] = 0
@@ -1267,7 +1261,6 @@ class Tile(object):
     #     self['fpga1.pps_manager.sysref_gen.sysref_pol_invert'] = 0
     #
     #     time.sleep(0.1)
-
 
     def __str__(self):
         return str(self.tpm)
