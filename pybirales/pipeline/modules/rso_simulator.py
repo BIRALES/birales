@@ -88,7 +88,7 @@ class RSOSignature(object):
         # i = np.where(self.ts >= t0)
 
         if not np.any(i):
-            print "No samples with range"
+            print("No samples with range")
             return None, None, None
 
         n0 = np.min(i)

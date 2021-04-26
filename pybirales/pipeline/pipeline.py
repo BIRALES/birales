@@ -18,6 +18,7 @@ from pybirales.pipeline.modules.persisters.raw_persister import RawPersister
 from pybirales.pipeline.modules.persisters.tdm_persister import TDMPersister
 from pybirales.pipeline.modules.readers.raw_data_reader import RawDataReader
 from pybirales.pipeline.modules.receivers.receiver import Receiver
+from pybirales.pipeline.modules.receivers.tpm_channel_receiver import TPMReceiver
 from pybirales.pipeline.modules.rso_simulator import RSOGenerator
 from pybirales.pipeline.modules.terminator import Terminator
 
@@ -379,7 +380,8 @@ class MSDSDetectionPipelineManagerBuilder(PipelineManagerBuilder):
             receiver = RawDataReader(settings.rawdatareader)
             self.manager.name += ' (Offline)'
         else:
-            receiver = Receiver(settings.receiver)
+            # receiver = Receiver(settings.receiver)
+            receiver = TPMReceiver(settings.tpm_receiver)
 
         self.manager.add_module("receiver", receiver)
 

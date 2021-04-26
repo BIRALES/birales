@@ -56,8 +56,8 @@ ra_max = ra._degrees + BIRALES_FOV_RA
 dec_min = dec.degrees - BIRALES_FOV_DEC
 dec_max = dec.degrees + BIRALES_FOV_DEC
 
-print "Birales Telescope is currently pointed towards: RA: {} deg, DEC: {} deg".format(ra, dec)
-print "FoV range is set to: RA: {}-{} deg, DEC: {}-{} deg".format(ra_min, ra_max, dec_min, dec_max)
+print("Birales Telescope is currently pointed towards: RA: {} deg, DEC: {} deg".format(ra, dec))
+print("FoV range is set to: RA: {}-{} deg, DEC: {}-{} deg".format(ra_min, ra_max, dec_min, dec_max))
 
 st = SpaceTrackClient(identity=USERNAME, password=PASSWORD)
 st.callback = rate_limiter
@@ -69,9 +69,9 @@ data = st.tle_latest(ordinal=1, epoch='>now-30',
 data_jsn = json.loads(data)
 
 for i, tle in enumerate(data_jsn):
-    print i, "NORAD ID {}: RA: {} deg, INC: {} deg, EPOCH: {}".format(
+    print(i, "NORAD ID {}: RA: {} deg, INC: {} deg, EPOCH: {}".format(
         tle['NORAD_CAT_ID'],
         tle['RA_OF_ASC_NODE'],
         tle['INCLINATION'],
-        tle['EPOCH'],
+        tle['EPOCH'])
     )

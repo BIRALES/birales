@@ -249,10 +249,15 @@ class Station(object):
         if pool is not None:
             pool.terminate()
 
-        # Connect all tiles
-        for tile in self.tiles:
-            tile.connect()
-            tile.tpm_ada.initialise_adas()
+        # Connect all tiles. If the tiles are not configured properly then the below calls will
+        # fail, in which case set properly_formed_station to false
+        try:
+            for tile in self.tiles:
+                tile.connect()
+                tile.tpm_ada.initialise_adas()
+        except Exception as e:
+            self.properly_formed_station = False
+            raise e
 
         # Initialise if required
         if self.configuration['station']['initialise'] and self.properly_formed_station:
@@ -826,7 +831,7 @@ class Station(object):
                 station['pll',0x0] = 0x81
                 pll_reset = 1
             if pll_reset == 1:
-                print "reset PLL"
+                print("reset PLL")
             time.sleep(1)
 
     # ------------------------------------------- OVERLOADED FUNCTIONS ---------------------------------------
@@ -843,7 +848,7 @@ class Station(object):
 
 def apply_config_file(input_dict, output_dict):
     """ Recursively copy value from input_dict to output_dict"""
-    for k, v in input_dict.iteritems():
+    for k, v in input_dict.items():
         if type(v) is dict:
             apply_config_file(v, output_dict[k])
         elif k not in output_dict.keys():

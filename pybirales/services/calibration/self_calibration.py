@@ -4,7 +4,7 @@ from copy import deepcopy
 import numpy as np
 import scipy.linalg as lin
 
-import geometric as gu
+from pybirales.services.calibration import geometric as gu
 
 
 class SelfCal(object):

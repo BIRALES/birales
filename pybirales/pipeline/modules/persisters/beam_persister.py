@@ -1,5 +1,5 @@
 import datetime
-import fadvise
+# import fadvise
 import numpy as np
 import os
 import pickle
@@ -57,7 +57,7 @@ class BeamPersister(ProcessingModule):
         self._file = open(file_path, "wb+")        
 
         # Use fadvise to optimise 
-        fadvise.set_advice(self._file, fadvise.POSIX_FADV_SEQUENTIAL)
+        # fadvise.set_advice(self._file, fadvise.POSIX_FADV_SEQUENTIAL)
 
         # Initialise ranges to persist for file
         self._beam_range = slice(None)
@@ -123,12 +123,12 @@ class BeamPersister(ProcessingModule):
             obs_info['start_beam_in_file'] = self._beam_range.start if self._beam_range.start is not None else 0
 
             obs_info['nof_beams_in_file'] = obs_info['nbeams'] if self._beam_range.start is None else \
-                self._beam_range.stop - self._beam_range.start
+                self._beam_range.stop_module - self._beam_range.start
 
             obs_info['start_channel_in_file'] = self._channel_range.start if self._channel_range.start is not None else 0
 
             obs_info['nof_channels_in_file'] = obs_info['nchans'] if self._channel_range.start is None else \
-                self._channel_range.stop - self._channel_range.start
+                self._channel_range.stop_module - self._channel_range.start
 
             del obs_info['nsubs']
 

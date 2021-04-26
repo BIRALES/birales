@@ -5,7 +5,7 @@ import threading
 import time
 
 from pybirales.pipeline.base.definitions import BEST2PointingException
-from best2_server import SdebTCPServer, Pointing
+from pybirales.services.instrument.best2_server import SdebTCPServer, Pointing
 from pybirales.utilities.singleton import Singleton
 
 # Delay in seconds

@@ -121,7 +121,7 @@ class Receiver(Generator):
         self._initialise_library()
         self._initialise_receiver(backend.read_startup_time())
 
-    def stop(self):
+    def stop_module(self):
         """ Stop generator """
         logging.info('Stopping the receiver module')
 
@@ -139,12 +139,12 @@ class Receiver(Generator):
                 logging.debug('ROACH is connected: {}. Disconnecting.'.format(roach.is_connected()))
 
                 if roach.is_connected():
-                    roach.stop()
+                    roach.stop_module()
 
                 logging.debug('ROACH is connected: {}'.format(roach.is_connected()))
 
                 # Backend.Instance()._roach.disconnect()
-                self._stop.set()
+                self._stop_module.set()
             else:
                 logging.critical("Failed to stop Receiver!")
 
@@ -346,7 +346,7 @@ if __name__ == "__main__":
         m2 = memory()
         logging.info('Receiver %d started. Memory Total: %.2f MB. Diff: %.2f MB', i, m1, m2 - m1)
 
-        r.stop()
+        r.stop_module()
         time.sleep(3)
 
         m3 = memory()

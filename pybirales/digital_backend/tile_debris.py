@@ -57,7 +57,7 @@ class Tile(object):
         # Add plugin directory (load module locally)
         # from pymexart.digital_backend import tpm_mexart_firmware
         # self.tpm.add_plugin_directory(os.path.dirname(tpm_mexart_firmware.__file__))
-        import tpm_debris_firmware
+        from pybirales.digital_backend import tpm_debris_firmware
         self.tpm.add_plugin_directory(os.path.dirname(tpm_debris_firmware.__file__))
 
         self.tpm.connect(ip=self._ip, port=self._port, initialise=initialise,
@@ -755,24 +755,24 @@ class Tile(object):
         devices = ["fpga1", "fpga2"]
 
         for f in devices:
-            self.tpm['%s.pps_manager.pps_gen_tc' % f] = int(self._sampling_rate) / 1 - 1
+            self.tpm['%s.pps_manager.pps_gen_tc' % f] = int(self._sampling_rate) - 1
 
-        # TODO: This is only valid when no PPS is present. Remove on deployed system
-        try:
-            self.tpm['fpga1.regfile.spi_sync_function'] = 1
-            self.tpm['fpga2.regfile.spi_sync_function'] = 1
-            self.tpm['fpga1.pps_manager.pps_gen_sync'] = 0
-            self.tpm['fpga2.pps_manager.pps_gen_sync'] = 0
-            time.sleep(0.1)
-            self.tpm['fpga1.pps_manager.pps_gen_sync.act'] = 1
-            time.sleep(0.1)
-            self.tpm['fpga1.pps_manager.pps_gen_sync'] = 0
-            self.tpm['fpga2.pps_manager.pps_gen_sync'] = 0
-            self.tpm['fpga1.regfile.spi_sync_function'] = 1
-            self.tpm['fpga2.regfile.spi_sync_function'] = 1
-            logging.info("Internal PPS generator synchronised")
-        except:
-            logging.info("Current FPGA firmware does not support PPS generator synchronisation")
+        # # TODO: This is only valid when no PPS is present. Remove on deployed system
+        # try:
+        #     self.tpm['fpga1.regfile.spi_sync_function'] = 1
+        #     self.tpm['fpga2.regfile.spi_sync_function'] = 1
+        #     self.tpm['fpga1.pps_manager.pps_gen_sync'] = 0
+        #     self.tpm['fpga2.pps_manager.pps_gen_sync'] = 0
+        #     time.sleep(0.1)
+        #     self.tpm['fpga1.pps_manager.pps_gen_sync.act'] = 1
+        #     time.sleep(0.1)
+        #     self.tpm['fpga1.pps_manager.pps_gen_sync'] = 0
+        #     self.tpm['fpga2.pps_manager.pps_gen_sync'] = 0
+        #     self.tpm['fpga1.regfile.spi_sync_function'] = 1
+        #     self.tpm['fpga2.regfile.spi_sync_function'] = 1
+        #     logging.info("Internal PPS generator synchronised")
+        # except:
+        #     logging.warning("Current FPGA firmware does not support PPS generator synchronisation")
 
         # Setting sync time
         for f in devices:
@@ -896,10 +896,6 @@ class Tile(object):
         tn2 = self.tpm["fpga2.pps_manager.timestamp_read_val"]
         if max(tn1, tn2) >= t1:
             logging.error("Synchronised operation failed!")
-
-        print tn1
-        print tn2
-        print t1
 
     @connected
     def configure_integrated_channel_data(self, integration_time=0.5):
@@ -1134,7 +1130,7 @@ class Tile(object):
         for n in range(4):
             for c in range(8):
                 if rd[n] & 0x7 != 0:
-                    print "Lane %s error detected! Error code: %d" % (str(n * 8 + c), rd[n] & 0x7)
+                    print("Lane %s error detected! Error code: %d" % (str(n * 8 + c), rd[n] & 0x7))
                 rd[n] = rd[n] >> 3
 
     def reset_jesd_error_counter(self):
@@ -1162,7 +1158,7 @@ class Tile(object):
             reg = self['fpga%d.jesd204_if.core_id_%d_lane_%d_link_error_count' % (fpga_id + 1, core_id, lane_id)]
             errors.append(reg)
             if show_result:
-                print "Lane %d error count %d" % (lane, reg)
+                print("Lane %d error count %d" % (lane, reg))
         return errors
 
     # ---------------------------- Polyphase configuration ----------------------------

@@ -17,7 +17,7 @@ def signal_handler(signal, frame):
 def realtime(opts):
     """ Generating beam plot in real-time """
 
-    print "Initialising real-time plotting"
+    print("Initialising real-time plotting")
 
     nbeams = opts.nbeams
     nchans = opts.nchans
@@ -86,7 +86,7 @@ def realtime(opts):
 def multipixel(opts):
     """ Generate multi-pixel view for specified sample """
 
-    print "Generating multi-pixel plot"
+    print("Generating multi-pixel plot")
 
     nbeams = opts.nbeams
     nchans = opts.nchans
@@ -128,7 +128,7 @@ def multipixel(opts):
 def plot(opts):
     """ Plot data """
 
-    print "Generating plots"
+    print("Generating plots")
 
     nbeams = opts.nbeams
     nchans = opts.nchans
@@ -150,7 +150,7 @@ def plot(opts):
         rms = np.sqrt(np.mean(data.ravel()**2))
         maximum = np.max(data.ravel())
         data = 10*np.log10(data / rms)
-        print "RMS: {}, max: {}\n".format(rms, maximum)
+        print("RMS: {}, max: {}\n".format(rms, maximum))
 
 
         fig = plt.figure()  # (figsize=(11,8))
@@ -270,7 +270,7 @@ def transpose(opts):
     """ Transpose data so it can be viewed with the Qt plotter
         Each beam is saved to a different file """
 
-    print "Generating beam files"
+    print("Generating beam files")
 
     nbeams = opts.nbeams
     nchans = opts.nchans
@@ -308,13 +308,13 @@ def transpose(opts):
 def integrate(opts):
     """ Integrate samples """
 
-    print "Time samples:       %d" % opts.samples
-    print args[0], glob.glob(args[0])
-    print "===== Generating time series ====="
+    print("Time samples:       %d" % opts.samples)
+    print(args[0], glob.glob(args[0]))
+    print("===== Generating time series =====")
 
     for filename in glob.glob(args[0]):
 
-        print "===== Processing %s =====" % filename
+        print("===== Processing %s =====" % filename)
 
         # Open file
         f = open(filename, 'rb')
@@ -390,16 +390,16 @@ if __name__ == "__main__":
 
     opts, args = p.parse_args(sys.argv[1:])
 
-    print
-    print "Number of channels:    %d" % opts.nchans
-    print "Number of beams:       %d" % opts.nbeams
-    print "Frequency Resolution:  %.2f Hz" % abs(opts.foff)
-    print "Temporal Resolution:   %.2f s" % opts.tsamp
-    print "Top Frequency:         %.2f MHz" % opts.fch1
-    print
+    print()
+    print("Number of channels:    %d" % opts.nchans)
+    print("Number of beams:       %d" % opts.nbeams)
+    print("Frequency Resolution:  %.2f Hz" % abs(opts.foff))
+    print("Temporal Resolution:   %.2f s" % opts.tsamp)
+    print("Top Frequency:         %.2f MHz" % opts.fch1)
+    print()
 
     if args == []:
-        print 'Please specify an input file! \nExiting.'
+        print('Please specify an input file! \nExiting.')
         exit()
 
     if opts.process:

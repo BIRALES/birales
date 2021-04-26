@@ -2,8 +2,9 @@ import logging as log
 import time
 
 from pybirales import settings
-from pybirales.pipeline.base.definitions import BEST2PointingException, ROACHBackendException
+from pybirales.pipeline.base.definitions import BEST2PointingException, ROACHBackendException, TPMBackendException
 from pybirales.services.instrument.backend import Backend
+from pybirales.services.instrument.backend_tpm import TPMBackend
 from pybirales.services.instrument.best2 import BEST2
 
 
@@ -18,14 +19,17 @@ class BackendController:
 
         if self.is_enabled:
             log.info('Loading backend')
-            self._backend = Backend.Instance()
+            # self._backend = Backend.Instance()
+            self._backend = TPMBackend.Instance()
             time.sleep(1)
 
             try:
-                self._backend.start(program_fpga=True, equalize=True, calibrate=False)
+                self._backend.start(program=False, initialise=False, calibrate=False)
             except RuntimeError:
-                log.critical('Could not start the ROACH backend.')
-                raise ROACHBackendException('Failed to start the ROACH backend.')
+                # log.critical('Could not start the ROACH backend.')
+                # raise ROACHBackendException('Failed to start the ROACH backend.')
+                log.critical('Could not start the TPM backend.')
+                raise TPMBackendException('Failed to start the TPM backend.')
 
             log.info('Backend loaded')
         else:
@@ -45,7 +49,7 @@ class BackendController:
 
 class InstrumentController:
     def __init__(self):
-        self._online = not settings.manager.offline
+        self._online = False # not settings.manager.offline
 
         self._pointing_enabled = settings.instrument.enable_pointing
 

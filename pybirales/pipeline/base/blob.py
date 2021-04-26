@@ -50,10 +50,11 @@ class DataBlob(object):
         self._writer_lock = Lock()
         self._writer_index = 0
 
-    def request_read(self):
+    def request_read(self, timeout=None):
         """ Wait while reader and writer are not pointing to the same block, then return read block
         :return: Data splice associated with current block and associated observation information
         """
+        t_start = time.time()
 
         # The reader must wait for the writer to insert data into the blob. When the reader and writer have the
         # same index it means that the reader is waiting for data to be available (the writer must be ahead of reader)
@@ -61,6 +62,11 @@ class DataBlob(object):
         while self._reader_index == self._writer_index and not self._block_has_data[self._reader_index]:
             self._writer_lock.release()
             time.sleep(0.001)  # Wait for data to become available
+
+            # If timeout has elapsed, return None
+            if timeout and time.time() - t_start >= timeout:
+                return None, None
+
             self._writer_lock.acquire()
 
         # Release writer lock and acquire reader lock
@@ -79,16 +85,21 @@ class DataBlob(object):
         self._reader_index = (self._reader_index + 1) % self._nof_blocks
         self._reader_lock.release()
 
-    def request_write(self):
+    def request_write(self, timeout=None):
         """ Get next block for writing
         :return: Data splice associated with current block
         """
+        t_start = time.time()
 
         # Acquire writer lock (if data is being read, wait for it to finish)
         self._writer_lock.acquire()
         while self._block_has_data[self._writer_index] is None:
             self._writer_lock.release()
             time.sleep(0.01)
+
+            if timeout and time.time() - t_start >= timeout:
+                return None
+
             self._writer_lock.acquire()
 
         # Test to see whether data is being overwritten

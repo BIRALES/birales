@@ -4,7 +4,7 @@ import logging as log
 import os
 import threading
 
-from slackclient import SlackClient
+from slack import WebClient
 
 from pybirales.events.events import ObservationScheduledEvent
 from pybirales.repository.message_broker import RedisManager
@@ -85,7 +85,7 @@ class NotificationsListener(Listener):
             log.warning('Slack token not set. Please set the SLACK_BOT_TOKEN env variable. Notifications disabled.')
             self.stop()
         else:
-            self.slack_client = SlackClient(self.token)
+            self.slack_client = WebClient(self.token)
 
         self._name = 'Notifications'
 

@@ -1,32 +1,26 @@
 from __future__ import division
 
-import inspect
-import signal
-import time
-
+from multiprocessing import Process, Value, shared_memory
+from ctypes import c_bool, c_double
 import numpy as np
-import threading
+import inspect
 import logging
+import signal
 import socket
 import struct
-
-# Stopping flag
-stop_acquisition = False
+import time
 
 
-def _signal_handler(signum, frame):
-    global stop_acquisition
-    logging.info("Received interrupt, stopping acqusition")
-    stop_acquisition = True
-
-
-class ChannelisedData(object):
-    """ REACH spectrometer data receiver """
+class ChannelisedData(Process):
+    """ BIRALES spectrometer data receiver """
 
     def __init__(self, ip, port=4660, nof_signals=32, buffer_samples=65536, callback=None):
         """ Class constructor:
         @param ip: IP address to bind receiver to
         @param port: Port to receive data on """
+
+        # Initialise superclass
+        Process.__init__(self)
 
         # Initialise parameters
         self._nof_signals_per_fpga = nof_signals // 2
@@ -58,9 +52,15 @@ class ChannelisedData(object):
         self._received_data = None
         self._current_timestamp = None
 
-        # Placeholder for full buffer
-        self._full_buffer = None
-        self._full_buffer_timestamp = None
+        # Shared memory from where data can be access from other processes
+        # _shared_memory_segment is a shared memory segment created internally
+        # _ready_buffer_shared is a numpy array in a shared memory segment
+        # _read_timestamp_shared is a shared variable
+        self._shared_memory_segment = None
+        self._ready_buffer_shared = None
+        self._ready_timestamp_shared = Value(c_double, 0.0)
+        self._ready_buffer_flag = Value(c_bool, False)
+        self._stop_acquisition = Value(c_bool, False)
 
         # Callback (sanity check on number of parameters
         self._callback = None
@@ -83,8 +83,22 @@ class ChannelisedData(object):
         # Initialise channel data receiver
         self._received_data = np.empty((self._buffer_samples, self._nof_signals), dtype=np.complex64)
 
-    def receive_channel_data(self):
+        # Create shared memory numpy array
+        self._shared_memory_segment = shared_memory.SharedMemory(create=True, size=self._received_data.nbytes)
+
+        # Create a NumPy array backed by shared memory
+        self._ready_buffer_shared = np.ndarray(self._received_data.shape,
+                                               dtype=np.complex64,
+                                               buffer=self._shared_memory_segment.buf)
+
+    def run(self):
         """ Wait for a spead packet to arrive """
+
+        def _signal_handler(signum, frame):
+            self._stop_acquisition.value = True
+
+        # Set signal handler
+        signal.signal(signal.SIGINT, _signal_handler)
 
         # Clear receiver
         self._clear_receiver()
@@ -95,17 +109,17 @@ class ChannelisedData(object):
             return
 
         # Loop until required to stop
-        while not stop_acquisition:
+        while not self._stop_acquisition.value:
             # Try to acquire packet
             try:
                 packet, _ = self._socket.recvfrom(9000)
             except socket.timeout:
-                logging.info("Socket timeout")
+                logging.error("Socket timeout")
                 continue
 
             # We have a packet, check if it is a valid packet
             if not self._decode_spead_header(packet):
-                print("Invalid spead packet")
+                logging.warning("Invalid spead packet")
                 continue
 
             # Valid packet, extract payload
@@ -142,7 +156,7 @@ class ChannelisedData(object):
 
             # If packet time is less than reference time, then this belongs to the previous buffer
             if packet_time < self._reference_time:
-                print("Packet belongs to previous buffer!")
+                logging.debug("Packet belongs to previous buffer!")
                 continue
 
             # Check if we skipped buffer boundaries, and if so, persist buffer
@@ -176,21 +190,20 @@ class ChannelisedData(object):
         self._received_data[start_index: start_index + samples_in_packet,
                             start_antenna: start_antenna + self._nof_signals_per_fpga] = data
 
-        pass
-
     def _persist_buffer(self):
         """ Buffer is full, send out for processing"""
 
         # Wait for full buffer to be None
-        while self._full_buffer is not None and not stop_acquisition:
-            print("Waiting for full buffer to be emptied")
+        while self._ready_buffer_flag.value and not self._stop_acquisition.value:
+            logging.warning("Waiting for full buffer to be emptied")
             time.sleep(1)
 
-        print("Persisting buffer with {} packets".format(self._received_packets))
+        logging.info("Persisting buffer with {} packets".format(self._received_packets))
 
         # Copy full buffer to full buffer placeholder
-        self._full_buffer = self._received_data.copy()
-        self._full_buffer_timestamp = self._current_timestamp
+        self._ready_buffer_shared[:] = self._received_data
+        self._ready_timestamp_shared.value = self._current_timestamp
+        self._ready_buffer_flag.value = True
 
         # Done, Clear buffer
         self._received_data[:] = 0
@@ -201,35 +214,19 @@ class ChannelisedData(object):
 
     def read_buffer(self):
         """ Wait for full buffer """
-        while self._full_buffer is None and not stop_acquisition:
+        while not self._ready_buffer_flag.value and not self._stop_acquisition.value:
             time.sleep(0.01)
 
-        return self._full_buffer, self._full_buffer_timestamp
+        return self._ready_buffer_shared, self._ready_timestamp_shared.value
 
     def read_buffer_ready(self):
         """ Ready from buffer read """
-        self._full_buffer = None
+        self._ready_buffer_flag.value = False
 
-    def start_receiver(self):
-        """ Receive specified number of spectra """
-
-        # Create and start thread and wait for it to stop
-        self._receiver_thread = threading.Thread(target=self.receive_channel_data)
-        self._receiver_thread.name = "ChannelAcqusition"
-        self._receiver_thread.start()
-
-    def stop(self):
+    def stop_receiver(self):
         """ Wait for receiver to finish """
-        global stop_acquisition
-
-        if self._receiver_thread is None:
-            logging.error("Receiver not started")
-
         # Issue stop
-        stop_acquisition = True
-
-        # Wait for thread to finish
-        self._receiver_thread.join()
+        self._stop_acquisition.value = True
 
     def _decode_spead_header(self, packet):
         """ Decode SPEAD packet header
@@ -292,18 +289,21 @@ if __name__ == "__main__":
     # Note: buffer samples must be a multiple of 20
     receiver = ChannelisedData(ip=config.ip, port=config.port, buffer_samples=262140)
     receiver.initialise()
-    receiver.start_receiver()
+    receiver.start()
 
     # Wait for exit or termination
+    def _signal_handler(signum, frame):
+        logging.info("Received interrupt, stopping acqusition")
+        receiver.stop_receiver()
+
     signal.signal(signal.SIGINT, _signal_handler)
 
     from matplotlib import pyplot as plt
 
-    while not stop_acquisition:
+    while not receiver._stop_acquisition.value:
         buff, timestamp = receiver.read_buffer()
-        receiver.read_buffer_ready()
+        plt.imshow(np.angle(buff), aspect='auto')
+        plt.show()
 
-        # # plt.imshow(np.angle(buff), aspect='auto')
-        # plt.plot(np.angle(buff[:, 20]))
-        # plt.show()
+        receiver.read_buffer_ready()
 

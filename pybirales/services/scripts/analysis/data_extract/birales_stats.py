@@ -179,4 +179,4 @@ if __name__ == '__main__':
     finally:
         print("Tear down")
         db_connection.close()
-        server.stop()
+        server.stop_module()

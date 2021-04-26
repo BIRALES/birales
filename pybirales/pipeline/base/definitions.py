@@ -112,6 +112,14 @@ class ROACHBackendException(PipelineError):
 
     pass
 
+class TPMBackendException(PipelineError):
+    """
+    Something went wrong whilst trying to load the TPM backend
+    """
+
+    pass
+
+
 class CalibrationFailedException(PipelineError):
     """
     Something went wrong whilst trying to calibrate

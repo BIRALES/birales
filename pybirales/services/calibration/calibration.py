@@ -4,9 +4,9 @@ import pickle
 
 import numpy as np
 
-import apply_coeffs
-import self_calibration
-import transit_select
+from pybirales.services.calibration import apply_coeffs
+from pybirales.services.calibration import self_calibration
+from pybirales.services.calibration import transit_select
 from pybirales import settings
 
 

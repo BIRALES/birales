@@ -1,5 +1,5 @@
 import datetime
-import fadvise
+# import fadvise
 import numpy as np
 import os
 import pickle
@@ -49,7 +49,7 @@ class RawPersister(ProcessingModule):
             os.remove(file_path)
 
         self._file = open(file_path, "wb+")
-        fadvise.set_advice(self._file, fadvise.POSIX_FADV_SEQUENTIAL)
+        # fadvise.set_advice(self._file, fadvise.POSIX_FADV_SEQUENTIAL)
 
         # Variable to check whether meta file has been written
         self._head_filepath = file_path + '.pkl'
@@ -103,7 +103,7 @@ class RawPersister(ProcessingModule):
             self._current_filepath = '{}_{}.dat'.format(self._base_filepath, self._raw_file_counter)
 
             self._file = open(self._current_filepath, "wb+")
-            fadvise.set_advice(self._file, fadvise.POSIX_FADV_SEQUENTIAL)
+            # fadvise.set_advice(self._file, fadvise.POSIX_FADV_SEQUENTIAL)
 
             logging.info("Opened a new raw file at {}".format(self._current_filepath))
 

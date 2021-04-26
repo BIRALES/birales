@@ -35,9 +35,7 @@ plt.legend()
 plt.show()
 exit()
 
-print data.shape
 data = data.reshape((len(pointings_ra), len(pointings_dec), data.shape[1]))
-print data.shape
 
 fig = plt.figure()
 ax = fig.add_subplot(111)

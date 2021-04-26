@@ -60,7 +60,7 @@ class BiralesFacade:
         if self._listeners is not None:
             log.debug('Stopping the listeners')
             for l in self._listeners:
-                l.stop()
+                l.stop_module()
 
             log.info('Listeners stopped')
 

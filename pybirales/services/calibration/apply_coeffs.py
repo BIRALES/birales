@@ -6,7 +6,7 @@ import logging
 # except ImportError:
 #     logging.warning('casacore not found.')
 
-import fringe_imager as fringe_image
+from pybirales.services.calibration import fringe_imager
 
 
 class CoeffManager:
@@ -102,7 +102,7 @@ class CoeffManager:
 
     def fringe_imager(self, transit_file, calib_check_path, no_of_antennas):
 
-        fringes = fringe_image.FringeImager(transit_file, calib_check_path, no_of_antennas)
+        fringes = fringe_imager.FringeImager(transit_file, calib_check_path, no_of_antennas)
         self._logger.info('Plotting fringes before and after calibration')
 
         return fringes.plotter()

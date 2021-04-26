@@ -32,13 +32,13 @@ class TPMBackend(object):
 
         return True
 
-    def start(self, program=True, initialise=True, calibrate=False):
+    def start(self, program=False, initialise=False, calibrate=False):
         """ Start the digital backend """
 
         # Load station configuration
         digital_backend.load_configuration_file(settings.digital_backend.configuration_file)
 
-        # Update configuration to match programming and initializati
+        # Update configuration to match programming and initialization
         station_config = digital_backend.Station(digital_backend.configuration).configuration
 
         # Load station configuration
@@ -48,12 +48,18 @@ class TPMBackend(object):
             logging.error("Could not configure station, please check configuration file: {}".format(e))
             return False
 
+        # Try connecting
+        try:
+            self._station.connect()
+        except:
+            pass
+
         # If we need to program and/or initialise the station, or if the station is not properly
         # set up, set config and re-connect
         if program or initialise or not self._station.properly_formed_station:
             # Digital backend not configured properly, re-configure
-            station_config['station']['program'] = program
-            station_config['station']['initialise'] = initialise
+            station_config['station']['program'] = True
+            station_config['station']['initialise'] = True
 
             try:
                 # Program and initialise station
@@ -71,11 +77,8 @@ class TPMBackend(object):
                 digital_backend.configuration['station']['program'] = False
                 digital_backend.configuration['station']['initialise'] = False
 
-        elif not self.connect():
-                return False
-
     def stop(self):
-        """ Stop methode, does nothing for TPM """
+        """ Stop method, does nothing for TPM """
         pass
 
 

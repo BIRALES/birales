@@ -165,9 +165,9 @@ class FitsPersister(ProcessingModule):
         start_window = expected_transit_time - datetime.timedelta(seconds=30)
         end_window = expected_transit_time + datetime.timedelta(seconds=20)
 
-        print 'Current time is', obs_info['timestamp']
-        print 'TLE is between {} and {}'.format(start_window, end_window)
-        print 'Persister Within window', end_window >= obs_info['timestamp'] >= start_window, self._iter_count
+        print('Current time is', obs_info['timestamp'])
+        print('TLE is between {} and {}'.format(start_window, end_window))
+        print('Persister Within window', end_window >= obs_info['timestamp'] >= start_window, self._iter_count)
 
         if end_window >= obs_info['timestamp'] >= start_window:
             expected_channel = (obs_info['transmitter_frequency'] * 1e6 + expected_doppler) - obs_info[
@@ -185,7 +185,7 @@ class FitsPersister(ProcessingModule):
 
             subset = input_data[channel_window[0]: channel_window[1], :]
 
-            print 'Expecting target to be between', channel_window, subset.shape
+            print('Expecting target to be between', channel_window, subset.shape)
             fig = plt.figure(figsize=(11, 8))
             ax = fig.add_subplot(1, 1, 1)
             ax.set_xlabel("Time")

@@ -1,5 +1,6 @@
 import logging
 import pickle
+import signal
 import time
 from multiprocessing import Pool
 from sys import stdout
@@ -12,6 +13,8 @@ from pybirales.pipeline.modules.detection.filter import triangle_filter, sigma_c
 from pybirales.pipeline.modules.detection.msds.msds import *
 from pybirales.pipeline.modules.detection.util import *
 from pybirales.pipeline.modules.persisters.fits_persister import TLE_Target
+
+# global_process_pool = Pool(8)
 
 
 def serial_msds(data):
@@ -148,11 +151,14 @@ class Detector(ProcessingModule):
 
         super(Detector, self).__init__(config, input_blob)
 
-        self.pool = Pool(8, maxtasksperchild=500)
+        # Ignore all signals before creating process pool
+        original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
+        self.pool = Pool(8)
+        signal.signal(signal.SIGINT, original_sigint_handler)
 
         self.data_dump = False
 
-        # Track which are currently valid and have not transitted/terminated yet
+        # Track which are currently valid and have not transmitted/terminated yet
         self.pending_tracks = []
 
         # Tracks that were valid but validation failed later on

@@ -31,7 +31,7 @@ done by Andrea Maccaferri for the Pulsar Scheduler(1990)
 """
 
 # Python modules
-import SocketServer
+import socketserver
 import struct
 import socket
 import time
@@ -168,7 +168,7 @@ class Pointing:
         return
 
 
-class SdebTCPHandler(SocketServer.BaseRequestHandler):
+class SdebTCPHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
         while True:
@@ -185,11 +185,11 @@ class SdebTCPHandler(SocketServer.BaseRequestHandler):
                 time.sleep(1)
 
 
-class SdebTCPServer(SocketServer.TCPServer):
+class SdebTCPServer(socketserver.TCPServer):
     def __init__(self, addr):
         try:
             self.timeout = 1
-            SocketServer.TCPServer.__init__(self, addr, SdebTCPHandler)
+            socketserver.TCPServer.__init__(self, addr, SdebTCPHandler)
         except:
             pass
         self.rec = 0
@@ -280,11 +280,11 @@ class SdebTCPServer(SocketServer.TCPServer):
             if len(args) > 1:
                 try:
                     res = self.commands[args[0]](*(args[1:]))
-                except TypeError, te:
+                except TypeError:
                     time.sleep(0.1)
             else:
                 try:
                     res = self.commands[args[0]]()
-                except TypeError, te:
+                except TypeError:
                     time.sleep(0.1)
         return res

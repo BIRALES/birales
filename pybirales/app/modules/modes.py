@@ -212,7 +212,7 @@ def view(environment, configuration_name):
     try:
         env_configs = _get_config_files(CONFIG_MAP[environment])
         for env_config in env_configs:
-            print env_config
+            print(env_config)
             if env_config['name'] == configuration_name:
                 return render_template('modules/configuration/configuration.html',
                                        configuration=_config_to_dict(env_config['file_name']),

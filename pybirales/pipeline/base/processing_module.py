@@ -41,7 +41,7 @@ class Module(Thread):
 
         # Stopping clause
         self.daemon = True
-        self._stop = Event()
+        self._stop_module = Event()
 
     @abstractmethod
     def generate_output_blob(self):
@@ -58,7 +58,7 @@ class Module(Thread):
 
         if not self.is_stopped:
             logging.info('Stopping %s module', self.name)
-            self._stop.set()
+            self._stop_module.set()
 
     def _validate_data_blob(self, input_blob, valid_blobs):
         if type(input_blob) not in valid_blobs:
@@ -77,7 +77,7 @@ class Module(Thread):
     @property
     def is_stopped(self):
         """ Specified whether the thread body is running or not """
-        return self._stop.is_set()
+        return self._stop_module.is_set()
 
     @property
     def output_blob(self):
@@ -108,16 +108,16 @@ class Generator(Module):
         """
 
         # Clear stop
-        self._stop.clear()
+        self._stop_module.clear()
 
         # Start generator
         self.start_generator()
 
         # Wait for stop command
-        while not self._stop.is_set():
+        while not self._stop_module.is_set():
             time.sleep(1)
 
-        self._stop.set()
+        self._stop_module.set()
 
     def request_output_blob(self):
         """
@@ -170,14 +170,18 @@ class ProcessingModule(Module):
 
     def run(self):
         """ Thread body """
-        while not self._stop.is_set():
+        while not self._stop_module.is_set():
 
             # Get pointer to input data if required
             input_data, obs_info = None, {}
             obs_info['stop_pipeline_at'] = -1
             if self._input is not None:
                 # This can be released immediately since, data has already been deep copied
-                input_data, obs_info = self._input.request_read()
+                while input_data is None and not self._stop_module.is_set():
+                    input_data, obs_info = self._input.request_read(timeout=0.2)
+
+                if self._stop_module.is_set():
+                    break
 
                 if 'stop_pipeline_at' not in obs_info:
                     obs_info['stop_pipeline_at'] = -1
@@ -185,7 +189,11 @@ class ProcessingModule(Module):
             # Get pointer to output data if required
             output_data = None
             if self._output is not None:
-                output_data = self._output.request_write()
+                while output_data is None and not self._stop_module.is_set():
+                    output_data = self._output.request_write(timeout=0.2)
+
+                if self._stop_module.is_set():
+                    break
 
             # Perform required processing
             try:
@@ -208,10 +216,6 @@ class ProcessingModule(Module):
                 else:
                     log.warning('[Iteration {}] {} finished in {:0.3f}s'.format(self._iter_count, self.name, tt))
 
-
-            # except NoDataReaderException:
-            #     logging.info("Data finished")
-            #     self.stop()
             except BIRALESObservationException:
                 log.exception("A Birales exception has occurred. Stopping the pipeline")
                 self.stop()

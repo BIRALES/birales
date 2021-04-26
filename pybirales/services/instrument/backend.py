@@ -2,7 +2,7 @@ import logging
 import struct
 import time
 
-import corr
+# import corr
 import numpy as np
 
 from pybirales.utilities.singleton import Singleton
@@ -27,7 +27,7 @@ class Backend(object):
         # Check if connection was successful, if already connected stop it
         if not self._roach.is_connected():
             try:
-                self._roach.stop()
+                self._roach.stop_module()
             except BaseException:
                 pass
             raise ROACHBackendException("BiralesBackend: Could not connect to ROACH")
@@ -200,7 +200,7 @@ class Backend(object):
 
     def stop(self):
         if self._roach.is_connected():
-            self._roach.stop()
+            self._roach.stop_module()
 
     def load_calibration_coefficients(self, amplitude_filepath=None, phase_filepath=None,
                                       amplitude=None, phase=None):

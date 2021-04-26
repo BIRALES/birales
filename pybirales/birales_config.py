@@ -176,7 +176,7 @@ class BiralesConfig:
 
             for (k, v) in self._parser.items(section):
                 # If value is a string, interpret it
-                if isinstance(v, basestring):
+                if isinstance(v, str):
                     # Check if value is a number of boolean
                     if re.match(re.compile("^True|False|[0-9]+(\.[0-9]*)?$"), v) is not None:
                         setattr(instance, k, ast.literal_eval(v))

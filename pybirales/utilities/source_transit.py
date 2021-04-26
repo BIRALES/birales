@@ -145,9 +145,9 @@ def get_best_calibration_obs(from_date, to_date, time_after_transit, time_before
 if __name__ == "__main__":
     for k, v in calibration_sources.iteritems():
         date, seconds = get_next_transit(k, datetime.datetime.now())
-        print "%+8s : RA: %11s  DEC: %11s  FLUX: %8s  TRANSIT (UTC): %-20s" % (
+        print("%+8s : RA: %11s  DEC: %11s  FLUX: %8s  TRANSIT (UTC): %-20s" % (
             k,
             v['ra'],
             v['dec'],
             v['flux'],
-            date)
+            date))

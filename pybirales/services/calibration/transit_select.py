@@ -2,7 +2,7 @@ import numpy as np
 import h5py
 import datetime
 
-import source_detail
+from pybirales.services.calibration import source_detail
 import logging as log
 
 

@@ -5,19 +5,24 @@ import os
 from setuptools import setup, find_packages
 from setuptools.command.install import install
 
-distutils.log.set_verbosity(distutils.log.info)
+# distutils.log.set_verbosity(distutils.log.info)
 
 HOME = os.environ['HOME']
 CONFIG_PATH = 'configuration'
 TEMPLATES = os.path.join(CONFIG_PATH, 'templates')
-DEPENDENCIES = ['configparser', 'futures', 'enum34', 'numpy', 'scipy', 'astropy==2.*', 'astroplan', 'matplotlib', 'numba',
-                'pymongo', 'scikit-learn', 'ephem>=3.7.6.0', 'h5py', 'click', 'flask', 'flask-compress',
-                'flask-socketio', 'flask_ini', 'fadvise', 'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow',
-                'humanize', 'mongoengine', 'pyfits', 'jinja2', 'katcp==0.5.*',
-                # 'construct==2.5.5-reupload',
-                'corr>=0.7.3', 'redis', 'flask_paginate',
-                'python-dateutil',
-                'slackclient']
+DEPENDENCIES = []
+    # ['configparser', 'futures', 'enum34', 'numpy', 'scipy', 'astroplan', 'matplotlib',
+    #             'numba',
+    #             'pymongo', 'scikit-learn', 'ephem>=3.7.6.0', 'h5py', 'click', 'flask', 'flask-compress',
+    #             'flask-socketio', 'flask_ini', 'fadvise', 'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow',
+    #             'humanize', 'mongoengine', 'pyfits', 'jinja2',
+    #             # 'construct==2.5.5-reupload',
+    #             'redis', 'flask_paginate', 'pyyaml', 'future', 'seaborn', 'scikit-image',
+    #             'python-dateutil',
+    #             'slackclient',
+    #             'astropy'
+    #             # 'corr>=0.7.3', 'katcp==0.5.*'
+    #             ]
 
 
 def list_dir(root_path):
@@ -43,7 +48,7 @@ class InstallWrapperCommand(install):
 
     """
     LOCAL_DIRS = [
-        '/var/log/birales',
+      #  '/var/log/birales',
         os.path.join(HOME, '.birales'),
         os.path.join(HOME, '.birales/configuration.py/templates/dev'),
         os.path.join(HOME, '.birales/configuration.py/templates/prod'),

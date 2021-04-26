@@ -336,5 +336,5 @@ if __name__ == "__main__":
     config['nbeams'] = len(config['pointings'])
 
     pointing = Pointing(config, 1, 32)
-    print config
-    print pointing.weights
+    print(config)
+    print(pointing.weights)

@@ -60,12 +60,12 @@ class PipelineManager(object):
             if "plot_update_rate" in self._config.settings():
                 self._plot_update_rate = self._config.plot_update_rate
 
-        self._stop = Event()
+        self._stop_pipeline = Event()
 
         self.count = 0
         self.name = None
 
-        self._pipeline_controller = threading.Thread(target=pipeline_status_worker, args=(self._stop,),
+        self._pipeline_controller = threading.Thread(target=pipeline_status_worker, args=(self._stop_pipeline,),
                                                      name='Pipeline CTL')
 
         self._pipeline_controller.start()
@@ -143,27 +143,18 @@ class PipelineManager(object):
 
         :return:
         """
-
-        self._stop.set()
+        self._stop_pipeline.set()
         # Loop over all modules
         for module in self._modules:
             # Stop module
             module.stop()
+            time.sleep(0.2)
 
-            a_threads = []
-            for t in threading.enumerate():
-                if t.isAlive():
-                    a_threads.append(t.getName())
-
-            if a_threads:
+            if a_threads := [t.getName() for t in threading.enumerate() if t.is_alive()]:
                 log.warning('Running threads: %s', ', '.join(a_threads))
 
-            # Try to kill it several time, otherwise skip (will be killed when main process exists)
-            tries = 0
-            while not module.is_stopped and tries < 5:
+            if not module.is_stopped:
                 time.sleep(0.5)
-                tries += 1
-                # All done
 
         log.info('Pipeline Manager stopped')
 
@@ -188,7 +179,7 @@ class PipelineManager(object):
 
     @property
     def stopped(self):
-        return self._stop.is_set()
+        return self._stop_pipeline.is_set()
 
     def all_modules_stopped(self):
         return all([module.is_stopped for module in self._modules])
