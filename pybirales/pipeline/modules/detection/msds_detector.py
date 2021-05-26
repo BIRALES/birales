@@ -162,7 +162,9 @@ class Detector(ProcessingModule):
         self.n_terminated_tracks = 0
 
         self.detection_algorithm = dbscan_standalone
-        # self.detection_algorithm = msds_standalone
+
+        if settings.detection.algorithm == 'msds':
+            self.detection_algorithm = msds_standalone
 
         self.name = "MSDS Detector"
 

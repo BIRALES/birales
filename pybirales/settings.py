@@ -46,9 +46,12 @@ class detection:
     linearity_thold = 0.95
     gradient_thold = [-57, -291.47]
     doppler_range = [-19688, 19507]
+    min_beams = 2
+    min_missing_score = 0.25
     debug_candidates = False
     save_tdm = False
     enable_gradient_thold = True
+    algorithm = 'msds'
 
 
 class manager:

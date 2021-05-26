@@ -49,6 +49,9 @@ function TrackDopplerProfilePlotter(selector) {
                 scaleLabel: {
                     display: true,
                     labelString: this.x_label
+                },
+                parser: function (utcMoment) {
+                    return utcMoment.utcOffset('+0000');
                 }
             }]
         }
