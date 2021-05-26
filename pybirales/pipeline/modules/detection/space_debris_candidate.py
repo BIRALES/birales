@@ -261,7 +261,7 @@ class SpaceDebrisTrack:
 
         # Check that the number of beams activated is less than 2
 
-        if self.data['beam_id'].unique().size < 2:
+        if self.data['beam_id'].unique().size < settings.detection.min_beams:
             return False, 'Not enough unique beams {}'.format(id(self) % 1000)
 
         # Check that the candidate has the minimum number of unique channel and time data points
@@ -275,7 +275,7 @@ class SpaceDebrisTrack:
         if not g_thold[0] >= self.ref_data['gradient'] >= g_thold[1]:
             return False, 'Gradient is not within valid range {}'.format(id(self) % 1000)
 
-        if missing_score(self.data['time_sample']) > 0.25:
+        if missing_score(self.data['time_sample']) > settings.detection.min_missing_score:
             return False, 'High missing score {:0.3f} {}'.format(missing_score(self.data['time_sample']),
                                                                  id(self) % 1000)
 
@@ -305,7 +305,7 @@ class SpaceDebrisTrack:
         slope_diff = np.abs(np.std(v) / np.mean(v))
         i_diff = np.abs(np.std(c) / np.mean(c))
 
-        thres = 0.1
+        thres = settings.detection.similarity_thold
         is_parent = slope_diff < thres and i_diff < thres and m_thold[1] <= m2 <= m_thold[0]
 
         # log.debug(
