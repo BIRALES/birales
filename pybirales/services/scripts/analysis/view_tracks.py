@@ -24,7 +24,7 @@ def plot_snr_profile(df, title):
         ax = sns.lineplot(y="snr", x="time_sample", data=df[df['beam_id'] == b], sort=True, ci=None, estimator=None,
                           legend="auto", label=b)
 
-    plt.savefig(f'{title}.png', bbox_inches='tight')
+    plt.savefig(title+'.png', bbox_inches='tight')
 
 
 def plot_doppler_profile(df, title):
@@ -33,11 +33,11 @@ def plot_doppler_profile(df, title):
     for b in df['beam_id'].unique():
         ax = sns.scatterplot(y="channel_sample", x="time_sample", data=df[df['beam_id'] == b],
                              legend="auto", label=b)
-    plt.savefig(f'{title}.png', bbox_inches='tight')
+    plt.savefig(title+ '.png', bbox_inches='tight')
 
 
 def save_detection_data(df, title):
-    return df.to_csv(f'{title}.csv')
+    return df.to_csv(title+'.csv')
 
 
 if __name__ == '__main__':

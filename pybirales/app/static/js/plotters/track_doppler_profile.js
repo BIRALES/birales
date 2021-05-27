@@ -44,12 +44,16 @@ function TrackDopplerProfilePlotter(selector) {
                     unit: 'second',
                     displayFormats: {
                         second: 'H:mm:ss'
-                    }
+                    },
+                      parser: function (utcMoment) {
+                                return utcMoment.utcOffset('+0000');
+                            }
                 },
                 scaleLabel: {
                     display: true,
                     labelString: this.x_label
                 }
+
             }]
         }
     };
