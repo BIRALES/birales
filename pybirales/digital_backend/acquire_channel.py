@@ -182,6 +182,7 @@ class ChannelisedData(Process):
 
         # Convert to complex
         data = data[:, :, 0] + 1j * data[:, :, 1]
+#        print(data[:, 0])
 
         # Convert to complex64
         data = data.astype(np.complex64)
@@ -302,7 +303,7 @@ if __name__ == "__main__":
 
     while not receiver._stop_acquisition.value:
         buff, timestamp = receiver.read_buffer()
-        plt.imshow(np.angle(buff), aspect='auto')
+        plt.imshow(np.abs(buff), aspect='auto')
         plt.show()
 
         receiver.read_buffer_ready()

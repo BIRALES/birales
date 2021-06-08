@@ -11,19 +11,6 @@ HOME = os.environ['HOME']
 CONFIG_PATH = 'configuration'
 TEMPLATES = os.path.join(CONFIG_PATH, 'templates')
 DEPENDENCIES = []
-    # ['configparser', 'futures', 'enum34', 'numpy', 'scipy', 'astroplan', 'matplotlib',
-    #             'numba',
-    #             'pymongo', 'scikit-learn', 'ephem>=3.7.6.0', 'h5py', 'click', 'flask', 'flask-compress',
-    #             'flask-socketio', 'flask_ini', 'fadvise', 'sklearn', 'pandas', 'webargs', 'yappi', 'marshmallow',
-    #             'humanize', 'mongoengine', 'pyfits', 'jinja2',
-    #             # 'construct==2.5.5-reupload',
-    #             'redis', 'flask_paginate', 'pyyaml', 'future', 'seaborn', 'scikit-image',
-    #             'python-dateutil',
-    #             'slackclient',
-    #             'astropy'
-    #             # 'corr>=0.7.3', 'katcp==0.5.*'
-    #             ]
-
 
 def list_dir(root_path):
     """

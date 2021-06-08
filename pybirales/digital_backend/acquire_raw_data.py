@@ -15,17 +15,16 @@ class SpeadRx:
 
         self.nof_signals = 32
         self.nof_fpga = 2
-        self.nof_signals_per_fpga = self.nof_signals / self.nof_fpga
+        self.nof_signals_per_fpga = self.nof_signals // self.nof_fpga
         self.data_width = 16
-        self.data_byte = self.data_width / 8
+        self.data_byte = self.data_width // 8
         self.byte_per_packet = 1024
-        self.word_per_packet = self.byte_per_packet / (self.data_width / 8)
+        self.word_per_packet = self.byte_per_packet / (self.data_width // 8)
         self.fpga_buffer_size = 64 * 1024
-        self.nof_samples = self.fpga_buffer_size / 2
-        self.expected_nof_packets = self.nof_signals * (self.fpga_buffer_size / self.byte_per_packet) / 2
+        self.nof_samples = self.fpga_buffer_size // 2
+        self.expected_nof_packets = self.nof_signals * (self.fpga_buffer_size / self.byte_per_packet) // 2
 
-        self.data_reassembled = np.zeros((self.nof_signals, self.fpga_buffer_size / 2), dtype=np.int16)
-        self.line = [0] * self.nof_signals
+        self.data_reassembled = np.zeros((self.nof_signals, self.fpga_buffer_size // 2), dtype=np.int16)
         self.data_buff = None
         self.is_spead = 0
         self.logical_channel_id = 0
@@ -51,6 +50,7 @@ class SpeadRx:
 
         self.num = 0
         self.plot_init = 0
+        self.line_data = []
         self.first_packet = 1
 
     def spead_header_decode(self, pkt):
@@ -93,17 +93,17 @@ class SpeadRx:
     def set_buffers(self):
         self.nof_signals = 32
         self.nof_fpga = 2
-        self.nof_signals_per_fpga = self.nof_signals / self.nof_fpga
+        self.nof_signals_per_fpga = self.nof_signals // self.nof_fpga
         self.data_width = 16
-        self.data_byte = self.data_width / 8
+        self.data_byte = self.data_width // 8
         self.byte_per_packet = self.payload_length
-        self.word_per_packet = self.byte_per_packet / (self.data_width / 8)
-        self.nof_samples = self.fpga_buffer_size / 2
+        self.word_per_packet = self.byte_per_packet // (self.data_width // 8)
+        self.nof_samples = self.fpga_buffer_size // 2
         self.expected_nof_packets = self.nof_signals * (self.fpga_buffer_size / self.byte_per_packet)
         self.data_reassembled = np.zeros((self.nof_signals, self.nof_samples), dtype=np.int16)
 
     def write_buff(self, data):
-        idx = (self.packet_counter * self.word_per_packet) % (self.fpga_buffer_size / self.data_byte)
+        idx = (self.packet_counter * self.word_per_packet) % (self.fpga_buffer_size // self.data_byte)
         self.data_reassembled[self.start_antenna_id, idx: idx + self.word_per_packet] = data
         self.recv_packets += 1
 
@@ -144,7 +144,7 @@ class SpeadRx:
                     if self.first_packet == 1:
                         self.set_buffers()
                         self.first_packet = 0
-                    self.write_buff(unpack('<' + 'h' * (self.payload_length / self.data_byte), _pkt[self.offset:]))
+                    self.write_buff(unpack('<' + 'h' * (self.payload_length // self.data_byte), _pkt[self.offset:]))
                     buffer_ready = self.detect_full_buffer()
                     if buffer_ready:
                         self.buffer_demux()
@@ -157,21 +157,10 @@ class SpeadRx:
         self.hdf5_channel.close()
 
     def plot_raw_data(self, data):
-        if self.plot_init == 0:
-            plt.ion()
-            plt.figure(0)
-            plt.title("Raw data")
-            self.line[0], = plt.plot([0] * self.nof_samples)
-            self.line[0].set_xdata(np.arange(self.nof_samples))
-            self.plot_init = 1
-
-        plt.figure(0)
-        plt.clf()
         plt.title("RAW data %d" % self.num)
         for n in range(self.nof_signals):
-            plt.plot(data[n][0:128])
-            plt.draw()
-        plt.pause(0.0001)
+            plt.plot(data[n][0:512])
+        plt.show()
 
 
 if __name__ == "__main__":
@@ -183,7 +172,7 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
-    sock.bind(("0.0.0.0", 4660))
+    sock.bind(("10.0.10.200", 4660))
     sock.settimeout(1)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 2 * 1024 * 1024)
 

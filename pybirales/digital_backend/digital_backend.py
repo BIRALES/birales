@@ -18,7 +18,7 @@ configuration = {'tiles': None,
                  'station': {
                      'id': 0,
                      'name': "debris",
-                     "number_of_antennas": 64,
+                     "number_of_antennas": 32,
                      'program': False,
                      'initialise': False,
                      'program_cpld': False,
@@ -993,12 +993,12 @@ if __name__ == "__main__":
     for tile in station.tiles:
         tile.set_channeliser_truncation(configuration['station']['channel_truncation'])
 
-    for tile in station.tiles:
-        for gen in tile.tpm.test_generator:
-            gen.channel_select(0x0000)
-            gen.disable_prdg()
-
-    for tile in station.tiles:
-        for gen in tile.tpm.test_generator:
-            gen.set_tone(0, 139624023.438 + 1e3, 2)
-            gen.channel_select(0xFFFF)
+#    for tile in station.tiles:
+#        for gen in tile.tpm.test_generator:
+#            gen.channel_select(0x0000)
+#            gen.disable_prdg()
+#
+#    for tile in station.tiles:
+#        for gen in tile.tpm.test_generator:
+#            gen.set_tone(0, 139624023.438 + 1e3, 2)
+#            gen.channel_select(0xFFFF)
