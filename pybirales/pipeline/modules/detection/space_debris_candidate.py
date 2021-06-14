@@ -167,7 +167,7 @@ class SpaceDebrisTrack:
 
         self.data = self.data.sort_values(by='time')
 
-        mid = self.data['channel'].size / 2
+        mid = int(self.data['channel'].size / 2)
         self.ref_data['time'] = self.data.iloc[mid]['time']
         self.ref_data['time_sample'] = self.data.iloc[mid]['time_sample']
         self.ref_data['channel'] = self.data.iloc[mid]['channel']
