@@ -159,7 +159,7 @@ class CorrMatrixPersister(ProcessingModule):
         if size >= len(dset[:, 0, 0, 0]):
             dset.resize(size * 2, axis=0)
 
-        dset[range(time_start, time_end), :, :, :] = input_data[:, :, :, :]
+        dset[time_start:time_end, :, :, :] = input_data[:, :, :, :]
 
         # Flush and close file
         f.flush()

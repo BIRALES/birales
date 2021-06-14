@@ -13,11 +13,11 @@ from pybirales.pipeline.blobs.dummy_data import DummyBlob
 
 # @numba.jit(nopython=True, nogil=True)
 def correlate(input_data, output_data, nchans, nants, integrations, nsamp):
-    for c in xrange(nchans):
+    for c in range(nchans):
         baseline = 0
-        for antenna1 in xrange(nants):
-            for antenna2 in xrange(antenna1 + 1, nants):
-                for i in xrange(nsamp / integrations):
+        for antenna1 in range(nants):
+            for antenna2 in range(antenna1 + 1, nants):
+                for i in range(nsamp // integrations):
                     """
                     output_data[i, c, baseline, 0] = \
                        np.dot(input_data[0, c, antenna1,
@@ -110,7 +110,7 @@ class Correlator(ProcessingModule):
             correlate(self._current_input, output_data, self._nchans,
                       self._nants, self._integrations, self._nsamp)
 
-        obs_info['nsamp'] = self._nsamp / self._integrations
+        obs_info['nsamp'] = self._nsamp // self._integrations
         obs_info['sampling_time'] *= self._integrations
         obs_info['nbaselines'] = self._nbaselines
         obs_info['nstokes'] = self._nstokes

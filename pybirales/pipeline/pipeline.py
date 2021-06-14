@@ -233,7 +233,8 @@ class CorrelatorPipelineManagerBuilder(PipelineManagerBuilder):
             receiver = RawDataReader(settings.rawdatareader)
             self.manager.name += ' (Offline)'
         else:
-            receiver = Receiver(settings.receiver)
+            # receiver = Receiver(settings.receiver)
+            receiver = TPMReceiver(settings.tpm_receiver)
 
         if settings.manager.save_raw:
             persister_raw = RawPersister(settings.rawpersister, receiver.output_blob)

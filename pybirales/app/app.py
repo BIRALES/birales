@@ -205,7 +205,7 @@ if __name__ == "__main__":
         # antenna_metrics_worker.start()
 
         # Turn the flask app into a socket.io app
-        socket_io.init_app(app, engineio_logger=True)
+        socket_io.init_app(app, engineio_logger=True, cors_allowed_origins="*")
 
         # Start the Flask Application
         socket_io.run(app, host="0.0.0.0", port=8000, use_reloader=True)
