@@ -1,8 +1,12 @@
+import warnings
+
 import click
 
 from pybirales.cli.commands.pipelines import pipelines
-from pybirales.cli.commands.services import services
 from pybirales.cli.commands.scheduler import scheduler
+from pybirales.cli.commands.services import services
+
+warnings.filterwarnings("ignore")
 
 
 @click.group()
