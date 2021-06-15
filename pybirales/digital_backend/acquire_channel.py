@@ -304,6 +304,9 @@ if __name__ == "__main__":
     while not receiver._stop_acquisition.value:
         buff, timestamp = receiver.read_buffer()
         plt.imshow(np.abs(buff), aspect='auto')
+        plt.xlabel("Antenna")
+        plt.ylabel("Samples")
+        plt.colorbar()
         plt.show()
 
         receiver.read_buffer_ready()

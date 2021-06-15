@@ -21,8 +21,8 @@ from pybirales.services.scheduler.schedule import Schedule
 
 class ObservationsScheduler:
     DEFAULT_WAIT_SECONDS = 5  # By default, all observation have a delayed start by this amount
-    OBSERVATIONS_CHL = 'birales_scheduled_obs'
-    BIRALES_STATUS_CHL = 'birales_system_status'
+    OBSERVATIONS_CHL = b'birales_scheduled_obs'
+    BIRALES_STATUS_CHL = b'birales_system_status'
     POLL_FREQ = datetime.timedelta(seconds=5)
     MONITORING_FREQ = 10
 

@@ -15,9 +15,9 @@ from pybirales.repository.models import Observation
 from pybirales.repository.models import SpaceDebrisTrack
 
 observations_page = Blueprint('observations_page', __name__, template_folder='templates')
-OBSERVATIONS_CHL = 'birales_scheduled_obs'
-OBSERVATIONS_DEL_CHL = 'birales_delete_obs'
-NOTIFICATIONS_CHL = 'notifications'
+OBSERVATIONS_CHL = b'birales_scheduled_obs'
+OBSERVATIONS_DEL_CHL = b'birales_delete_obs'
+NOTIFICATIONS_CHL = b'notifications'
 
 
 @observations_page.route('/observations')

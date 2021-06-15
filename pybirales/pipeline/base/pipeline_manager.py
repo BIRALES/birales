@@ -13,8 +13,8 @@ from pybirales import settings
 from pybirales.pipeline.base.definitions import NoDataReaderException
 from pybirales.repository.message_broker import broker
 
-PIPELINE_CTL_CHL = 'birales_pipeline_control'
-BIRALES_STATUS_CHL = 'birales_system_status'
+PIPELINE_CTL_CHL = b'birales_pipeline_control'
+BIRALES_STATUS_CHL = b'birales_system_status'
 
 
 def pipeline_status_worker(kill_pill):

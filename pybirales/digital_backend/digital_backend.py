@@ -265,7 +265,7 @@ class Station(object):
             self._form_station()
 
             logging.info("Initializing Channelizer")
-            center_channel = 256
+            center_channel = 282
 
             for i, tile in enumerate(self.tiles):
                 tile['fpga1.dsp_regfile.channelizer_sel.lo_channel'] = center_channel
