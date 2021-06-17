@@ -234,7 +234,6 @@ class ChannelisedData(Process):
         """ Wait for receiver to finish """
 
         # Issue stop
-        logging.info("In stop receiver")
         self._stop_acquisition.value = True
 
         # Wait for a while
@@ -247,7 +246,8 @@ class ChannelisedData(Process):
             self._shared_memory_segment.close()
             self._shared_memory_segment.unlink()
 
-        logging.info("Finished stop receiver")
+        # Close socket
+        self._socket.close()
 	
     def _decode_spead_header(self, packet):
         """ Decode SPEAD packet header

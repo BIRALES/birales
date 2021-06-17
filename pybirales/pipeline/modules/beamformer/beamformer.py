@@ -132,10 +132,6 @@ class Beamformer(ProcessingModule):
 
         return obs_info
 
-    def stop_module(self):
-        self._stop_module.set()
-        logging.info('{} module stop flag set'.format(self.name))
-
 
 class Pointing(object):
     """ Pointing class which periodically updates pointing weights """

@@ -87,19 +87,11 @@ class TPMReceiver(Generator):
 
         # Set stopping flag
         self._stop_module.set()
-        logging.info("Called stop module")
 
         # Stop TPM data receiver
         if self._tpm_receiver is not None:
             self._tpm_receiver.stop_receiver()
-            logging.info("Called stop receiver")
             self._tpm_receiver = None
-
-        # Stop local thread
-        #logging.info("Waiting for thread to join") 
-        #self._data_processor.join()
-        #logging.info("Thread join")
-
 
     def process_data(self):
         """ Data callback for receiver thread"""
@@ -127,6 +119,7 @@ class TPMReceiver(Generator):
 
             # If receiver is stopping, break from while loop
             if self._stop_module.is_set():
+                self.release_output_blob(obs_info)
                 break
 
             # Set data and timestamp
@@ -134,8 +127,6 @@ class TPMReceiver(Generator):
             obs_info['timestamp'] = datetime.datetime.utcfromtimestamp(timestamp)
 
             # Ready from buffer
-            if self._tpm_receiver is None:
-                break
             self._tpm_receiver.read_buffer_ready()
 
             # Release output blob
