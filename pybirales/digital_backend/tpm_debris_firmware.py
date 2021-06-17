@@ -161,8 +161,8 @@ class TpmDebrisFirmware(FirmwareBlock):
         self._power_meter.initialise()
 
         # Initialise 10G cores
-        for teng in self._teng:
-            teng.initialise_core()
+        #for teng in self._teng:
+        #    teng.initialise_core()
 
     #######################################################################################
 
