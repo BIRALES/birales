@@ -18,6 +18,7 @@ from pybirales.app.modules.monitoring import monitoring_page
 from pybirales.app.modules.observations import observations_page
 from pybirales.repository.message_broker import pub_sub, broker
 from pybirales.repository.models import BeamCandidate, SpaceDebrisTrack
+from pybirales.base.helper import to_string
 
 DEBUG = True
 NOTIFICATIONS_CHL = b'notifications'
@@ -85,13 +86,13 @@ def pub_sub_listener():
             elif message['type'] == 'message':
                 log.debug("Received message on #%s received: %s", message['channel'], message)
                 if message['channel'] == NOTIFICATIONS_CHL:
-                    msg = message['data']
+                    msg = to_string(message['data'])
                     socket_io.send(msg)
                 if message['channel'] == METRICS_CHL:
-                    msg = message['data']
+                    msg = to_string(message['data'])
                     socket_io.emit('antenna_metrics', msg)
                 if message['channel'] == BIRALES_STATUS_CHL:
-                    msg = message['data']
+                    msg = to_string(message['data'])
                     socket_io.emit('status', msg)
             else:
                 log.warning('Received message not handled %s', message)
@@ -125,7 +126,7 @@ def system_listener():
             break
         else:
             if message['type'] == 'message':
-                msg = message['data'].decode("utf-8")
+                msg = to_string(message['data'])
                 log.debug("System message received: %s", msg)
                 socket_io.emit('status', msg)
 

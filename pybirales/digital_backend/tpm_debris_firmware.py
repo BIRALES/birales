@@ -79,8 +79,8 @@ class TpmDebrisFirmware(FirmwareBlock):
         self._testgen = self.board.load_plugin("TpmTestGenerator", device=self._device, fsample=self._fsample/self._decimation)
         self._sysmon = self.board.load_plugin("TpmSysmon", device=self._device)
         self._patterngen = self.board.load_plugin("TpmPatternGenerator", device=self._device)
-        self._power_meter = self.board.load_plugin("AdcPowerMeterSimple", device=self._device, fsample=self._fsample/(self._decimation), samples_per_frame=4096)
-        self._integrator = self.board.load_plugin("TpmIntegrator", device=self._device, fsample=self._fsample/self._decimation, nof_frequency_channels=2048, oversampling_factor=1.0)
+        self._power_meter = self.board.load_plugin("AdcPowerMeterSimple", device=self._device, fsample=self._fsample/(self._decimation), samples_per_frame=1024)
+        self._integrator = self.board.load_plugin("TpmIntegrator", device=self._device, fsample=self._fsample/self._decimation, nof_frequency_channels=512, oversampling_factor=1.0)
         self._polyfilter = self.board.load_plugin("PolyFilter", device=self._device)
 
         self._device_name = "fpga1" if self._device is Device.FPGA_1 else "fpga2"

@@ -15,7 +15,7 @@ STATUS_MAP = {
 
 
 class BIRALESObservation(Document):
-    meta = {'allow_inheritance': True, 'abstract': True}
+    meta = {'allow_inheritance': True, 'abstract': True,  'collection': 'observation', }
 
     # _id = ObjectIdField(required=True, default=ObjectId, primary_key=True)
     name = StringField(required=True, max_length=200)

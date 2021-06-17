@@ -5,7 +5,7 @@ data/
 build
 dist
 pybirales.egg-info
-
+venv/
 .eggs
 *.log
 *.swp

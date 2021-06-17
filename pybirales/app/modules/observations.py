@@ -11,7 +11,7 @@ from flask_paginate import Pagination, get_page_parameter
 from pybirales.app.modules.forms import DetectionModeForm, CalibrationModeForm
 from pybirales.repository.message_broker import broker
 from pybirales.repository.models import Configuration as ConfigurationModel
-from pybirales.repository.models import Observation
+from pybirales.repository.models import Observation, BIRALESObservation
 from pybirales.repository.models import SpaceDebrisTrack
 
 observations_page = Blueprint('observations_page', __name__, template_folder='templates')
@@ -31,7 +31,7 @@ def index():
     page = int(request.args.get(get_page_parameter(), default=1))
     per_page = 10
 
-    observations = Observation.objects().order_by('-date_time_start').skip((page - 1) * per_page).limit(per_page)
+    observations = Observation.objects(class_check=False).order_by('-date_time_start').skip((page - 1) * per_page).limit(per_page)
 
     pagination = Pagination(page=page, total=observations.count(),
                             inner_window=5,

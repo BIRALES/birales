@@ -41,15 +41,19 @@ if __name__ == "__main__":
     except:
         pass
 
+    # Generate subplots
+    ax_1 = plt.subplot(211)
+    ax_2 = plt.subplot(212)
+
+    ax_1.title.set_text('Real')
+    ax_2.title.set_text('Immaginary')
+
     # Plot
-#    for to_plot in opts.baseline.split(','):
-#        plt.plot(data[:nsamp, 0, baselines[to_plot], 0], label=to_plot)
     counter = 0
     for i in range(opts.nants):
         for j in range(i + i, opts.nants):
-            plt.plot(data[:nsamp, 0, counter, 0], label="{}-{}".format(i, j))
+            ax_1.plot(data[:nsamp, 0, counter, 0].real, label="{}-{}".format(i, j))
+            ax_2.plot(data[:nsamp, 0, counter, 0].imag, label="{}-{}".format(i, j))
             counter += 1
 
-    #plt.axvline(x=2220)
-    plt.legend()
     plt.show()

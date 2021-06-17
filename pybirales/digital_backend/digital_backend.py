@@ -149,6 +149,11 @@ def initialise_tile(params):
         station_tile.set_lmc_integrated_download("1g")
         station_tile['board.regfile.ethernet_pause'] = 0x1000
 
+        ## Reduce ADC DDC gain
+        #for i in range(16):
+        #    station[(f"adc{i}", 0x310)]
+        #    station[(f"adc{i}", 0x330)]
+
         return True
     except Exception as e:
         logging.warning("Could not initialise Tile {}: {}".format(config['tiles'][tile_number], e))

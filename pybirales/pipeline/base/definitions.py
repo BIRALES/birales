@@ -22,7 +22,7 @@ class ObservationInfo(collections.MutableMapping):
         self['created_at'] = Time.now().iso
 
         self['settings'] = {a: settings.__dict__[a].__dict__ for a in settings.__dict__.keys() if
-                            not a.startswith('__')}
+                            not a.startswith('__') and settings.__dict__[a] is not None}
 
     def get_dict(self):
         return self.store

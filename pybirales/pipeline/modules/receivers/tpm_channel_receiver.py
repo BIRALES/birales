@@ -82,20 +82,24 @@ class TPMReceiver(Generator):
         self._data_processor.name = "TPMDataProcessor"
         self._data_processor.start()
 
-    def stop_module(self):
+    def stop_receiver(self):
         """ Stop generator """
-        logging.info('############# Stopping the receiver module')
+
+        # Set stopping flag
+        self._stop_module.set()
+        logging.info("Called stop module")
 
         # Stop TPM data receiver
         if self._tpm_receiver is not None:
             self._tpm_receiver.stop_receiver()
+            logging.info("Called stop receiver")
             self._tpm_receiver = None
 
         # Stop local thread
-        self._data_processor.join()
+        #logging.info("Waiting for thread to join") 
+        #self._data_processor.join()
+        #logging.info("Thread join")
 
-        # Set stopping flag
-        self._stop_module.set()
 
     def process_data(self):
         """ Data callback for receiver thread"""
@@ -116,14 +120,22 @@ class TPMReceiver(Generator):
             # Get output blob
             output_data = self.request_output_blob()
 
-            # Get buffer from receiver
-            data, timestamp = self._tpm_receiver.read_buffer()
+            # Get buffer
+            data = None
+            while not self._stop_module.is_set() and data is None:
+                data, timestamp = self._tpm_receiver.read_buffer()
+
+            # If receiver is stopping, break from while loop
+            if self._stop_module.is_set():
+                break
 
             # Set data and timestamp
             output_data[:] = data.reshape((self._nsubs, self._nsamp, self._nants))
             obs_info['timestamp'] = datetime.datetime.utcfromtimestamp(timestamp)
 
             # Ready from buffer
+            if self._tpm_receiver is None:
+                break
             self._tpm_receiver.read_buffer_ready()
 
             # Release output blob
@@ -135,6 +147,9 @@ class TPMReceiver(Generator):
             # self.publish_antenna_metrics(self._read_count, output_data, obs_info)
 
             self._read_count += 1
+
+        # Stop module has been set
+        self.stop_receiver()
 
     @staticmethod
     def _calculate_rms(input_data):
@@ -174,5 +189,5 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, _signal_handler)
 
     from time import sleep
-    while not receiver.is_stopped():
+    while not receiver.is_stopped:
         sleep(1)

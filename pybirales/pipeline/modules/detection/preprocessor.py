@@ -20,9 +20,11 @@ class PreProcessor(ProcessingModule):
 
         self._moving_avg_period = settings.detection.n_noise_samples
 
-        self.channel_noise = np.zeros(shape=(settings.beamformer.nbeams, 4110, self._moving_avg_period))
+        self._n_channels = 2026
 
-        self.channel_noise_std = np.zeros(shape=(settings.beamformer.nbeams, 4110, self._moving_avg_period))
+        self.channel_noise = np.zeros(shape=(settings.beamformer.nbeams, self._n_channels, self._moving_avg_period))
+
+        self.channel_noise_std = np.zeros(shape=(settings.beamformer.nbeams, self._n_channels, self._moving_avg_period))
 
         self._observation = None
 
@@ -145,6 +147,6 @@ class PreProcessor(ProcessingModule):
         return ChannelisedBlob(self._config, [
             ('nbeams', input_shape['nbeams']),
             # ('nchans', input_shape['nchans']),
-            ('nchans', 4110),
+            ('nchans', self._n_channels),
             ('nsamp', input_shape['nsamp'])
         ], datatype=np.float)
