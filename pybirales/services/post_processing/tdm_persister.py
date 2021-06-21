@@ -114,7 +114,7 @@ class TDMPersister:
 
         try:
             with open(filepath, "wb") as fh:
-                fh.write(parsed_template)
+                fh.write(parsed_template.encode('utf-8'))
                 log.info('Outputted TDM {} persisted at: {} for track {}'.format(detection_num, filepath, sd_track.id))
         except IOError:
             log.exception(

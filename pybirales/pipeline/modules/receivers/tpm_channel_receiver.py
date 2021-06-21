@@ -135,7 +135,7 @@ class TPMReceiver(Generator):
             logging.info("Receiver: Received buffer ({})".format(obs_info['timestamp'].time()))
 
             # Publish the RMS voltages
-            # self.publish_antenna_metrics(self._read_count, output_data, obs_info)
+            self.publish_antenna_metrics(self._read_count, output_data, obs_info)
 
             self._read_count += 1
 
@@ -146,7 +146,7 @@ class TPMReceiver(Generator):
     def _calculate_rms(input_data):
         """ Calculate the RMS of the incoming antenna data
         :param input_data: Input antenna data """
-        return np.squeeze(np.sqrt(np.sum(np.power(np.abs(input_data), 2.), axis=2)))
+        return np.squeeze(np.sqrt(np.mean(np.power(np.abs(input_data), 2.), axis=2)))
 
     def publish_antenna_metrics(self, iteration, data, obs_info):
         if iteration % self._metrics_poll_freq == 0:

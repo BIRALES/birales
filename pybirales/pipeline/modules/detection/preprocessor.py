@@ -20,7 +20,7 @@ class PreProcessor(ProcessingModule):
 
         self._moving_avg_period = settings.detection.n_noise_samples
 
-        self._n_channels = 2026
+        self._n_channels = 3758
 
         self.channel_noise = np.zeros(shape=(settings.beamformer.nbeams, self._n_channels, self._moving_avg_period))
 

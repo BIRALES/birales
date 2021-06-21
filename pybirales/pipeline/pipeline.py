@@ -88,7 +88,6 @@ class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
         """
         This script runs the multi-pixel pipeline with debris detection enabled,
         using the specified CONFIGURATION.
-l
         :return:
         """
 

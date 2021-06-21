@@ -332,11 +332,11 @@ if __name__ == "__main__":
             break
 
         print(np.mean(np.abs(buff)))
-        plt.imshow(np.abs(buff), aspect='auto')
+        plt.imshow(10 * np.log10(np.abs(buff)), aspect='auto')
         plt.xlabel("Antenna")
         plt.ylabel("Samples")
         plt.colorbar()
-        #plt.show()
+        plt.show()
 
         receiver.read_buffer_ready()
 
