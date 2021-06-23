@@ -72,7 +72,7 @@ def serial_msds(data):
     # print 'Beam {}. Noise: {:0.3f}. Finished in {:0.3f}'.format(b, noise_est, time.time() - t1)
 
     log.info(
-        '[Iter {} Detections] Beam {}: {} leaves, {} clusters, {} tracks in {:0.3f}'.format(iter, b, len(positives),
+        '[Iter {}] Beam {}: {} leaves, {} clusters, {} tracks in {:0.3f}'.format(iter, b, len(positives),
                                                                                             len(cluster_data),
                                                                                             len(valid_tracks),
                                                                                             time.time() - t1))
@@ -167,8 +167,8 @@ class Detector(ProcessingModule):
         # Tracks, that are valid and have transitted.
         self.n_terminated_tracks = 0
 
-        self.detection_algorithm = dbscan_standalone
-        # self.detection_algorithm = msds_standalone
+        # self.detection_algorithm = dbscan_standalone
+        self.detection_algorithm = msds_standalone
 
         self.name = "MSDS Detector"
 
@@ -193,6 +193,8 @@ class Detector(ProcessingModule):
         """
 
         obs_info['iter_count'] = self._iter_count
+
+        print(f"Input shape is: {np.shape(input_data)}")
 
         # Skip the first few blobs (to allow for an accurate noise estimation to be determined)
         if self._iter_count < 2:

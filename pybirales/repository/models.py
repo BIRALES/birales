@@ -146,6 +146,8 @@ class SpaceDebrisTrack(DynamicDocument):
         if to_time:
             query &= Q(created_at__lte=to_time)
 
+        # query &= Q(terminated=True)
+
         return query_set.filter(query)
 
     def invalidate(self):

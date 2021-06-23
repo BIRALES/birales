@@ -54,7 +54,7 @@ class CalibrationFacade:
             'calibration_dec': settings.beamformer.reference_declination,
             'longitude': settings.beamformer.reference_antenna_location[0],
             'latitude': settings.beamformer.reference_antenna_location[1],
-            'frequency': (settings.observation.start_center_frequency + settings.observation.channel_bandwidth * 0.5) * 1e6,
+            'frequency': settings.observation.start_center_frequency * 1e6,
             'bandwidth': settings.observation.channel_bandwidth * 1e6,
             'main_dir': calib_dir,
             'obs_time': self.obs_info['timestamp'],

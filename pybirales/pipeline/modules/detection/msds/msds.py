@@ -300,7 +300,7 @@ def is_valid(candidate, g, beam_id):
         log.debug("Candidate {}, dropped since p-value is not low enough ({:0.3f})".format(g, p))
         return False
 
-    log.info("Candidate {} is Valid with: {:0.3f} {:0.3f} {:0.3f} {}".format(g, score, r_value, p, len(candidate)))
+    log.debug("Candidate {} is Valid with: {:0.3f} {:0.3f} {:0.3f} {}".format(g, score, r_value, p, len(candidate)))
 
     return add_group(add_group(candidate, g), beam_id)
 
