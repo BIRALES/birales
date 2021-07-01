@@ -338,6 +338,12 @@ if __name__ == "__main__":
         plt.colorbar()
         plt.show()
 
+        #plt.plot(buff[:256, 0].imag, label="Antenna 0")
+        #plt.plot(buff[:256, 16].imag, label="Antenna 16")
+        #plt.legend(loc="upper right")
+        #plt.show()
+
+
         receiver.read_buffer_ready()
 
     print("Exiting")

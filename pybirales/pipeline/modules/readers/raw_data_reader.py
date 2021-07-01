@@ -112,7 +112,7 @@ class RawDataReader(ProcessingModule):
 
             return self._get_start_file(next_file, skip)
 
-        self._f.seek(self._nsamp * self._nants * 8 * skip)
+        self._f.seek(self._nsamp * self._nants * 8 * int(skip))
 
         log.info("RawDataReader will use: %s and skip %d blobs from it. (read counter: %s)", filepath, skip,
                  self._read_count)

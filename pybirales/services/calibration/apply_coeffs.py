@@ -29,7 +29,7 @@ class CoeffManager:
         text_file = open(self.coeff_filepath, "w")
         for pol in range(self.coeffs.shape[1]):
             for i in range(self.coeffs.shape[0]):
-                text_file.write(str(self.coeffs[i, pol]) + '\n')
+                text_file.write(format(self.coeffs[i, pol], ".16e") + '\n')
         text_file.close()
 
     def coeffs_apply(self, real_vis, baseline_no, main_dir, i):

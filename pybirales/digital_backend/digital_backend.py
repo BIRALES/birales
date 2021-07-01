@@ -147,7 +147,7 @@ def initialise_tile(params):
         station_tile.download_polyfilter_coeffs("hann")
         station_tile.set_lmc_download("1g")
         station_tile.set_lmc_integrated_download("1g")
-        station_tile['board.regfile.ethernet_pause'] = 0x1000
+        station_tile['board.regfile.ethernet_pause'] = 0x0400
 
         ## Reduce ADC DDC gain
         #for i in range(16):

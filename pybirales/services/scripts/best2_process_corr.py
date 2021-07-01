@@ -15,6 +15,8 @@ if __name__ == "__main__":
                  help='Baselines to plot (default: 0-1')
     p.add_option('-a', '--antennas', dest='nants', action='store', default=32,
                  type='int', help='Number of antennas (default: 32)')
+    p.add_option('-s', '--sample', dest='sample', action='store', default=-1,
+                 type='int', help='If a sample number is provided, plot corr matrix (default: -1)')
 
     opts, args = p.parse_args(sys.argv[1:])
 
@@ -41,19 +43,31 @@ if __name__ == "__main__":
     except:
         pass
 
-    # Generate subplots
-    ax_1 = plt.subplot(211)
-    ax_2 = plt.subplot(212)
+    if opts.sample == -1:
+        # Generate subplots
+        ax_1 = plt.subplot(211)
+        ax_2 = plt.subplot(212)
 
-    ax_1.title.set_text('Real')
-    ax_2.title.set_text('Immaginary')
+        ax_1.title.set_text('Real')
+        ax_2.title.set_text('Immaginary')
 
-    # Plot
-    counter = 0
-    for i in range(opts.nants):
-        for j in range(i + i, opts.nants):
-            ax_1.plot(data[:nsamp, 0, counter, 0].real, label="{}-{}".format(i, j))
-            ax_2.plot(data[:nsamp, 0, counter, 0].imag, label="{}-{}".format(i, j))
-            counter += 1
+        # Plot
+        counter = 0
+        for i in range(opts.nants):
+            for j in range(i + 1, opts.nants):
+                ax_1.plot(data[:nsamp, 0, counter, 0].real, label="{}-{}".format(i, j))
+                ax_2.plot(data[:nsamp, 0, counter, 0].imag, label="{}-{}".format(i, j))
+                counter += 1
+
+    else:
+        to_plot = np.zeros((opts.nants, opts.nants))
+        counter = 0
+        for i in range(opts.nants):
+            for j in range(i + 1, opts.nants):
+                to_plot[i, j] = np.abs(data[opts.sample, 0, counter, 0])
+                counter += 1
+
+        plt.imshow(to_plot, aspect='auto')
+        plt.colorbar()
 
     plt.show()

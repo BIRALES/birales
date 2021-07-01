@@ -165,9 +165,9 @@ class SelfCal(object):
 
             for k in range(coeffs.shape[0]):
                 if coeffs[k, pol].imag >= 0:
-                    text_file.write('%f' % coeffs[k, pol].real + '+' + '%f' % coeffs[k, pol].imag + 'j' + '\n')
+                    text_file.write('%.16e' % coeffs[k, pol].real + '+' + '%.16e' % coeffs[k, pol].imag + 'j' + '\n')
                 if coeffs[k].imag < 0:
-                    text_file.write('%f' % coeffs[k, pol].real + '%f' % coeffs[k, pol].imag + 'j' + '\n')
+                    text_file.write('%.16e' % coeffs[k, pol].real + '%.16e' % coeffs[k, pol].imag + 'j' + '\n')
 
         text_file.close()
 

@@ -22,9 +22,9 @@ class PreProcessor(ProcessingModule):
 
         self._n_channels = 3758
 
-        self.channel_noise = np.zeros(shape=(settings.beamformer.nbeams, self._n_channels, self._moving_avg_period))
+        self.channel_noise = None
 
-        self.channel_noise_std = np.zeros(shape=(settings.beamformer.nbeams, self._n_channels, self._moving_avg_period))
+        self.channel_noise_std = None
 
         self._observation = None
 
@@ -46,7 +46,7 @@ class PreProcessor(ProcessingModule):
         :return:
         """
         # print power_data.shape
-        self.channel_noise[:, :, iter_count % self._moving_avg_period] = np.mean(power_data, axis=2)
+        self.channel_noise[:, :, iter_count % self._moving_avg_period] = np.median(power_data, axis=2)
         self.channel_noise_std[:, :, iter_count % self._moving_avg_period] = np.std(power_data, axis=2)
 
         channel_noise = self.channel_noise
@@ -55,7 +55,7 @@ class PreProcessor(ProcessingModule):
             channel_noise = self.channel_noise[:, :, :self.counter + 1]
             channel_noise_std = self.channel_noise_std[:, :, :self.counter + 1]
 
-        return np.mean(channel_noise, axis=2), np.mean(channel_noise_std, axis=2)
+        return np.median(channel_noise, axis=2), np.median(channel_noise_std, axis=2)
 
     def process(self, obs_info, input_data, output_data):
         """
@@ -74,22 +74,26 @@ class PreProcessor(ProcessingModule):
         self.channels, self._doppler_mask = apply_doppler_mask(self._doppler_mask, self.channels,
                                                                settings.detection.doppler_range,
                                                                obs_info)
+
+        if self.channel_noise is None:
+            self.channel_noise = np.zeros(shape=(settings.beamformer.nbeams, len(self.channels),
+                                                 self._moving_avg_period))
+            self.channel_noise_std = np.zeros(shape=(settings.beamformer.nbeams, len(self.channels),
+                                                     self._moving_avg_period))
+
         if not 'doppler_mask' in obs_info:
             obs_info['doppler_mask'] = self._doppler_mask
             obs_info['channels'] = self.channels
 
-        # print input_data.shape
-        # print len(self._doppler_mask)
-        # Process only 1 polarisation
-
-        # data = input_data[0, :, 2392:6502, :]
         data = input_data[0][:, self._doppler_mask, :]
 
         power_data = self._power(data)
 
         # Recalculate channel noise in db
         obs_info['channel_noise'], obs_info['channel_noise_std'] = self._get_noise_estimation(power_data, self.counter)
-        obs_info['mean_noise'] = np.mean(obs_info['channel_noise'])
+        obs_info['mean_noise'] = np.median(obs_info['channel_noise'])
+
+        print('>', self.counter, np.max(power_data), np.argmax(power_data),  np.max(obs_info['channel_noise'][15]), np.argmax(obs_info['channel_noise'][15]))
 
         power_data = power_data - obs_info['channel_noise'][..., np.newaxis]
 
@@ -98,7 +102,7 @@ class PreProcessor(ProcessingModule):
             self._observation = Observation.objects.get(id=settings.observation.id)
 
             self._observation.noise_mean = float(obs_info['mean_noise'])
-            self._observation.noise_beams = np.mean(obs_info['channel_noise'], axis=1).tolist()
+            self._observation.noise_beams = np.median(obs_info['channel_noise'], axis=1).tolist()
 
             self._observation.tx = obs_info['transmitter_frequency']
             self._observation.sampling_time = obs_info['sampling_time']
@@ -148,5 +152,6 @@ class PreProcessor(ProcessingModule):
             ('nbeams', input_shape['nbeams']),
             # ('nchans', input_shape['nchans']),
             ('nchans', self._n_channels),
+            # ('nchans', len(self.channels)),
             ('nsamp', input_shape['nsamp'])
         ], datatype=np.float)

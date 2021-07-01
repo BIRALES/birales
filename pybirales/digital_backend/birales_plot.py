@@ -1,7 +1,9 @@
 #!/usr/bin/env python
-
-from pybirales.digital_backend.digital_backend import Station, load_station_configuration
-
+from pybirales.digital_backend.tile_debris import Tile
+from pyfabil import Device
+from pybirales.digital_backend.digital_backend import Station, load_station_configuration, load_configuration_file, apply_config_file
+import yaml
+import h5py
 import datetime
 import threading
 import logging
@@ -11,8 +13,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
 from struct import unpack
-import sys
-
 COLOR = ['b', 'g']
 
 DATA_LEN = 32768
@@ -30,12 +30,12 @@ configuration = {'tiles': None,
                      'channel_truncation': 7,
                      'channel_integration_time': -1,
                      'ada_gain': None
-                 },
+                     },
                  'observation': {
                      'sampling_frequency': 700e6,
                      'bandwidth': 12.5e6,
                      'ddc_frequency': 139.65e6
-                 },
+                     },
                  'network': {
                      'lmc': {
                          'tpm_cpld_port': 10000,
@@ -53,7 +53,7 @@ configuration = {'tiles': None,
                          'dst_port': 4660,
                          'dst_ip': "10.0.10.200",
                          'src_mac': None}
-                 }
+                    }
                  }
 
 
@@ -81,7 +81,7 @@ def calcAVGSpectra(raw_data, avg_num):
         spettri[:] += np.array(spettro)
     spettri[:] /= avg_num
     with np.errstate(divide='ignore', invalid='ignore'):
-        spettri[:] = 20 * np.log10(spettri / ((2 ** 13) - 1))
+        spettri[:] = 20 * np.log10(spettri / ((2**13) - 1))
     adu_rms = np.sqrt(np.mean(np.power(raw_data, 2), 0))
     volt_rms = adu_rms * (1.7 / 16384.)  # VppADC9680/2^bits * ADU_RMS
     with np.errstate(divide='ignore', invalid='ignore'):
@@ -103,12 +103,12 @@ class SpeadRx:
         self.data_byte = self.data_width / 8
         self.byte_per_packet = 1024
         self.word_per_packet = self.byte_per_packet / (self.data_width / 8)
-        self.fpga_buffer_size = 64 * 1024
+        self.fpga_buffer_size = 64*1024
         self.nof_samples = self.fpga_buffer_size / 2
         self.expected_nof_packets = self.nof_signals * (self.fpga_buffer_size / self.byte_per_packet) / 2
 
-        self.data_reassembled = np.zeros((self.nof_signals, int(self.fpga_buffer_size / 2)), dtype=np.int16)
-        self.line = [0] * self.nof_signals
+        self.data_reassembled = np.zeros((self.nof_signals, int(self.fpga_buffer_size/2)), dtype=np.int16)
+        self.line = [0]*self.nof_signals
         self.is_spead = 0
         self.logical_channel_id = 0
         self.packet_counter = 0
@@ -136,13 +136,13 @@ class SpeadRx:
         self.plot_init = 0
         self.first_packet = 1
 
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)   # UDP
         self.sock.bind(("0.0.0.0", 4660))
         self.sock.settimeout(1)
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 2 * 1024 * 1024)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 2*1024*1024)
 
     def spead_header_decode(self, pkt):
-        items = unpack('>' + 'Q' * 9, pkt[0:8 * 9])
+        items = unpack('>' + 'Q'*9, pkt[0:8*9])
         self.is_spead = 0
         for idx in range(len(items)):
             spead_item = items[idx]
@@ -173,7 +173,7 @@ class SpeadRx:
             elif spead_id == 0xA004:
                 self.capture_mode = val
             elif spead_id == 0x3300:
-                self.offset = 9 * 8
+                self.offset = 9*8
             else:
                 print("Error in SPEAD header decoding!")
                 print("Unexpected item " + hex(spead_item) + " at position " + str(idx))
@@ -203,7 +203,7 @@ class SpeadRx:
             exit()
 
     def detect_full_buffer(self):
-        # print self.recv_packets
+        #print self.recv_packets
         if self.packet_counter == 0:
             if self.fpga_id in self.first_fpga_id:
                 self.recv_packets = 1
@@ -220,7 +220,7 @@ class SpeadRx:
         while True:
             packet_ok = 0
             try:
-                _pkt, _addr = self.sock.recvfrom(1024 * 10)
+                _pkt, _addr = self.sock.recvfrom(1024*10)
                 packet_ok = 1
             except socket.timeout:
                 sys.stdout.write("\rWaiting for data...                            ")
@@ -245,18 +245,19 @@ class SpeadRx:
                             self.hdf5_channel.create_dataset(str(self.timestamp), data=self.data_buff)
                         self.num += 1
                         tstamp = datetime.datetime.utcnow()
-                        # sys.stdout.write("\n" + datetime.datetime.strftime(tstamp, "%Y-%m-%d %H:%M:%S ") + "Full buffer received: " + str(self.num) + "    ")
-                        # sys.stdout.flush()
+                        #sys.stdout.write("\n" + datetime.datetime.strftime(tstamp, "%Y-%m-%d %H:%M:%S ") + "Full buffer received: " + str(self.num) + "    ")
+                        #sys.stdout.flush()
                         return self.data_buff.tolist()
 
         self.hdf5_channel.close()
+
 
     def plot_raw_data(self, data):
         if self.plot_init == 0:
             plt.ion()
             plt.figure(0)
             plt.title("Raw data")
-            self.line[0], = plt.plot([0] * self.nof_samples)
+            self.line[0], = plt.plot([0]*self.nof_samples)
             self.line[0].set_xdata(np.arange(self.nof_samples))
             self.plot_init = 1
 
@@ -272,8 +273,7 @@ class SpeadRx:
 if __name__ == "__main__":
     from optparse import OptionParser
     from sys import argv, stdout
-
-    # global data_received
+    #global data_received
 
     parser = OptionParser(usage="usage: %station [options]")
     parser.add_option("--config", action="store", dest="config",
@@ -329,8 +329,11 @@ if __name__ == "__main__":
     parser.add_option("--ddc_frequency", action="store", dest="ddc_frequency",
                       type="float", default=None, help="DDC frequency [default: None]")
     parser.add_option("--sampling_frequency", action="store", dest="sampling_frequency",
-                      type="float", default=700e6,
-                      help="ADC sampling frequency. Supported frequency are 700e6, 800e6 [default: 700e6]")
+                      type="float", default=700e6, help="ADC sampling frequency. Supported frequency are 700e6, 800e6 [default: 700e6]")
+    parser.add_option("--saveraw", action="store_true", dest="saveraw",
+                      default=False, help="Save HDF5 Raw File")
+    parser.add_option("--ylim", action="store", dest="ylim",
+                      default="-100,0", help="Y Limits")
 
     (conf, args) = parser.parse_args(argv[1:])
 
@@ -354,14 +357,14 @@ if __name__ == "__main__":
     # Connect station (program, initialise and configure if required)
     station.connect()
 
-    spead_rx_inst = SpeadRx(False)
+    spead_rx_inst = SpeadRx(conf.saveraw)
 
     resolutions = 2 ** np.array(range(16)) * (800000.0 / 2 ** 15)
     rbw = int(closest(resolutions, conf.resolution))
     avg = 2 ** rbw
     nsamples = int(2 ** 15 / avg)
     RBW = (avg * (400000.0 / 16384.0))
-    # asse_x = np.arange(nsamples/2 + 1) * RBW * 0.001
+    #asse_x = np.arange(nsamples/2 + 1) * RBW * 0.001
     bw = 43750000
     nfreq = int((DATA_LEN / 2 / avg) + 1)
     rbw = bw / (nfreq - 1)
@@ -393,25 +396,27 @@ if __name__ == "__main__":
     ax = []
     ax_lines = []
     ax_annotations = []
-    # csfont = {'fontname': 'monospace', 'weight': 'bold'}
+    ymin = int(conf.ylim.split(",")[0])
+    ymax = int(conf.ylim.split(",")[1])
+    #csfont = {'fontname': 'monospace', 'weight': 'bold'}
     for i in antenna_list:
         ax += [fig.add_subplot(gs[i])]
         ax[i].set_title("INPUT-%02d" % (i + 1), fontsize=10)
-        ax[i].set_ylim(-100, 0)
+        ax[i].set_ylim(ymin, ymax)
         ax[i].set_xlim(x1, x2)
         ax[i].set_ylabel("dB", fontsize=7)
         ax[i].set_xlabel("MHz", fontsize=7)
-        ticks = asse_x[::int(len(asse_x) / 4)]
-        tickslabels = ["%3.1f" % (t / 1000000.) for t in ticks[1:-1]]
+        ticks = asse_x[::int(len(asse_x)/4)]
+        tickslabels = ["%3.1f" % (t/1000000.) for t in ticks[1:-1]]
 
         ax[i].set_xticks(ticks[1:-1])
         ax[i].set_xticklabels(tickslabels, fontsize=7)
         ax[i].set_yticks([-100, -80, -60, -40, -20, 0])
         ax[i].set_yticklabels([-100, -80, -60, -40, -20, 0], fontsize=7)
 
-        l, = ax[i].plot(asse_x[3:], (np.zeros(len(asse_x[3:])) - 100), color='b')
+        l, = ax[i].plot(asse_x[3:], (np.zeros(len(asse_x[3:]))-100), color='b')
         ax_lines += [l]
-        a = ax[i].annotate("--- dBm", (asse_x[50], -15), fontsize=8, color='r')  # , **csfont)
+        a = ax[i].annotate("--- dBm", (asse_x[50], -15), fontsize=8, color='r')#, **csfont)
         ax_annotations += [a]
     fig.show()
 
@@ -419,10 +424,10 @@ if __name__ == "__main__":
     while i < conf.num:
         station.send_raw_data()
         data = spead_rx_inst.get_raw_data()
-        # print("DATA LEN: %d" % len(data))
+        #print("DATA LEN: %d" % len(data))
         if not data == []:
-            # data = data[antenna_mapping, :, :].transpose((0, 1, 2))
-            # print("ANT LEN %d" % len(data[:, 0, 0]))
+            #data = data[antenna_mapping, :, :].transpose((0, 1, 2))
+            #print("ANT LEN %d" % len(data[:, 0, 0]))
             for ant in antenna_list:
                 spettro, power_rms, adu_rms = calcAVGSpectra(np.array(data[ant]), avg)
                 ax_lines[ant].set_ydata(spettro[3:])
@@ -432,3 +437,7 @@ if __name__ == "__main__":
         i = i + 1
     del station
     logging.info("End of process.")
+
+
+
+
