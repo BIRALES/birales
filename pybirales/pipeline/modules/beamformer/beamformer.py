@@ -132,10 +132,6 @@ class Beamformer(ProcessingModule):
 
         return obs_info
 
-    def stop_module(self):
-        self._stop_module.set()
-        logging.info('{} module stop flag set'.format(self.name))
-
 
 class Pointing(object):
     """ Pointing class which periodically updates pointing weights """
@@ -377,7 +373,7 @@ class Pointing(object):
 
         # Find the calibration algorithm whose principal start time is closest to this observation's principal start time
         calib_obs = CalibrationObservation.objects(principal_created_at__lte=obs_start, status="finished").order_by(
-            'principal_created_at', '-created_at').first()
+            '-principal_created_at', 'created_at').first()
 
         if len(calib_obs) < 1:
             obs_start = obs.created_at

@@ -98,26 +98,26 @@ class NotificationsListener(Listener):
 
             request_body = dict(channel=self.channel, text=self._format_msg(msg))
 
-            response = self.slack_client.api_call(
-                self.api_end_point,
-                **request_body
-            )
-
-            if 'images' in msg:
-                for image in msg['images']:
-                    if os.path.exists(image['filepath']):
-                        with open(image['filepath']) as file_content:
-                            response = self.slack_client.api_call(
-                                self.api_end_point_upload,
-                                   channels=self.channel,
-                                    file=file_content,
-                                    title=image['title']
-                            )
-
-            if response['ok']:
-                log.debug('Slack message was sent successfully')
-            else:
-                log.warning('Slack message failed with the following error: {}'.format(response['error']))
+            # response = self.slack_client.api_call(
+            #     self.api_end_point,
+            #     **request_body
+            # )
+            #
+            # if 'images' in msg:
+            #     for image in msg['images']:
+            #         if os.path.exists(image['filepath']):
+            #             with open(image['filepath']) as file_content:
+            #                 response = self.slack_client.api_call(
+            #                     self.api_end_point_upload,
+            #                        channels=self.channel,
+            #                         file=file_content,
+            #                         title=image['title']
+            #                 )
+            #
+            # if response['ok']:
+            #     log.debug('Slack message was sent successfully')
+            # else:
+            #     log.warning('Slack message failed with the following error: {}'.format(response['error']))
 
     @staticmethod
     def _format_msg(msg):

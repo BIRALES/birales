@@ -8,8 +8,8 @@ from pybirales.repository.message_broker import pub_sub, broker
 from pybirales.repository.models import Observation
 from pybirales.services.scheduler.exceptions import InvalidObservationException
 
-OBS_CREATE_CHL = 'birales_scheduled_obs'
-OBS_DEL_CHL = 'birales_delete_obs'
+OBS_CREATE_CHL = b'birales_scheduled_obs'
+OBS_DEL_CHL = b'birales_delete_obs'
 
 
 def obs_listener_worker(scheduler):

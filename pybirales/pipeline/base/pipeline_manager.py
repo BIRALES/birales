@@ -13,8 +13,8 @@ from pybirales import settings
 from pybirales.pipeline.base.definitions import NoDataReaderException
 from pybirales.repository.message_broker import broker
 
-PIPELINE_CTL_CHL = 'birales_pipeline_control'
-BIRALES_STATUS_CHL = 'birales_system_status'
+PIPELINE_CTL_CHL = b'birales_pipeline_control'
+BIRALES_STATUS_CHL = b'birales_system_status'
 
 
 def pipeline_status_worker(kill_pill):
@@ -148,13 +148,13 @@ class PipelineManager(object):
         for module in self._modules:
             # Stop module
             module.stop()
-            time.sleep(0.2)
+            time.sleep(0.5)
 
-            if a_threads := [t.getName() for t in threading.enumerate() if t.is_alive()]:
-                log.warning('Running threads: %s', ', '.join(a_threads))
-
-            if not module.is_stopped:
-                time.sleep(0.5)
+            while not module.is_stopped:
+                #if a_threads := [t.getName() for t in threading.enumerate() if t.is_alive()]:
+                #    log.warning('Running threads: %s', ', '.join(a_threads))
+                log.warning(f"Killing {module.name}")
+                time.sleep(0.2)
 
         log.info('Pipeline Manager stopped')
 

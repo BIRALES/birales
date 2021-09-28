@@ -41,6 +41,7 @@ class Module(Thread):
 
         # Stopping clause
         self.daemon = True
+        self._module_stopped = False
         self._stop_module = Event()
 
     @abstractmethod
@@ -77,7 +78,7 @@ class Module(Thread):
     @property
     def is_stopped(self):
         """ Specified whether the thread body is running or not """
-        return self._stop_module.is_set()
+        return self._module_stopped
 
     @property
     def output_blob(self):
@@ -117,7 +118,7 @@ class Generator(Module):
         while not self._stop_module.is_set():
             time.sleep(1)
 
-        self._stop_module.set()
+        self._module_stopped = True
 
     def request_output_blob(self):
         """
@@ -241,6 +242,9 @@ class ProcessingModule(Module):
 
         # Clean
         self._tear_down()
+
+        self._module_stopped = True
+
         log.info('%s killed [Active threads: %s]', self.name, self._get_active_threads())
 
     def _get_active_threads(self):

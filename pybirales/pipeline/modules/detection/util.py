@@ -32,9 +32,10 @@ def apply_doppler_mask(doppler_mask, channels, doppler_range, obs_info):
 
         doppler_mask = np.bitwise_and(channels < b, channels > a)
 
-        # print a
+        print(f"Channel start: {a} Channel end: {b}. BW: {obs_info['channel_bandwidth']}, NChans: {obs_info['nchans']},"
+              f" SCW: {obs_info['start_center_frequency']}")
         # print b
-        # print len(channels)
+        # print(len(channels))
         # print np.argmin(channels < b)
         # print np.argmax(channels > a)
         # print doppler_range
@@ -47,7 +48,7 @@ def apply_doppler_mask(doppler_mask, channels, doppler_range, obs_info):
 
         channels = channels[doppler_mask]
 
-        # print min(channels), max(channels), len(channels)
+        print(min(channels), max(channels), len(channels))
 
     return channels, doppler_mask
 
@@ -109,10 +110,12 @@ def data_association(tracks, tentative_tracks, obs_info, notifications=False, sa
                 continue
 
             # print "Created new track {} m={} from {}".format(__id(new_track), new_track.m, __id(tentative_track))
-            log.info('New track initiated {}'.format(__id(new_track)))
+            # log.info('New track initiated {}'.format(__id(new_track)))
 
             # Add the space debris track to the candidates list
             tracks.append(new_track)
+
+    log.info('Initiated {} new tracks'.format(len(tracks)))
 
     # Notify the listeners, that a new detection was made
     if notifications:
@@ -139,6 +142,8 @@ def active_tracks(obs_info, tracks, iter_count):
         if not valid:
             track.cancel()
             # delete from database but keep it in memory
+            track.delete()
+
             log.info("Track {} was cancelled in iteration {}. Reason: {}".format(track.id % 1000, iter_count, reason))
             continue
 

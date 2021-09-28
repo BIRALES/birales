@@ -182,7 +182,6 @@ class ChannelisedData(Process):
 
         # Convert to complex
         data = data[:, :, 0] + 1j * data[:, :, 1]
-#        print(data[:, 0])
 
         # Convert to complex64
         data = data.astype(np.complex64)
@@ -198,6 +197,9 @@ class ChannelisedData(Process):
         while self._ready_buffer_flag.value and not self._stop_acquisition.value:
             logging.warning("Waiting for full buffer to be emptied")
             time.sleep(1)
+
+        if self._stop_acquisition.value:
+            return
 
         logging.info("Persisting buffer with {} packets".format(self._received_packets))
 
@@ -215,8 +217,12 @@ class ChannelisedData(Process):
 
     def read_buffer(self):
         """ Wait for full buffer """
-        while not self._ready_buffer_flag.value and not self._stop_acquisition.value:
-            time.sleep(0.01)
+
+        # If buffer is not ready, sleep for a while and return None. This avoids
+        # waiting forever when either the data stream or receiver is stopped
+        if not self._ready_buffer_flag.value and not  self._stop_acquisition.value:
+            time.sleep(0.1)
+            return None, None
 
         return self._ready_buffer_shared, self._ready_timestamp_shared.value
 
@@ -226,9 +232,23 @@ class ChannelisedData(Process):
 
     def stop_receiver(self):
         """ Wait for receiver to finish """
+
         # Issue stop
         self._stop_acquisition.value = True
 
+        # Wait for a while
+        # TODO: Perform the below using an atexit registered function
+        time.sleep(0.1)
+
+        # Clear shared memory buffer
+        if self._shared_memory_segment is not None:
+            del self._ready_buffer_shared
+            self._shared_memory_segment.close()
+            self._shared_memory_segment.unlink()
+
+        # Close socket
+        self._socket.close()
+	
     def _decode_spead_header(self, packet):
         """ Decode SPEAD packet header
         @param: Received packet header """
@@ -295,6 +315,7 @@ if __name__ == "__main__":
     # Wait for exit or termination
     def _signal_handler(signum, frame):
         logging.info("Received interrupt, stopping acqusition")
+        print("Stopping handler")
         receiver.stop_receiver()
 
     signal.signal(signal.SIGINT, _signal_handler)
@@ -302,9 +323,28 @@ if __name__ == "__main__":
     from matplotlib import pyplot as plt
 
     while not receiver._stop_acquisition.value:
-        buff, timestamp = receiver.read_buffer()
-        plt.imshow(np.abs(buff), aspect='auto')
+
+        buff = None
+        while buff is None and not receiver._stop_acquisition.value:
+            buff, timestamp = receiver.read_buffer()
+
+        if receiver._stop_acquisition.value:
+            break
+
+        print(np.mean(np.abs(buff)))
+        plt.imshow(10 * np.log10(np.abs(buff)), aspect='auto')
+        plt.xlabel("Antenna")
+        plt.ylabel("Samples")
+        plt.colorbar()
         plt.show()
 
+        #plt.plot(buff[:256, 0].imag, label="Antenna 0")
+        #plt.plot(buff[:256, 16].imag, label="Antenna 16")
+        #plt.legend(loc="upper right")
+        #plt.show()
+
+
         receiver.read_buffer_ready()
+
+    print("Exiting")
 

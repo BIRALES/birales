@@ -48,7 +48,7 @@ class BiralesConfig:
             self._load_from_file(os.path.join(os.path.dirname(__file__), 'configuration/birales.ini'))
 
         # Load the ROACH backend settings
-        self._load_from_file(os.path.join(os.path.dirname(__file__), settings.receiver.backend_config_filepath))
+        # self._load_from_file(os.path.join(os.path.dirname(__file__), settings.receiver.backend_config_filepath))
 
         if config_options:
             # Override the configuration with settings passed on in the config_options dictionary
@@ -212,4 +212,4 @@ class BiralesConfig:
         """
 
         return {section: settings.__dict__[section].__dict__ for section in settings.__dict__.keys() if
-                not section.startswith('__')}
+                not section.startswith('__') and settings.__dict__[section] is not None}

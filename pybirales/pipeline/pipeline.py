@@ -88,7 +88,6 @@ class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
         """
         This script runs the multi-pixel pipeline with debris detection enabled,
         using the specified CONFIGURATION.
-l
         :return:
         """
 
@@ -182,7 +181,8 @@ class StandAlonePipelineMangerBuilder(PipelineManagerBuilder):
             receiver = RawDataReader(settings.rawdatareader)
             self.manager.name += ' (Offline)'
         else:
-            receiver = Receiver(settings.receiver)
+            # receiver = Receiver(settings.receiver)
+            receiver = TPMReceiver(settings.tpm_receiver)
 
         beamformer = Beamformer(settings.beamformer, receiver.output_blob)
         pfb = PFB(settings.channeliser, beamformer.output_blob)

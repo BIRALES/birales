@@ -15,7 +15,7 @@ STATUS_MAP = {
 
 
 class BIRALESObservation(Document):
-    meta = {'allow_inheritance': True, 'abstract': True}
+    meta = {'allow_inheritance': True, 'abstract': True,  'collection': 'observation', }
 
     # _id = ObjectIdField(required=True, default=ObjectId, primary_key=True)
     name = StringField(required=True, max_length=200)
@@ -145,6 +145,8 @@ class SpaceDebrisTrack(DynamicDocument):
 
         if to_time:
             query &= Q(created_at__lte=to_time)
+
+        # query &= Q(terminated=True)
 
         return query_set.filter(query)
 

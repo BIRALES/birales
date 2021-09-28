@@ -374,7 +374,7 @@ class Tile(object):
             self.tpm.tpm_10g_core[core_id].set_src_port(src_port, arp_table_entry)
         if dst_port is not None:
             self.tpm.tpm_10g_core[core_id].set_dst_port(dst_port, arp_table_entry)
-            self.tpm.tpm_10g_core[core_id].set_rx_port_filter(dst_port)
+            # self.tpm.tpm_10g_core[core_id].set_rx_port_filter(dst_port)
 
     @connected
     def get_10g_core_configuration(self, core_id):
@@ -696,6 +696,13 @@ class Tile(object):
             pass
 
     @connected
+    def wait_pps_event2(self):
+        """ Wait for a PPS edge """
+        self['fpga1.pps_manager.pps_edge.req'] = 1
+        while self['fpga1.pps_manager.pps_edge.req'] == 1:
+            time.sleep(0.01)
+
+    @connected
     def check_pending_data_requests(self):
         """ Checks whether there are any pending data requests """
         return (self["fpga1.lmc_gen.request"] + self["fpga2.lmc_gen.request"]) > 0
@@ -711,19 +718,20 @@ class Tile(object):
     @connected
     def configure_channeliser(self):
         logging.info("Configuring channeliser...")
-        self['fpga1.dsp_regfile.adc_remap.enable'] = 1
-        self['fpga2.dsp_regfile.adc_remap.enable'] = 1
-        self['fpga1.dsp_regfile.adc_remap.lsb_discard'] = 6
-        self['fpga2.dsp_regfile.adc_remap.lsb_discard'] = 6
+        return
+        # self['fpga1.dsp_regfile.adc_remap.enable'] = 1
+        # self['fpga2.dsp_regfile.adc_remap.enable'] = 1
+        # self['fpga1.dsp_regfile.adc_remap.lsb_discard'] = 6
+        # self['fpga2.dsp_regfile.adc_remap.lsb_discard'] = 6
 
     @connected
     def set_channeliser_truncation(self, trunc):
         """ Set channeliser truncation scale """
         self['fpga1.dsp_regfile.channelizer_out_bit_round'] = trunc
         self['fpga2.dsp_regfile.channelizer_out_bit_round'] = trunc
-        trunc16 = 4
-        self['fpga1.dsp_regfile.channelizer_out_bit_round16'] = trunc16
-        self['fpga2.dsp_regfile.channelizer_out_bit_round16'] = trunc16
+        #trunc16 = 4
+        #self['fpga1.dsp_regfile.channelizer_out_bit_round16'] = trunc16
+        #self['fpga2.dsp_regfile.channelizer_out_bit_round16'] = trunc16
         return
 
     def set_fft_shift(self, shift):
@@ -1211,7 +1219,7 @@ class Tile(object):
 
     def set_fpga_sysref_gen(self, sysref_period):
         self['fpga1.pps_manager.sysref_gen_period'] = sysref_period - 1
-        self['fpga1.pps_manager.sysref_gen_duty'] = sysref_period / 2 - 1
+        self['fpga1.pps_manager.sysref_gen_duty'] = sysref_period // 2 - 1
         self['fpga1.pps_manager.sysref_gen.enable'] = 1
         self['fpga1.pps_manager.sysref_gen.spi_sync_enable'] = 1
         self['fpga1.pps_manager.sysref_gen.sysref_pol_invert'] = 0

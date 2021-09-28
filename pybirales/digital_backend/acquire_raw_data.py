@@ -172,7 +172,7 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
-    sock.bind(("10.0.10.200", 4660))
+    sock.bind(("10.0.10.201", 4660))
     sock.settimeout(1)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 2 * 1024 * 1024)
 
