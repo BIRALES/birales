@@ -4,7 +4,6 @@ import signal
 import sys
 
 from pybirales import settings
-from pybirales.listeners.listeners import NotificationsListener
 from pybirales.services.scheduler.exceptions import SchedulerException, NoObservationsQueuedException
 from pybirales.services.scheduler.scheduler import ObservationsScheduler
 
