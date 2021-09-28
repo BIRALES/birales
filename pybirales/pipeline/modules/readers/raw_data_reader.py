@@ -70,7 +70,7 @@ class RawDataReader(ProcessingModule):
 
         # Load the PKL file
         try:
-            self._config = pickle.load(open(self._filepath + config.config_ext, 'rb'))
+            self._config = pickle.load(open(self._filepath + config.config_ext, 'rb'), encoding='latin1')
 
             # Use the declination that is in the PKL file
             settings.beamformer.reference_declination = self._config['settings']['beamformer']['reference_declination']

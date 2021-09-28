@@ -24,7 +24,7 @@ def pipeline_status_worker(kill_pill):
 
     for item in pub_sub.listen():
         if item['type'] == 'message':
-            if item['data'] == 'KILL':
+            if item['data'] == b'KILL':
                 log.info('KILL received on #{}. Killing pipeline'.format(PIPELINE_CTL_CHL))
 
                 pub_sub.unsubscribe(PIPELINE_CTL_CHL)
@@ -167,7 +167,7 @@ class PipelineManager(object):
             stats.save(profiling_file_path, type='callgrind')
 
         # kill listener thread
-        log.debug('trying to kill pipeline %s', PIPELINE_CTL_CHL)
+        log.info('trying to kill pipeline %s', PIPELINE_CTL_CHL)
         broker.publish(PIPELINE_CTL_CHL, 'KILL')
 
     def is_module_stopped(self):

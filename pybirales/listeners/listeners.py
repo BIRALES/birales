@@ -6,7 +6,6 @@ import threading
 
 from slack import WebClient
 
-from pybirales.events.events import ObservationScheduledEvent
 from pybirales.repository.message_broker import RedisManager
 
 
@@ -43,7 +42,7 @@ class Listener(threading.Thread):
         self._pubsub.subscribe(self._channels[0])
 
         for item in self._pubsub.listen():
-            if item['data'] == 'KILL' or self._stop_event.is_set():
+            if item['data'] == b'KILL' or self._stop_event.is_set():
                 log.info('Listener, un-subscribed from channels: {}'.format(self.name, self._channels))
                 break
             else:
