@@ -1,4 +1,5 @@
 import ast
+import configparser
 import datetime
 import logging as log
 import logging.config as log_config
@@ -6,7 +7,6 @@ import os
 import re
 from logging.handlers import TimedRotatingFileHandler
 
-import configparser
 from mongoengine import connect
 
 from pybirales import settings
@@ -53,6 +53,8 @@ class BiralesConfig:
         if config_options:
             # Override the configuration with settings passed on in the config_options dictionary
             self.update_config(config_options)
+
+        self.db_connection = None
 
     def is_loaded(self):
         """
@@ -136,8 +138,7 @@ class BiralesConfig:
     def get(self, section, key):
         return self._parser.get(section, key)
 
-    @staticmethod
-    def _db_connect():
+    def _db_connect(self):
         """
         Connect to the database using the loaded settings file
 
@@ -145,14 +146,14 @@ class BiralesConfig:
         """
 
         if settings.database.authentication:
-            connect(
+            self.db_connection = connect(
                 db=settings.database.name,
                 username=settings.database.user,
                 password=settings.database.password,
                 port=settings.database.port,
                 host=settings.database.host)
         else:
-            connect(settings.database.host)
+            self.db_connection = connect(settings.database.host)
 
         log.info('Successfully connected to the {} database'.format(settings.database.name))
 

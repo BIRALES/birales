@@ -151,8 +151,8 @@ class PipelineManager(object):
             time.sleep(0.5)
 
             while not module.is_stopped:
-                #if a_threads := [t.getName() for t in threading.enumerate() if t.is_alive()]:
-                #    log.warning('Running threads: %s', ', '.join(a_threads))
+                if a_threads := [t.getName() for t in threading.enumerate() if t.is_alive()]:
+                    log.warning('Running threads: %s', ', '.join(a_threads))
                 log.warning(f"Killing {module.name}")
                 time.sleep(0.2)
 

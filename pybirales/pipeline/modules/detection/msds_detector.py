@@ -14,6 +14,7 @@ from pybirales.pipeline.modules.detection.msds.msds import *
 from pybirales.pipeline.modules.detection.util import *
 from pybirales.pipeline.modules.persisters.fits_persister import TLE_Target
 
+
 # global_process_pool = Pool(8)
 
 
@@ -178,8 +179,11 @@ class Detector(ProcessingModule):
         :return:
         """
         # if settings.detection.multi_proc:
+        log.info("In msds tear_down")
         self.pool.close()
+        log.info("after terminate")
         self.pool.join()
+        log.info("after join")
 
     def process(self, obs_info, input_data, output_data):
         """

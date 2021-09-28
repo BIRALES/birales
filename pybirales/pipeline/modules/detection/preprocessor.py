@@ -20,7 +20,7 @@ class PreProcessor(ProcessingModule):
 
         self._moving_avg_period = settings.detection.n_noise_samples
 
-        self._n_channels = 3758
+        self._n_channels = 3758  # new tpm
 
         self.channel_noise = None
 

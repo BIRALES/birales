@@ -78,7 +78,7 @@ class RawDataReader(ProcessingModule):
 
         except IOError:
             log.error('Config PKL file was not found in %s. Exiting.', self._filepath + config.config_ext)
-            raise BIRALESObservationException("Config PKL file was not found")
+            raise BIRALESObservationException(f"Config PKL file was not found in {self._filepath + config.config_ext}")
 
         self._raw_file_timerange_display(self._filepath, self._config['timestamp'])
 

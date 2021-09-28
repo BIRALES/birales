@@ -1,12 +1,8 @@
-import datetime
 import logging as log
 import threading
 from logging.config import dictConfig
 
-import time
 import dateutil.parser
-import numpy as np
-import pytz
 from flask import Flask, request
 from flask_socketio import SocketIO
 from mongoengine import connect
@@ -16,9 +12,9 @@ from pybirales.app.modules.events import events_page
 from pybirales.app.modules.modes import configurations_page
 from pybirales.app.modules.monitoring import monitoring_page
 from pybirales.app.modules.observations import observations_page
+from pybirales.base.helper import to_string
 from pybirales.repository.message_broker import pub_sub, broker
 from pybirales.repository.models import BeamCandidate, SpaceDebrisTrack
-from pybirales.base.helper import to_string
 
 DEBUG = True
 NOTIFICATIONS_CHL = b'notifications'
@@ -79,7 +75,7 @@ def pub_sub_listener():
     log.info('BIRALES app listening for notifications on #%s', NOTIFICATIONS_CHL)
     for message in pub_sub.listen():
         if message['channel'] in channels:
-            if message['data'] == 'KILL':
+            if message['data'] == b'KILL':
                 log.info('KILL command received for notifications listener')
                 pub_sub.unsubscribe(NOTIFICATIONS_CHL)
                 break
@@ -120,7 +116,7 @@ def system_listener():
     pub_sub.subscribe(BIRALES_STATUS_CHL)
     log.info('BIRALES app listening for system status messages on #%s', BIRALES_STATUS_CHL)
     for message in pub_sub.listen():
-        if message['data'] == 'KILL' and message['channel'] == BIRALES_STATUS_CHL:
+        if message['data'] == b'KILL' and message['channel'] == BIRALES_STATUS_CHL:
             log.info('KILL command received for system listener')
             pub_sub.unsubscribe(BIRALES_STATUS_CHL)
             break

@@ -110,7 +110,7 @@ class ObservationManager:
 
             # if settings.detection.save_candidates or settings.detection.save_tdm:
             #     self._post_process(observation)
-
+        # self.obs_config.db_disconnect()
         self.tear_down()
 
     def _post_process(self, observation):

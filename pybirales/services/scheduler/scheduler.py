@@ -65,7 +65,7 @@ class ObservationsScheduler:
         else:
             raise IncorrectScheduleFormat(schedule_file_path)
 
-    def _mock_obs(self):
+    def get_mock_obs(self):
         """
 
         :return:
@@ -186,6 +186,9 @@ class ObservationsScheduler:
     def _monitoring_message(self, now, pending_observations):
         if len(pending_observations) < 1:
             log.info('No queued observations.')
+
+            if a_threads := [t.getName() for t in threading.enumerate() if t.is_alive()]:
+                log.warning('Running threads: %s', ', '.join(a_threads))
         else:
             log.info('There are %s observation queued. Next observation: %s', len(pending_observations),
                      pending_observations[0].name)
@@ -200,7 +203,7 @@ class ObservationsScheduler:
         broker.publish(self.BIRALES_STATUS_CHL, json.dumps({
             'scheduler': {
                 'status': 'running',
-                'obs_thread_status': self._obs_thread.isAlive(),
+                'obs_thread_status': self._obs_thread.is_alive(),
                 'timestamp': now.isoformat('T'),
                 'next_update': (now + self.POLL_FREQ).isoformat('T'),
                 'dt': self.POLL_FREQ.seconds
