@@ -302,3 +302,59 @@ class ObservationsScheduler:
             log.warning('Observation %s was not added to the schedule', obs)
         else:
             return so
+
+
+if __name__ == '__main__':
+
+    CONFIG_ROOT = os.path.join(os.environ['HOME'], '.birales/configuration/')
+    DEFAULT_CONFIG = CONFIG_ROOT + 'birales.ini'
+    DETECTION_CONFIG = CONFIG_ROOT + 'detection_noraw_nopoint_new.ini'
+    date_str = '2021-10-07'
+    date_str += ' '
+    OBSERVATIONS = [['NORAD40699', date_str + '08:59:00', date_str + '09:03:00', 0.07],
+                    ['NORAD37782', date_str + '09:04:00', date_str + '09:09:00', 60.20],
+                    ['NORAD38771', date_str + '09:12:00', date_str + '09:18:00', 13.07],
+                    ['NORAD22626', date_str + '09:20:00', date_str + '09:32:00', 63.10],
+                    ['NORAD26536', date_str + '09:33:00', date_str + '09:37:00', 58.74],
+                    ['NORAD5560', date_str + '09:39:00', date_str + '09:44:00', 39.21],
+                    ['NORAD20443', date_str + '09:45:00', date_str + '09:51:00', 69.91],
+                    ['NORAD27421', date_str + '09:52:00', date_str + '09:58:00', 32.88],
+                    ['NORAD37387', date_str + '10:01:00', date_str + '10:14:00', 2.46],
+                    ['NORAD10967', date_str + '10:15:00', date_str + '10:28:00', 19.00],
+                    ['NORAD28651', date_str + '10:29:00', date_str + '10:32:00', 53.47],
+                    ['NORAD12443', date_str + '10:33:00', date_str + '10:37:00', 75.43],
+                    ['NORAD11288', date_str + '10:39:00', date_str + '10:46:00', 44.39],
+                    ['NORAD3530', date_str + '10:47:00', date_str + '11:00:00', 22.84]]
+
+    CONFIG = [os.path.join(os.environ['HOME'], '.birales/configuration/birales.ini')]
+
+    scheduler = ObservationsScheduler()
+    for obs in OBSERVATIONS:
+        name, date_start_str, date_end_str, declination = obs
+        pipeline = 'detection_pipeline'
+        config_file = [DEFAULT_CONFIG, DETECTION_CONFIG]
+
+        date_start = datetime.datetime.strptime(date_start_str, '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.utc)
+        date_end = datetime.datetime.strptime(date_end_str, '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.utc)
+
+        duration = (date_end - date_start).total_seconds()
+
+        config_parameters = {
+            "beamformer": {
+                "reference_declination": declination
+            },
+            "observation": {
+                "name": name,
+                "target_name": name
+            },
+            "start_time": date_start,
+            "duration": duration
+        }
+
+        so = ScheduledObservation(name=name,
+                                  pipeline_name=pipeline,
+                                  config_file=config_file,
+                                  config_parameters=config_parameters)
+        print(config_parameters)
+
+        scheduler._schedule.add(so)
