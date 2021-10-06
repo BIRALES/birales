@@ -17,6 +17,7 @@ from pybirales.services.scheduler.exceptions import IncorrectScheduleFormat, Inv
 from pybirales.services.scheduler.monitoring import obs_listener_worker
 from pybirales.services.scheduler.observation import ScheduledObservation, ScheduledCalibrationObservation
 from pybirales.services.scheduler.schedule import Schedule
+from pybirales.birales_config import BiralesConfig
 
 
 class ObservationsScheduler:
@@ -305,10 +306,9 @@ class ObservationsScheduler:
 
 
 if __name__ == '__main__':
-
     CONFIG_ROOT = os.path.join(os.environ['HOME'], '.birales/configuration/')
     DEFAULT_CONFIG = CONFIG_ROOT + 'birales.ini'
-    DETECTION_CONFIG = CONFIG_ROOT + 'detection_noraw_nopoint_new.ini'
+    DETECTION_CONFIG = CONFIG_ROOT + 'detection.ini'
     date_str = '2021-10-07'
     date_str += ' '
     OBSERVATIONS = [['NORAD40699', date_str + '08:59:00', date_str + '09:03:00', 0.07],
@@ -326,8 +326,8 @@ if __name__ == '__main__':
                     ['NORAD11288', date_str + '10:39:00', date_str + '10:46:00', 44.39],
                     ['NORAD3530', date_str + '10:47:00', date_str + '11:00:00', 22.84]]
 
-    CONFIG = [os.path.join(os.environ['HOME'], '.birales/configuration/birales.ini')]
-
+    config = BiralesConfig([DEFAULT_CONFIG], {})
+    config.load()
     scheduler = ObservationsScheduler()
     for obs in OBSERVATIONS:
         name, date_start_str, date_end_str, declination = obs
