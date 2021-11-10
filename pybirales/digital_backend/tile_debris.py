@@ -4,6 +4,7 @@ import os
 import socket
 import threading
 import time
+import datetime
 
 import numpy as np
 from pyfabil.base.definitions import *
@@ -794,16 +795,34 @@ class Tile(object):
 
     @connected
     def check_synchronization(self):
-        t0, t1, t2 = 0, 0, 1
-        while t0 != t2:
+
+        devices = ["fpga1", "fpga2"]
+
+        for n in range(5):
+            logging.info("Synchronising FPGA UTC time.")
+            self.wait_pps_event()
+            time.sleep(0.5)
+
+            t = int(time.time())
+            for f in devices:
+                self.tpm["%s.pps_manager.curr_time_write_val" % f] = t
+            # sync time write command
+            for f in devices:
+                self.tpm["%s.pps_manager.curr_time_cmd.wr_req" % f] = 0x1
+
+            self.wait_pps_event()
+            time.sleep(0.1)
             t0 = self.tpm["fpga1.pps_manager.curr_time_read_val"]
             t1 = self.tpm["fpga2.pps_manager.curr_time_read_val"]
-            t2 = self.tpm["fpga1.pps_manager.curr_time_read_val"]
 
-        fpga = "fpga1" if t0 > t1 else "fpga2"
-        for i in range(abs(t1 - t0)):
-            logging.debug("Decrementing %s by 1" % fpga)
-            self.tpm["%s.pps_manager.curr_time_cmd.down_req" % fpga] = 0x1
+            if t0 == t1:
+                return
+        logging.error("Not possible to synchronise FPGA UTC time!")
+
+    @connected
+    def check_server_time(self):
+        self.wait_pps_event()
+        print(datetime.datetime.now())
 
     @connected
     def check_fpga_synchronization(self):
