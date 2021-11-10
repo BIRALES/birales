@@ -822,7 +822,10 @@ class Tile(object):
     @connected
     def check_server_time(self):
         self.wait_pps_event()
-        print(datetime.datetime.now())
+        fpga_time = self.tpm["fpga1.pps_manager.curr_time_read_val"]
+        server_time = datetime.datetime.now()
+        print("Server Time: " + str(server_time.timestamp()))
+        print("FPGA Time: " + str(fpga_time))
 
     @connected
     def check_fpga_synchronization(self):
