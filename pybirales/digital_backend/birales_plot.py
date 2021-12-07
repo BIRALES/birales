@@ -130,7 +130,7 @@ class SpeadRx:
 
         if self.write_hdf5:
             _time = time.strftime("%Y%m%d_%H%M%S")
-            self.hdf5_channel = h5py.File('channel_data_' + _time + '.hdf5', 'a')
+            self.hdf5_channel = h5py.File('/storage/data/raw/channel_data_' + _time + '.hdf5', 'a')
 
         self.num = 0
         self.plot_init = 0
@@ -284,8 +284,8 @@ if __name__ == "__main__":
                       help="List of TPM inputs to be displayed (default: all)")
     parser.add_option("--tile", dest="tile", default=1, type=int,
                       help="Tile number to plot")
-    parser.add_option("--num", dest="num", default=1000, type=int,
-                      help="Number of acquisitions (def. 1000)")
+    parser.add_option("--num", dest="num", default=1000000, type=int,
+                      help="Number of acquisitions (def. 1000000)")
     parser.add_option("--nic", dest="nic", default="", type=str,
                       help="If given force to use this NIC")
     parser.add_option("--use_teng", action="store_true", dest="use_teng",
@@ -374,7 +374,7 @@ if __name__ == "__main__":
     asse_x = np.linspace(x1, x2, nfreq)
 
     if not conf.inputlist == "":
-        antenna_list = conf.inputlist.split(",")
+        antenna_list = [int(a) for a in conf.inputlist.split(",")]
     else:
         antenna_list = range(32)
 
@@ -391,7 +391,7 @@ if __name__ == "__main__":
         rows = int(np.ceil(np.sqrt(len(antenna_list))))
         cols = int(np.ceil(np.sqrt(len(antenna_list))))
     plt.ion()
-    gs = gridspec.GridSpec(rows, cols, wspace=0.6, hspace=1, top=0.9, bottom=0.09, left=0.08, right=0.96)
+    gs = gridspec.GridSpec(rows, cols, wspace=0.3, hspace=0.7, top=0.9, bottom=0.09, left=0.08, right=0.96)
     fig = plt.figure(figsize=(14, 9), facecolor='w')
     ax = []
     ax_lines = []
@@ -399,9 +399,9 @@ if __name__ == "__main__":
     ymin = int(conf.ylim.split(",")[0])
     ymax = int(conf.ylim.split(",")[1])
     #csfont = {'fontname': 'monospace', 'weight': 'bold'}
-    for i in antenna_list:
+    for i, ant in enumerate(antenna_list):
         ax += [fig.add_subplot(gs[i])]
-        ax[i].set_title("INPUT-%02d" % (i + 1), fontsize=10)
+        ax[i].set_title("INPUT-%02d" % ant, fontsize=10)
         ax[i].set_ylim(ymin, ymax)
         ax[i].set_xlim(x1, x2)
         ax[i].set_ylabel("dB", fontsize=7)
@@ -421,22 +421,24 @@ if __name__ == "__main__":
     fig.show()
 
     i = 0
-    while i < conf.num:
-        station.send_raw_data()
-        data = spead_rx_inst.get_raw_data()
-        #print("DATA LEN: %d" % len(data))
-        if not data == []:
-            #data = data[antenna_mapping, :, :].transpose((0, 1, 2))
-            #print("ANT LEN %d" % len(data[:, 0, 0]))
-            for ant in antenna_list:
-                spettro, power_rms, adu_rms = calcAVGSpectra(np.array(data[ant]), avg)
-                ax_lines[ant].set_ydata(spettro[3:])
-                ax_annotations[ant].set_text("%3.1f dBm" % power_rms)
-            fig.canvas.draw()
-            fig.canvas.flush_events()
-        i = i + 1
-    del station
-    logging.info("End of process.")
+    try:
+        while True: #i < conf.num:
+            station.send_raw_data()
+            data = spead_rx_inst.get_raw_data()
+            #print("DATA LEN: %d" % len(data))
+            if not data == []:
+                #data = data[antenna_mapping, :, :].transpose((0, 1, 2))
+                #print("ANT LEN %d" % len(data[:, 0, 0]))
+                for n, ant in enumerate(antenna_list):
+                    spettro, power_rms, adu_rms = calcAVGSpectra(np.array(data[ant-1]), avg)
+                    ax_lines[n].set_ydata(spettro[3:])
+                    ax_annotations[n].set_text("%3.1f dBm" % power_rms)
+                fig.canvas.draw()
+                fig.canvas.flush_events()
+            i = i + 1
+    except KeyboardInterrupt:
+        del station
+        logging.info("End of process.")
 
 
 

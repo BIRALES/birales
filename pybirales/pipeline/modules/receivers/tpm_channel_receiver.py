@@ -113,7 +113,7 @@ class TPMReceiver(Generator):
             output_data = self.request_output_blob()
 
             # Get buffer
-            data = None
+            data, timestamp = None, None
             while not self._stop_module.is_set() and data is None:
                 data, timestamp = self._tpm_receiver.read_buffer()
 

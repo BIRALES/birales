@@ -4,6 +4,7 @@ function TrackDopplerProfilePlotter(selector) {
     this.name = 'Doppler Profile';
     this.y_label = 'Doppler Shift (Hz)';
     this.x_label = 'Timestamp (UTC)';
+    //this.x_label = 'Timestamp (LOCAL TIME)';
     this.api_entry = '/api/live/data';
     this.color_map = colorbrewer['Set3'][12];
 
