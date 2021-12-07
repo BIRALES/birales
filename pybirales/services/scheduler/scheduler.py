@@ -309,22 +309,81 @@ if __name__ == '__main__':
     CONFIG_ROOT = os.path.join(os.environ['HOME'], '.birales/configuration/')
     DEFAULT_CONFIG = CONFIG_ROOT + 'birales.ini'
     DETECTION_CONFIG = CONFIG_ROOT + 'detection.ini'
-    date_str = '2021-10-07'
+    date_str = '2021-11-04'
     date_str += ' '
-    OBSERVATIONS = [['NORAD40699', date_str + '08:59:00', date_str + '09:03:00', 0.07],
-                    ['NORAD37782', date_str + '09:04:00', date_str + '09:09:00', 60.20],
-                    ['NORAD38771', date_str + '09:12:00', date_str + '09:18:00', 13.07],
-                    ['NORAD22626', date_str + '09:20:00', date_str + '09:32:00', 63.10],
-                    ['NORAD26536', date_str + '09:33:00', date_str + '09:37:00', 58.74],
-                    ['NORAD5560', date_str + '09:39:00', date_str + '09:44:00', 39.21],
-                    ['NORAD20443', date_str + '09:45:00', date_str + '09:51:00', 69.91],
-                    ['NORAD27421', date_str + '09:52:00', date_str + '09:58:00', 32.88],
-                    ['NORAD37387', date_str + '10:01:00', date_str + '10:14:00', 2.46],
-                    ['NORAD10967', date_str + '10:15:00', date_str + '10:28:00', 19.00],
-                    ['NORAD28651', date_str + '10:29:00', date_str + '10:32:00', 53.47],
-                    ['NORAD12443', date_str + '10:33:00', date_str + '10:37:00', 75.43],
-                    ['NORAD11288', date_str + '10:39:00', date_str + '10:46:00', 44.39],
-                    ['NORAD3530', date_str + '10:47:00', date_str + '11:00:00', 22.84]]
+    # OBSERVATIONS = [['NORAD40699', date_str + '08:59:00', date_str + '09:03:00', 0.07],
+    #                 ['NORAD37782', date_str + '09:04:00', date_str + '09:09:00', 60.20],
+    #                 ['NORAD38771', date_str + '09:12:00', date_str + '09:18:00', 13.07],
+    #                 ['NORAD22626', date_str + '09:20:00', date_str + '09:32:00', 63.10],
+    #                 ['NORAD26536', date_str + '09:33:00', date_str + '09:37:00', 58.74],
+    #                 ['NORAD5560', date_str + '09:39:00', date_str + '09:44:00', 39.21],
+    #                 ['NORAD20443', date_str + '09:45:00', date_str + '09:51:00', 69.91],
+    #                 ['NORAD27421', date_str + '09:52:00', date_str + '09:58:00', 32.88],
+    #                 ['NORAD37387', date_str + '10:01:00', date_str + '10:14:00', 2.46],
+    #                 ['NORAD10967', date_str + '10:15:00', date_str + '10:28:00', 19.00],
+    #                 ['NORAD28651', date_str + '10:29:00', date_str + '10:32:00', 53.47],
+    #                 ['NORAD12443', date_str + '10:33:00', date_str + '10:37:00', 75.43],
+    #                 ['NORAD11288', date_str + '10:39:00', date_str + '10:46:00', 44.39],
+    #                 ['NORAD3530', date_str + '10:47:00', date_str + '11:00:00', 22.84]]
+
+    # OBSERVATIONS = [['NORAD45389', date_str + '18:00:30', date_str + '18:03:30', 4.07],
+    #                  ['NORAD46567', date_str + '18:06:50', date_str + '18:10:50', 49.73],
+    #                  ['NORAD46589', date_str + '18:13:29', date_str + '18:16:29', 41.42],
+    #                  ['NORAD44499', date_str + '18:18:37', date_str + '18:21:37', 50.77],
+    #                  ['NORAD48097', date_str + '18:24:00', date_str + '18:27:00', -0.21],
+    #                  ['NORAD29252', date_str + '18:29:36', date_str + '18:31:36', 47.82],
+    #                  ['NORAD45099', date_str + '18:34:06', date_str + '18:37:06', 50.34],
+    #                  ['NORAD48115', date_str + '18:38:46', date_str + '18:49:46', 21.01],
+    #                  ['NORAD47832', date_str + '18:51:53', date_str + '18:54:53', 47.57],
+    #                  ['NORAD45114', date_str + '18:56:55', date_str + '18:59:55', 1.65],
+    #                  ['NORAD45377', date_str + '19:01:23', date_str + '19:03:23', 30.14],
+    #                  ['NORAD42760', date_str + '19:06:54', date_str + '19:09:54', 16.27],
+    #                  ['NORAD48014', date_str + '19:12:53', date_str + '19:15:53', 2.93],
+    #                  ['NORAD42759', date_str + '19:19:26', date_str + '19:22:26', 15.57],
+    #                  ['NORAD48134', date_str + '19:24:51', date_str + '19:26:51', 24.42],
+    #                  ['NORAD42790', date_str + '19:29:43', date_str + '19:32:43', 72.34],
+    #                  ['NORAD47828', date_str + '19:34:08', date_str + '19:36:08', 50.18],
+    #                  ['NORAD45072', date_str + '19:39:40', date_str + '19:42:40', 30.56],
+    #                  ['NORAD47876', date_str + '19:46:12', date_str + '19:49:12', 11.80],
+    #                  ['NORAD48130', date_str + '19:51:31', date_str + '20:00:31', 13.19]]
+
+    # OBSERVATIONS = [['NORAD41039', 	date_str + '19:00:35', 	date_str + '19:06:35', 9.45],
+    #                 ['NORAD39450', 	date_str + '19:07:32', 	date_str + '19:09:32', 16.60],
+    #                 ['NORAD17973', 	date_str + '19:10:01', 	date_str + '19:19:01', 33.75],
+    #                 ['NORAD10962', 	date_str + '19:20:40', 	date_str + '19:36:40', 17.27],
+    #                 ['NORAD23704', 	date_str + '19:38:51', 	date_str + '19:44:51', 36.15],
+    #                 ['NORAD11870', 	date_str + '19:45:22', 	date_str + '19:51:22', 21.73],
+    #                 ['NORAD23343', 	date_str + '19:53:03', 	date_str + '19:55:03', 6.09],
+    #                 ['NORAD44835', 	date_str + '19:58:30', 	date_str + '20:01:30', 77.38],
+    #                 ['NORAD17129', 	date_str + '20:03:29', 	date_str + '20:12:29', 37.63],
+    #                 ['NORAD41728', 	date_str + '20:13:45', 	date_str + '20:20:45', 30.77],
+    #                 ['NORAD28649', 	date_str + '20:22:07', 	date_str + '20:31:07', 53.28],
+    #                 ['NORAD41335', 	date_str + '20:33:18', 	date_str + '20:35:18', 77.03],
+    #                 ['NORAD36416', 	date_str + '20:37:29', 	date_str + '20:43:29', 49.98],
+    #                 ['NORAD38347', 	date_str + '20:45:40', 	date_str + '20:47:40', 42.43],
+    #                 ['NORAD33066', 	date_str + '20:49:38', 	date_str + '21:00:38', 69.67]]
+
+    # OBSERVATIONS = [['NORAD40699', date_str + '20:00:41', date_str + '20:06:00', 11.34],
+    #                 ['NORAD44835', date_str + '20:07:30', date_str + '20:11:00', -4.65],
+    #                 ['NORAD17129', date_str + '20:12:42', date_str + '20:17:00', -1.23],
+    #                 ['NORAD44797', date_str + '20:18:21', date_str + '20:24:00', 43.48],
+    #                 ['NORAD10095', date_str + '20:25:24', date_str + '20:27:24', 66.59],
+    #                 ['NORAD44813', date_str + '20:31:27', date_str + '20:37:27', 2.03],
+    #                 ['NORAD9662',  date_str + '20:40:59', date_str + '20:42:50', 65.42],
+    #                 ['NORAD41621', date_str + '20:43:13', date_str + '20:45:00', 44.05],
+    #                 ['NORAD15595', date_str + '20:46:01', date_str + '20:48:01', 28.05],
+    #                 ['NORAD17912', date_str + '20:49:08', date_str + '20:51:08', 54.85],
+    #                 ['NORAD41635', date_str + '20:53:18', date_str + '21:00:18', 5.23]]
+
+    OBSERVATIONS = [['NORAD40420', date_str + '15:59:02', date_str + '16:01:02', 51.50],
+                    ['NORAD17974', date_str + '16:03:01', date_str + '16:05:01', 33.5],
+                    ['NORAD447', date_str + '16:07:40', date_str + '16:19:40', 42.12],
+                    ['NORAD21263', date_str + '16:21:34', date_str + '16:25:34', 31.53],
+                    ['NORAD40358', date_str + '16:28:51', date_str + '16:32:51', 57.15],
+                    ['NORAD11788', date_str + '16:34:10', date_str + '16:36:10', 51.13],
+                    ['NORAD36605', date_str + '16:38:41', date_str + '16:44:41', 66.28],
+                    ['NORAD37673', date_str + '16:46:51', date_str + '16:48:51', 33.75],
+                    ['NORAD15099', date_str + '16:50:47', date_str + '16:59:47', 28.64]]
 
     config = BiralesConfig([DEFAULT_CONFIG], {})
     config.load()

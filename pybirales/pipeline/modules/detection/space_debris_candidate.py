@@ -245,27 +245,24 @@ class SpaceDebrisTrack:
 
         if is_valid:
             self._update(new_data)
-        # else:
-        #     self.cancel()
 
         return is_valid
-        # else:
-        #     # If fitting failed, track data remains unchanged, and raise an exception
-        #     raise DetectionClusterIsNotValid(cluster_df)
 
     def is_valid(self):
         """
         The candidate is not valid if size is too small or the number of activate beams is less than 2
         :return:
         """
+        min_beams = 1
+        unq_samples = 5
+        m_score = 0.15
 
         # Check that the number of beams activated is less than 2
-
-        if self.data['beam_id'].unique().size < 2:
+        if self.data['beam_id'].unique().size < min_beams:
             return False, 'Not enough unique beams {}'.format(id(self) % 1000)
 
         # Check that the candidate has the minimum number of unique channel and time data points
-        if self.data['channel'].unique().size < 5 or self.data['time'].unique().size < 5:
+        if self.data['channel'].unique().size < unq_samples or self.data['time'].unique().size < unq_samples:
             return False, 'Not enough unique samples {}'.format(id(self) % 1000)
 
         if not np.abs(self.r_value) >= settings.detection.linearity_thold:
@@ -275,7 +272,7 @@ class SpaceDebrisTrack:
         if not g_thold[0] >= self.ref_data['gradient'] >= g_thold[1]:
             return False, 'Gradient is not within valid range {}'.format(id(self) % 1000)
 
-        if missing_score(self.data['time_sample']) > 0.25:
+        if missing_score(self.data['time_sample']) > m_score:
             return False, 'High missing score {:0.3f} {}'.format(missing_score(self.data['time_sample']),
                                                                  id(self) % 1000)
 

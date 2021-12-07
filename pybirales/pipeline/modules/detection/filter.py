@@ -205,8 +205,8 @@ class Filter(ProcessingModule):
 
         # For MSDS
         self._filters = [
-            RemoveTransmitterChannelFilter(),
-            SigmaClipFilter(),
+            # RemoveTransmitterChannelFilter(),
+            TriangleFilter(),
             PepperNoiseFilter(),
         ]
 

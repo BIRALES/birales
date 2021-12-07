@@ -32,19 +32,19 @@ def apply_doppler_mask(doppler_mask, channels, doppler_range, obs_info):
 
         doppler_mask = np.bitwise_and(channels < b, channels > a)
 
-        print(f"Channel start: {a} Channel end: {b}. BW: {obs_info['channel_bandwidth']}, NChans: {obs_info['nchans']},"
+        log.info(f"Channel start: {a} Channel end: {b}. BW: {obs_info['channel_bandwidth']}, NChans: {obs_info['nchans']},"
               f" SCW: {obs_info['start_center_frequency']}")
         # print b
-        # print(len(channels))
+        print(len(channels))
         # print np.argmin(channels < b)
         # print np.argmax(channels > a)
         # print doppler_range
         # print channels[2392], channels[6502]
 
-        # print "tx is at:", np.argmin(channels <= obs_info['transmitter_frequency'])
-        # print "tx is at:", np.argmax(channels <= obs_info['transmitter_frequency'])
-        # print "tx is at:", np.argmin(channels >= obs_info['transmitter_frequency'])
-        # print "tx is at:", np.argmax(channels >= obs_info['transmitter_frequency'])
+        print("tx is at:", np.argmin(channels <= obs_info['transmitter_frequency']))
+        print("tx is at:", np.argmax(channels <= obs_info['transmitter_frequency']))
+        print("tx is at:", np.argmin(channels >= obs_info['transmitter_frequency']))
+        print("tx is at:", np.argmax(channels >= obs_info['transmitter_frequency']))
 
         channels = channels[doppler_mask]
 

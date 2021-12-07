@@ -3,7 +3,7 @@ function TrackSNRProfilePlotter(selector) {
     this.title = 'Track';
     this.name = 'SNR Profile';
     this.x_label = 'Timestamp (UTC)';
-    this.y_label = 'SNR (dBHz)';
+    this.y_label = 'SNR';
     this.api_entry = '/api/live/data';
     this.color_map = colorbrewer['Set3'][12];
 
