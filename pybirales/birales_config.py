@@ -128,7 +128,7 @@ class BiralesConfig:
 
         log_path = os.path.join(directory, observation_name + '.log')
 
-        handler = TimedRotatingFileHandler(log_path, when="h", interval=1, backupCount=5, utc=True)
+        handler = TimedRotatingFileHandler(log_path, when="h", interval=1, backupCount=0, utc=True)
         formatter = log.Formatter(self._parser.get('formatter_formatter', 'format'))
         handler.setFormatter(formatter)
         log.getLogger().addHandler(handler)
