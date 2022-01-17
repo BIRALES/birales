@@ -28,6 +28,7 @@
                                 <th>Type</th>
                                 <th>Date (UTC)</th>
                                 <th>Status</th>
+                                <th>Tracks</th>
                                 <th>Actions</th>
                             </tr>
                             </thead>
@@ -64,6 +65,7 @@
                                             <span class="label label-danger">{{ observation.status }}</span>
                                         {% endif %}
                                     </td>
+                                    <td><span class="badge badge-secondary">{{ observation.n_tracks() }}</span></td>
                                     <td>
                                         {% if observation.type == 'observation' %}
                                             <a href="{{ url_for('observations_page.view', observation_id=observation.id) }}"

@@ -117,6 +117,9 @@ class Observation(BIRALESObservation):
             'config': config_files
         }
 
+    def n_tracks(self):
+        return len(SpaceDebrisTrack.get(observation_id=self.id))
+
 
 class SpaceDebrisTrack(DynamicDocument):
     _id = ObjectIdField(required=True, default=ObjectId, primary_key=True)
