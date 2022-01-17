@@ -255,7 +255,11 @@ class SpaceDebrisTrack:
         """
         min_beams = 1
         unq_samples = 5
-        m_score = 0.15
+        m_score = 0.25
+
+        # Never delete an object that was detected a minimum number of beams
+        if self.data['beam_id'].unique().size > 5:
+            return True, None
 
         # Check that the number of beams activated is less than 2
         if self.data['beam_id'].unique().size < min_beams:
