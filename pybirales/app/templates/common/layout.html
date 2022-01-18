@@ -51,7 +51,7 @@
         <div class="sidebar-wrapper">
             <div class="logo">
                 <a href="/" class="simple-text">
-                    <strong>BIRALES_TPM_1N</strong>
+                    <strong id="server-name">BIRALES</strong>
                 </a>
             </div>
 
@@ -178,6 +178,15 @@
             let birales_unavailable_overlay = $('#birales-not-available-container');
             let observation_running = false; // A flag that is flipped when an observation is running
 
+            $.ajax({
+                url: '/api/server',
+                method: "POST",
+                timeout: 8000,
+            }).done(function (response) {
+                $('#server-name').html(response).fadeIn();
+            }).fail(function (error) {
+                log.error(error)
+            });
 
             function events_polling(last_updated) {
 
@@ -222,10 +231,6 @@
 
             // Poll for newar events
             events_polling(new Date());
-
-
-            {#Giving broken pipe errors#}
-
 
             socket.on('connect', function () {
                 console.log('connected to server');
