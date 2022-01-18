@@ -80,7 +80,7 @@ TrackDopplerProfilePlotter.prototype = {
             let tx = track['tx'];
             $.each(track['data']['channel'], function (i) {
                 track_data.push({
-                    x: moment.utc(track['data']['time'][i]),
+                    x: moment.utc(track['data']['time'][i]).format('YYYY-MM-DDTHH:mm:ss'),
                     y: (track['data']['channel'][i] - tx) * 1e6
                 })
             });
