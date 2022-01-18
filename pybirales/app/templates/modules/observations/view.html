@@ -9,7 +9,6 @@
             <div class="col-md-3">
                 <div class="card card-user">
                     <div class="image">
-                        <img src="{{ url_for('static', filename='themes/lbd/assets/img/obs_bkg.png') }}">
                     </div>
                     <div class="content">
                         <div class="author">
@@ -79,25 +78,11 @@
                         </div>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-lg-12">
-                        <div class="card">
-                            <div class="header">
-                                <h5 class="title">Tail log file</h5>
-                            </div>
-                            <div class="content">
-                                <p id="log-area"></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
                 <div class="card card-plain" style="display: none" id="no-detections-container">
                     {#                    <div class="content">#}
                     {#                        No detections were made for this observation :(#}
                     {#                    </div>#}
                 </div>
-
-
             </div>
         </div>
     </div>
@@ -123,16 +108,16 @@
             snr_plotter.update(observation_id, undefined, undefined);
 
 
-            function poll_log_changes() {
-                if (observation_id !== undefined) {
-                    $.get(observation_id + '/logs/tail', function (data) {
-                        log_area.html(data);
-                        setTimeout(poll_log_changes, 10000);
-                    });
-                }
-            }
-
-            poll_log_changes();
+            // function poll_log_changes() {
+            //     if (observation_id !== undefined) {
+            //         $.get(observation_id + '/logs/tail', function (data) {
+            //             log_area.html(data);
+            //             setTimeout(poll_log_changes, 10000);
+            //         });
+            //     }
+            // }
+            //
+            // poll_log_changes();
 
             function update(track_id, detection_number) {
                 $.ajax({

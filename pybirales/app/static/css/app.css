@@ -268,3 +268,6 @@ body > .navbar-collapse[data-color="blue"]:after {
 /*.main-panel{*/
     /*overflow-y: hidden;*/
 /*}*/
+.card-user .image{
+background-color: black;
+}
