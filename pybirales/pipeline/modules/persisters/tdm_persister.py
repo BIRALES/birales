@@ -22,7 +22,7 @@ class TDMPersister(ProcessingModule):
         self._created_date = datetime.utcnow()
         self._created_date_str = '{:%Y%m%d}'.format(self._created_date)
 
-        self._filename_mask = 'BIRALES_OUT_{:%Y%m%d}_{:0>3}.tdm'
+        self._filename_mask = 'BIRALES_OUT_{:%Y%m%d%H%M%S}.tdm'
         self._start_time = '{}_{:%H%M%S}'.format(settings.observation.name, self._created_date)
 
         self._out_dir = os.path.join(os.environ['HOME'], '.birales/tdm/out', self._created_date_str, self._start_time)
@@ -55,7 +55,7 @@ class TDMPersister(ProcessingModule):
         :param detection_num:
         :return:
         """
-        return os.path.join(self._out_dir, self._filename_mask.format(min(sd_track.data['time']), detection_num))
+        return os.path.join(self._out_dir, self._filename_mask.format(min(sd_track.data['time'])))
 
     def generate_output_blob(self):
         """

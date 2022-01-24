@@ -33,7 +33,7 @@ class TDMPersister:
 
         self._template_dir = os.path.dirname(__file__)
 
-        self._filename_mask = 'BIRALES_OUT_{:%Y%m%d}_{:0>3}.tdm'
+        self._filename_mask = 'BIRALES_OUT_{:%Y%m%d%H%M%S}.tdm'
 
         self._template_filepath = 'input_template.tdm'
         self._template = Environment(loader=FileSystemLoader(self._template_dir)).get_template(self._template_filepath)
@@ -66,7 +66,7 @@ class TDMPersister:
 
         out_dir = self._create_out_dir(out_dir)
 
-        return os.path.join(out_dir, self._filename_mask.format(min(sd_track.data['time']), detection_num))
+        return os.path.join(out_dir, self._filename_mask.format(min(sd_track.data['time'])))
 
     def _get_debug_filename(self, obs_name, detection_num):
         """

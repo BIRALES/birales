@@ -48,7 +48,7 @@ class Writer:
         :param detection_num:
         :return:
         """
-        return os.path.join(self._out_dir, self._filename_mask.format(min(sd_track.data['time']), detection_num))
+        return os.path.join(self._out_dir, self._filename_mask.format(min(sd_track.data['time'])))
 
     @abstractmethod
     def write(self, observation, sd_track, detection_num):
@@ -73,7 +73,7 @@ class DebugCandidatesWriter(Writer):
         """
         Writer.__init__(self)
 
-        self._filename_mask = 'BIRALES_OUT_{:%Y%m%d}_{:0>3}.csv'
+        self._filename_mask = 'BIRALES_OUT_{:%Y%m%d%H%M%S}.csv'
         self._out_dir = os.path.join(os.environ['HOME'], '.birales/debug/detection', self._created_date_str)
 
         self._create_out_dir()
@@ -105,7 +105,7 @@ class TDMWriter(Writer):
         """
         Writer.__init__(self)
 
-        self._filename_mask = 'BIRALES_OUT_{:%Y%m%d}_{:0>3}.tdm'
+        self._filename_mask = 'BIRALES_OUT_{:%Y%m%d%H%M%S}.tdm'
         self._out_dir = os.path.join(os.environ['HOME'], '.birales/tdm/out', self._created_date_str)
         self._template_filepath = 'input_template.tdm'
         self._template = Environment(loader=FileSystemLoader(self._template_dir)).get_template(self._template_filepath)
