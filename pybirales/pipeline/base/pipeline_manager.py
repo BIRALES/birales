@@ -6,7 +6,7 @@ import threading
 import time
 from threading import Event
 
-import yappi as profiler
+# import yappi as profiler
 from matplotlib import pyplot as plt
 
 from pybirales import settings
@@ -110,8 +110,8 @@ class PipelineManager(object):
         try:
             logging.info("PyBIRALES: Starting")
 
-            if settings.manager.profile:
-                profiler.start()
+            # if settings.manager.profile:
+            #     profiler.start()
 
             # Start all modules
             for module in self._modules:
@@ -158,13 +158,13 @@ class PipelineManager(object):
 
         log.info('Pipeline Manager stopped')
 
-        if settings.manager.profile:
-            profiler.stop()
-            stats = profiler.get_func_stats()
-            profiling_file_path = settings.manager.profiler_file_path + '_{:%Y%m%d_%H:%M}.stats'.format(
-                datetime.datetime.utcnow())
-            log.info('Profiling stopped. Dumping profiling statistics to %s', profiling_file_path)
-            stats.save(profiling_file_path, type='callgrind')
+        # if settings.manager.profile:
+        #     profiler.stop()
+        #     stats = profiler.get_func_stats()
+        #     profiling_file_path = settings.manager.profiler_file_path + '_{:%Y%m%d_%H:%M}.stats'.format(
+        #         datetime.datetime.utcnow())
+        #     log.info('Profiling stopped. Dumping profiling statistics to %s', profiling_file_path)
+        #     stats.save(profiling_file_path, type='callgrind')
 
         # kill listener thread
         log.info('trying to kill pipeline %s', PIPELINE_CTL_CHL)
