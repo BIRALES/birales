@@ -21,7 +21,6 @@ terminator = None
 manager = None
 calibration = None
 database = None
-instrument = None
 logger_root = None
 fits_persister = None
 scheduler = None
@@ -31,6 +30,10 @@ feng_configuration = None
 generator = None
 rso_generator = None
 tpm_receiver = None
+
+
+class instrument:
+    name_prefix = '1N'
 
 
 class receiver:

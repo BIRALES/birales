@@ -33,7 +33,7 @@ class TDMPersister:
 
         self._template_dir = os.path.dirname(__file__)
 
-        self._filename_mask = 'BIRALES_OUT_{:%Y%m%d%H%M%S}.tdm'
+        self._filename_mask = settings.instrument.name_prefix + '_BIRALES_OUT_{:%Y%m%d%H%M%S}.tdm'
 
         self._template_filepath = 'input_template.tdm'
         self._template = Environment(loader=FileSystemLoader(self._template_dir)).get_template(self._template_filepath)
