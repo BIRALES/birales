@@ -22,7 +22,7 @@ class TDMPersister(ProcessingModule):
         self._created_date = datetime.utcnow()
         self._created_date_str = '{:%Y%m%d}'.format(self._created_date)
 
-        self._filename_mask = settings.instrument.name_prefix + '_BIRALES_OUT_{:%Y%m%d%H%M%S}.tdm'
+        self._filename_mask = settings.instrument.name_prefix + '_BIRALES_OUT_{:%Y%m%dT%H%M%S}.tdm'
         self._start_time = '{}_{:%H%M%S}'.format(settings.observation.name, self._created_date)
 
         self._out_dir = os.path.join(os.environ['HOME'], '.birales/tdm/out', self._created_date_str, self._start_time)
