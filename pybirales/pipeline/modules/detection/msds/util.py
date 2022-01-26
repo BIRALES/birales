@@ -218,5 +218,5 @@ def is_valid(cluster, r_thold=-0.98, min_span_thold=1, group=-1):
 
 
 def missing_score(param):
-    missing = np.setxor1d(np.arange(min(param), max(param)), param)
+    missing = np.setxor1d(np.arange(min(param), max(param) + 1, dtype=int), param)
     return len(missing) / float(len(param))

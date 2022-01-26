@@ -15,10 +15,21 @@ MIN_IR = 0.001
 # MIN_R = -2901 * 0.10485 / 9.5367  # (min gradient / (channel-bandwidth)) * sampling_rate
 # MIN_R *= 1.1  # buffer
 
-MIN_R = -291 * 0.10485 / 9.5367  # (min gradient / (channel-bandwidth)) * sampling_rate
+# MIN_R = -291 * 0.10485 / 9.5367  # (min gradient / (channel-bandwidth)) * sampling_rate
+# MIN_R *= 1.1  # buffer
+#
+# MAX_R = 1.1 * -57 * 0.10485 / 9.5367
+
+# sampling_time =  9.5367 # seconds
+# channel_bandwidth = 0.10485 # Hz
+
+sampling_time = 0.0958698057142857  # seconds
+channel_bandwidth = 10.43081283569336  # Hz
+
+MIN_R = -291 * sampling_time / channel_bandwidth  # (min gradient / (channel-bandwidth)) * sampling_rate
 MIN_R *= 1.1  # buffer
 
-MAX_R = 1.1 * -57 * 0.10485 / 9.5367
+MAX_R = 1.1 * -57 * sampling_time / channel_bandwidth
 
 
 # this does not include SNR in the diff calc
@@ -96,18 +107,12 @@ def fclusterdata(X, threshold, criterion, min_r=-1e9, check_grad=False, cluster_
 # @timeit
 # @profile
 def h_cluster_leaves(leaves, distance_thold):
-    X = np.vstack(
-        [(cluster, cluster_id, grad2(cluster, ratio),
+    a = [(cluster, cluster_id, grad2(cluster, ratio),
           np.average(cluster[:, 1], weights=cluster[:, 2]),
           np.average(cluster[:, 0], weights=cluster[:, 2])) for
          (cluster, cluster_id, ratio, bbox) in
-         leaves])
-
-    # X = np.vstack(
-    #     [(cluster, cluster_id, grad2(cluster), np.mean(cluster[:, 1]), np.mean(cluster[:, 0]))
-    #      for
-    #      (cluster, cluster_id, ratio, bbox) in
-    #      leaves])
+         leaves]
+    X = np.vstack(np.array(a, dtype=object))
 
     if len(leaves) == 1:
         return np.append(X, np.array([[0]]), axis=1)
@@ -117,7 +122,7 @@ def h_cluster_leaves(leaves, distance_thold):
                                   check_grad=True)
 
     u, i, c = np.unique(cluster_labels, return_counts=True, return_index=True)
-    min_labels = 3  # was 2
+    min_labels = 2  # was 2
     unique_groups = u[c >= min_labels].astype(int)
 
     f_groups = []
@@ -218,7 +223,7 @@ def linear_cluster(leave_pair):
     n_data = []
     for g in u_groups:
         c = data[np.where(labels == g)]
-        if missing_score(c[:, 1]) > 0.5:
+        if missing_score(c[:, 1]) > 0.5 and missing_score(c[:, 0]) > 0.5:
             continue
 
         ratio = __ir(c, min_n=20, i=leaf_id)
@@ -239,7 +244,7 @@ def process_leaves(leaves, debug=False):
 
 # @timeit
 def estimate_leave_eps(positives):
-    bboxes = np.vstack(np.array(positives)[:, 3])
+    bboxes = np.vstack(np.array(positives, dtype=object)[:, 3])
     a = bboxes[:, 0] - bboxes[:, 1]
     b = bboxes[:, 2] - bboxes[:, 3]
     return np.median(np.sqrt(a ** 2 + b ** 2)) * 1.5
@@ -286,9 +291,10 @@ def is_valid(candidate, g, beam_id):
     if len(candidate) < 1:
         return False
 
-    score = missing_score(candidate[:, 1])
-    if score > 0.5:
-        log.debug("Candidate {}, dropped since missing score is high ({:0.3f})".format(g, score))
+    c_score = missing_score(candidate[:, 1])
+    t_score = missing_score(candidate[:, 0])
+    if c_score > 0.5 and t_score > 0.5:
+        log.debug(f"Candidate {g}, dropped since missing score is high (c={c_score:0.3f}, t={t_score:0.3f})")
         return False
 
     r_value, p = pearsonr(candidate[:, 1], candidate[:, 0])
@@ -300,7 +306,9 @@ def is_valid(candidate, g, beam_id):
         log.debug("Candidate {}, dropped since p-value is not low enough ({:0.3f})".format(g, p))
         return False
 
-    log.debug("Candidate {} is Valid with: {:0.3f} {:0.3f} {:0.3f} {}".format(g, score, r_value, p, len(candidate)))
+    log.debug(
+        "Candidate {} is Valid with: cs={:0.3f} ts={:0.3f} r={:0.3f} p={} n={}".format(g, c_score, t_score, r_value, p,
+                                                                                       len(candidate)))
 
     return add_group(add_group(candidate, g), beam_id)
 
