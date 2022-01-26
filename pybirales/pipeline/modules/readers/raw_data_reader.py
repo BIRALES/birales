@@ -51,6 +51,7 @@ class RawDataReader(ProcessingModule):
         self._read_count = 20  # norad 1328 on 03/10/2019 @ 06:27
 
         self._read_count = 48
+        self._read_count = 58   # 'Norad41240', transit_time='16 DEC 2021 16:15:18.01', doppler=-8500
 
         self._metrics_poll_freq = 10
         self._metric_channel = 'antenna_metrics'
