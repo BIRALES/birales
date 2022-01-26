@@ -12,10 +12,13 @@ from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 def triangle_filter(input_data, obs_info):
     for b in range(0, input_data.shape[0]):
         beam_data = input_data[b, ...]
-        local_thresh = threshold_triangle(beam_data, nbins=1024)
+        try:
+            local_thresh = threshold_triangle(beam_data, nbins=1024)
+        except ValueError:
+            local_thresh = 1.
         local_filter_mask = beam_data < local_thresh
 
-        beam_data[local_filter_mask] = -100
+        beam_data[local_filter_mask] = 0
 
     return input_data
 
@@ -92,7 +95,7 @@ class PepperNoiseFilter(InputDataFilter):
         """
         # todo - can this for loop be eliminated?
         for beam_id in range(data.shape[0]):
-            data[beam_id, self._remove_pepper_noise(data[beam_id])] = -100
+            data[beam_id, self._remove_pepper_noise(data[beam_id])] = 0
 
 
 class RemoveTransmitterChannelFilterPeak(InputDataFilter):
