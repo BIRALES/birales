@@ -418,9 +418,23 @@ class MSDSDetectionPipelineManagerBuilder(PipelineManagerBuilder):
             filtering_input = raw_fits_persister.output_blob
 
         filtering = Filter(settings.detection, filtering_input)
-        detector = MSDSDetector(settings.detection, filtering.output_blob)
-        terminator = Terminator(None, detector.output_blob)
 
         self.manager.add_module("filtering", filtering)
+
+        if settings.fits_persister.visualise_filtered_beams:
+            filtered_fits_persister = FilteredDataFitsPersister(settings.fits_persister, filtering.output_blob)
+            detector = MSDSDetector(settings.detection, filtered_fits_persister.output_blob)
+            self.manager.add_module("filtered_fits_persister", filtered_fits_persister)
+        else:
+            detector = MSDSDetector(settings.detection, filtering.output_blob)
+
         self.manager.add_module("detector", detector)
+        terminator = Terminator(None, detector.output_blob)
         self.manager.add_module("terminator", terminator)
+
+        # filtered_fits_persister = FilteredDataFitsPersister(settings.fits_persister, filtering.output_blob)
+        # self.manager.add_module("filtered_fits_persister", filtered_fits_persister)
+        # terminator = Terminator(None, filtered_fits_persister.output_blob)
+        # self.manager.add_module("terminator", terminator)
+
+
