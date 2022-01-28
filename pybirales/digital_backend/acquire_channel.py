@@ -67,6 +67,7 @@ class ChannelisedData(Process):
 
         # Initialise socket
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        print("Connecting to ", self._ip, self._port)
         self._socket.bind((self._ip, self._port))
         self._socket.settimeout(2)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 16 * 1024 * 1024)
