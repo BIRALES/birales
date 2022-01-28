@@ -36,7 +36,7 @@ class TDMPersister:
 
         name_prefix = settings.instrument.name_prefix
 
-        if socket.gethostname() == 'medfrb':
+        if socket.gethostname() == 'med-frb':
             name_prefix = '2N'
 
         self._filename_mask = name_prefix + '_BIRALES_OUT_{:%Y%m%dT%H%M%S}.tdm'
