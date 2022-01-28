@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 
 import numpy as np
+import socket
 from jinja2 import Environment, FileSystemLoader
 from scipy import io
 
@@ -33,7 +34,12 @@ class TDMPersister:
 
         self._template_dir = os.path.dirname(__file__)
 
-        self._filename_mask = settings.instrument.name_prefix + '_BIRALES_OUT_{:%Y%m%dT%H%M%S}.tdm'
+        name_prefix = settings.instrument.name_prefix
+
+        if socket.gethostname() == 'medfrb':
+            name_prefix = '2N'
+
+        self._filename_mask = name_prefix + '_BIRALES_OUT_{:%Y%m%dT%H%M%S}.tdm'
 
         self._template_filepath = 'input_template.tdm'
         self._template = Environment(loader=FileSystemLoader(self._template_dir)).get_template(self._template_filepath)
