@@ -122,8 +122,7 @@ class ChannelisedData(Process):
 
             # Calculate packet time
             # Sampling time is: 1.0 / (sampling_freq / (DDC (8) * FFT Size (1024)))
-            # NOTE: + 1 due to firmware bug
-            packet_time = self._sync_time + self._timestamp * self._sampling_time + 1
+            packet_time = self._sync_time + self._timestamp * self._sampling_time
 
             # Handle packet counter rollover
             # First condition ensures that on startup, first packets with counter number 0 are not updated

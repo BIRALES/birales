@@ -145,7 +145,7 @@ def correlation_pipeline(ctx, config_file_path, pointing):
 @click.pass_context
 def standalone_pipeline(ctx, config_file_path):
     """
-    Run the Stand Alone Pipeline
+    Run the Standalone Pipeline
 
     :param config_file_path: The default configuration file to be used.
     :return:

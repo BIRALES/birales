@@ -41,8 +41,11 @@ class BiralesConfig:
         if config_file_path:
             # Set the configurations from file (can be multiple files)
             log.info('Loading configuration files')
-            for config_file in config_file_path:
-                self._load_from_file(config_file)
+            if type(config_file_path) is list:
+                for config_file in config_file_path:
+                    self._load_from_file(config_file)
+            else:
+                self._load_from_file(config_file_path)
         else:
             # load the birales default configuration
             self._load_from_file(os.path.join(os.path.dirname(__file__), 'configuration/birales.ini'))
@@ -183,7 +186,7 @@ class BiralesConfig:
                         setattr(instance, k, ast.literal_eval(v))
 
                     # Check if value is a list
-                    elif re.match("^\[.*\]$", re.sub('\s+', '', v)):
+                    elif re.match(r"^\[.*\]$", re.sub(r'\s+', '', v)):
                         setattr(instance, k, ast.literal_eval(v))
 
                     # Otherwise it is a string
@@ -197,7 +200,7 @@ class BiralesConfig:
 
         log.info('Configurations successfully loaded.')
 
-        if not self.is_loaded():
+        if not self.is_loaded() and settings.database is not None and settings.database.load_database:
             # Connect to the database
             self._db_connect()
 

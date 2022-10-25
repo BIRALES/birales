@@ -66,7 +66,7 @@ if __name__ == "__main__":
     }
 
     # Plot all the files
-    for k, v in files.iteritems():
+    for k, v in files.items():
         data = open(v, 'rb').read()
         data = np.log10(np.array(struct.unpack("f" * (len(data) / 4), data)))
         x = [(0 + i * opts.tsamp) / 60.0 for i in range(len(data))]

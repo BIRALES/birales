@@ -98,7 +98,7 @@ class PreProcessor(ProcessingModule):
         power_data = power_data - obs_info['channel_noise'][..., np.newaxis]
 
         # If the configuration was not saved AND the number of noise samples is sufficient, save the noise value.
-        if not self._config_persisted and self.counter >= settings.detection.n_noise_samples:
+        if not self._config_persisted and self.counter >= settings.detection.n_noise_samples and settings.database.load_database:
             self._observation = Observation.objects.get(id=settings.observation.id)
 
             self._observation.noise_mean = float(obs_info['mean_noise'])
@@ -117,6 +117,7 @@ class PreProcessor(ProcessingModule):
             self._config_persisted = True
 
             log.info('Mean noise {:0.3f}'.format(obs_info['mean_noise']))
+
         output_data[:] = power_data
 
         self.counter += 1

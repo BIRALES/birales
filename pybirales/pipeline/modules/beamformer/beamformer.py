@@ -44,6 +44,11 @@ class Beamformer(ProcessingModule):
                 - set(config.settings()) != set():
             raise PipelineError("Beamformer: Missing keys on configuration "
                                 "(nbeams, nants, antenna_locations, pointings)")
+
+        if config.pointings == "high_resolution":
+            config.pointings = [(ha, dec) for ha in np.linspace(-3, 3, 13) for dec in np.linspace(-2.5, 2.5, 9)]
+            config.nbeams = len(config.pointings)
+
         self._nbeams = config.nbeams
 
         self._disable_antennas = None
@@ -85,9 +90,6 @@ class Beamformer(ProcessingModule):
         input_shape = dict(self._input.shape)
         datatype = self._input.datatype
 
-        # Initialise pointing
-        # self._initialise(input_shape['nsubs'], input_shape['nants'])
-
         # Create output blob
         return BeamformedBlob(self._config, [('npols', input_shape['npols']),
                                              ('nbeams', self._nbeams),
@@ -121,9 +123,6 @@ class Beamformer(ProcessingModule):
         self._beamformer.beamform(input_data.ravel(), self._pointing.weights.ravel(), output_data.ravel(),
                                   nsamp, nsubs, self._nbeams, nants, npols, self._nthreads)
 
-        # input_data_bkp = np.ascontiguousarray(input_data_bkp[0, 0, :, :], dtype=np.complex64)
-        # beamformer_python(self._nbeams, input_data_bkp, self._pointing.weights, output_data_bkp)
-
         # Update observation information
         obs_info['nbeams'] = self._nbeams
         obs_info['pointings'] = self._config.pointings
@@ -146,19 +145,19 @@ class Pointing(object):
         if len(config.pointings) != config.nbeams:
             logging.error("Pointing: Mismatch between number of beams and number of beam pointings")
 
-        # Initialise Pointing
+        # Load settings
         array = config.antenna_locations
         self._start_center_frequency = settings.observation.start_center_frequency
         self._reference_location = config.reference_antenna_location
         self._reference_declination = config.reference_declination
 
-        # print 'beamformer scf', self._start_center_frequency
-
-        self._pointings = config.pointings
         self._bandwidth = settings.observation.channel_bandwidth
         self._nbeams = config.nbeams
         self._nants = nants
         self._nsubs = nsubs
+
+        # Initialise pointings
+        self._pointings = config.pointings
 
         log.info('Reference declination: {}'.format(self._reference_declination))
 
@@ -167,7 +166,11 @@ class Pointing(object):
 
         try:
             if settings.beamformer.apply_calib_coeffs:
-                self._calib_coeffs = self._get_latest_calib_coeffs()
+                if settings.beamformer.calibration_coefficients_filepath is not None:
+                    self._calib_coeffs = np.loadtxt(settings.beamformer.calibration_coefficients_filepath,
+                                                    dtype=complex)
+                else:
+                    self._calib_coeffs = self._get_latest_calib_coeffs()
             else:
                 log.warning('No calibration coefficients applied to this observation')
         except InvalidCalibrationCoefficientsException as e:

@@ -8,6 +8,8 @@ from time import sleep
 import matplotlib
 import signal
 
+from matplotlib.patches import Circle
+
 
 def signal_handler(signal, frame):
     print('Ctrl-C detected. Exiting')
@@ -97,7 +99,7 @@ def multipixel(opts):
     nsamp = 0  # Current nsamp
     filesize = 0
 
-    fig = plt.figure()
+    fig, ax = plt.subplots(1)
     plt.ion()
     while True:
 
@@ -114,13 +116,19 @@ def multipixel(opts):
         # Re-shape data to match grid shape
         data /= np.max(data)
         data = np.reshape(data, (opts.gridx, opts.gridy))
-        fig.clear()
-        plt.imshow(np.log10(data), origin='lower', aspect='auto', interpolation='nearest')
+
+        ax.clear()
+        ax.imshow(np.log10(data), origin='lower', aspect='auto', interpolation='nearest')
+
+        circ = Circle((3, 3), 2)
+        ax.add_patch(circ)
+
         plt.title("%.3fs into observation" % (nsamp * opts.tsamp))
         plt.xlabel("RA")
         plt.ylabel("DEC")
-        plt.colorbar()
         fig.canvas.draw()
+        plt.pause(0.001)
+        plt.show()
 
         nsamp = nsamp + 1
 
@@ -134,10 +142,10 @@ def plot(opts):
     nchans = opts.nchans
 
     f = open(args[0], 'rb')
-    data = np.fromfile(f, dtype=np.dtype('f'))
+    data = np.fromfile(f, dtype=np.dtype('f'), count=8192 * 117 * 1024)
 
-    nsamp = len(data) / (nbeams * nchans)
-    data = np.reshape(data[:nsamp*nbeams*nchans], (nsamp, nchans, nbeams))
+    nsamp = int(len(data) / (nbeams * nchans))
+    data = np.reshape(data[:nsamp * nbeams * nchans], (nsamp, nchans, nbeams))
 
     time = np.arange(0, opts.tsamp * data.shape[0], opts.tsamp)
     frequency = (np.arange(opts.fch1 * 1e6, opts.fch1 * 1e6 + opts.foff * (data.shape[1]), opts.foff)) * 1e-6
@@ -145,13 +153,11 @@ def plot(opts):
 
     # Process only one beam
     if opts.beam != -1 and opts.waterfall:
-
-        data = data[:,:,opts.beam]
-        rms = np.sqrt(np.mean(data.ravel()**2))
+        data = data[:, :, opts.beam]
+        rms = np.sqrt(np.mean(data.ravel() ** 2))
         maximum = np.max(data.ravel())
-        data = 10*np.log10(data / rms)
+        data = 10 * np.log10(data / rms)
         print("RMS: {}, max: {}\n".format(rms, maximum))
-
 
         fig = plt.figure()  # (figsize=(11,8))
         ax = fig.add_subplot(1, 1, 1)
@@ -170,12 +176,12 @@ def plot(opts):
         f.close()
 
     if opts.beam != -1:
-        data = data[:,:,opts.beam]
-        #rms = np.sqrt(np.mean(data.ravel()**2))
-        #maximum = np.max(data.ravel())
-        #data = 10*np.log10(data / rms)
-        data = 10 * np.log10(data**2)
-        #print "RMS: {}, max: {}\n".format(rms, maximum)
+        data = data[:, :, opts.beam]
+        # rms = np.sqrt(np.mean(data.ravel()**2))
+        # maximum = np.max(data.ravel())
+        # data = 10*np.log10(data / rms)
+        data = 10 * np.log10(data ** 2)
+        # print "RMS: {}, max: {}\n".format(rms, maximum)
 
         fig = plt.figure(figsize=(11, 8))
         ax = fig.add_subplot(2, 2, 2)
@@ -220,7 +226,7 @@ def plot(opts):
         ax = fig.add_subplot(1, 1, 1)
 
         data = np.sum(data, axis=1)
-        #idata = np.reshape(data, (len(data) / opts.samples, opts.samples, nbeams))
+        # idata = np.reshape(data, (len(data) / opts.samples, opts.samples, nbeams))
         data = 10 * np.log10(data)
 
         # Plot time series

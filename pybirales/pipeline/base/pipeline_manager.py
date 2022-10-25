@@ -12,6 +12,7 @@ from matplotlib import pyplot as plt
 from pybirales import settings
 from pybirales.pipeline.base.definitions import NoDataReaderException
 from pybirales.repository.message_broker import broker
+from pybirales.repository.models import DummyObservation
 
 PIPELINE_CTL_CHL = b'birales_pipeline_control'
 BIRALES_STATUS_CHL = b'birales_system_status'
@@ -99,11 +100,12 @@ class PipelineManager(object):
             plot.initialise_plot()
             self._plotters.append(plot)
 
-    def start_pipeline(self, duration, observation):
+    def start_pipeline(self, duration=0, observation=DummyObservation()):
         """
         Start running the pipeline
 
         :param duration: duration of observation in s (0 means run forever)
+        :param observation: Database observation object
         :return:
         """
 
