@@ -96,6 +96,7 @@ def msds_standalone(_iter_count, input_data, obs_info, channels, pool=None):
 
     size = input_data.shape[0]
     chunks = [(input_data[b, ...], b, _iter_count, np.mean(obs_info['channel_noise'][b])) for b in range(0, size)]
+    # chunks = [(input_data[b, ...], b, _iter_count, np.mean(obs_info['channel_noise'][b])) for b in [15]]
 
     for c in pool.map(serial_msds, chunks):
         beam_clusters += c

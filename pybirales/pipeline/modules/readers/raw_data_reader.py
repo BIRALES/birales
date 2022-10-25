@@ -231,15 +231,15 @@ class RawDataReader(ProcessingModule):
         obs_info['npols'] = self._npols
 
         obs_info['transmitter_frequency'] = self._config['settings']['observation']['transmitter_frequency']
-        obs_info['start_center_frequency'] = self._config['start_center_frequency']
+        obs_info['start_center_frequency'] = self._config['settings']['observation']['start_center_frequency']
 
         settings.observation.start_center_frequency = obs_info['start_center_frequency']
         # print obs_info['start_center_frequency'], settings.observation.start_center_frequency
 
         obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
+
         obs_info['timestamp'] = self._config['timestamp'] + datetime.timedelta(
             seconds=self._nsamp * obs_info['sampling_time']) * self._read_count
-
         self.publish_antenna_metrics(data, obs_info)
 
         self._read_count += 1
