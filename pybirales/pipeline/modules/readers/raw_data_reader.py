@@ -39,20 +39,6 @@ class RawDataReader(ProcessingModule):
         self._filepath = config.filepath
         self._raw_file_counter = 0
 
-        self._read_count = 48  # norad 1328 on 03/05/2019
-        self._read_count = 53  # norad 41182 on 03/05/2019 @ 11
-        self._read_count = 35  # norad 20666 on 11/02/2019 @ 11
-        self._read_count = 60  # norad 25160 on 03/10/2019 @ 06
-        self._read_count = 50  # norad 40894 on 11/02/2019 @ 10:53
-        self._read_count = 70  # norad 41240 on 11/02/2019 @ 11:36
-
-        self._read_count = 20  # norad 4259 on 03/10/2019 @ 06:27
-
-        self._read_count = 20  # norad 1328 on 03/10/2019 @ 06:27
-
-        self._read_count = 48
-        self._read_count = 58   # 'Norad41240', transit_time='16 DEC 2021 16:15:18.01', doppler=-8500
-
         self._metrics_poll_freq = 10
         self._metric_channel = 'antenna_metrics'
 
@@ -76,7 +62,6 @@ class RawDataReader(ProcessingModule):
             # Use the declination that is in the PKL file
             settings.beamformer.reference_declination = self._config['settings']['beamformer']['reference_declination']
 
-
         except IOError:
             log.error('Config PKL file was not found in %s. Exiting.', self._filepath + config.config_ext)
             raise BIRALESObservationException(f"Config PKL file was not found in {self._filepath + config.config_ext}")
@@ -86,9 +71,6 @@ class RawDataReader(ProcessingModule):
         # Load the data file
         try:
             self._f = self._get_start_file(self._filepath, self._read_count)
-
-            # self._f = open(self._filepath, 'rb')
-            # self._f.seek(self._nsamp * self._nants * 8 * self._read_count)
 
             log.info('Using raw data in: {}'.format(self._filepath))
         except IOError:
@@ -191,9 +173,7 @@ class RawDataReader(ProcessingModule):
             if self._read_count > self._read_count_end:
                 obs_info['stop_pipeline_at'] = self._iter_count
                 self.stop()
-
                 return
-
 
         data = self._f.read(self._nsamp * self._nants * 8)
 
@@ -207,8 +187,6 @@ class RawDataReader(ProcessingModule):
                 obs_info['stop_pipeline_at'] = self._iter_count
                 self.stop()
                 return
-                # time.sleep(200)
-                # raise NoDataReaderException("Observation finished")
 
             # Read from the next set of data from new file
             data = self._f.read(self._nsamp * self._nants * 8)

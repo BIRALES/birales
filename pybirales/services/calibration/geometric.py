@@ -64,7 +64,7 @@ class Pointing(object):
 
             # Apply to weights
             self.weights[i, beam, :].real = real
-            self.weights[i, beam, :].imag = imag
+            self.weights[i, beam, :].imag = -imag
 
     def point_array(self, beam, ref_dec, ha, delta_dec):
         """ Calculate the phase shift between two antennas which is given by the phase constant (2 * pi / wavelength)

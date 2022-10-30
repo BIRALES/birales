@@ -144,11 +144,11 @@ def active_tracks(obs_info, tracks, iter_count):
             # delete from database but keep it in memory
             track.delete()
 
-            log.info("Track {} was cancelled in iteration {}. Reason: {}".format(track.id % 1000, iter_count, reason))
+            # log.info("Track {} was cancelled in iteration {}. Reason: {}".format(track.id % 1000, iter_count, reason))
             continue
 
         if track.track_expired(obs_info):
-            log.info("Track {} was terminated in iteration {}".format(track.id % 1000, iter_count))
+            # log.info("Track {} was terminated in iteration {}".format(track.id % 1000, iter_count))
             track.terminate()
 
             publish(TrackTransittedEvent(track))

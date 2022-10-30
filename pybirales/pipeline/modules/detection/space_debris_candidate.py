@@ -383,8 +383,8 @@ class SpaceDebrisTrack:
                 _db_model.objects.get(pk=self._id).delete()
             except OperationError:
                 log.exception("Track could not be deleted from DB")
-            else:
-                log.info('Track {:03d} deleted'.format(id(self) % 1000))
+            # else:
+            #     log.info('Track {:03d} deleted'.format(id(self) % 1000))
 
     def reduce_data(self, remove_duplicate_epoch=True, remove_duplicate_channel=True):
         """

@@ -45,19 +45,24 @@ if __name__ == "__main__":
 
     if opts.sample == -1:
         # Generate subplots
-        ax_1 = plt.subplot(211)
-        ax_2 = plt.subplot(212)
+        ax_1 = plt.subplot(311)
+        ax_2 = plt.subplot(312)
+        ax_3 = plt.subplot(313)
 
         ax_1.title.set_text('Real')
         ax_2.title.set_text('Immaginary')
+        ax_3.title.set_text('Power')
 
         # Plot
         counter = 0
+        power = np.zeros(nsamp)
         for i in range(opts.nants):
             for j in range(i + 1, opts.nants):
                 ax_1.plot(data[:nsamp, 0, counter, 0].real, label="{}-{}".format(i, j))
                 ax_2.plot(data[:nsamp, 0, counter, 0].imag, label="{}-{}".format(i, j))
+                power += np.abs(data[:nsamp, 0, counter, 0])
                 counter += 1
+        ax_3.plot(power)
 
     else:
         to_plot = np.zeros((opts.nants, opts.nants))

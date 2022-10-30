@@ -431,7 +431,7 @@ if __name__ == "__main__":
                 #data = data[antenna_mapping, :, :].transpose((0, 1, 2))
                 #print("ANT LEN %d" % len(data[:, 0, 0]))
                 for n, ant in enumerate(antenna_list):
-                    spettro, power_rms, adu_rms = calcAVGSpectra(np.array(data[ant-1]), avg)
+                    spettro, power_rms, adu_rms = calcAVGSpectra(np.array(data[ant]), avg)
                     ax_lines[n].set_ydata(spettro[3:])
                     ax_annotations[n].set_text("%3.1f dBm" % power_rms)
                 fig.canvas.draw()

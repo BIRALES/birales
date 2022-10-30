@@ -92,6 +92,7 @@ class SelfCal(object):
 
         inverter = np.ones(len(gs[i - 1]), dtype=np.complex64)
         gs_out = np.divide(inverter, gs[i - 1], out=np.zeros_like(inverter), where=gs[i - 1] != 0.)
+
         self.latest_coeffs[:, 0] = gs_out
 
         self.coeff_type = "calib_geom"
@@ -113,7 +114,7 @@ class SelfCal(object):
         pointing = gu.Pointing(config, vis_in.shape[1], no_of_antennas)
 
         for pol in range(self.latest_coeffs.shape[1]):
-            self.latest_coeffs[:, pol] /= pointing.weights[0, 0, :]
+            self.latest_coeffs[:, pol] *= np.conj(pointing.weights[0, 0, :])
 
         self.coeffs_no_geom = deepcopy(self.latest_coeffs)
         self.coeff_type = "no_geom"

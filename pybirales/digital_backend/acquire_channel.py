@@ -122,7 +122,8 @@ class ChannelisedData(Process):
 
             # Calculate packet time
             # Sampling time is: 1.0 / (sampling_freq / (DDC (8) * FFT Size (1024)))
-            packet_time = self._sync_time + self._timestamp * self._sampling_time
+            # +1 due to firmware bug
+            packet_time = self._sync_time + self._timestamp * self._sampling_time + 1
 
             # Handle packet counter rollover
             # First condition ensures that on startup, first packets with counter number 0 are not updated
@@ -280,7 +281,7 @@ if __name__ == "__main__":
 
     parser = OptionParser()
     parser.add_option("-p", dest="port", default=4660, type=int, help="UDP port (default:4660)")
-    parser.add_option("-i", dest="ip", default="10.0.10.10", help="IP (default: 10.0.10.10)")
+    parser.add_option("-i", dest="ip", default="10.0.10.201", help="IP (default: 10.0.10.201)")
     parser.add_option("-P", dest="plot", default=False, action="store_true", help="Generate Plot [default: False]")
     (config, args) = parser.parse_args()
 

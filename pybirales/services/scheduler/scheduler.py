@@ -25,7 +25,7 @@ class ObservationsScheduler:
     OBSERVATIONS_CHL = b'birales_scheduled_obs'
     BIRALES_STATUS_CHL = b'birales_system_status'
     POLL_FREQ = datetime.timedelta(seconds=5)
-    MONITORING_FREQ = 10
+    MONITORING_FREQ = 60
 
     def __init__(self):
         """

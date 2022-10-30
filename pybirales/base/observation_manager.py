@@ -243,8 +243,6 @@ class CalibrationObservationManager(ObservationManager):
                 observation.model.status = 'failed'
                 observation.save()
                 publish(CalibrationObservationFailedEvent(observation, "Calibration observation failed"))
-
-                raise
             else:
                 observation.model.status = 'finished'
                 observation.save()

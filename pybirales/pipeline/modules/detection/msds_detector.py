@@ -71,11 +71,11 @@ def serial_msds(data):
 
     # print 'Beam {}. Noise: {:0.3f}. Finished in {:0.3f}'.format(b, noise_est, time.time() - t1)
 
-    log.info(
-        '[Iter {}] Beam {}: {} leaves, {} clusters, {} tracks in {:0.3f}'.format(iter, b, len(positives),
-                                                                                            len(cluster_data),
-                                                                                            len(valid_tracks),
-                                                                                            time.time() - t1))
+    # log.info(
+    #     '[Iter {}] Beam {}: {} leaves, {} clusters, {} tracks in {:0.3f}'.format(iter, b, len(positives),
+    #                                                                                         len(cluster_data),
+    #                                                                                         len(valid_tracks),
+    #                                                                                         time.time() - t1))
     # if debug:
     #     plt.show()
     return valid_tracks
@@ -198,8 +198,6 @@ class Detector(ProcessingModule):
 
         obs_info['iter_count'] = self._iter_count
 
-        print(f"Input shape is: {np.shape(input_data)}")
-
         # Skip the first few blobs (to allow for an accurate noise estimation to be determined)
         if self._iter_count < 2:
             return obs_info
@@ -208,10 +206,12 @@ class Detector(ProcessingModule):
 
             # self.pool = Pool(3, maxtasksperchild=500)
             # plot_TLE(obs_info, input_data, tle_target)
+
+            t0 = time.time()
             new_tracks = self.detection_algorithm(self._iter_count, input_data, obs_info, obs_info['channels'],
                                                   self.pool)
 
-            log.info('[Iter {}]. Found {} beam_candidates'.format(self._iter_count, len(new_tracks)))
+            log.info(f'[Iter {self._iter_count}]. Found {len(new_tracks)} beam candidates in {time.time() - t0:.2f}s')
 
             # [Track Association] Create new tracks from clusters or merge clusters into existing
             tracks = data_association(self.pending_tracks, new_tracks, obs_info, notifications=False,

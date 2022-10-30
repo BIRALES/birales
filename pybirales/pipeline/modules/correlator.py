@@ -18,13 +18,6 @@ def correlate(input_data, output_data, nchans, nants, integrations, nsamp):
         for antenna1 in range(nants):
             for antenna2 in range(antenna1 + 1, nants):
                 for i in range(nsamp // integrations):
-                    """
-                    output_data[i, c, baseline, 0] = \
-                       np.dot(input_data[0, c, antenna1,
-                              i * integrations:(i + 1) * integrations],
-                             np.conj(input_data[0, c, antenna2,
-                                      i * integrations:(i + 1) * integrations]))
-                    """
                     output_data[i, c, baseline, 0] = np.correlate(
                         input_data[0, c, antenna1, i * integrations:(i + 1) * integrations],
                         input_data[0, c, antenna2, i * integrations:(i + 1) * integrations])

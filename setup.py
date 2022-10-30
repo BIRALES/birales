@@ -87,7 +87,7 @@ setup(
     install_requires=DEPENDENCIES,
     setup_requires=DEPENDENCIES,
     data_files=[
-        (os.path.join(HOME, '.birales', CONFIG_PATH), list_dir(os.path.join('pybirales', CONFIG_PATH))),
+#        (os.path.join(HOME, '.birales', CONFIG_PATH), list_dir(os.path.join('pybirales', CONFIG_PATH))),
         (os.path.join(HOME, '.birales', TEMPLATES, 'dev'), list_dir(os.path.join('pybirales', TEMPLATES, 'dev'))),
         (os.path.join(HOME, '.birales', TEMPLATES, 'prod'), list_dir(os.path.join('pybirales', TEMPLATES, 'prod'))),
         (os.path.join(HOME, '.birales/fits'), []),
