@@ -25,7 +25,7 @@ from pybirales.pipeline.modules.terminator import Terminator
 AVAILABLE_PIPELINES_BUILDERS = ['detection_pipeline', 'msds_detection_pipeline',
                                 'correlation_pipeline', 'dbscan_detection_pipeline',
                                 'standalone_pipeline', 'test_receiver_pipeline', 'dummy_data_pipeline',
-                                'rso_generator_pipeline', 'raw_data_truncator_pipeline']
+                                'rso_generator_pipeline', 'raw_data_truncator_pipeline', 'chnl_corr_pipeline_builder']
 
 
 def get_builder_by_id(builder_id):
@@ -58,6 +58,8 @@ def get_builder_by_id(builder_id):
         return RSOGeneratorPipelineMangerBuilder()
     elif builder_id == 'raw_data_truncator_pipeline':
         return DataTruncatorPipelineMangerBuilder()
+    elif builder_id == 'chnl_corr_pipeline_builder':
+        return ChanneliserCorrelatorPipelineManagerBuilder()
 
 
 class PipelineManagerBuilder:
@@ -438,3 +440,30 @@ class MSDSDetectionPipelineManagerBuilder(PipelineManagerBuilder):
         # self.manager.add_module("terminator", terminator)
 
 
+class ChanneliserCorrelatorPipelineManagerBuilder(PipelineManagerBuilder):
+    def __init__(self):
+        PipelineManagerBuilder.__init__(self)
+
+        self.manager.name = 'ChanneliserCorrelator Pipeline'
+
+        self._id = 'chnl_corr_pipeline_builder'
+
+    def build(self):
+        if settings.manager.offline:
+            receiver = RawDataReader(settings.rawdatareader)
+            self.manager.name += ' (Offline)'
+        else:
+            # receiver = Receiver(settings.receiver)
+            receiver = TPMReceiver(settings.tpm_receiver)
+
+        ppf = PFB(settings.channeliser, receiver.output_blob)
+
+        correlator = Correlator(settings.correlator, ppf.output_blob)
+
+        persister = CorrMatrixPersister(settings.corrmatrixpersister, correlator.output_blob)
+
+        # Add modules to pipeline manager
+        self.manager.add_module("receiver", receiver)
+        self.manager.add_module("ppf", ppf)
+        self.manager.add_module("correlator", correlator)
+        self.manager.add_module("persister", persister)

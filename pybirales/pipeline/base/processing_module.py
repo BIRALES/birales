@@ -148,6 +148,7 @@ class ProcessingModule(Module):
     def __init__(self, config, input_blob):
         super(ProcessingModule, self).__init__(config, input_blob)
         self._iter_count = 1
+        self._is_offline = settings.manager.offline
         logging.info('Initialised the %s module', self.__class__.__name__)
 
     @abstractmethod
@@ -213,8 +214,9 @@ class ProcessingModule(Module):
                         obs_info = res
                 tt = time.time() - s
 
-                # nsamp = settings.rawdatareader.nsamp
-                nsamp = settings.receiver.nsamp
+                nsamp = settings.tpm_receiver.nsamp
+                if self._is_offline:
+                    nsamp = settings.rawdatareader.nsamp
 
                 if tt < float(nsamp) / settings.observation.samples_per_second:
                     log.info('[Iteration {}] {} finished in {:0.3f}s'.format(self._iter_count, self.name, tt))

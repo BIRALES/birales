@@ -1,15 +1,16 @@
-import pytz
+import datetime
 import logging as log
 import os
 import pickle
 
 import h5py
 import numpy as np
+import pytz
 
 from pybirales import settings
 from pybirales.pipeline.base.definitions import PipelineError
 from pybirales.pipeline.base.processing_module import ProcessingModule
-import datetime
+from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 
 
 def create_corr_matrix_filepath():
@@ -62,6 +63,10 @@ class CorrMatrixPersister(ProcessingModule):
         self._counter = 0
         self._iterator = 0
 
+        self._after_channeliser = True if type(input_blob) is ChannelisedBlob else False
+
+        self._nchans = None
+
         # Processing module name
         self.name = "CorrMatrixPersister"
 
@@ -87,8 +92,7 @@ class CorrMatrixPersister(ProcessingModule):
         with open(filepath, 'wb') as f:
             pickle.dump(obs_info.get_dict(), f)
 
-    @staticmethod
-    def _create_hdf5_file(filepath, obs_info):
+    def _create_hdf5_file(self, filepath, obs_info):
         """
         Create HDF5 file for storing correlation matrix
 
@@ -97,15 +101,17 @@ class CorrMatrixPersister(ProcessingModule):
         :return:
         """
 
+        if not self._nchans:
+            self._nchans = self._get_nchans(obs_info, self._after_channeliser)
+
         f = h5py.File(filepath, "w")
 
-        dset = f.create_dataset("Vis", (obs_info['nsamp'], obs_info['nsubs'], obs_info['nbaselines'],
-                                        obs_info['nstokes']),
-                                maxshape=(None, obs_info['nsubs'], obs_info['nbaselines'], obs_info['nstokes']),
+        dset = f.create_dataset("Vis", (obs_info['nsamp'], self._nchans, obs_info['nbaselines'], obs_info['nstokes']),
+                                maxshape=(None, self._nchans, obs_info['nbaselines'], obs_info['nstokes']),
                                 dtype='c16')
 
-        dset[:] = np.zeros(((obs_info['nsamp'], obs_info['nsubs'], obs_info['nbaselines'],
-                             obs_info['nstokes'])), dtype=np.complex64)
+        dset[:] = np.zeros(((obs_info['nsamp'], self._nchans, obs_info['nbaselines'], obs_info['nstokes'])),
+                           dtype=np.complex64)
 
         # Create baselines data set
         dset2 = f.create_dataset("Baselines", (obs_info['nbaselines'], 3))
@@ -168,3 +174,13 @@ class CorrMatrixPersister(ProcessingModule):
         self._counter += 1
 
         return obs_info
+
+    def _get_nchans(self, obs_info, after_channeliser):
+        nchans = obs_info['nsubs']
+        if after_channeliser:
+            nchans = obs_info['nchans']
+
+            if hasattr(settings.correlator, 'channel_start') and hasattr(settings.correlator, 'channel_end'):
+                nchans = settings.correlator.channel_end - settings.correlator.channel_start
+
+        return nchans
