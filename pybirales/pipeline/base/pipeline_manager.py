@@ -117,7 +117,8 @@ class PipelineManager(object):
 
             # Start all modules
             for module in self._modules:
-                log.debug('Starting module {}'.format(module.name))
+                log.info('Starting module {}'.format(module.name))
+
                 module.start()
 
             self.wait_pipeline(duration=duration)

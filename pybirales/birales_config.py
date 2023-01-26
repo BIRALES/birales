@@ -41,7 +41,7 @@ class BiralesConfig:
         if config_file_path:
             # Set the configurations from file (can be multiple files)
             log.info('Loading configuration files')
-            if type(config_file_path) is list:
+            if type(config_file_path) is list or type(config_file_path) is tuple:
                 for config_file in config_file_path:
                     self._load_from_file(config_file)
             else:

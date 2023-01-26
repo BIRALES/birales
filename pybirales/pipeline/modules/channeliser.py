@@ -1,6 +1,6 @@
 import math
-from multiprocessing.pool import ThreadPool
 from datetime import timedelta
+from multiprocessing.pool import ThreadPool
 
 import numba
 import numpy as np
@@ -89,12 +89,16 @@ class PFB(ProcessingModule):
 
         self._initialise(npols, input_shape['nsamp'], nstreams, input_shape['nsubs'])
 
+        meta_data = [('npols', self._npols),
+                     ('nbeams', nstreams),
+                     ('nchans', self._nchans * input_shape['nsubs']),
+                     ('nsamp', int(input_shape['nsamp'] / self._nchans))]
+
+        if not self._after_beamformer:
+            meta_data[1] = ('nants', input_shape['nants'])
+
         # Generate output blob
-        return ChannelisedBlob(self._config, [('npols', self._npols),
-                                              ('nbeams', nstreams),
-                                              ('nchans', self._nchans * input_shape['nsubs']),
-                                              ('nsamp', int(input_shape['nsamp'] / self._nchans))],
-                               datatype=datatype)
+        return ChannelisedBlob(self._config, meta_data, datatype=datatype)
 
     def _initialise(self, npols, nsamp, nbeams, nsubs):
         """ Initialise temporary arrays if not already initialised """
@@ -157,9 +161,9 @@ class PFB(ProcessingModule):
             self.channelise_serial()
 
         # Update observation information
-        obs_info['timestamp'] -= timedelta(seconds=(self._ntaps -1) * self._nchans * obs_info['sampling_time'])
+        obs_info['timestamp'] -= timedelta(seconds=(self._ntaps - 1) * self._nchans * obs_info['sampling_time'])
         obs_info['nchans'] = self._nchans * obs_info['nsubs']
-        obs_info['nsamp'] /= self._nchans
+        obs_info['nsamp'] //= self._nchans
         obs_info['sampling_time'] *= self._nchans
 
         obs_info['channel_bandwidth'] /= self._nchans

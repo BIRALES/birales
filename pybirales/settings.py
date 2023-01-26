@@ -16,9 +16,8 @@ bandpassplotter = None
 antennaplotter = None
 persisters = None
 corrmatrixpersister = None
-correlator = None
+
 terminator = None
-manager = None
 calibration = None
 database = None
 logger_root = None
@@ -57,3 +56,8 @@ class detection:
 
 class manager:
     profile_timeit = False
+
+
+class correlator:
+    channel_start = None
+    channel_end = None
