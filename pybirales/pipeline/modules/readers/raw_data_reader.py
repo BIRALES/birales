@@ -39,20 +39,6 @@ class RawDataReader(ProcessingModule):
         self._filepath = config.filepath
         self._raw_file_counter = 0
 
-        self._read_count = 48  # norad 1328 on 03/05/2019
-        self._read_count = 53  # norad 41182 on 03/05/2019 @ 11
-        self._read_count = 35  # norad 20666 on 11/02/2019 @ 11
-        self._read_count = 60  # norad 25160 on 03/10/2019 @ 06
-        self._read_count = 50  # norad 40894 on 11/02/2019 @ 10:53
-        self._read_count = 70  # norad 41240 on 11/02/2019 @ 11:36
-
-        self._read_count = 20  # norad 4259 on 03/10/2019 @ 06:27
-
-        self._read_count = 20  # norad 1328 on 03/10/2019 @ 06:27
-
-        self._read_count = 48
-        self._read_count = 58   # 'Norad41240', transit_time='16 DEC 2021 16:15:18.01', doppler=-8500
-
         self._metrics_poll_freq = 10
         self._metric_channel = 'antenna_metrics'
 
@@ -61,10 +47,19 @@ class RawDataReader(ProcessingModule):
         self._read_count = 0
         self._read_count_end = None
 
-        if settings.rawdatareader.skip > 0:
-            self._read_count = settings.rawdatareader.skip
+        if settings.rawdatareader.skip_seconds > 0:
+            samples_to_skip = settings.observation.samples_per_second * settings.rawdatareader.nants * settings.rawdatareader.skip_seconds
+            raw_file_nsamp = settings.rawdatareader.nsamp * settings.rawdatareader.nants
+            self._read_count = (samples_to_skip) / raw_file_nsamp
 
-            log.info("Raw data reader will skip {} iterations".format(self._read_count))
+            # print(f'Samples to skip: {samples_to_skip}')
+            # print(f'Samples per raw data file: {raw_file_nsamp}')
+            # print(f'Files to skip: {self._read_count}')
+        else:
+            if settings.rawdatareader.skip > 0:
+                self._read_count = settings.rawdatareader.skip
+
+                log.info("Raw data reader will skip {} iterations".format(self._read_count))
 
         # Call superclass initialiser
         super(RawDataReader, self).__init__(config, input_blob)
@@ -87,9 +82,6 @@ class RawDataReader(ProcessingModule):
         try:
             self._f = self._get_start_file(self._filepath, self._read_count)
 
-            # self._f = open(self._filepath, 'rb')
-            # self._f.seek(self._nsamp * self._nants * 8 * self._read_count)
-
             log.info('Using raw data in: {}'.format(self._filepath))
         except IOError:
             log.error('Data not found in %s. Exiting.', self._filepath)
@@ -105,17 +97,15 @@ class RawDataReader(ProcessingModule):
             next_file = '{}_{}.dat'.format(self._base_filepath, self._raw_file_counter + 1)
             self._raw_file_counter += 1
 
-            log.info("%s was skipped. Blobs to skip: %d. Next file: %s", os.path.basename(filepath), skip, next_file)
-
-            # self._raw_file_timerange(filepath, self._config['timestamp'])
+            log.info("%s was skipped. Blobs to skip: %f. Next file: %s", os.path.basename(filepath), skip, next_file)
 
             skip -= os.stat(filepath).st_size / (self._nsamp * self._nants * 8)
 
             return self._get_start_file(next_file, skip)
 
-        self._f.seek(self._nsamp * self._nants * 8 * int(skip))
+        self._f.seek(int(self._nsamp * self._nants * 8 * skip))
 
-        log.info("RawDataReader will use: %s and skip %d blobs from it. (read counter: %s)", filepath, skip,
+        log.info("RawDataReader will use: %s and skip %f blobs from it. (read counter: %s)", filepath, skip,
                  self._read_count)
 
         return self._f
@@ -136,7 +126,6 @@ class RawDataReader(ProcessingModule):
 
             _raw_file_counter += 1
             raw_file = '{}_{}.dat'.format(self._base_filepath, _raw_file_counter)
-
 
     @staticmethod
     def _calculate_rms(input_data):
@@ -193,7 +182,6 @@ class RawDataReader(ProcessingModule):
                 self.stop()
 
                 return
-
 
         data = self._f.read(self._nsamp * self._nants * 8)
 

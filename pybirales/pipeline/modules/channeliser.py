@@ -170,9 +170,10 @@ class PFB(ProcessingModule):
         obs_info['start_center_frequency'] -= obs_info['channel_bandwidth'] * self._nchans / 2.0
 
         # Debug info
-        # print  obs_info['start_center_frequency']
-        # print 'Channeliser {:0.7f}s shape:{}, iter:{}'.format(obs_info['sampling_time'], np.shape(output_data), self._iter_count)
-        # print 'Channeliser bandwidth from: {} Mhz to {} Mhz'.format(obs_info['start_center_frequency'], obs_info['start_center_frequency'] + obs_info['channel_bandwidth']*8192)
+        # print(f'{self._iter_count} Time: {obs_info["timestamp"]:%Y-%m-%d %H:%M:%S.%f}')
+        # print(obs_info['start_center_frequency'])
+        # print('Channeliser {:0.7f}s shape:{}, iter:{}'.format(obs_info['sampling_time'], np.shape(output_data), self._iter_count))
+        # print('Channeliser bandwidth from: {} Mhz to {} Mhz'.format(obs_info['start_center_frequency'], obs_info['start_center_frequency'] + obs_info['channel_bandwidth']*8192))
 
         # Done, return observation information
         return obs_info
