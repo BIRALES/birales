@@ -1,4 +1,5 @@
 import ctypes
+import datetime
 import logging
 import logging as log
 import warnings
@@ -28,8 +29,7 @@ warnings.simplefilter('ignore', category=AstropyWarning)
 @njit(parallel=True, fastmath=True)
 def beamformer_python(nbeams, data, weights, output):
     for b in prange(nbeams):
-        x = np.dot(data, weights[0, b, :])
-        output[:, b, :, :] = np.sum(np.power(np.abs(x), 2))
+        output[0, b, 0, :] = np.dot(data, weights[0, b, :])
 
 
 class Beamformer(ProcessingModule):
@@ -116,12 +116,12 @@ class Beamformer(ProcessingModule):
 
         # If pointing is not initialise, initialise
         if self._pointing is None:
-            # print 'pointing is none'
             self._initialise(nsubs, nants)
 
         # Apply pointing coefficients
         self._beamformer.beamform(input_data.ravel(), self._pointing.weights.ravel(), output_data.ravel(),
                                   nsamp, nsubs, self._nbeams, nants, npols, self._nthreads)
+        # beamformer_python(self._nbeams, input_data[0, 0], self._pointing.weights, output_data)
 
         # Update observation information
         obs_info['nbeams'] = self._nbeams
@@ -166,9 +166,11 @@ class Pointing(object):
 
         try:
             if settings.beamformer.apply_calib_coeffs:
-                if settings.beamformer.calibration_coefficients_filepath is not None:
+                if "calibration_coefficients_filepath" in settings.beamformer.__dict__.keys() and \
+                        settings.beamformer.calibration_coefficients_filepath != 'None':
                     self._calib_coeffs = np.loadtxt(settings.beamformer.calibration_coefficients_filepath,
                                                     dtype=complex)
+                    logging.info(f"Using calibration coefficients from {settings.beamformer.calibration_coefficients_filepath}")
                 else:
                     self._calib_coeffs = self._get_latest_calib_coeffs()
             else:
@@ -226,7 +228,7 @@ class Pointing(object):
             # print frequency, self._nsubs
             # Apply to weights
             self.weights[i, beam, :].real = real
-            self.weights[i, beam, :].imag = imag
+            self.weights[i, beam, :].imag = -imag
 
             # Multiply generated weights with calibration coefficients
             self.weights[i, beam, :] *= self._calib_coeffs
@@ -371,15 +373,18 @@ class Pointing(object):
         Read the calibration coefficients from file.
         :return:
         """
-        obs = Observation.objects.get(id=settings.observation.id)
-        obs_start = obs.principal_created_at
+        # If observation id is false, use current time
+        if not settings.observation.id:
+            obs_start = datetime.datetime.utcnow()
+        else:
+            obs = Observation.objects.get(id=settings.observation.id)
+            obs_start = obs.principal_created_at
 
         # Find the calibration algorithm whose principal start time is closest to this observation's principal start time
         calib_obs = CalibrationObservation.objects(principal_created_at__lte=obs_start, status="finished").order_by(
             '-principal_created_at', 'created_at').first()
 
         if len(calib_obs) < 1:
-            obs_start = obs.created_at
             calib_obs = CalibrationObservation.objects(created_at__lte=obs_start, status="finished").order_by(
                 'created_at').first()
 
@@ -401,8 +406,9 @@ class Pointing(object):
 
         log.info('Calibration coefficients loaded successfully')
 
-        obs.calibration_observation = calib_obs.id
-        obs.save()
+        if settings.observation.id:
+            obs.calibration_observation = calib_obs.id
+            obs.save()
 
         return calib_coeffs
 

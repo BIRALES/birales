@@ -71,7 +71,6 @@ class RawDataReader(ProcessingModule):
             # Use the declination that is in the PKL file
             settings.beamformer.reference_declination = self._config['settings']['beamformer']['reference_declination']
 
-
         except IOError:
             log.error('Config PKL file was not found in %s. Exiting.', self._filepath + config.config_ext)
             raise BIRALESObservationException(f"Config PKL file was not found in {self._filepath + config.config_ext}")
@@ -180,7 +179,6 @@ class RawDataReader(ProcessingModule):
             if self._read_count > self._read_count_end:
                 obs_info['stop_pipeline_at'] = self._iter_count
                 self.stop()
-
                 return
 
         data = self._f.read(self._nsamp * self._nants * 8)
@@ -195,8 +193,6 @@ class RawDataReader(ProcessingModule):
                 obs_info['stop_pipeline_at'] = self._iter_count
                 self.stop()
                 return
-                # time.sleep(200)
-                # raise NoDataReaderException("Observation finished")
 
             # Read from the next set of data from new file
             data = self._f.read(self._nsamp * self._nants * 8)

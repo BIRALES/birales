@@ -134,7 +134,7 @@ class BeamPersister(ProcessingModule):
         # Transpose data and write to file
         if input_data.dtype == float:
             temp_array = input_data[self._beam_range, self._channel_range, :].T.ravel()
-        elif settings.persisters.compute_power:
+        elif 'compute_power' in settings.persister.__dict__.keys() and settings.persister.compute_power:
             temp_array = np.power(np.abs(input_data[self._beam_range, self._channel_range, :].T), 2).ravel()
         else:
             temp_array = input_data[self._beam_range, self._channel_range, :].T.ravel()

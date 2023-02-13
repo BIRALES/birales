@@ -197,7 +197,6 @@ def traverse(root, ndx, bbox, noise_est, min_length=2):
 
         else:
             if root.children > min_length:
-                # print len(leaves)
 
                 p5 = noise_est * 10 ** (5 / 10.)  # power at SNR = 5
                 pm = np.mean(ndx[:, 2])  # mean power of leaf
@@ -293,9 +292,9 @@ def is_valid(candidate, g, beam_id):
 
     c_score = missing_score(candidate[:, 1])
     t_score = missing_score(candidate[:, 0])
-    # if c_score > 0.5 and t_score > 0.5:
-    #     log.debug(f"Candidate {g}, dropped since missing score is high (c={c_score:0.3f}, t={t_score:0.3f})")
-    #     return False
+    if c_score > 0.5 and t_score > 0.5:
+        # log.debug(f"Candidate {g}, dropped since missing score is high (c={c_score:0.3f}, t={t_score:0.3f})")
+        return False
 
     r_value, p = pearsonr(candidate[:, 1], candidate[:, 0])
 

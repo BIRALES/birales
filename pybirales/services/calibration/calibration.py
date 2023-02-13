@@ -28,7 +28,7 @@ class CalibrationFacade:
         try:
             return pickle.load(open(filepath + '.pkl', 'rb'))
         except IOError:
-            raise BaseException("PKL file not found in {}.pkl".format(filepath))
+            raise Exception("PKL file not found in {}.pkl".format(filepath))
 
     def calibrate(self, calib_dir, corr_matrix_filepath):
         """
@@ -43,8 +43,7 @@ class CalibrationFacade:
         self.obs_info = self.load_pkl_file(corr_matrix_filepath)
 
         log.info('Running the calibration routine.')
-        # print self.obs_info['start_center_frequency'] , 'scf'
-        cal_input = {
+        calibration_config = {
             'no_of_antennas': len(settings.beamformer.antenna_locations),
             'gaincal': True,
             'phasecal': True,
@@ -74,36 +73,42 @@ class CalibrationFacade:
             'antennas': settings.beamformer.antenna_locations,
         }
 
-        # ensure that the directory structure exists.
-        if not os.path.exists(os.path.dirname(cal_input['calib_check_path'])):
-            os.makedirs(os.path.dirname(cal_input['calib_check_path']))
+        # Ensure that the directory structure exists.
+        if not os.path.exists(os.path.dirname(calibration_config['calib_check_path'])):
+            os.makedirs(os.path.dirname(calibration_config['calib_check_path']))
 
+        # Generate baseline mapping
         cr = 0
-        no_of_baselines = np.int(0.5 * ((cal_input['no_of_antennas'] ** 2) - cal_input['no_of_antennas']))
-        bas_ant_no = np.zeros((no_of_baselines, 2), dtype=np.int)
-        for i in range(cal_input['no_of_antennas']):
-            for j in range(cal_input['no_of_antennas']):
+        nof_baselines = np.int(0.5 * ((calibration_config['no_of_antennas'] ** 2) - calibration_config['no_of_antennas']))
+        baseline_antenna_mapping = np.zeros((nof_baselines, 2), dtype=np.int)
+        for i in range(calibration_config['no_of_antennas']):
+            for j in range(calibration_config['no_of_antennas']):
                 if i < j:
-                    bas_ant_no[cr, 0] = i
-                    bas_ant_no[cr, 1] = j
+                    baseline_antenna_mapping[cr, 0] = i
+                    baseline_antenna_mapping[cr, 1] = j
                     cr += 1
 
-        cal_input['baseline_no'] = bas_ant_no
+        calibration_config['baseline_no'] = baseline_antenna_mapping
 
-        vis_file = cal_input['transit_file']
+        # Assign visibilities
+        visibilies_file = calibration_config['transit_file']
 
-        transit_sel = transit_select.TransitSelect(cal_input, vis_file)
-        calib_run = self_calibration.SelfCalRun(cal_input, transit_sel.vis_in)
+        # Select transit source and time
+        source_transit = transit_select.TransitSelect(calibration_config, visibilies_file)
 
-        coeffs_no_geom = np.array(calib_run.selfcal.coeffs_no_geom)
+        # Run self calibration
+        calibration_run = self_calibration.SelfCalRun(calibration_config, source_transit.vis_in)
+
+        # Assign instrumental coefficients (without geometric phases)
+        coeffs_no_geom = np.array(calibration_run.selfcal.coeffs_no_geom)
         
         # Generate the visibilities (before and after) plot to check the calibration coefficients
-        coeff_manager = apply_coeffs.CoeffManagerRun(cal_input, transit_sel.vis_in, calib_run.selfcal.latest_coeffs)
-        # coeff_manager = apply_coeffs.CoeffManagerRun(cal_input, transit_sel.vis_in, giuseppe_coeffs)
+        coefficient_manager = apply_coeffs.CoeffManagerRun(calibration_config, source_transit.vis_in,
+                                                           calibration_run.selfcal.latest_coeffs)
 
-        fringe_image = coeff_manager.check()
-        
-        # print coeffs_no_geom
+        # Generate a fringe image for future checking
+        fringe_image = coefficient_manager.check()
 
+        # Return the instrumental coefficients and fringe image
         return coeffs_no_geom.real.flatten(), coeffs_no_geom.imag.flatten(), fringe_image
 

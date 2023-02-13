@@ -7,6 +7,7 @@ import os
 import re
 from logging.handlers import TimedRotatingFileHandler
 
+from mongoengine.base.datastructures import BaseList
 from mongoengine import connect
 
 from pybirales import settings
@@ -41,7 +42,7 @@ class BiralesConfig:
         if config_file_path:
             # Set the configurations from file (can be multiple files)
             log.info('Loading configuration files')
-            if type(config_file_path) is list or type(config_file_path) is tuple:
+            if type(config_file_path) in [list, tuple, BaseList]:
                 for config_file in config_file_path:
                     self._load_from_file(config_file)
             else:
@@ -200,7 +201,8 @@ class BiralesConfig:
 
         log.info('Configurations successfully loaded.')
 
-        if not self.is_loaded() and settings.database is not None and settings.database.load_database:
+        if not self.is_loaded() and settings.database is not None and "load_database" in settings.database.__dict__ \
+                and settings.database.load_database:
             # Connect to the database
             self._db_connect()
 

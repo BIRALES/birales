@@ -7,6 +7,7 @@ import glob, pylab
 from time import sleep
 import matplotlib
 import signal
+from scipy.signal import medfilt
 
 from matplotlib.patches import Circle
 
@@ -142,7 +143,7 @@ def plot(opts):
     nchans = opts.nchans
 
     f = open(args[0], 'rb')
-    data = np.fromfile(f, dtype=np.dtype('f'), count=8192 * 117 * 1024)
+    data = np.fromfile(f, dtype=np.dtype('f'))
 
     nsamp = int(len(data) / (nbeams * nchans))
     data = np.reshape(data[:nsamp * nbeams * nchans], (nsamp, nchans, nbeams))
@@ -180,7 +181,7 @@ def plot(opts):
         # rms = np.sqrt(np.mean(data.ravel()**2))
         # maximum = np.max(data.ravel())
         # data = 10*np.log10(data / rms)
-        data = 10 * np.log10(data ** 2)
+        data = 10 * np.log10(data)
         # print "RMS: {}, max: {}\n".format(rms, maximum)
 
         fig = plt.figure(figsize=(11, 8))
@@ -225,17 +226,19 @@ def plot(opts):
         fig = plt.figure(figsize=(8, 8))
         ax = fig.add_subplot(1, 1, 1)
 
-        data = np.sum(data, axis=1)
-        # idata = np.reshape(data, (len(data) / opts.samples, opts.samples, nbeams))
-        data = 10 * np.log10(data)
-
         # Plot time series
         markers = matplotlib.markers.MarkerStyle.markers.keys()
         for i in range(nbeams):
-            ax.plot(data[:, i], marker=markers[i], label="Beam %d" % i)
+            to_plot = data[:, :, i]
+            to_plot = 10 * np.log10(to_plot)
+            print(to_plot.shape)
+            to_plot = medfilt(np.sum(to_plot / nchans, axis=1), 11)
+
+            ax.plot(np.arange(data.shape[0]) * opts.tsamp, to_plot, label=f"Beam {i} = {-2 + i * 0.25} deg")
             ax.xaxis.set_major_formatter(pylab.FormatStrFormatter('%2.1f'))
             ax.set_xlabel("Time (s)")
             ax.set_ylabel("Log Power (Arbitrary)")
+            ax.set_title("Cygnus calibrated with CasA - NS")
 
         fig.tight_layout()
         plt.legend()
