@@ -46,20 +46,27 @@ class RawDataReader(ProcessingModule):
 
         self._read_count = 0
         self._read_count_end = None
+        self._samples_read = 0
+        self._samples_to_read = None
 
         if settings.rawdatareader.skip_seconds > 0:
             samples_to_skip = settings.observation.samples_per_second * settings.rawdatareader.nants * settings.rawdatareader.skip_seconds
             raw_file_nsamp = settings.rawdatareader.nsamp * settings.rawdatareader.nants
+
             self._read_count = (samples_to_skip) / raw_file_nsamp
 
-            # print(f'Samples to skip: {samples_to_skip}')
-            # print(f'Samples per raw data file: {raw_file_nsamp}')
-            # print(f'Files to skip: {self._read_count}')
+            print(f'Samples to skip: {samples_to_skip}')
+            print(f'Samples per raw data file: {raw_file_nsamp}')
+            print(f'Files to skip: {self._read_count}')
         else:
             if settings.rawdatareader.skip > 0:
                 self._read_count = settings.rawdatareader.skip
 
                 log.info("Raw data reader will skip {} iterations".format(self._read_count))
+
+        if settings.rawdatareader.seconds_to_process > 0:
+            self._samples_to_read = settings.observation.samples_per_second * settings.rawdatareader.nants * settings.rawdatareader.seconds_to_process
+            print(f'Samples to process: {self._samples_to_read}')
 
         # Call superclass initialiser
         super(RawDataReader, self).__init__(config, input_blob)
@@ -175,6 +182,14 @@ class RawDataReader(ProcessingModule):
         :param output_data:
         :return:
         """
+        if self._samples_to_read:
+            if self._samples_read >= self._samples_to_read:
+                log.warning(f"Read {self._samples_read} / {self._samples_to_read} "
+                            f"samples as specified in the configuration file. Pipeline will terminate.")
+                obs_info['stop_pipeline_at'] = self._iter_count
+                self.stop()
+                return
+
         if self._read_count_end:
             if self._read_count > self._read_count_end:
                 obs_info['stop_pipeline_at'] = self._iter_count
@@ -227,6 +242,8 @@ class RawDataReader(ProcessingModule):
         self.publish_antenna_metrics(data, obs_info)
 
         self._read_count += 1
+
+        self._samples_read += self._nsamp * self._nants
 
         return obs_info
 
