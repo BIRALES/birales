@@ -126,6 +126,11 @@ class CorrMatrixPersister(ProcessingModule):
 
         dset2[:, :] = np.transpose([baselines, antenna1, antenna2])
 
+        # Create timesample dataset
+
+        dset_time = f.create_dataset("Time", shape=(obs_info['nsamp'],), maxshape=(None,), dtype=np.float, chunks=True)
+        dset_time[:] = np.zeros((obs_info['nsamp']), dtype=np.float)
+
         # Ready file
         f.flush()
         f.close()
@@ -164,8 +169,13 @@ class CorrMatrixPersister(ProcessingModule):
         # Resize dataset if required
         if size >= len(dset[:, 0, 0, 0]):
             dset.resize(size * 2, axis=0)
+            f["Time"].resize(size * 2, axis=0)
 
         dset[time_start:time_end, :, :, :] = input_data[:, :, :, :]
+
+        timestamps = datetime.timedelta(seconds=obs_info['sampling_time']) * np.arange(obs_info['nsamp']) + obs_info[
+            'timestamp']
+        f["Time"][time_start:time_end] = [t.timestamp() for t in timestamps]
 
         # Flush and close file
         f.flush()

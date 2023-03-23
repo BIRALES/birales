@@ -162,6 +162,8 @@ class PFB(ProcessingModule):
 
         # Update observation information
         obs_info['timestamp'] -= timedelta(seconds=(self._ntaps - 1) * self._nchans * obs_info['sampling_time'])
+        print(timedelta(seconds=(self._ntaps - 1) * self._nchans * obs_info['sampling_time']))
+        print((self._ntaps - 1), self._nchans, obs_info['sampling_time'])
         obs_info['nchans'] = self._nchans * obs_info['nsubs']
         obs_info['nsamp'] //= self._nchans
         obs_info['sampling_time'] *= self._nchans

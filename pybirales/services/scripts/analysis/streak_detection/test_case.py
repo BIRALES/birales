@@ -46,6 +46,7 @@ no_filter = ImageSegmentationAlgorithm('No filter', dummy_filter)
 
 dbscan_detector = FeatureExtractionAlgorithm('DBSCAN', naive_dbscan)
 msds_detector = FeatureExtractionAlgorithm('MSDS', msds_q)
+msds_detector2 = FeatureExtractionAlgorithm('MSDS', msds_2)
 hough_detector = FeatureExtractionAlgorithm('Hough', hough_transform)
 astride_detector = FeatureExtractionAlgorithm('Astride', astride)
 cfar_detector = FeatureExtractionAlgorithm('CFAR', cfar)
@@ -67,7 +68,9 @@ DETECTION_TESTS = TestSuite('detection_tests', [
 ])
 
 DETECTION_TESTS_DEBUG = TestSuite('detection_tests', [
-    Test(triangle_filter, [msds_detector]),
+    # Test(triangle_filter, [msds_detector]),
+    Test(triangle_filter, [msds_detector2]),
+
     # Test(triangle_filter, [msds_detector, dbscan_detector]),
     # Test(no_filter, [astride_detector])
 ])
