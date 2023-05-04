@@ -6,11 +6,13 @@ space debris tracks from the filtered data
 
 from astride.utils.edge import EDGE
 from astropy.stats import sigma_clipped_stats
-from hdbscan import HDBSCAN
+from line_profiler import LineProfiler
+# from hdbscan import HDBSCAN
 from skimage import measure
 from skimage.transform import probabilistic_hough_line
 from sklearn.cluster import DBSCAN
 
+import pybirales.pipeline.modules.detection.msds.msdsv2 as msds2
 from pybirales.pipeline.modules.detection.msds.msds import *
 from pybirales.pipeline.modules.detection.msds.util import get_clusters, _validate_clusters, timeit
 from pybirales.pipeline.modules.detection.msds.visualisation import *
@@ -22,7 +24,7 @@ def _viz_cluster(bb, fclust1):
         print(b[0], b[1], b[2], g)
 
 
-def hough_transform(test_image, true_tracks, noise_est, debug):
+def hough_transform(test_image, true_tracks, noise_est, debug, profiler):
     """
     Hough feature detection
 
@@ -51,7 +53,7 @@ def hough_transform(test_image, true_tracks, noise_est, debug):
     return clusters
 
 
-def astride(test_image, true_tracks, noise_est, debug):
+def astride(test_image, true_tracks, noise_est, debug, profiler):
     mean, med, std = sigma_clipped_stats(test_image)
     test_image -= med
     contours = measure.find_contours(test_image, std * 3, fully_connected='high')
@@ -92,26 +94,26 @@ def astride(test_image, true_tracks, noise_est, debug):
     return clusters
 
 
-def hdbscan(test_image, debug):
-    hdbscan = HDBSCAN(algorithm='prims_kdtree', alpha=1.0, approx_min_span_tree=True,
-                      gen_min_span_tree=False, leaf_size=50, metric='euclidean',
-                      min_cluster_size=5, min_samples=None, p=None)
-    ndx = np.column_stack(np.where(test_image > 0.))
+# def hdbscan(test_image, debug, profiler):
+#     hdbscan = HDBSCAN(algorithm='prims_kdtree', alpha=1.0, approx_min_span_tree=True,
+#                       gen_min_span_tree=False, leaf_size=50, metric='euclidean',
+#                       min_cluster_size=5, min_samples=None, p=None)
+#     ndx = np.column_stack(np.where(test_image > 0.))
+#
+#     ndx = np.append(ndx, np.expand_dims(test_image[test_image > 0.], axis=1), axis=1)
+#
+#     # ndx = pairwise_distances(ndx, metric=sim)
+#
+#     c_labels = hdbscan.fit_predict(ndx)
+#
+#     clusters = get_clusters(ndx, c_labels)
+#
+#     clusters = _validate_clusters(clusters)
+#
+#     return clusters
 
-    ndx = np.append(ndx, np.expand_dims(test_image[test_image > 0.], axis=1), axis=1)
 
-    # ndx = pairwise_distances(ndx, metric=sim)
-
-    c_labels = hdbscan.fit_predict(ndx)
-
-    clusters = get_clusters(ndx, c_labels)
-
-    clusters = _validate_clusters(clusters)
-
-    return clusters
-
-
-def naive_dbscan(test_image, true_tracks, noise_estimate, debug):
+def naive_dbscan(test_image, true_tracks, noise_estimate, debug, profiler):
     db_scan = DBSCAN(eps=5, min_samples=5, algorithm='kd_tree', n_jobs=-1)
 
     ndx = np.column_stack(np.where(test_image > 0.))
@@ -136,7 +138,7 @@ def naive_dbscan(test_image, true_tracks, noise_estimate, debug):
 
 # @profile
 @timeit
-def msds_q(test_image, true_tracks, noise_est, debug):
+def msds_q(test_image, true_tracks, noise_est, debug, profiler):
     limits = get_limits(test_image, true_tracks)
 
     pub = False
@@ -145,36 +147,122 @@ def msds_q(test_image, true_tracks, noise_est, debug):
     # limits = (0, 70, 2000, 2160)   #s limits for crossing streaks
     # limits = (50,120, 1100, 1400)
     # limits = None
+    profiler.reset()
 
     ndx = pre_process_data(test_image)
+    profiler.add_timing('MSDS: pre_process_data')
 
     # Build quad/nd tree that spans all the data points
     k_tree = build_tree(ndx, leave_size=40, n_axis=2)
+    profiler.add_timing('MSDS: build_tree')
 
     visualise_filtered_data(ndx, true_tracks, '1_filtered_data' + ext, limits=limits, debug=debug, pub=pub)
 
     # Traverse the tree and identify valid linear streaks
     leaves = traverse(k_tree.tree, ndx, bbox=(0, test_image.shape[1], 0, test_image.shape[0]), min_length=2.,
                       noise_est=noise_est)
+    profiler.add_timing('MSDS: traverse')
 
     positives = process_leaves(leaves)
+    profiler.add_timing('MSDS: process_leaves')
 
     print("Processed {} leaves. Of which {} were positives.".format(len(leaves), len(positives)))
 
     visualise_tree_traversal(ndx, true_tracks, positives, leaves, '2_processed_leaves' + ext, limits=limits,
-                             vis=True, pub=True)
+                             vis=False, pub=True)
     eps = estimate_leave_eps(positives)
+    profiler.add_timing('MSDS: estimate_leave_eps')
 
-    print('eps is:', eps)
     cluster_data = h_cluster_leaves(positives, distance_thold=eps)
-
+    profiler.add_timing('MSDS: h_cluster_leaves')
     visualise_clusters(cluster_data, true_tracks, positives,
                        filename='3_clusters' + ext,
                        limits=limits,
                        debug=debug, pub=pub)
+
+    # lp = LineProfiler()
+    # lp_wrapper = lp(validate_clusters)
+    # lp_wrapper(cluster_data)
+    # lp.print_stats()
+
+    # lp = LineProfiler()
+    # lp_wrapper = lp(process_leaves)
+    # lp_wrapper(leaves)
+    # lp.print_stats()
+
     # Filter invalid clusters
     tracks = validate_clusters(cluster_data)
+    profiler.add_timing('MSDS: validate_clusters')
+    visualise_tracks(tracks, true_tracks, '4_tracks' + ext, limits=limits, debug=debug, pub=pub)
 
+    visualise_tracks(tracks, true_tracks, '5_tracks' + ext, limits=None, debug=debug, pub=pub)
+    return tracks
+
+
+@timeit
+def msds_2(test_image, true_tracks, noise_est, debug, profiler):
+    limits = get_limits(test_image, true_tracks)
+
+    pub = False
+    ext = '.pdf'
+
+    # limits = (0, 70, 2000, 2160)   #s limits for crossing streaks
+    # limits = (50,120, 1100, 1400)
+    # limits = None
+    profiler.reset()
+
+    ndx = msds2.pre_process_data(test_image)
+    profiler.add_timing('MSDS: pre_process_data')
+
+    # Build quad/nd tree that spans all the data points
+    k_tree = msds2.build_tree(ndx, leave_size=40, n_axis=2)
+    profiler.add_timing('MSDS: build_tree')
+
+    visualise_filtered_data(ndx, true_tracks, '1_filtered_data' + ext, limits=limits, debug=debug, pub=pub)
+
+    # Traverse the tree and identify valid linear streaks
+    leaves = msds2.traverse(k_tree.tree, ndx, bbox=(0, test_image.shape[1], 0, test_image.shape[0]), min_length=2.,
+                            noise_est=noise_est)
+    profiler.add_timing('MSDS: traverse')
+
+    # pre-preprocessing step to be included in tree traversal
+    leave_data = np.zeros(shape=(len(leaves), 45, 3))
+
+    for i, l in enumerate(leaves):
+        leave_data[i, :len(l[0]), ...] = l[0]
+
+    positives = msds2.process_leaves(leave_data)
+    profiler.add_timing('MSDS: process_leaves')
+
+    profiler.show()
+
+    lp = LineProfiler()
+    lp_wrapper = lp(msds2.process_leaves)
+    lp_wrapper(leave_data)
+    lp.print_stats()
+
+    print("Processed {} leaves. Of which {} were positives.".format(len(leaves), len(positives)))
+
+    visualise_tree_traversal(ndx, true_tracks, positives, leaves, '2_processed_leaves' + ext, limits=limits,
+                             vis=False, pub=True)
+    eps = msds2.estimate_leave_eps(positives)
+    profiler.add_timing('MSDS: estimate_leave_eps')
+
+    cluster_data = msds2.h_cluster_leaves(positives, distance_thold=eps)
+    profiler.add_timing('MSDS: h_cluster_leaves')
+    visualise_clusters(cluster_data, true_tracks, positives,
+                       filename='3_clusters' + ext,
+                       limits=limits,
+                       debug=debug, pub=pub)
+
+    # lp = LineProfiler()
+    # lp_wrapper = lp(process_leaves)
+    # lp_wrapper(leaves)
+    # lp.print_stats()
+
+    # Filter invalid clusters
+    tracks = msds2.validate_clusters(cluster_data)
+    profiler.add_timing('MSDS: validate_clusters')
     visualise_tracks(tracks, true_tracks, '4_tracks' + ext, limits=limits, debug=debug, pub=pub)
 
     visualise_tracks(tracks, true_tracks, '5_tracks' + ext, limits=None, debug=debug, pub=pub)

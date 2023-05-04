@@ -19,13 +19,12 @@ from pybirales.pipeline.modules.persisters.tdm_persister import TDMPersister
 from pybirales.pipeline.modules.readers.raw_data_reader import RawDataReader
 from pybirales.pipeline.modules.receivers.receiver import Receiver
 from pybirales.pipeline.modules.receivers.tpm_channel_receiver import TPMReceiver
-from pybirales.pipeline.modules.rso_simulator import RSOGenerator
 from pybirales.pipeline.modules.terminator import Terminator
 
 AVAILABLE_PIPELINES_BUILDERS = ['detection_pipeline', 'msds_detection_pipeline',
                                 'correlation_pipeline', 'dbscan_detection_pipeline',
                                 'standalone_pipeline', 'test_receiver_pipeline', 'dummy_data_pipeline',
-                                'rso_generator_pipeline', 'raw_data_truncator_pipeline', 'chnl_corr_pipeline_builder']
+                                'raw_data_truncator_pipeline', 'chnl_corr_pipeline_builder']
 
 
 def get_builder_by_id(builder_id):
@@ -54,8 +53,6 @@ def get_builder_by_id(builder_id):
         return StandAlonePipelineMangerBuilder()
     elif builder_id == 'dummy_data_pipeline':
         return DummyDataPipelineMangerBuilder()
-    elif builder_id == 'rso_generator_pipeline':
-        return RSOGeneratorPipelineMangerBuilder()
     elif builder_id == 'raw_data_truncator_pipeline':
         return DataTruncatorPipelineMangerBuilder()
     elif builder_id == 'chnl_corr_pipeline_builder':
@@ -290,48 +287,6 @@ class DummyDataPipelineMangerBuilder(PipelineManagerBuilder):
         self.manager.add_module("receiver", receiver)
         self.manager.add_module("beamformer", beamformer)
         self.manager.add_module("pfb", pfb)
-        self.manager.add_module("terminator", terminator)
-
-
-class RSOGeneratorPipelineMangerBuilder(PipelineManagerBuilder):
-    def __init__(self):
-        PipelineManagerBuilder.__init__(self)
-
-        self.manager.name = 'RSO Simulator Pipeline'
-
-        self._id = 'rso_generator_pipeline_builder'
-
-    def build(self):
-        """
-        This script runs the test receiver pipeline,
-        using the specified CONFIGURATION.
-        """
-        # Generate and equal number of antennas and beams
-
-        # Initialise the modules
-        receiver = RSOGenerator(settings.rso_generator)
-        beamformer = Beamformer(settings.beamformer, receiver.output_blob)
-        pfb = PFB(settings.channeliser, beamformer.output_blob)
-        preprocessor = PreProcessor(settings.detection, pfb.output_blob)
-        raw_fits_persister = RawDataFitsPersister(settings.fits_persister, preprocessor.output_blob)
-
-        # Add modules to pipeline manager
-        self.manager.add_module("receiver", receiver)
-        self.manager.add_module("beamformer", beamformer)
-        self.manager.add_module("pfb", pfb)
-        self.manager.add_module("preprocessor", preprocessor)
-        self.manager.add_module("raw_fits_persister", raw_fits_persister)
-
-        if settings.manager.detector_enabled:
-            filtering = Filter(settings.detection, raw_fits_persister.output_blob)
-            detector = Detector(settings.detection, filtering.output_blob)
-            terminator = Terminator(None, detector.output_blob)
-
-            self.manager.add_module("filtering", filtering)
-            self.manager.add_module("detector", detector)
-        else:
-            terminator = Terminator(None, raw_fits_persister.output_blob)
-
         self.manager.add_module("terminator", terminator)
 
 

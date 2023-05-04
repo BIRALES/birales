@@ -1,4 +1,3 @@
-import distutils
 import distutils.log as log
 import os
 
@@ -76,18 +75,13 @@ setup(
     author='Alessio Magro',
     author_email='alessio.magro@um.edu.mt',
     description='',
-    scripts=['pybirales/services/scripts/best2_server.py',
-             'pybirales/services/scripts/best2_client.py',
-             'pybirales/services/scripts/best2_process_beams.py',
-             'pybirales/cli/cli.py',
-             'pybirales/app/app.py'
-             ],
+    scripts=['pybirales/cli/cli.py',
+             'pybirales/app/app.py'],
     include_package_data=True,
     zip_safe=False,
     install_requires=DEPENDENCIES,
     setup_requires=DEPENDENCIES,
     data_files=[
-#        (os.path.join(HOME, '.birales', CONFIG_PATH), list_dir(os.path.join('pybirales', CONFIG_PATH))),
         (os.path.join(HOME, '.birales', TEMPLATES, 'dev'), list_dir(os.path.join('pybirales', TEMPLATES, 'dev'))),
         (os.path.join(HOME, '.birales', TEMPLATES, 'prod'), list_dir(os.path.join('pybirales', TEMPLATES, 'prod'))),
         (os.path.join(HOME, '.birales/fits'), []),

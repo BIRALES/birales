@@ -8,7 +8,7 @@ from scipy.spatial import KDTree
 from scipy.stats import pearsonr
 from sklearn import linear_model
 
-from pybirales.pipeline.modules.detection.msds.util import __ir, grad2, missing_score
+from pybirales.pipeline.modules.detection.msds.util import __ir, grad2, missing_score, ir_opt
 
 MIN_CLST_DIST = 3
 MIN_CHILDREN = 3
@@ -34,26 +34,33 @@ MAX_R = 1.1 * -57 * sampling_time / channel_bandwidth
 
 
 # this does not include SNR in the diff calc
-@njit("float64[:](float64[:,:], int32, float64[:], float64, int32)")
-def dm(X, m, dm, min_r, cid):
-    k = 0
+@njit("float64[:, :](float64[:,:, :])")
+def compute_dm(X):
     min_r = MIN_R
-    # min_r = -35e3
-    for i in range(0, m - 1):
-        for j in range(i + 1, m):
-            diff = X[i] - X[j]
+    l = X.shape[0]
+    m = X.shape[1]
 
-            # perfectly horizontal and distance is large  (> 1 px)
-            if diff[0] == 0 and abs(diff[1]) > 1:
-                dm[k] = 10000
-            # vertical
-            elif diff[1] == 0 and abs(diff[0]) > 1:
-                dm[k] = 10000
-            else:
-                diff += 1e-6
-                if min_r <= (diff[0] / diff[1]) <= 0:
-                    dm[k] = (diff[0] ** 2 + diff[1] ** 2) ** 0.5
-            k = k + 1
+    # dm = np.full((405, (m * (m - 1)) // 2), 10000, dtype=np.float)
+
+    dm = np.zeros((l, (m * (m - 1)) // 2), dtype=np.float) + 10000
+
+    for row in range(l):
+        k = 0
+        for i in range(0, m - 1):
+            for j in range(i + 1, m):
+                diff = X[row, i] - X[row, j]
+
+                # perfectly horizontal and distance is large  (> 1 px)
+                if diff[0] == 0 and abs(diff[1]) > 1:
+                    dm[row, k] = 10000
+                # vertical
+                elif diff[1] == 0 and abs(diff[0]) > 1:
+                    dm[row, k] = 10000
+                else:
+                    diff += 1e-6
+                    if min_r <= (diff[0] / diff[1]) <= 0:
+                        dm[row, k] = (diff[0] ** 2 + diff[1] ** 2) ** 0.5
+                k = k + 1
     return dm
 
 
@@ -206,7 +213,6 @@ def traverse(root, ndx, bbox, noise_est, min_length=2):
 
                 if np.any(ndx):
                     leaves.append((ndx, bbox))
-
     return leaves
 
 
@@ -221,12 +227,13 @@ def linear_cluster(leave_pair):
     labels, u_groups = h_cluster(data, 4, min_length=min_length, i=leaf_id)
 
     n_data = []
+    g_mean = np.mean(data[:, :2])
     for g in u_groups:
         c = data[labels == g]
         if missing_score(c[:, 1]) > 0.5 and missing_score(c[:, 0]) > 0.5:
             continue
 
-        ratio = __ir(c, min_n=20, i=leaf_id)
+        ratio = __ir(c, min_n=20, i=leaf_id, mean=g_mean[labels == g])
 
         if 0. >= ratio >= -0.15:
             n_data.append([c, leaf_id, ratio, bbox])
@@ -234,21 +241,41 @@ def linear_cluster(leave_pair):
     return n_data
 
 
-def process_leaves(leaves, debug=False):
-    leaves = np.array(leaves)
+# def is_linear(data):
 
-    # pos = sum([linear_cluster(leave_pair=(leaves[i], i)) for i in range(len(leaves))])
-    pos = []
-    for i in range(len(leaves)):
-        pos += linear_cluster(leave_pair=(leaves[i], i))
 
-    return pos
+def process_leaves(leave_data):
+    leave_data = leave_data[45 - np.count_nonzero(np.sum(leave_data, axis=2), axis=1) > 2]
+    min_length = 5
 
-    # pos = []
-    # for i in range(len(leaves)):
-    #     pos += linear_cluster(leave_pair=(leaves[i], i))
-    #
-    # return pos
+    distances = compute_dm(leave_data)
+
+    # todo Perform single linkage clustering - was not able to vectorise this - produce mwexample
+    a = np.zeros(len(distances), dtype=bool)
+
+    for d in range(distances.shape[0]):
+        Z = linkage(distances[d], 'single')
+        # Determine to which cluster each initial point would belong given a distance threshold
+        labels = fcluster(Z, 4, criterion='distance')
+
+        u, c = np.unique(labels, return_counts=True)
+        u_groups = u[c >= min_length]
+
+        # g_mean = np.mean(leave_data[d, :2])
+        for g in u_groups:
+            c = leave_data[d, labels == g]
+            if missing_score(c[:, 1]) > 0.5 and missing_score(c[:, 0]) > 0.5:
+                continue
+
+            ratio = ir_opt(c, min_n=20, i=0)
+            # ratio = __ir(c, min_n=20, i=0)
+
+            if 0. >= ratio >= -0.15:
+                a[d] = True
+                break
+        else:
+            a[d] = False
+    return leave_data[a]
 
 
 # @timeit
