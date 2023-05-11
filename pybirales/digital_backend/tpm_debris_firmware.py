@@ -76,11 +76,15 @@ class TpmDebrisFirmware(FirmwareBlock):
                           self.board.load_plugin("TpmTenGCore", device=self._device, core=1),
                           self.board.load_plugin("TpmTenGCore", device=self._device, core=2),
                           self.board.load_plugin("TpmTenGCore", device=self._device, core=3)]
-        self._testgen = self.board.load_plugin("TpmTestGenerator", device=self._device, fsample=self._fsample/self._decimation)
+        self._testgen = self.board.load_plugin("TpmTestGenerator", device=self._device,
+                                               fsample=self._fsample / self._decimation)
         self._sysmon = self.board.load_plugin("TpmSysmon", device=self._device)
         self._patterngen = self.board.load_plugin("TpmPatternGenerator", device=self._device)
-        self._power_meter = self.board.load_plugin("AdcPowerMeterSimple", device=self._device, fsample=self._fsample/(self._decimation), samples_per_frame=4096)
-        self._integrator = self.board.load_plugin("TpmIntegrator", device=self._device, fsample=self._fsample/self._decimation, nof_frequency_channels=2048, oversampling_factor=1.0)
+        self._power_meter = self.board.load_plugin("AdcPowerMeterSimple", device=self._device,
+                                                   fsample=self._fsample / (self._decimation), samples_per_frame=1024)
+        self._integrator = self.board.load_plugin("TpmIntegrator", device=self._device,
+                                                  fsample=self._fsample / self._decimation, nof_frequency_channels=512,
+                                                  oversampling_factor=1.0)
         self._polyfilter = self.board.load_plugin("PolyFilter", device=self._device)
 
         self._device_name = "fpga1" if self._device is Device.FPGA_1 else "fpga2"
@@ -156,13 +160,12 @@ class TpmDebrisFirmware(FirmwareBlock):
             if retries == max_retries:
                 raise BoardError("TpmDebrisFirmware: Could not configure JESD cores")
 
-
         # Initialise power meter
         self._power_meter.initialise()
 
         # Initialise 10G cores
-        for teng in self._teng:
-            teng.initialise_core()
+        # for teng in self._teng:
+        #    teng.initialise_core()
 
     #######################################################################################
 

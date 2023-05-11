@@ -4,7 +4,7 @@ import logging as log
 import pytz
 
 from pybirales.repository.models import Observation, CalibrationObservation
-from pybirales.services.scheduler.exceptions import ObservationsConflictException, InvalidObservationException
+from pybirales.services.scheduler.exceptions import ObservationsConflictException
 from pybirales.services.scheduler.observation import ScheduledCalibrationObservation, ScheduledObservation
 
 
@@ -108,4 +108,7 @@ class Schedule:
 
         self.observations = observations
 
-        return observations
+        # Sort the list of observation (since calibration observations are appended to the detection obs)
+        self.observations = sorted(observations, key=lambda x: x.start_time)
+
+        return self.observations

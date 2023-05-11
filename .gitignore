@@ -5,7 +5,7 @@ data/
 build
 dist
 pybirales.egg-info
-
+venv/
 .eggs
 *.log
 *.swp
@@ -25,3 +25,4 @@ pybirales/services/scripts/**/*.mat
 pybirales/services/scripts/**/*.lprof
 pybirales/services/scripts/**/*.pdf
 pybirales/services/scripts/**/*.tree
+/pybirales/cli/*.png

@@ -24,16 +24,16 @@ from configuration import GRADIENT_RANGE, TRACK_LENGTH_RANGE
 from pybirales.pipeline.modules.detection.msds.util import snr_calc, is_valid
 from pybirales.pipeline.modules.detection.msds.visualisation import *
 import random
-
+from profiler import Profiler
 
 # Plot the metrics
 # Metrics as a function of SNR
 # Filters as a function of speed
 
-def test_detector(detector, data, true_tracks, noise_estimate, debug=True, visualise=False):
+def test_detector(detector, data, true_tracks, noise_estimate, debug=True, visualise=False, profiler=None):
     print("Running {} algorithm".format(detector.name))
     start = time.time()
-    candidates = detector.func(data, true_tracks, noise_estimate, debug)
+    candidates = detector.func(data, true_tracks, noise_estimate, debug, profiler)
 
     candidates = [snr_calc(candidate, noise_estimate=noise_mean) for candidate in candidates if is_valid(candidate)]
     timing = time.time() - start
@@ -45,6 +45,7 @@ def test_detector(detector, data, true_tracks, noise_estimate, debug=True, visua
 
     # visualise candidates
     # visualise_detector(data, candidates, tracks, detector.name, s, visualise=visualise)
+
 
     return evaluate_detector(true_image, data, candidates, timing, s, thickness=TRACK_THICKNESS, name=detector.name)
 
@@ -134,13 +135,16 @@ if __name__ == '__main__':
     detection_metrics_df = pd.DataFrame()
 
     snr = np.arange(0, 7, 1)
+    snr = [10]
 
     DEBUG_DETECTOR = False
 
-    N_TESTS = 5
+    N_TESTS = 1
 
     OUTPUT_DF = 'output_' + str(len(TEST_SUITE.name)) + str(N_CHANS) + str(N_SAMPLES) + str(N_TRACKS) + '_'.join(
         map(str, snr)) + '.pkl'
+
+    profiler = Profiler()
 
     # visualise_image(test_img, 'Test Image: no tracks', tracks=None)
     count = 0
@@ -171,8 +175,11 @@ if __name__ == '__main__':
             # Add tracks to the simulated data
             test_img = add_tracks(org_test_img.copy(), tracks, noise_mean, s)
 
+            profiler.start()
             # preprocessing - remove noise estimate from image
             test_img -= np.mean(test_img, axis=1)[..., np.newaxis]
+
+            profiler.add_timing("Pre-processing")
 
             visualise_image(test_img, 'Test Image: %d tracks at SNR %d dB' % (N_TRACKS, s), tracks,
                             visualise=VISUALISE,  # VISUALISE,
@@ -189,7 +196,9 @@ if __name__ == '__main__':
                 filter_func = test_filter.func
 
                 try:
+                    profiler.reset()
                     mask, threshold = filter_func(data)
+                    profiler.add_timing('Triangle Filter')
                 except Exception:
                     print("warning. The following filter failed: ", f_name, "at an snr of ", s)
                     continue
@@ -207,7 +216,9 @@ if __name__ == '__main__':
                     mask, _ = hit_and_miss(data, test_img, mask)
                     timing = time.time() - start
                     f_name += '_pp'
+                    profiler.reset()
                     e2 = evaluate_filter(true_image, data, ~mask, timing, s, TRACK_THICKNESS, f_name)
+                    profiler.add_timing('Hit and Miss')
                     metrics_df = metrics_df.append(e2, ignore_index=True)
                     visualise_filter(test_img, mask, tracks, f_name, s, visualise=VISUALISE,
                                      file_name="filter_{}_{}dB.png".format(f_name, s))
@@ -217,12 +228,16 @@ if __name__ == '__main__':
                 # Detection stuff here
                 for detector in test.detectors:
                     data2 = data.copy()
-                    results = test_detector(detector, data2, tracks, noise_mean, debug=DEBUG_DETECTOR)
+
+                    results = test_detector(detector, data2, tracks, noise_mean, debug=DEBUG_DETECTOR,
+                                            profiler=profiler)
+
                     detection_metrics_df = detection_metrics_df.append(results, ignore_index=True)
 
     # agg_f_df = show_results_filter(metrics_df, im_algorithms, 'image_seg_results')
-
     agg_d_df = show_results_detector(detection_metrics_df, detection_algorithms, 'detection_results')
 
     if VISUALISE:
         plt.show()
+
+    profiler.show()

@@ -14,6 +14,7 @@ class Complex8t(ctypes.Structure):
     _fields_ = [("x", ctypes.c_int8),
                 ("y", ctypes.c_int8)]
 
+
 # Custom numpy type for creating complex signed 8-bit data
 complex_8t = np.dtype([('real', np.int8), ('imag', np.int8)])
 
@@ -93,7 +94,7 @@ class ContinuousChannelReceiver(Generator):
             buffer_from_memory.restype = ctypes.py_object
             values = buffer_from_memory(data, complex_8t.itemsize * nof_values)
             values = np.frombuffer(values, complex_8t)
-            #values = memoryview(data)
+            # values = memoryview(data)
 
             obs_info = ObservationInfo()
             obs_info['sampling_time'] = 1.0 / settings.observation.samples_per_second
@@ -111,7 +112,8 @@ class ContinuousChannelReceiver(Generator):
             # TODO: tranpose data to fit our needs
 
             # Copy data to output buffer
-            output_data[:] = values.reshape((obs_info['npols'], obs_info['nsubs'], obs_info['nsamp'], obs_info['nants']))
+            output_data[:] = values.reshape(
+                (obs_info['npols'], obs_info['nsubs'], obs_info['nsamp'], obs_info['nants']))
 
             # Release output blob
             self.release_output_blob(obs_info)
@@ -131,7 +133,6 @@ class ContinuousChannelReceiver(Generator):
                                    self._config.frame_size,
                                    self._config.frames_per_block,
                                    self._config.nblocks) != Result.Success.value:
-
             raise PipelineError("Receiver: Failed to start")
 
         # Set receiver ports
@@ -146,7 +147,7 @@ class ContinuousChannelReceiver(Generator):
         self._callback = self._get_callback_function()
         if self._daq.setContinuousChannelConsumerCallback(self._callback) != Result.Success.value:
             raise PipelineError("Receiver: Failed to set consumer callback")
-        
+
         logging.info("Waiting for incoming data")
 
     def _initialise_library(self):
@@ -157,8 +158,8 @@ class ContinuousChannelReceiver(Generator):
 
         # Define setReceiverConfiguration function
         self._daq.setReceiverConfiguration.argtypes = [ctypes.c_uint16, ctypes.c_uint16,
-                                                     ctypes.c_uint16, ctypes.c_uint8,
-                                                     ctypes.c_uint8, ctypes.c_uint8]
+                                                       ctypes.c_uint16, ctypes.c_uint8,
+                                                       ctypes.c_uint8, ctypes.c_uint8]
         self._daq.setReceiverConfiguration.restype = None
 
         # Define startReceiver function

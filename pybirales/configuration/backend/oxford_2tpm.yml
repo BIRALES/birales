@@ -6,10 +6,10 @@ observation:
 
 # Station configuration parameters
 station:
-    id: 0
+  id: 0
     channel_truncation: 6
     channel_integration_time: -1
-    bitfile: "../bitfiles/itpm_v1_1_tpm_debris_wrap_v002.bit"
+    bitfile: "../../bitfiles/itpm_v1_1_tpm_debris_wrap_v004.bit"
 
 # Network configuration parameters
 network:

@@ -27,7 +27,9 @@
                                 <th>Observation</th>
                                 <th>Type</th>
                                 <th>Date (UTC)</th>
+                                <th>Declination</th>
                                 <th>Status</th>
+                                <th>Tracks</th>
                                 <th>Actions</th>
                             </tr>
                             </thead>
@@ -52,6 +54,13 @@
                                         </td>
                                     {% endif %}
                                     <td>
+                                        {% if 'beamformer' in observation.config_parameters.keys() %}
+                                            {{ "%.2f"|format(observation.config_parameters['beamformer']['reference_declination']|float) }}
+                                        {% else %}
+                                            {{ "%.2f"|format(observation.settings.beamformer.reference_declination|float) }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
                                         {% if observation.status == 'finished' %}
                                             <span class="label label-success">{{ observation.status }}</span>
                                         {% elif observation.status == 'pending' %}
@@ -62,6 +71,13 @@
                                             <span class="label label-warning">{{ observation.status }}</span>
                                         {% else %}
                                             <span class="label label-danger">{{ observation.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if observation.type == 'observation' %}
+                                            <span class="badge badge-secondary">{{ observation.n_tracks() }}</span>
+                                        {% else %}
+                                            -
                                         {% endif %}
                                     </td>
                                     <td>

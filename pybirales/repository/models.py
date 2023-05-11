@@ -15,7 +15,7 @@ STATUS_MAP = {
 
 
 class BIRALESObservation(Document):
-    meta = {'allow_inheritance': True, 'abstract': True}
+    meta = {'allow_inheritance': True, 'abstract': True, 'collection': 'observation', }
 
     # _id = ObjectIdField(required=True, default=ObjectId, primary_key=True)
     name = StringField(required=True, max_length=200)
@@ -117,6 +117,29 @@ class Observation(BIRALESObservation):
             'config': config_files
         }
 
+    def n_tracks(self):
+        return len(SpaceDebrisTrack.get(observation_id=self.id))
+
+
+class DummyObservation(BIRALESObservation):
+    class model:
+        status = ""
+
+    def save(
+            self,
+            force_insert=False,
+            validate=True,
+            clean=True,
+            write_concern=None,
+            cascade=None,
+            cascade_kwargs=None,
+            _refs=None,
+            save_condition=None,
+            signal_kwargs=None,
+            **kwargs,
+    ):
+        pass
+
 
 class SpaceDebrisTrack(DynamicDocument):
     _id = ObjectIdField(required=True, default=ObjectId, primary_key=True)
@@ -145,6 +168,8 @@ class SpaceDebrisTrack(DynamicDocument):
 
         if to_time:
             query &= Q(created_at__lte=to_time)
+
+        # query &= Q(terminated=True)
 
         return query_set.filter(query)
 

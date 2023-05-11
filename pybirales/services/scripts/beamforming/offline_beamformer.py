@@ -15,6 +15,7 @@ from scipy import io
 
 from pybirales.services.scripts.calibration.offline_calibration import calibrate
 from pybirales.services.scripts.offline_pointing import Pointing
+from pybirales import settings
 
 log.basicConfig(level=log.NOTSET)
 
@@ -39,7 +40,7 @@ class Beamformer:
 
         n_integrations = total_samples_per_antenna / nsamp  # num. integrations per antenna
 
-        n_chunks = n_integrations / (skip + 1)
+        n_chunks = int(n_integrations / (skip + 1))
 
         # Create output array
         output_data = np.zeros((config['nbeams'], n_chunks), dtype=np.float64)
@@ -264,7 +265,7 @@ def display_obs_info(obs_name, obs_info, nsamp, sampling_rate, integration_time)
     log.info("Date: from {:%H:%M:%S} to {:%H:%M:%S %d/%m/%Y}".format(start_time, end_time))
     log.info("Duration: {:2.2f} minutes".format(duration.seconds / 60.))
     log.info("N samples per antenna: {:d}".format(nsamp))
-    log.info("Sampling rate: {:d}".format(sampling_rate))
+    log.info("Sampling rate: {:2.4f}".format(sampling_rate))
     log.info("Integration time: {:2.4f} seconds".format(integration_time))
 
 
@@ -332,13 +333,16 @@ def get_raw_filepaths(root_filepath):
     return file_paths
 
 
-def run():
+def run(output_filepath):
     suffix = '{}_{}_{}'.format(calibration_mode, nants_to_process, skip)
 
     obs_root = os.path.abspath(os.path.join(obs_raw_file, os.pardir))
     obs_raw_name = os.path.basename(obs_raw_file)
     base_filepath = os.path.join(obs_root, obs_raw_name)
-    settings = pickle.load(open(base_filepath + '.pkl'))
+    # settings = pickle.load(open(base_filepath + '.pkl'))
+
+    with open(base_filepath + '.pkl', 'rb') as pickle_file:
+        settings = pickle.load(pickle_file)
 
     settings = settings['settings']
     obs_info = settings['observation']
@@ -357,6 +361,7 @@ def run():
 
     if CALIBRATE:
         PARAMETERS = {
+            'observation': {},
             'manager': {
                 'debug': True
             },
@@ -370,7 +375,7 @@ def run():
         calib_coeffs = get_calibration_coefficients(calibration_mode)
 
     filepaths = get_raw_filepaths(base_filepath)
-    output_file_path = 'output/{}_beamformed_data_{}'.format(obs_name, suffix)
+    output_file_path = output_filepath + '{}_beamformed_data_{}'.format(obs_name, suffix)
     combined_output = []
 
     beamformer = OfflineBeamformer()
@@ -421,19 +426,28 @@ if __name__ == '__main__':
 
     nsamp = 32768  # samples to integrate
     nants = 32  # number of antennas
-    nants_to_process = 1
+    nants_to_process = 32
     calibration_mode = 'stefcal'
     skip = 0  # chunks to skip ( 0 does not skip)
-    beams = [6, 15, 24, 30]  # beams to be plotted
+    beams = [6, 15, 24, 30]  # beams to be plotted - central row
+    beams = [7, 16, 25]
+    beams = [5, 14, 23]
 
-    CONFIG_ROOT = '/home/denis/.birales/configuration/'
+    CONFIG_ROOT = '/home/oper/.birales/configuration/'
     config_filepath = [os.path.join(CONFIG_ROOT, 'birales.ini'),
                        os.path.join(CONFIG_ROOT, 'offline_calibration.ini')]
 
     obs_raw_file = "/media/denis/backup/birales/2019/2019_09_14/CASA/CASA_raw.dat"
     # obs_raw_file = "/media/denis/backup/birales/2019/2019_08_14/CAS_A_FES/CAS_A_FES_raw.dat"
+    obs_raw_file = '/storage/data/birales/2022_02_23/CasA/CasA_raw.dat'
 
-    run()
+    # settings.database.name = 'birales'
+    # settings.database.host = 'localhost'
+    # settings.database.port = 27017
+    # settings.database.user = 'birales_rw'
+    # settings.database.password = 'rw_Sept03'
+
+    run('/storage/data/birales/2022_02_23/CasA/')
 
     # for n in [4, 8, 16, 32]:
     #     nants_to_process = n

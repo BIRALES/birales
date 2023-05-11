@@ -21,20 +21,7 @@ class BeamPersister(ProcessingModule):
         # Sanity checks on configuration
         if {'filename_suffix'} - set(config.settings()) != set():
             raise PipelineError("Persister: Missing keys on configuration. (filename_suffix)")
-        
-        """
-        # Get the destination file path of the persisted data
-        self._filepath = self._get_filepath(config) + '.dat'
 
-        # Open file (if file exists, remove first)
-        if os.path.exists(self._filepath):
-            os.remove(self._filepath)
-            
-        self._file = open(self._filepath, "wb+")
-            
-        """
-        
-        
         # Create directory if it doesn't exist
         directory = os.path.join(settings.persisters.directory, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
                                  settings.observation.name)
@@ -145,8 +132,14 @@ class BeamPersister(ProcessingModule):
             return obs_info
 
         # Transpose data and write to file
-        # np.save(self._file, np.abs(input_data[self._beam_range, self._channel_range, :].T))
-        temp_array = np.power(np.abs(input_data[self._beam_range, self._channel_range, :].T), 2).ravel()
+        if input_data.dtype == float:
+            temp_array = input_data[self._beam_range, self._channel_range, :].T.ravel()
+        elif 'compute_power' in settings.persister.__dict__.keys() and settings.persister.compute_power:
+            temp_array = np.power(np.abs(input_data[self._beam_range, self._channel_range, :].T), 2).ravel()
+        else:
+            temp_array = input_data[self._beam_range, self._channel_range, :].T.ravel()
+            temp_array = np.stack((temp_array.real, temp_array.imag), axis=1).ravel()
+
         self._file.write(struct.pack('f' * len(temp_array), *temp_array))
         self._file.flush()
 

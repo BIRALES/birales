@@ -130,7 +130,7 @@ def get_best_calibration_obs(from_date, to_date, time_after_transit, time_before
     max_to_date = to_date - time_after_transit
 
     available_calibration_sources = []
-    for source, source_parameters in calibration_sources.iteritems():
+    for source, source_parameters in calibration_sources.items():
         previous_transit_time, ttt = get_previous_transit(source, max_to_date)
 
         if min_from_date < previous_transit_time < max_to_date:
@@ -143,7 +143,7 @@ def get_best_calibration_obs(from_date, to_date, time_after_transit, time_before
 
 
 if __name__ == "__main__":
-    for k, v in calibration_sources.iteritems():
+    for k, v in calibration_sources.items():
         date, seconds = get_next_transit(k, datetime.datetime.now())
         print("%+8s : RA: %11s  DEC: %11s  FLUX: %8s  TRANSIT (UTC): %-20s" % (
             k,

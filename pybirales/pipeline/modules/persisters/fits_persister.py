@@ -10,6 +10,7 @@ from pybirales import settings
 from pybirales.pipeline.base.definitions import PipelineError
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
+import logging
 
 
 class TLE_Target:
@@ -113,6 +114,7 @@ class FitsPersister(ProcessingModule):
                 self._fits_file = fits.open(self._fits_filepath)
                 new_data = np.dstack([self._fits_file[0].data, new_data])
                 self._write_to_file(new_data)
+                logging.info(f"Saved beam ({self._beams_to_visualise}) data to {self._fits_filepath}")
             except IOError:
                 # Fits file not created, create a new one (and set header)
                 self._header = self._create_header(obs_info, settings.observation.name)

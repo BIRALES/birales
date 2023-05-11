@@ -104,7 +104,7 @@ def __ir2(data, min_n=10, i=None):
     return ir, np.rad2deg(m2), m1
 
 
-def __ir(data, min_n=10, i=None):
+def __ir(data, min_n=10, i=None, mean=None):
     if len(data) >= min_n:
         return -0.09123
 
@@ -113,6 +113,7 @@ def __ir(data, min_n=10, i=None):
         return -0.09123
 
     b = data[:, :2] - np.mean(data[:, :2], axis=0)
+
     coords = np.flip(b.T, axis=0)
     eigen_values, eigen_vectors = np.linalg.eig(np.cov(coords))
     sort_indices = np.argsort(eigen_values)[::-1]
@@ -127,6 +128,28 @@ def __ir(data, min_n=10, i=None):
     m1 = -1 * p_v1[1] / p_v1[0]
 
     return np.abs(eigen_values[sort_indices[1]] / eigen_values[sort_indices[0]]) * np.sign(m1)
+
+
+def ir_opt(data, min_n=10, i=None):
+    if len(data) < min_n and len(np.unique(data[:, 0])) != 1:
+        b = data[:, :2] - np.mean(data[:, :2], axis=0)
+        coords = np.flip(b.T, axis=0)
+        eigen_values, eigen_vectors = np.linalg.eig(np.cov(coords))
+
+        sort_indices = np.argsort(eigen_values)[::-1]
+
+        p_v1 = eigen_vectors[sort_indices[0]]
+
+        # primary eigenvector is perfectly horizontal or perfectly vertical
+        if p_v1[0] == 0 or p_v1[1] == 0:
+            return 1
+
+        # Gradient of 1st eigenvector
+        m1 = -1 * p_v1[1] / p_v1[0]
+
+        return np.abs(eigen_values[sort_indices[1]] / eigen_values[sort_indices[0]]) * np.sign(m1)
+
+    return 0.0
 
 
 def _create_cluster(cluster_data, channels, obs_info, beam_id, iter_count):
@@ -218,5 +241,5 @@ def is_valid(cluster, r_thold=-0.98, min_span_thold=1, group=-1):
 
 
 def missing_score(param):
-    missing = np.setxor1d(np.arange(min(param), max(param)), param)
+    missing = np.setxor1d(np.arange(min(param), max(param) + 1, dtype=int), param)
     return len(missing) / float(len(param))

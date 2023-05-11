@@ -167,10 +167,8 @@ class Detector(ProcessingModule):
         # Tracks, that are valid and have transitted.
         self.n_terminated_tracks = 0
 
-        self.detection_algorithm = dbscan_standalone
-
-        if settings.detection.algorithm == 'msds':
-            self.detection_algorithm = msds_standalone
+        # self.detection_algorithm = dbscan_standalone
+        self.detection_algorithm = msds_standalone
 
         self.name = "MSDS Detector"
 
@@ -204,10 +202,12 @@ class Detector(ProcessingModule):
 
             # self.pool = Pool(3, maxtasksperchild=500)
             # plot_TLE(obs_info, input_data, tle_target)
+
+            t0 = time.time()
             new_tracks = self.detection_algorithm(self._iter_count, input_data, obs_info, obs_info['channels'],
                                                   self.pool)
 
-            log.info('[Iter {}]. Found {} beam_candidates'.format(self._iter_count, len(new_tracks)))
+            log.info(f'[Iter {self._iter_count}]. Found {len(new_tracks)} beam candidates in {time.time() - t0:.2f}s')
 
             # [Track Association] Create new tracks from clusters or merge clusters into existing
             tracks = data_association(self.pending_tracks, new_tracks, obs_info, notifications=False,

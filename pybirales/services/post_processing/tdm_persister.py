@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 
 import numpy as np
+import socket
 from jinja2 import Environment, FileSystemLoader
 from scipy import io
 
@@ -33,7 +34,12 @@ class TDMPersister:
 
         self._template_dir = os.path.dirname(__file__)
 
-        self._filename_mask = 'BIRALES_OUT_{:%Y%m%d}_{:0>3}.tdm'
+        name_prefix = settings.instrument.name_prefix
+
+        if socket.gethostname() == 'med-frb':
+            name_prefix = '2N'
+
+        self._filename_mask = name_prefix + '_BIRALES_OUT_{:%Y%m%dT%H%M%S}.tdm'
 
         self._template_filepath = 'input_template.tdm'
         self._template = Environment(loader=FileSystemLoader(self._template_dir)).get_template(self._template_filepath)
@@ -66,7 +72,7 @@ class TDMPersister:
 
         out_dir = self._create_out_dir(out_dir)
 
-        return os.path.join(out_dir, self._filename_mask.format(min(sd_track.data['time']), detection_num))
+        return os.path.join(out_dir, self._filename_mask.format(min(sd_track.data['time'])))
 
     def _get_debug_filename(self, obs_name, detection_num):
         """
@@ -114,7 +120,7 @@ class TDMPersister:
 
         try:
             with open(filepath, "wb") as fh:
-                fh.write(parsed_template)
+                fh.write(parsed_template.encode('utf-8'))
                 log.info('Outputted TDM {} persisted at: {} for track {}'.format(detection_num, filepath, sd_track.id))
         except IOError:
             log.exception(

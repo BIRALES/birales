@@ -145,7 +145,7 @@ def correlation_pipeline(ctx, config_file_path, pointing):
 @click.pass_context
 def standalone_pipeline(ctx, config_file_path):
     """
-    Run the Stand Alone Pipeline
+    Run the Standalone Pipeline
 
     :param config_file_path: The default configuration file to be used.
     :return:
@@ -237,6 +237,34 @@ def data_truncator_pipeline(ctx, config_file_path):
 
     observation = ScheduledObservation(name=ctx.obj['observation']['name'],
                                        pipeline_name='raw_data_truncator_pipeline',
+                                       config_file=config_file_path,
+                                       config_parameters=ctx.obj)
+
+    om = ObservationManager()
+    om.run(observation)
+
+
+@pipelines.command(short_help='Run the Correlation Pipeline')
+@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+              help='The BIRALES configuration file', multiple=True)
+@click.option('--pointing', 'pointing', help='Reference Declination of the Beam Former')
+@click.pass_context
+@enable_notifications
+def channel_correlation_pipeline(ctx, config_file_path, pointing):
+    """
+    Run the Correlation Pipeline
+
+    :param pointing:
+    :type pointing:
+    :param ctx:
+    :param config_file_path: The default configuration file to be used.
+    :return:
+    """
+    if pointing:
+        ctx.obj = update_config(ctx.obj, 'beamformer', 'reference_declination', pointing)
+
+    observation = ScheduledObservation(name=ctx.obj['observation']['name'],
+                                       pipeline_name='chnl_corr_pipeline_builder',
                                        config_file=config_file_path,
                                        config_parameters=ctx.obj)
 

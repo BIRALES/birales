@@ -17,18 +17,11 @@ class TransitSelect:
         self.source_transit_time = None
 
         self.h5_reader()
-        # self.transit_peak_find()
-        # print 'Transit peak search located transit at time sample ' + str(self.vis_peak) +\
-        #       ' at time: ' + str(self.source_transit_time)
 
         self.transit_compute()
         log.info('Transit time computation located transit at time sample {} at {:%d.%m.%y @ %H:%M:%S}'.format(self.vis_peak, self.source_transit_time))
 
         self.vis_in = self.visibilities[self.vis_peak, :]        
-        
-        # For testing purposes only 
-        # o =  len(self.visibilities) /2
-        # self.vis_in = self.visibilities[o, :]
 
     def h5_reader(self):
 

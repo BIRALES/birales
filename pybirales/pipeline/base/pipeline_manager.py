@@ -6,15 +6,16 @@ import threading
 import time
 from threading import Event
 
-import yappi as profiler
+# import yappi as profiler
 from matplotlib import pyplot as plt
 
 from pybirales import settings
 from pybirales.pipeline.base.definitions import NoDataReaderException
 from pybirales.repository.message_broker import broker
+from pybirales.repository.models import DummyObservation
 
-PIPELINE_CTL_CHL = 'birales_pipeline_control'
-BIRALES_STATUS_CHL = 'birales_system_status'
+PIPELINE_CTL_CHL = b'birales_pipeline_control'
+BIRALES_STATUS_CHL = b'birales_system_status'
 
 
 def pipeline_status_worker(kill_pill):
@@ -24,7 +25,7 @@ def pipeline_status_worker(kill_pill):
 
     for item in pub_sub.listen():
         if item['type'] == 'message':
-            if item['data'] == 'KILL':
+            if item['data'] == b'KILL':
                 log.info('KILL received on #{}. Killing pipeline'.format(PIPELINE_CTL_CHL))
 
                 pub_sub.unsubscribe(PIPELINE_CTL_CHL)
@@ -99,23 +100,25 @@ class PipelineManager(object):
             plot.initialise_plot()
             self._plotters.append(plot)
 
-    def start_pipeline(self, duration, observation):
+    def start_pipeline(self, duration=0, observation=DummyObservation()):
         """
         Start running the pipeline
 
         :param duration: duration of observation in s (0 means run forever)
+        :param observation: Database observation object
         :return:
         """
 
         try:
             logging.info("PyBIRALES: Starting")
 
-            if settings.manager.profile:
-                profiler.start()
+            # if settings.manager.profile:
+            #     profiler.start()
 
             # Start all modules
             for module in self._modules:
-                log.debug('Starting module {}'.format(module.name))
+                log.info('Starting module {}'.format(module.name))
+
                 module.start()
 
             self.wait_pipeline(duration=duration)
@@ -148,26 +151,26 @@ class PipelineManager(object):
         for module in self._modules:
             # Stop module
             module.stop()
-            time.sleep(0.2)
+            time.sleep(0.5)
 
-            if a_threads := [t.getName() for t in threading.enumerate() if t.is_alive()]:
-                log.warning('Running threads: %s', ', '.join(a_threads))
-
-            if not module.is_stopped:
-                time.sleep(0.5)
+            while not module.is_stopped:
+                if a_threads := [t.getName() for t in threading.enumerate() if t.is_alive()]:
+                    log.warning('Running threads: %s', ', '.join(a_threads))
+                log.warning(f"Killing {module.name}")
+                time.sleep(0.2)
 
         log.info('Pipeline Manager stopped')
 
-        if settings.manager.profile:
-            profiler.stop()
-            stats = profiler.get_func_stats()
-            profiling_file_path = settings.manager.profiler_file_path + '_{:%Y%m%d_%H:%M}.stats'.format(
-                datetime.datetime.utcnow())
-            log.info('Profiling stopped. Dumping profiling statistics to %s', profiling_file_path)
-            stats.save(profiling_file_path, type='callgrind')
+        # if settings.manager.profile:
+        #     profiler.stop()
+        #     stats = profiler.get_func_stats()
+        #     profiling_file_path = settings.manager.profiler_file_path + '_{:%Y%m%d_%H:%M}.stats'.format(
+        #         datetime.datetime.utcnow())
+        #     log.info('Profiling stopped. Dumping profiling statistics to %s', profiling_file_path)
+        #     stats.save(profiling_file_path, type='callgrind')
 
         # kill listener thread
-        log.debug('trying to kill pipeline %s', PIPELINE_CTL_CHL)
+        log.info('trying to kill pipeline %s', PIPELINE_CTL_CHL)
         broker.publish(PIPELINE_CTL_CHL, 'KILL')
 
     def is_module_stopped(self):

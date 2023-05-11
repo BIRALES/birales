@@ -2,7 +2,7 @@ import datetime
 import json
 import os
 import subprocess
-
+import socket
 import dateutil.parser
 import pandas as pd
 import pytz
@@ -124,3 +124,16 @@ def birales_pipeline_stop():
         return json.dumps({
             'msg': 'KILL command sent successfully',
         }), 200
+
+
+@api_page.route('/api/server', methods=['POST'])
+def get_server():
+    server = socket.gethostname()
+
+    if server == 'birales':
+        return 'BIRALES_TPM_1N'
+
+    if server == 'med-frb':
+        return 'BIRALES_TPM_2N'
+
+    return 'BIRALES'

@@ -41,6 +41,7 @@ class Module(Thread):
 
         # Stopping clause
         self.daemon = True
+        # self._module_stopped = False
         self._stop_module = Event()
 
     @abstractmethod
@@ -59,6 +60,8 @@ class Module(Thread):
         if not self.is_stopped:
             logging.info('Stopping %s module', self.name)
             self._stop_module.set()
+
+            # self._tear_down()
 
     def _validate_data_blob(self, input_blob, valid_blobs):
         if type(input_blob) not in valid_blobs:
@@ -117,6 +120,8 @@ class Generator(Module):
         while not self._stop_module.is_set():
             time.sleep(1)
 
+        # self._module_stopped = True
+
         self._stop_module.set()
 
     def request_output_blob(self):
@@ -143,6 +148,7 @@ class ProcessingModule(Module):
     def __init__(self, config, input_blob):
         super(ProcessingModule, self).__init__(config, input_blob)
         self._iter_count = 1
+        self._is_offline = settings.manager.offline
         logging.info('Initialised the %s module', self.__class__.__name__)
 
     @abstractmethod
@@ -208,8 +214,9 @@ class ProcessingModule(Module):
                         obs_info = res
                 tt = time.time() - s
 
-                # nsamp = settings.rawdatareader.nsamp
-                nsamp = settings.receiver.nsamp
+                nsamp = settings.tpm_receiver.nsamp
+                if self._is_offline:
+                    nsamp = settings.rawdatareader.nsamp
 
                 if tt < float(nsamp) / settings.observation.samples_per_second:
                     log.info('[Iteration {}] {} finished in {:0.3f}s'.format(self._iter_count, self.name, tt))
@@ -241,6 +248,11 @@ class ProcessingModule(Module):
 
         # Clean
         self._tear_down()
+
+        # self._module_stopped = True
+
+        self._stop_module.set()
+
         log.info('%s killed [Active threads: %s]', self.name, self._get_active_threads())
 
     def _get_active_threads(self):

@@ -4,6 +4,7 @@ function TrackDopplerProfilePlotter(selector) {
     this.name = 'Doppler Profile';
     this.y_label = 'Doppler Shift (Hz)';
     this.x_label = 'Timestamp (UTC)';
+    //this.x_label = 'Timestamp (LOCAL TIME)';
     this.api_entry = '/api/live/data';
     this.color_map = colorbrewer['Set3'][12];
 
@@ -86,7 +87,7 @@ TrackDopplerProfilePlotter.prototype = {
             let tx = track['tx'];
             $.each(track['data']['channel'], function (i) {
                 track_data.push({
-                    x: moment.utc(track['data']['time'][i]),
+                    x: moment.utc(track['data']['time'][i]).format('YYYY-MM-DDTHH:mm:ss'),
                     y: (track['data']['channel'][i] - tx) * 1e6
                 })
             });

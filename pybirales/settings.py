@@ -16,12 +16,10 @@ bandpassplotter = None
 antennaplotter = None
 persisters = None
 corrmatrixpersister = None
-correlator = None
+
 terminator = None
-manager = None
 calibration = None
 database = None
-instrument = None
 logger_root = None
 fits_persister = None
 scheduler = None
@@ -31,6 +29,10 @@ feng_configuration = None
 generator = None
 rso_generator = None
 tpm_receiver = None
+
+
+class instrument:
+    name_prefix = '1N'
 
 
 class receiver:
@@ -57,3 +59,8 @@ class detection:
 
 class manager:
     profile_timeit = False
+
+
+class correlator:
+    channel_start = None
+    channel_end = None

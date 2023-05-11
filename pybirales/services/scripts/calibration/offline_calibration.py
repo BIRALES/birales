@@ -18,7 +18,10 @@ def calibrate(obs_root, c_filepath, parameters):
 
     try:
         corr_matrix_filepath = get_file_by_extension(obs_root, '_corr.h5')
-        obs_info = pickle.load(open(get_file_by_extension(obs_root, '.pkl')))
+        # obs_info = pickle.load(open(get_file_by_extension(obs_root, '.pkl')))
+
+        with open(get_file_by_extension(obs_root, '.pkl'), 'rb') as pickle_file:
+            obs_info = pickle.load(pickle_file)
     except IOError:
         print('File not found in observation {}. Skipping observation'.format(obs_root))
         raise

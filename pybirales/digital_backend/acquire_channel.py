@@ -1,6 +1,7 @@
 from __future__ import division
 
 from multiprocessing import Process, Value, shared_memory
+from datetime import datetime
 from ctypes import c_bool, c_double
 import numpy as np
 import inspect
@@ -14,7 +15,7 @@ import time
 class ChannelisedData(Process):
     """ BIRALES spectrometer data receiver """
 
-    def __init__(self, ip, port=4660, nof_signals=32, buffer_samples=65536, callback=None):
+    def __init__(self, ip, port=4660, nof_signals=32, buffer_samples=65536):
         """ Class constructor:
         @param ip: IP address to bind receiver to
         @param port: Port to receive data on """
@@ -45,7 +46,6 @@ class ChannelisedData(Process):
         self._reference_counter = 0
         self._rollover_counter = 0
         self._received_packets = 0
-        self._reference_time = 0
 
         # Received data placeholder
         self._receiver_thread = None
@@ -62,20 +62,12 @@ class ChannelisedData(Process):
         self._ready_buffer_flag = Value(c_bool, False)
         self._stop_acquisition = Value(c_bool, False)
 
-        # Callback (sanity check on number of parameters
-        self._callback = None
-        if callback is not None:
-            try:
-                inspect.getargspec(callback)
-                self._callback = callback
-            except TypeError:
-                logging.error("Invalid function callback, ignoring")
-
     def initialise(self):
         """ Initialise receiver """
 
         # Initialise socket
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        print("Connecting to ", self._ip, self._port)
         self._socket.bind((self._ip, self._port))
         self._socket.settimeout(2)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 16 * 1024 * 1024)
@@ -130,7 +122,8 @@ class ChannelisedData(Process):
 
             # Calculate packet time
             # Sampling time is: 1.0 / (sampling_freq / (DDC (8) * FFT Size (1024)))
-            packet_time = self._sync_time + self._timestamp * self._sampling_time
+            # +1 due to firmware bug
+            packet_time = self._sync_time + self._timestamp * self._sampling_time + 1
 
             # Handle packet counter rollover
             # First condition ensures that on startup, first packets with counter number 0 are not updated
@@ -150,20 +143,9 @@ class ChannelisedData(Process):
             sample_index = (self._packet_counter - self._reference_counter) % (
                     self._buffer_samples // samples_in_packet)
 
-            # Check if packet belongs to current buffer
-            if self._reference_time == 0:
-                self._reference_time = packet_time
-
-            # If packet time is less than reference time, then this belongs to the previous buffer
-            if packet_time < self._reference_time:
-                logging.debug("Packet belongs to previous buffer!")
-                continue
-
             # Check if we skipped buffer boundaries, and if so, persist buffer
-            if sample_index == 0 and self._start_antenna_id == 0 and \
-                    packet_time >= self._reference_time + self._buffer_samples * self._sampling_time:
+            if sample_index == 0 and self._received_packets > 1:
                 self._persist_buffer()
-                self._reference_time = self._buffer_samples * self._sampling_time
                 self._current_timestamp = packet_time
                 self._received_packets = 0
 
@@ -171,10 +153,10 @@ class ChannelisedData(Process):
             self._received_packets += 1
 
             # Add data to buffer
-            self._add_packet_to_buffer(payload, sample_index * samples_in_packet, samples_in_packet,
-                                       self._start_antenna_id, packet_time)
+            self._add_packet_to_buffer(payload, sample_index * samples_in_packet,
+                                       samples_in_packet, self._start_antenna_id)
 
-    def _add_packet_to_buffer(self, payload, start_index, samples_in_packet, start_antenna, packet_time):
+    def _add_packet_to_buffer(self, payload, start_index, samples_in_packet, start_antenna):
         """ Add received payload to buffer """
 
         # Incoming data is in shape time/antennas/coeff (complex coefficient), reshape
@@ -182,7 +164,6 @@ class ChannelisedData(Process):
 
         # Convert to complex
         data = data[:, :, 0] + 1j * data[:, :, 1]
-#        print(data[:, 0])
 
         # Convert to complex64
         data = data.astype(np.complex64)
@@ -199,6 +180,9 @@ class ChannelisedData(Process):
             logging.warning("Waiting for full buffer to be emptied")
             time.sleep(1)
 
+        if self._stop_acquisition.value:
+            return
+
         logging.info("Persisting buffer with {} packets".format(self._received_packets))
 
         # Copy full buffer to full buffer placeholder
@@ -209,14 +193,14 @@ class ChannelisedData(Process):
         # Done, Clear buffer
         self._received_data[:] = 0
 
-        # If a callback is defined, call callback()
-        if self._callback is not None:
-            self._callback()
-
     def read_buffer(self):
         """ Wait for full buffer """
-        while not self._ready_buffer_flag.value and not self._stop_acquisition.value:
-            time.sleep(0.01)
+
+        # If buffer is not ready, sleep for a while and return None. This avoids
+        # waiting forever when either the data stream or receiver is stopped
+        if not self._ready_buffer_flag.value and not self._stop_acquisition.value:
+            time.sleep(0.1)
+            return None, None
 
         return self._ready_buffer_shared, self._ready_timestamp_shared.value
 
@@ -226,8 +210,22 @@ class ChannelisedData(Process):
 
     def stop_receiver(self):
         """ Wait for receiver to finish """
+
         # Issue stop
         self._stop_acquisition.value = True
+
+        # Wait for a while
+        # TODO: Perform the below using an atexit registered function
+        time.sleep(0.1)
+
+        # Clear shared memory buffer
+        if self._shared_memory_segment is not None:
+            del self._ready_buffer_shared
+            self._shared_memory_segment.close()
+            self._shared_memory_segment.unlink()
+
+        # Close socket
+        self._socket.close()
 
     def _decode_spead_header(self, packet):
         """ Decode SPEAD packet header
@@ -276,7 +274,6 @@ class ChannelisedData(Process):
     def _clear_receiver(self):
         """ Reset receiver  """
         self._received_packets = 0
-        self._previous_timestamp = 0
 
 
 if __name__ == "__main__":
@@ -284,7 +281,8 @@ if __name__ == "__main__":
 
     parser = OptionParser()
     parser.add_option("-p", dest="port", default=4660, type=int, help="UDP port (default:4660)")
-    parser.add_option("-i", dest="ip", default="10.0.10.10", help="IP (default: 10.0.10.10)")
+    parser.add_option("-i", dest="ip", default="10.0.10.201", help="IP (default: 10.0.10.201)")
+    parser.add_option("-P", dest="plot", default=False, action="store_true", help="Generate Plot [default: False]")
     (config, args) = parser.parse_args()
 
     # Note: buffer samples must be a multiple of 20
@@ -292,19 +290,78 @@ if __name__ == "__main__":
     receiver.initialise()
     receiver.start()
 
+
     # Wait for exit or termination
     def _signal_handler(signum, frame):
         logging.info("Received interrupt, stopping acqusition")
+        print("Stopping handler")
         receiver.stop_receiver()
+
 
     signal.signal(signal.SIGINT, _signal_handler)
 
     from matplotlib import pyplot as plt
+    import matplotlib.dates as md
+
+    sampling_time = 1.1702857142857143e-05
 
     while not receiver._stop_acquisition.value:
-        buff, timestamp = receiver.read_buffer()
-        plt.imshow(np.abs(buff), aspect='auto')
-        plt.show()
+
+        buff, timestamp = None, None
+        while buff is None and not receiver._stop_acquisition.value:
+            buff, timestamp = receiver.read_buffer()
+
+        if receiver._stop_acquisition.value:
+            break
+
+        vals = buff.real
+        print("\nReal mean value: ", np.mean(vals))
+        print("Real minimum: ", np.min(vals))
+        print("Real maximum: ", np.max(vals))
+        print("Real standard deviation", np.std(vals))
+
+        vals = buff.imag
+        print("\nImag mean value: ", np.mean(vals))
+        print("Imag minimum: ", np.min(vals))
+        print("Imag maximum: ", np.max(vals))
+        print("Imag standard deviation", np.std(vals))
+
+        vals = np.abs(buff)
+        print("\nMean absolute value: ", np.mean(vals))
+        print("Absolute minimum: ", np.min(vals))
+        print("Absolute maximum: ", np.max(vals))
+        print("Absolute standard deviation", np.std(vals))
+
+        # Generate timestamps
+        now = time.mktime(time.localtime())
+        dates = [datetime.utcfromtimestamp(timestamp + i * sampling_time) for i in np.arange(buff.shape[0])]
+
+        if config.plot:
+            plt.xticks(rotation=25)
+            ax = plt.gca()
+            xfmt = md.DateFormatter('%M:%S')
+            ax.xaxis.set_major_formatter(xfmt)
+
+            plt.plot(dates, np.abs(buff[:, 7]))
+            plt.xlabel("Sample")
+            plt.title("Antenna 0")
+            plt.show()
+
+            plt.clf()
+
+            # plt.imshow(buff.real, aspect='auto')
+            # plt.title("Real")
+            # plt.xlabel("Antenna")
+            # plt.ylabel("Sample")
+            # plt.colorbar()
+
+            # plt.figure()
+            # plt.imshow(buff.imag, aspect='auto')
+            # plt.title("Imaginary")
+            # plt.xlabel("Antenna")
+            # plt.ylabel("Sample")
+            # plt.colorbar()
 
         receiver.read_buffer_ready()
 
+    print("Exiting")

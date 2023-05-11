@@ -1,12 +1,8 @@
-import datetime
 import logging as log
 import threading
 from logging.config import dictConfig
 
-import time
 import dateutil.parser
-import numpy as np
-import pytz
 from flask import Flask, request
 from flask_socketio import SocketIO
 from mongoengine import connect
@@ -16,13 +12,14 @@ from pybirales.app.modules.events import events_page
 from pybirales.app.modules.modes import configurations_page
 from pybirales.app.modules.monitoring import monitoring_page
 from pybirales.app.modules.observations import observations_page
+from pybirales.base.helper import to_string
 from pybirales.repository.message_broker import pub_sub, broker
 from pybirales.repository.models import BeamCandidate, SpaceDebrisTrack
 
 DEBUG = True
-NOTIFICATIONS_CHL = 'notifications'
-BIRALES_STATUS_CHL = 'birales_system_status'
-METRICS_CHL = 'antenna_metrics'
+NOTIFICATIONS_CHL = b'notifications'
+BIRALES_STATUS_CHL = b'birales_system_status'
+METRICS_CHL = b'antenna_metrics'
 LOGGING_CONFIG = dict(
     version=1,
     disable_existing_loggers=True,
@@ -78,20 +75,20 @@ def pub_sub_listener():
     log.info('BIRALES app listening for notifications on #%s', NOTIFICATIONS_CHL)
     for message in pub_sub.listen():
         if message['channel'] in channels:
-            if message['data'] == 'KILL':
+            if message['data'] == b'KILL':
                 log.info('KILL command received for notifications listener')
                 pub_sub.unsubscribe(NOTIFICATIONS_CHL)
                 break
             elif message['type'] == 'message':
                 log.debug("Received message on #%s received: %s", message['channel'], message)
                 if message['channel'] == NOTIFICATIONS_CHL:
-                    msg = message['data']
+                    msg = to_string(message['data'])
                     socket_io.send(msg)
                 if message['channel'] == METRICS_CHL:
-                    msg = message['data']
+                    msg = to_string(message['data'])
                     socket_io.emit('antenna_metrics', msg)
                 if message['channel'] == BIRALES_STATUS_CHL:
-                    msg = message['data']
+                    msg = to_string(message['data'])
                     socket_io.emit('status', msg)
             else:
                 log.warning('Received message not handled %s', message)
@@ -119,13 +116,13 @@ def system_listener():
     pub_sub.subscribe(BIRALES_STATUS_CHL)
     log.info('BIRALES app listening for system status messages on #%s', BIRALES_STATUS_CHL)
     for message in pub_sub.listen():
-        if message['data'] == 'KILL' and message['channel'] == BIRALES_STATUS_CHL:
+        if message['data'] == b'KILL' and message['channel'] == BIRALES_STATUS_CHL:
             log.info('KILL command received for system listener')
             pub_sub.unsubscribe(BIRALES_STATUS_CHL)
             break
         else:
             if message['type'] == 'message':
-                msg = message['data']
+                msg = to_string(message['data'])
                 log.debug("System message received: %s", msg)
                 socket_io.emit('status', msg)
 
@@ -199,7 +196,7 @@ if __name__ == "__main__":
         notifications_worker.start()
 
         system_listener = threading.Thread(target=system_listener, name='System Status Listener')
-        # system_listener.start()
+        system_listener.start()
 
         # antenna_metrics_worker = threading.Thread(target=antenna_metrics, name='Antenna Metrics', args=(stop_event,))
         # antenna_metrics_worker.start()

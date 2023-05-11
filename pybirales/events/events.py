@@ -416,7 +416,7 @@ class TrackTransittedEvent(Event):
             id(sd_track) % 1000,
             sd_track.r_value,
             sd_track.size,
-            sd_track.duration,
+            sd_track.duration.seconds,
             sd_track.activated_beams,
             sd_track.ref_data['doppler'], sd_track.ref_data['time'], sd_track.ref_data['snr'])
         log.info(self.payload['body'])

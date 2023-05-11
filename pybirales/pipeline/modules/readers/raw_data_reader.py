@@ -39,19 +39,6 @@ class RawDataReader(ProcessingModule):
         self._filepath = config.filepath
         self._raw_file_counter = 0
 
-        self._read_count = 48  # norad 1328 on 03/05/2019
-        self._read_count = 53  # norad 41182 on 03/05/2019 @ 11
-        self._read_count = 35  # norad 20666 on 11/02/2019 @ 11
-        self._read_count = 60  # norad 25160 on 03/10/2019 @ 06
-        self._read_count = 50  # norad 40894 on 11/02/2019 @ 10:53
-        self._read_count = 70  # norad 41240 on 11/02/2019 @ 11:36
-
-        self._read_count = 20  # norad 4259 on 03/10/2019 @ 06:27
-
-        self._read_count = 20  # norad 1328 on 03/10/2019 @ 06:27
-
-        self._read_count = 48
-
         self._metrics_poll_freq = 10
         self._metric_channel = 'antenna_metrics'
 
@@ -59,35 +46,47 @@ class RawDataReader(ProcessingModule):
 
         self._read_count = 0
         self._read_count_end = None
+        self._samples_read = 0
+        self._samples_to_read = None
 
-        if settings.rawdatareader.skip > 0:
-            self._read_count = settings.rawdatareader.skip
+        if settings.rawdatareader.skip_seconds > 0:
+            samples_to_skip = settings.observation.samples_per_second * settings.rawdatareader.nants * settings.rawdatareader.skip_seconds
+            raw_file_nsamp = settings.rawdatareader.nsamp * settings.rawdatareader.nants
 
-            log.info("Raw data reader will skip {} iterations".format(self._read_count))
+            self._read_count = (samples_to_skip) / raw_file_nsamp
+
+            print(f'Samples to skip: {samples_to_skip}')
+            print(f'Samples per raw data file: {raw_file_nsamp}')
+            print(f'Files to skip: {self._read_count}')
+        else:
+            if settings.rawdatareader.skip > 0:
+                self._read_count = settings.rawdatareader.skip
+
+                log.info("Raw data reader will skip {} iterations".format(self._read_count))
+
+        if settings.rawdatareader.seconds_to_process > 0:
+            self._samples_to_read = settings.observation.samples_per_second * settings.rawdatareader.nants * settings.rawdatareader.seconds_to_process
+            print(f'Samples to process: {self._samples_to_read}')
 
         # Call superclass initialiser
         super(RawDataReader, self).__init__(config, input_blob)
 
         # Load the PKL file
         try:
-            self._config = pickle.load(open(self._filepath + config.config_ext, 'rb'))
+            self._config = pickle.load(open(self._filepath + config.config_ext, 'rb'), encoding='latin1')
 
             # Use the declination that is in the PKL file
             settings.beamformer.reference_declination = self._config['settings']['beamformer']['reference_declination']
 
-
         except IOError:
             log.error('Config PKL file was not found in %s. Exiting.', self._filepath + config.config_ext)
-            raise BIRALESObservationException("Config PKL file was not found")
+            raise BIRALESObservationException(f"Config PKL file was not found in {self._filepath + config.config_ext}")
 
         self._raw_file_timerange_display(self._filepath, self._config['timestamp'])
 
         # Load the data file
         try:
             self._f = self._get_start_file(self._filepath, self._read_count)
-
-            # self._f = open(self._filepath, 'rb')
-            # self._f.seek(self._nsamp * self._nants * 8 * self._read_count)
 
             log.info('Using raw data in: {}'.format(self._filepath))
         except IOError:
@@ -104,17 +103,15 @@ class RawDataReader(ProcessingModule):
             next_file = '{}_{}.dat'.format(self._base_filepath, self._raw_file_counter + 1)
             self._raw_file_counter += 1
 
-            log.info("%s was skipped. Blobs to skip: %d. Next file: %s", os.path.basename(filepath), skip, next_file)
-
-            # self._raw_file_timerange(filepath, self._config['timestamp'])
+            log.info("%s was skipped. Blobs to skip: %f. Next file: %s", os.path.basename(filepath), skip, next_file)
 
             skip -= os.stat(filepath).st_size / (self._nsamp * self._nants * 8)
 
             return self._get_start_file(next_file, skip)
 
-        self._f.seek(self._nsamp * self._nants * 8 * skip)
+        self._f.seek(int(self._nsamp * self._nants * 8 * skip))
 
-        log.info("RawDataReader will use: %s and skip %d blobs from it. (read counter: %s)", filepath, skip,
+        log.info("RawDataReader will use: %s and skip %f blobs from it. (read counter: %s)", filepath, skip,
                  self._read_count)
 
         return self._f
@@ -135,7 +132,6 @@ class RawDataReader(ProcessingModule):
 
             _raw_file_counter += 1
             raw_file = '{}_{}.dat'.format(self._base_filepath, _raw_file_counter)
-
 
     @staticmethod
     def _calculate_rms(input_data):
@@ -186,13 +182,19 @@ class RawDataReader(ProcessingModule):
         :param output_data:
         :return:
         """
+        if self._samples_to_read:
+            if self._samples_read >= self._samples_to_read:
+                log.warning(f"Read {self._samples_read} / {self._samples_to_read} "
+                            f"samples as specified in the configuration file. Pipeline will terminate.")
+                obs_info['stop_pipeline_at'] = self._iter_count
+                self.stop()
+                return
+
         if self._read_count_end:
             if self._read_count > self._read_count_end:
                 obs_info['stop_pipeline_at'] = self._iter_count
-                self.stop_module()
-
+                self.stop()
                 return
-
 
         data = self._f.read(self._nsamp * self._nants * 8)
 
@@ -204,11 +206,8 @@ class RawDataReader(ProcessingModule):
             if not self._f:
                 log.info("Data finished successfully. Stopping modules at iteration %d", self._iter_count)
                 obs_info['stop_pipeline_at'] = self._iter_count
-                self.stop_module()
-
+                self.stop()
                 return
-                # time.sleep(200)
-                # raise NoDataReaderException("Observation finished")
 
             # Read from the next set of data from new file
             data = self._f.read(self._nsamp * self._nants * 8)
@@ -231,18 +230,20 @@ class RawDataReader(ProcessingModule):
         obs_info['npols'] = self._npols
 
         obs_info['transmitter_frequency'] = self._config['settings']['observation']['transmitter_frequency']
-        obs_info['start_center_frequency'] = self._config['start_center_frequency']
+        obs_info['start_center_frequency'] = self._config['settings']['observation']['start_center_frequency']
 
         settings.observation.start_center_frequency = obs_info['start_center_frequency']
         # print obs_info['start_center_frequency'], settings.observation.start_center_frequency
 
         obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
+
         obs_info['timestamp'] = self._config['timestamp'] + datetime.timedelta(
             seconds=self._nsamp * obs_info['sampling_time']) * self._read_count
-
         self.publish_antenna_metrics(data, obs_info)
 
         self._read_count += 1
+
+        self._samples_read += self._nsamp * self._nants
 
         return obs_info
 

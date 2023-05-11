@@ -1,10 +1,15 @@
-import collections
+import sys
+
+if sys.version_info.major == 3 and sys.version_info.minor >= 10:
+    from collections.abc import MutableMapping
+else:
+    from collections import MutableMapping
 
 from astropy.time import Time
 from pybirales import settings
 
 
-class ObservationInfo(collections.MutableMapping):
+class ObservationInfo(MutableMapping):
     """ An Observation Info object which is essentially a dict with
         minor adjustments"""
 
@@ -22,7 +27,7 @@ class ObservationInfo(collections.MutableMapping):
         self['created_at'] = Time.now().iso
 
         self['settings'] = {a: settings.__dict__[a].__dict__ for a in settings.__dict__.keys() if
-                            not a.startswith('__')}
+                            not a.startswith('__') and settings.__dict__[a] is not None}
 
     def get_dict(self):
         return self.store

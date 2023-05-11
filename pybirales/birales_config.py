@@ -1,4 +1,5 @@
 import ast
+import configparser
 import datetime
 import logging as log
 import logging.config as log_config
@@ -6,7 +7,7 @@ import os
 import re
 from logging.handlers import TimedRotatingFileHandler
 
-import configparser
+from mongoengine.base.datastructures import BaseList
 from mongoengine import connect
 
 from pybirales import settings
@@ -41,18 +42,23 @@ class BiralesConfig:
         if config_file_path:
             # Set the configurations from file (can be multiple files)
             log.info('Loading configuration files')
-            for config_file in config_file_path:
-                self._load_from_file(config_file)
+            if type(config_file_path) in [list, tuple, BaseList]:
+                for config_file in config_file_path:
+                    self._load_from_file(config_file)
+            else:
+                self._load_from_file(config_file_path)
         else:
             # load the birales default configuration
             self._load_from_file(os.path.join(os.path.dirname(__file__), 'configuration/birales.ini'))
 
         # Load the ROACH backend settings
-        self._load_from_file(os.path.join(os.path.dirname(__file__), settings.receiver.backend_config_filepath))
+        # self._load_from_file(os.path.join(os.path.dirname(__file__), settings.receiver.backend_config_filepath))
 
         if config_options:
             # Override the configuration with settings passed on in the config_options dictionary
             self.update_config(config_options)
+
+        self.db_connection = None
 
     def is_loaded(self):
         """
@@ -126,7 +132,7 @@ class BiralesConfig:
 
         log_path = os.path.join(directory, observation_name + '.log')
 
-        handler = TimedRotatingFileHandler(log_path, when="h", interval=1, backupCount=5, utc=True)
+        handler = TimedRotatingFileHandler(log_path, when="h", interval=1, backupCount=0, utc=True)
         formatter = log.Formatter(self._parser.get('formatter_formatter', 'format'))
         handler.setFormatter(formatter)
         log.getLogger().addHandler(handler)
@@ -136,8 +142,7 @@ class BiralesConfig:
     def get(self, section, key):
         return self._parser.get(section, key)
 
-    @staticmethod
-    def _db_connect():
+    def _db_connect(self):
         """
         Connect to the database using the loaded settings file
 
@@ -145,14 +150,14 @@ class BiralesConfig:
         """
 
         if settings.database.authentication:
-            connect(
+            self.db_connection = connect(
                 db=settings.database.name,
                 username=settings.database.user,
                 password=settings.database.password,
                 port=settings.database.port,
                 host=settings.database.host)
         else:
-            connect(settings.database.host)
+            self.db_connection = connect(settings.database.host)
 
         log.info('Successfully connected to the {} database'.format(settings.database.name))
 
@@ -182,7 +187,7 @@ class BiralesConfig:
                         setattr(instance, k, ast.literal_eval(v))
 
                     # Check if value is a list
-                    elif re.match("^\[.*\]$", re.sub('\s+', '', v)):
+                    elif re.match(r"^\[.*\]$", re.sub(r'\s+', '', v)):
                         setattr(instance, k, ast.literal_eval(v))
 
                     # Otherwise it is a string
@@ -196,7 +201,8 @@ class BiralesConfig:
 
         log.info('Configurations successfully loaded.')
 
-        if not self.is_loaded():
+        if not self.is_loaded() and settings.database is not None and "load_database" in settings.database.__dict__ \
+                and settings.database.load_database:
             # Connect to the database
             self._db_connect()
 
@@ -212,4 +218,4 @@ class BiralesConfig:
         """
 
         return {section: settings.__dict__[section].__dict__ for section in settings.__dict__.keys() if
-                not section.startswith('__')}
+                not section.startswith('__') and settings.__dict__[section] is not None}

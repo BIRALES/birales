@@ -147,7 +147,12 @@ def initialise_tile(params):
         station_tile.download_polyfilter_coeffs("hann")
         station_tile.set_lmc_download("1g")
         station_tile.set_lmc_integrated_download("1g")
-        station_tile['board.regfile.ethernet_pause'] = 0x1000
+        station_tile['board.regfile.ethernet_pause'] = 0x0400
+
+        ## Reduce ADC DDC gain
+        # for i in range(16):
+        #    station[(f"adc{i}", 0x310)]
+        #    station[(f"adc{i}", 0x330)]
 
         return True
     except Exception as e:
@@ -265,7 +270,7 @@ class Station(object):
             self._form_station()
 
             logging.info("Initializing Channelizer")
-            center_channel = 256
+            center_channel = 282
 
             for i, tile in enumerate(self.tiles):
                 tile['fpga1.dsp_regfile.channelizer_sel.lo_channel'] = center_channel
@@ -327,7 +332,7 @@ class Station(object):
             logging.info("Synchronising station")
             self._station_post_synchronisation()
             self._synchronise_adc_clk()
-            # self._synchronise_ddc(sysref_period=1280)   # 1280 works for all supported frequencies
+            self._synchronise_ddc(sysref_period=1280)  # 1280 works for all supported frequencies
             self._synchronise_tiles(self.configuration['network']['lmc']['use_teng'])
 
         elif not self.properly_formed_station:
@@ -369,6 +374,10 @@ class Station(object):
         if sampling_frequency == 700e6:
             logging.info("Synchronising FPGA ADC Clock...")
             for tile in self.tiles:
+                tile['fpga1.pps_manager.sync_tc_adc_clk'] = 0x7
+                tile['fpga2.pps_manager.sync_tc_adc_clk'] = 0x7
+            self.tiles[0].wait_pps_event2()
+            for tile in self.tiles:
                 for fpga in tile.tpm.tpm_fpga:
                     fpga.fpga_align_adc_clk(sampling_frequency)
 
@@ -389,7 +398,9 @@ class Station(object):
         sampling_frequency = self.configuration['observation']['sampling_frequency']
         for tile in self.tiles:
             for n in range(16):
-                tile.tpm.tpm_adc[n].adc_single_start_dual_14_ddc(sampling_frequency=sampling_frequency, ddc_frequency=ddc_frequency)
+                tile.tpm.tpm_adc[n].adc_single_start_dual_14_ddc(sampling_frequency=sampling_frequency,
+                                                                 ddc_frequency=ddc_frequency,
+                                                                 low_bitrate=True)
 
             for n in range(16):
                 if n < 8:
@@ -442,6 +453,8 @@ class Station(object):
         while True:
             # Read the current time on first tile
             self.tiles[0].wait_pps_event()
+
+            time.sleep(0.2)
 
             # PPS edge detected, write time to all tiles
             curr_time = self.tiles[0].get_fpga_time(Device.FPGA_1)
@@ -509,12 +522,19 @@ class Station(object):
 
     def _station_post_synchronisation(self):
         """ Post tile configuration synchronization """
+        for tile in self.tiles:
+            tile['fpga1.pps_manager.sync_cnt_enable'] = 0x7
+            tile['fpga2.pps_manager.sync_cnt_enable'] = 0x7
+        time.sleep(0.2)
+        for tile in self.tiles:
+            tile['fpga1.pps_manager.sync_cnt_enable'] = 0x0
+            tile['fpga2.pps_manager.sync_cnt_enable'] = 0x0
 
         # Station synchronisation loop
         sync_loop = 0
         max_sync_loop = 3
         while sync_loop < max_sync_loop:
-            self.tiles[0].wait_pps_event()
+            self.tiles[0].wait_pps_event2()
 
             current_tc = [tile.get_phase_terminal_count() for tile in self.tiles]
             delay = [tile.get_pps_delay() for tile in self.tiles]
@@ -523,7 +543,7 @@ class Station(object):
                 self.tiles[n].set_phase_terminal_count(self.tiles[n].calculate_delay(delay[n], current_tc[n],
                                                                                      16, 24))
 
-            self.tiles[0].wait_pps_event()
+            self.tiles[0].wait_pps_event2()
 
             current_tc = [tile.get_phase_terminal_count() for tile in self.tiles]
             delay = [tile.get_pps_delay() for tile in self.tiles]
@@ -532,14 +552,14 @@ class Station(object):
                 self.tiles[n].set_phase_terminal_count(self.tiles[n].calculate_delay(delay[n], current_tc[n],
                                                                                      delay[0] - 4, delay[0] + 4))
 
-            self.tiles[0].wait_pps_event()
+            self.tiles[0].wait_pps_event2()
 
             delay = [tile.get_pps_delay() for tile in self.tiles]
 
             synced = 1
             for n in range(len(self.tiles) - 1):
                 if abs(delay[0] - delay[n + 1]) > 4:
-                    logging.debug("Resynchronizing station ({})".format(delay))
+                    logging.info("Resynchronizing station ({})".format(delay))
                     sync_loop += 1
                     synced = 0
 
