@@ -41,7 +41,6 @@ class Module(Thread):
 
         # Stopping clause
         self.daemon = True
-        # self._module_stopped = False
         self._stop_module = Event()
 
     @abstractmethod
@@ -248,8 +247,6 @@ class ProcessingModule(Module):
 
         # Clean
         self._tear_down()
-
-        # self._module_stopped = True
 
         self._stop_module.set()
 

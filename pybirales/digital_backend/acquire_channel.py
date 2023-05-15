@@ -4,7 +4,6 @@ from multiprocessing import Process, Value, shared_memory
 from datetime import datetime
 from ctypes import c_bool, c_double
 import numpy as np
-import inspect
 import logging
 import signal
 import socket
@@ -85,12 +84,6 @@ class ChannelisedData(Process):
 
     def run(self):
         """ Wait for a spead packet to arrive """
-
-        def _signal_handler(signum, frame):
-            self._stop_acquisition.value = True
-
-        # Set signal handler
-        signal.signal(signal.SIGINT, _signal_handler)
 
         # Clear receiver
         self._clear_receiver()
@@ -183,7 +176,7 @@ class ChannelisedData(Process):
         if self._stop_acquisition.value:
             return
 
-        logging.info("Persisting buffer with {} packets".format(self._received_packets))
+        # logging.info("Persisting buffer with {} packets".format(self._received_packets))
 
         # Copy full buffer to full buffer placeholder
         self._ready_buffer_shared[:] = self._received_data
@@ -296,6 +289,7 @@ if __name__ == "__main__":
         logging.info("Received interrupt, stopping acqusition")
         print("Stopping handler")
         receiver.stop_receiver()
+        receiver.join()
 
 
     signal.signal(signal.SIGINT, _signal_handler)

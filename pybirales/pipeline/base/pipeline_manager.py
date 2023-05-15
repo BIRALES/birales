@@ -136,7 +136,9 @@ class PipelineManager(object):
             observation.model.status = 'finished'
         finally:
             observation.model.date_time_end = datetime.datetime.utcnow()
-            observation.save()
+
+            if settings.database.load_database:
+                observation.save()
 
             self.stop_pipeline()
 

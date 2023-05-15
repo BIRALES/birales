@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging as log
+import math
 import os
 import pickle
 
@@ -50,14 +51,15 @@ class RawDataReader(ProcessingModule):
         self._samples_to_read = None
 
         if settings.rawdatareader.skip_seconds > 0:
-            samples_to_skip = settings.observation.samples_per_second * settings.rawdatareader.nants * settings.rawdatareader.skip_seconds
-            raw_file_nsamp = settings.rawdatareader.nsamp * settings.rawdatareader.nants
+            samples_to_skip = math.ceil(settings.observation.samples_per_second * settings.rawdatareader.skip_seconds)
+            samples_to_skip -= samples_to_skip % 20
+            samples_to_skip *= settings.rawdatareader.nants
+            blob_nsamp = settings.rawdatareader.nsamp * settings.rawdatareader.nants
 
-            self._read_count = (samples_to_skip) / raw_file_nsamp
+            self._read_count = samples_to_skip / blob_nsamp
 
             print(f'Samples to skip: {samples_to_skip}')
-            print(f'Samples per raw data file: {raw_file_nsamp}')
-            print(f'Files to skip: {self._read_count}')
+            print(f'Blobs to skip: {self._read_count}')
         else:
             if settings.rawdatareader.skip > 0:
                 self._read_count = settings.rawdatareader.skip
@@ -81,8 +83,6 @@ class RawDataReader(ProcessingModule):
         except IOError:
             log.error('Config PKL file was not found in %s. Exiting.', self._filepath + config.config_ext)
             raise BIRALESObservationException(f"Config PKL file was not found in {self._filepath + config.config_ext}")
-
-        self._raw_file_timerange_display(self._filepath, self._config['timestamp'])
 
         # Load the data file
         try:
@@ -115,23 +115,6 @@ class RawDataReader(ProcessingModule):
                  self._read_count)
 
         return self._f
-
-    def _raw_file_timerange_display(self, filepath, t0):
-
-        raw_file = filepath
-        sampling_time = 1. / 78125
-
-        td = datetime.timedelta(seconds=self._nsamp * sampling_time)
-        n_blobs = 0
-        _raw_file_counter = 0
-        while os.path.exists(raw_file):
-            c_blobs = n_blobs
-            n_blobs += os.stat(raw_file).st_size / (self._nsamp * self._nants * 8)
-            # print  os.path.basename(raw_file), t0 + td * c_blobs, ' to ', t0 + td * n_blobs, (
-            #             n_blobs - c_blobs), 'blobs', td * (n_blobs - c_blobs)
-
-            _raw_file_counter += 1
-            raw_file = '{}_{}.dat'.format(self._base_filepath, _raw_file_counter)
 
     @staticmethod
     def _calculate_rms(input_data):
@@ -210,7 +193,7 @@ class RawDataReader(ProcessingModule):
                 return
 
             # Read from the next set of data from new file
-            data = self._f.read(self._nsamp * self._nants * 8)
+            data = data + self._f.read(self._nsamp * self._nants * 8 - len(data))
 
         try:
             data = np.frombuffer(data, np.complex64)
@@ -233,7 +216,6 @@ class RawDataReader(ProcessingModule):
         obs_info['start_center_frequency'] = self._config['settings']['observation']['start_center_frequency']
 
         settings.observation.start_center_frequency = obs_info['start_center_frequency']
-        # print obs_info['start_center_frequency'], settings.observation.start_center_frequency
 
         obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
 

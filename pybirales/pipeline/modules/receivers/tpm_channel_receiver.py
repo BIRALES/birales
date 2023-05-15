@@ -91,6 +91,7 @@ class TPMReceiver(Generator):
         # Stop TPM data receiver
         if self._tpm_receiver is not None:
             self._tpm_receiver.stop_receiver()
+            self._tpm_receiver.join()
             self._tpm_receiver = None
 
     def process_data(self):
@@ -159,9 +160,6 @@ class TPMReceiver(Generator):
 
             logging.debug('Published antenna metrics %s: %s', timestamp,
                           ', '.join(['%0.2f'] * len(rms_voltages)) % tuple(rms_voltages))
-
-            logging.debug('Delay between server and roach is ~ {:0.2f} seconds'.format(
-                (datetime.datetime.utcnow() - obs_info['timestamp']).total_seconds()))
 
 
 if __name__ == "__main__":

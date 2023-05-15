@@ -95,13 +95,6 @@ class InvalidCalibrationCoefficientsException(PipelineError):
     pass
 
 
-class BEST2PointingException(PipelineError):
-    """
-    Something went wrong whilst pointing the BEST2 Antenna
-    """
-
-    pass
-
 class BIRALESObservationException(PipelineError):
     """
     Something went wrong whilst starting the observation
@@ -109,13 +102,6 @@ class BIRALESObservationException(PipelineError):
 
     pass
 
-
-class ROACHBackendException(PipelineError):
-    """
-    Something went wrong whilst trying to load the ROACH backend
-    """
-
-    pass
 
 class TPMBackendException(PipelineError):
     """
