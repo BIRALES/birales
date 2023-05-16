@@ -2,11 +2,11 @@ import logging as log
 
 import pandas as pd
 from scipy import stats
+import numpy as np
 
 from pybirales.events.events import TrackTransittedEvent
 from pybirales.events.publisher import publish
 from pybirales.pipeline.modules.detection.exceptions import DetectionClusterIsNotValid
-from pybirales.pipeline.modules.detection.msds.visualisation import *
 from pybirales.pipeline.modules.detection.space_debris_candidate import SpaceDebrisTrack
 from pybirales.services.post_processing.tdm_persister import persist
 

@@ -17,7 +17,6 @@ from pybirales.pipeline.modules.persisters.fits_persister import RawDataFitsPers
 from pybirales.pipeline.modules.persisters.raw_persister import RawPersister
 from pybirales.pipeline.modules.persisters.tdm_persister import TDMPersister
 from pybirales.pipeline.modules.readers.raw_data_reader import RawDataReader
-from pybirales.pipeline.modules.receivers.receiver import Receiver
 from pybirales.pipeline.modules.receivers.tpm_channel_receiver import TPMReceiver
 from pybirales.pipeline.modules.terminator import Terminator
 
@@ -95,7 +94,7 @@ class DetectionPipelineMangerBuilder(PipelineManagerBuilder):
             receiver = RawDataReader(settings.rawdatareader)
             self.manager.name += ' (Offline)'
         else:
-            receiver = Receiver(settings.receiver)
+            receiver = TPMReceiver(settings.tpm_receiver)
 
         self.manager.add_module("receiver", receiver)
 
@@ -180,7 +179,6 @@ class StandAlonePipelineMangerBuilder(PipelineManagerBuilder):
             receiver = RawDataReader(settings.rawdatareader)
             self.manager.name += ' (Offline)'
         else:
-            # receiver = Receiver(settings.receiver)
             receiver = TPMReceiver(settings.tpm_receiver)
 
         beamformer = Beamformer(settings.beamformer, receiver.output_blob)
@@ -194,30 +192,6 @@ class StandAlonePipelineMangerBuilder(PipelineManagerBuilder):
         self.manager.add_module("pfb", pfb)
         self.manager.add_module("persister", persister)
         self.manager.add_module("terminator", terminator)
-
-
-class TestReceiverPipelineMangerBuilder(PipelineManagerBuilder):
-    def __init__(self):
-        PipelineManagerBuilder.__init__(self)
-
-        self.manager.name = 'Test Receiver Pipeline'
-
-        self._id = 'test_receiver_pipeline_builder'
-
-    def build(self):
-        """
-        This script runs the test receiver pipeline,
-        using the specified CONFIGURATION.
-        """
-
-        # Initialise the modules
-        receiver = Receiver(settings.receiver)
-        terminator = Terminator(None, receiver.output_blob)
-
-        # Add modules to pipeline manager
-        self.manager.add_module("receiver", receiver)
-        self.manager.add_module("terminator", terminator)
-
 
 class CorrelatorPipelineManagerBuilder(PipelineManagerBuilder):
     def __init__(self):

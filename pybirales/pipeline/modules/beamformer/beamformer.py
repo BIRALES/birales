@@ -45,10 +45,6 @@ class Beamformer(ProcessingModule):
             raise PipelineError("Beamformer: Missing keys on configuration "
                                 "(nbeams, nants, antenna_locations, pointings)")
 
-        if config.pointings == "high_resolution":
-            config.pointings = [(ha, dec) for ha in np.linspace(-3, 3, 13) for dec in np.linspace(-2.5, 2.5, 9)]
-            config.nbeams = len(config.pointings)
-
         self._nbeams = config.nbeams
 
         self._disable_antennas = None

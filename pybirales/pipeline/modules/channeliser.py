@@ -151,7 +151,6 @@ class PFB(ProcessingModule):
         if self._after_beamformer:
             self._temp_input[:, :, :, self._nchans * self._ntaps:] = input_data
         else:
-            # TODO: Fix this transpose
             self._temp_input[:, :, :, self._nchans * self._ntaps:] = np.transpose(input_data, (0, 3, 1, 2))
 
         # Channelise
@@ -162,20 +161,11 @@ class PFB(ProcessingModule):
 
         # Update observation information
         obs_info['timestamp'] -= timedelta(seconds=(self._ntaps - 1) * self._nchans * obs_info['sampling_time'])
-        print(timedelta(seconds=(self._ntaps - 1) * self._nchans * obs_info['sampling_time']))
-        print((self._ntaps - 1), self._nchans, obs_info['sampling_time'])
         obs_info['nchans'] = self._nchans * obs_info['nsubs']
         obs_info['nsamp'] //= self._nchans
         obs_info['sampling_time'] *= self._nchans
-
         obs_info['channel_bandwidth'] /= self._nchans
         obs_info['start_center_frequency'] -= obs_info['channel_bandwidth'] * self._nchans / 2.0
-
-        # Debug info
-        # print(f'{self._iter_count} Time: {obs_info["timestamp"]:%Y-%m-%d %H:%M:%S.%f}')
-        # print(obs_info['start_center_frequency'])
-        # print('Channeliser {:0.7f}s shape:{}, iter:{}'.format(obs_info['sampling_time'], np.shape(output_data), self._iter_count))
-        # print('Channeliser bandwidth from: {} Mhz to {} Mhz'.format(obs_info['start_center_frequency'], obs_info['start_center_frequency'] + obs_info['channel_bandwidth']*8192))
 
         # Done, return observation information
         return obs_info

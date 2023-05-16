@@ -1,14 +1,9 @@
 import logging
-import struct
-import time
-import os
 
-import numpy as np
-
-from pybirales.birales_config import BiralesConfig
-from pybirales.utilities.singleton import Singleton
-from pybirales.digital_backend import digital_backend
 from pybirales import settings
+from pybirales.birales_config import BiralesConfig
+from pybirales.digital_backend import digital_backend
+from pybirales.utilities.singleton import Singleton
 
 
 @Singleton

@@ -2,13 +2,13 @@ import logging as log
 import os
 
 from pybirales import settings
-from pybirales.base.controller import BackendController, InstrumentController
+from pybirales.base.controller import BackendController
 from pybirales.birales_config import BiralesConfig
 from pybirales.events.events import ObservationStartedEvent, ObservationFinishedEvent, CalibrationRoutineStartedEvent, \
     CalibrationRoutineFinishedEvent, ObservationFailedEvent, CalibrationObservationFailedEvent
 from pybirales.events.publisher import publish
 from pybirales.pipeline.base.definitions import CalibrationFailedException
-from pybirales.pipeline.base.definitions import PipelineError, BEST2PointingException
+from pybirales.pipeline.base.definitions import PipelineError
 from pybirales.pipeline.modules.persisters.corr_matrix_persister import create_corr_matrix_filepath
 from pybirales.pipeline.pipeline import get_builder_by_id, CorrelatorPipelineManagerBuilder
 from pybirales.services.calibration.calibration import CalibrationFacade
@@ -23,7 +23,6 @@ class ObservationManager:
 
         """
         self._post_processor = None
-        self._instrument_control = None
         self._backend_control = None
 
     def _pre_process(self, observation):
@@ -40,12 +39,11 @@ class ObservationManager:
 
         self._post_processor = PostProcessor()
 
-        self._instrument_control = InstrumentController()
-
         self._backend_control = BackendController()
 
         # Make sure observation is in the database
-        observation.save()
+        if settings.database.load_database:
+            observation.save()
 
         self.obs_config.update_config({'observation': {'id': observation.id}})
 
@@ -74,18 +72,9 @@ class ObservationManager:
 
         observation.model.status = 'running'
 
-        try:
-            # Point the instrument to the desired declination
-            self._instrument_control.point(observation.declination)
-
-            # Read the current declination of the antenna
-            observation.model.antenna_dec = self._instrument_control.get_declination()
-        except BEST2PointingException:
-            publish(ObservationFailedEvent(observation, "Failed to point antenna."))
-
-        observation.save()
-
-        publish(ObservationStartedEvent(observation.name, observation.pipeline_name))
+        if settings.database.load_database:
+            observation.save()
+            publish(ObservationStartedEvent(observation.name, observation.pipeline_name))
 
         pipeline_builder = get_builder_by_id(observation.pipeline_name)
 
@@ -98,7 +87,8 @@ class ObservationManager:
             publish(ObservationFailedEvent(observation, "A scheduler exception has occurred"))
 
             observation.model.status = 'failed'
-            observation.save()
+            if settings.database.load_database:
+                observation.save()
         except PipelineError:
             log.exception("An fatal error has occurred whilst trying to run %s", observation.name)
             publish(ObservationFailedEvent(observation, "A pipeline error has occurred"))
@@ -106,11 +96,9 @@ class ObservationManager:
             observation.model.status = 'failed'
             observation.save()
         else:
-            publish(ObservationFinishedEvent(observation.name, observation.pipeline_name))
+            if settings.database.load_database:
+                publish(ObservationFinishedEvent(observation.name, observation.pipeline_name))
 
-            # if settings.detection.save_candidates or settings.detection.save_tdm:
-            #     self._post_process(observation)
-        # self.obs_config.db_disconnect()
         self.tear_down()
 
     def _post_process(self, observation):
@@ -125,8 +113,6 @@ class ObservationManager:
         log.info('Post-processing of the observation finished')
 
     def tear_down(self):
-        log.debug('Stopping the instrument')
-        self._instrument_control.stop()
 
         log.debug('Stopping the Backend')
         self._backend_control.stop()
@@ -190,15 +176,6 @@ class CalibrationObservationManager(ObservationManager):
 
         publish(ObservationStartedEvent(observation.name, observation.pipeline_name))
 
-        try:
-            # Point the instrument to the desired declination
-            self._instrument_control.point(observation.declination)
-
-            # Read the current declination of the antenna
-            observation.model.antenna_dec = self._instrument_control.get_declination()
-        except BEST2PointingException:
-            publish(ObservationFailedEvent(observation, "Failed to point antenna."))
-
         pipeline_builder = CorrelatorPipelineManagerBuilder()
 
         try:
@@ -251,7 +228,8 @@ class CalibrationObservationManager(ObservationManager):
         else:
             publish(CalibrationObservationFailedEvent(observation, "Correlation pipeline failed to "
                                                                    "generate a valid correlation matrix"))
-        # Terminate (gracefully) the connection to the BEST instrument and the ROACH backend
+
+        # Graceful termination
         self.tear_down()
 
     def _calibrate(self, observation, corr_matrix_filepath):

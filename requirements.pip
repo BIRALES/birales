@@ -21,8 +21,6 @@ fadvise
 sklearn
 pandas
 webargs
-yappi
-marshmallow
 pyfits
 jinja2
 redis
