@@ -1,29 +1,27 @@
-import ctypes
-import datetime
 import logging
-import logging as log
-import warnings
-from math import cos, sin, atan2, asin
+import math
+import time
 
+import numba
 import numpy as np
-from astropy import constants
-from astropy import units as u
-from astropy.coordinates import Angle
-from astropy.units import Quantity
-from astropy.utils.exceptions import AstropyWarning
-from numba import njit, prange
-from numpy import ctypeslib
-
+from numba import njit, prange, cuda
 from pybirales import settings
-from pybirales.pipeline.base.definitions import PipelineError, InvalidCalibrationCoefficientsException
-from pybirales.pipeline.base.processing_module import ProcessingModule
-from pybirales.pipeline.blobs.beamformed_data import BeamformedBlob
-from pybirales.pipeline.blobs.dummy_data import DummyBlob
-from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
-from pybirales.repository.models import CalibrationObservation, Observation
 
-# Mute Astropy Warnings
-warnings.simplefilter('ignore', category=AstropyWarning)
+from pybirales.pipeline.base.definitions import PipelineError
+from pybirales.pipeline.base.processing_module import ProcessingModule
+from pybirales.pipeline.blobs.beamformed_data import BeamformedBlob, GPUBeamformedBlob
+from pybirales.pipeline.blobs.dummy_data import DummyBlob, GPUDummyBlob
+from pybirales.pipeline.blobs.receiver_data import ReceiverBlob, GPUReceiverBlob
+from pybirales.pipeline.modules.beamformer.pointing import Pointing
+
+cu = None
+try:
+    import cupy as cu
+except ImportError:
+    pass
+
+# Define the maximum number of antennas to generate shared memory buffer in GPU
+MAX_ANTENNAS = 128
 
 
 @njit(parallel=True, fastmath=True)
@@ -32,48 +30,66 @@ def beamformer_python(nbeams, data, weights, output):
         output[0, b, 0, :] = np.dot(data, weights[0, b, :])
 
 
+@cuda.jit('void(complex64[:,:,:,:], complex64[:,:,:,:], complex64[:, :,:])', fastmath=True)
+def beamformer_gpu(input_data, output_data, weights):
+    # Input in pol/sub/samp/ant order
+    # Output in pol/beam/sub/samp order
+    # Weights in sub/beam/ant order
+
+    # Compute sample index and check whether thread is out of bounds
+    sample = cuda.blockDim.x * cuda.blockIdx.x + cuda.threadIdx.x
+
+    if sample >= input_data.shape[-2]:
+        return
+
+    nof_antennas = weights.shape[-1]
+    beam = cuda.blockIdx.y
+
+    # Use a shared memory block to store the weights of associated beam
+    shared_memory = cuda.shared.array(MAX_ANTENNAS, numba.complex64)
+
+    # Cooperative load of pointing coefficient for current beam
+    for t in range(nof_antennas, cuda.blockDim.x):
+        shared_memory[t] = weights[0, beam, t]
+    cuda.syncthreads()
+
+    # Each thread computes the beamformed value of a single time sample
+    beamformed_value = 0 + 0j
+    for a in range(input_data.shape[-2]):
+        beamformed_value += input_data[0, 0, a, sample] * shared_memory[a]
+
+    # Save result to output
+    output_data[0, beam, 0, sample] = beamformed_value
+
+
 class Beamformer(ProcessingModule):
     """ Beamformer processing module """
 
     def __init__(self, config, input_blob=None):
-        # This module needs an input blob of type channelised
-        self._validate_data_blob(input_blob, valid_blobs=[DummyBlob, ReceiverBlob])
+
+        # Check whether input blob type is compatible
+        self._validate_data_blob(input_blob, valid_blobs=[DummyBlob, GPUDummyBlob, ReceiverBlob, GPUReceiverBlob])
 
         # Sanity checks on configuration
-        if {'nbeams', 'antenna_locations', 'pointings', 'reference_antenna_location', 'reference_declination'} \
+        if {'nbeams', 'pointings', 'reference_declination'} \
                 - set(config.settings()) != set():
             raise PipelineError("Beamformer: Missing keys on configuration "
-                                "(nbeams, nants, antenna_locations, pointings)")
+                                "(nbeams, nants, pointings)")
 
         self._nbeams = config.nbeams
+
+        # If GPUs need to be used, check whether CuPy is available
+        if settings.manager.use_gpu and cu is None:
+            logging.critical("GPU enabled but could not import CuPy.")
+            raise PipelineError("CuPy could not be imported")
 
         self._disable_antennas = None
         if 'disable_antennas' in config.settings():
             self._disable_antennas = config.disable_antennas
 
-        # Make sure that antenna locations is a list
-        if type(config.antenna_locations) is not list:
-            raise PipelineError("Beamformer: Expected list of antennas with long/lat/height as antenna locations")
-
-        # Number of threads to use
-        self._nthreads = 2
-        if 'nthreads' in config.settings():
-            self._nthreads = config.nthreads
-
-        # Check if we have to move the telescope
-        self._move_to_dec = False
-        if 'move_to_dec' in config.settings():
-            self._move_to_dec = config.move_to_dec
-
         # Create placeholder for pointing class instance
         self._pointing = None
-
-        # Wrap library containing C-implementation of beamformer
-        self._beamformer = ctypes.CDLL("/usr/local/lib/libbeamformer.so")
-        complex_p = ctypeslib.ndpointer(np.complex64, ndim=1, flags='C')
-        self._beamformer.beamform.argtypes = [complex_p, complex_p, complex_p, ctypes.c_uint32, ctypes.c_uint32,
-                                              ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32]
-        self._beamformer.beamform.restype = None
+        self._weights_gpu = None
 
         # Call superclass initializer
         super(Beamformer, self).__init__(config, input_blob)
@@ -87,11 +103,13 @@ class Beamformer(ProcessingModule):
         datatype = self._input.datatype
 
         # Create output blob
-        return BeamformedBlob(self._config, [('npols', input_shape['npols']),
-                                             ('nbeams', self._nbeams),
-                                             ('nsubs', input_shape['nsubs']),
-                                             ('nsamp', input_shape['nsamp'])],
-                              datatype=datatype)
+        data_shape = [('npols', input_shape['npols']), ('nbeams', self._nbeams),
+                      ('nsubs', input_shape['nsubs']), ('nsamp', input_shape['nsamp'])]
+
+        if settings.manager.use_gpu:
+            return GPUBeamformedBlob(data_shape, datatype=datatype, device=settings.manager.gpu_device_id)
+        else:
+            return BeamformedBlob(data_shape, datatype=datatype)
 
     def _initialise(self, nsubs, nants):
         """ Initialise pointing """
@@ -110,14 +128,32 @@ class Beamformer(ProcessingModule):
         nants = obs_info['nants']
         npols = obs_info['npols']
 
-        # If pointing is not initialise, initialise
+        # If pointing is not initialised then this is the first input blob that's being processed.
+        # Initialise pointing and GPU arrays
         if self._pointing is None:
             self._initialise(nsubs, nants)
 
-        # Apply pointing coefficients
-        self._beamformer.beamform(input_data.ravel(), self._pointing.weights.ravel(), output_data.ravel(),
-                                  nsamp, nsubs, self._nbeams, nants, npols, self._nthreads)
-        # beamformer_python(self._nbeams, input_data[0, 0], self._pointing.weights, output_data)
+            # If using GPU, copy weights to GPU
+            if settings.manager.use_gpu:
+                with cu.cuda.Device(settings.manager.gpu_device_id):
+                    self._weights_gpu = cu.asarray(self._pointing.weights)
+
+        if settings.manager.use_gpu:
+            with cu.cuda.Device(settings.manager.gpu_device_id) as d:
+                # TODO: If input blob is a CPU blob, copy to GPU
+                # TODO: Handle case where output blob is not on GPU
+
+                # Transpose input to improve memory access in beamformer
+                input_data = cu.transpose(input_data, (0, 1, 3, 2))
+
+                # Run beamforming kernel
+                grid = (math.ceil(nsamp / 128), self._nbeams)
+                block_size = 128
+                beamformer_gpu[grid, block_size](input_data, output_data, self._weights_gpu)
+                d.synchronize()
+        else:
+            # TODO: Extract pols and sub-bands properly
+            beamformer_python(self._nbeams, input_data[0, 0], self._pointing.weights, output_data)
 
         # Update observation information
         obs_info['nbeams'] = self._nbeams
@@ -126,356 +162,3 @@ class Beamformer(ProcessingModule):
         obs_info['declination'] = self._pointing._reference_declination
 
         return obs_info
-
-
-class Pointing(object):
-    """ Pointing class which periodically updates pointing weights """
-
-    def __init__(self, config, nsubs, nants):
-
-        # Make sure that we have enough antenna locations
-        if len(config.antenna_locations) != nants:
-            logging.error("Pointing: Mismatch between number of antennas and number of antenna locations")
-
-        # Make sure that we have enough pointing
-        if len(config.pointings) != config.nbeams:
-            logging.error("Pointing: Mismatch between number of beams and number of beam pointings")
-
-        # Load settings
-        array = config.antenna_locations
-        self._start_center_frequency = settings.observation.start_center_frequency
-        self._reference_location = config.reference_antenna_location
-        self._reference_declination = config.reference_declination
-
-        self._bandwidth = settings.observation.channel_bandwidth
-        self._nbeams = config.nbeams
-        self._nants = nants
-        self._nsubs = nsubs
-
-        # Initialise pointings
-        self._pointings = config.pointings
-
-        log.info('Reference declination: {}'.format(self._reference_declination))
-
-        # Calibration coefficients
-        self._calib_coeffs = np.ones(self._nants, dtype=np.complex64)
-
-        try:
-            if settings.beamformer.apply_calib_coeffs:
-                if "calibration_coefficients_filepath" in settings.beamformer.__dict__.keys() and \
-                        settings.beamformer.calibration_coefficients_filepath != 'None':
-                    self._calib_coeffs = np.loadtxt(settings.beamformer.calibration_coefficients_filepath,
-                                                    dtype=complex)
-                    logging.info(
-                        f"Using calibration coefficients from {settings.beamformer.calibration_coefficients_filepath}")
-                else:
-                    self._calib_coeffs = self._get_latest_calib_coeffs()
-            else:
-                log.warning('No calibration coefficients applied to this observation')
-        except InvalidCalibrationCoefficientsException as e:
-            log.warning("Could not load coefficients from TCPO directory. Reason: {}".format(e))
-
-        # Ignore AstropyWarning
-        warnings.simplefilter('ignore', category=AstropyWarning)
-
-        # Create AntennaArray object
-        self._array = AntennaArray(array, self._reference_location[0], self._reference_location[1])
-
-        # Calculate displacement vectors to each antenna from reference antenna
-        # (longitude, latitude)
-        self._reference_location = self._reference_location[0], self._reference_location[1]
-
-        self._vectors_enu = np.full([self._nants, 3], np.nan)
-        for i in range(self._nants):
-            self._vectors_enu[i, :] = self._array.antenna_position(i)
-
-        # Create initial weights
-        self.weights = np.ones((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
-
-        # Create placeholder for azimuth and elevation
-        self.beam_az_el = np.zeros((self._nbeams, 2))
-
-        # Generate weights
-        for beam in range(self._nbeams):
-            self.point_array_birales(beam, self._reference_declination, self._pointings[beam][0],
-                                     self._pointings[beam][1])
-
-        # Ignore AstropyWarning
-        warnings.simplefilter('ignore', category=AstropyWarning)
-
-    def disable_antennas(self, antennas):
-        """ Disable any antennas """
-        for antenna in antennas:
-            logging.info("Disabling antenna {}".format(antenna))
-            self.weights[:, :, antenna] = np.zeros((self._nsubs, self._nbeams))
-
-    def point_array_static(self, beam, altitude, azimuth):
-        """ Calculate the phase shift given the altitude and azimuth coordinates of a sky object as astropy angles
-        :param beam: beam to which this applies
-        :param altitude: altitude coordinates of a sky object as astropy angle
-        :param azimuth: azimuth coordinates of a sky object as astropy angles
-        :return: The phase shift in radians for each antenna
-        """
-
-        for i in range(self._nsubs):
-            # Calculate complex coefficients
-            frequency = Quantity(self._start_center_frequency + (i * self._bandwidth / self._nsubs), u.MHz)
-            real, imag = self._phaseshifts_from_altitude_azimuth(altitude.rad, azimuth.rad, frequency,
-                                                                 self._vectors_enu)
-            # print frequency, self._nsubs
-            # Apply to weights
-            self.weights[i, beam, :].real = real
-            self.weights[i, beam, :].imag = -imag
-
-            # Multiply generated weights with calibration coefficients
-            self.weights[i, beam, :] *= self._calib_coeffs
-
-    def point_array_birales(self, beam, ref_dec, ha, delta_dec):
-        """ Calculate the phase shift between two antennas which is given by the phase constant (2 * pi / wavelength)
-        multiplied by the projection of the baseline vector onto the plane wave arrival vector
-        :param beam: Beam to which this applies
-        :param ref_dec: Reference declination (center of FoV)
-        :param ha: Hour angel of source (astropy angle, or string that can be converted to angle)
-        :param delta_dec: Declination of source (astropy angle, or string that can be converted to angle)
-        :return: The phaseshift in radians for each antenna
-        """
-        # Type conversions if required
-        ref_dec = Angle(ref_dec, u.deg)
-        delta_dec = Angle(delta_dec, u.deg)
-
-        # Convert RA DEC to ALT AZ
-        primary_alt, primary_az = self._ha_dec_to_alt_az(Angle(0, u.deg), ref_dec, self._reference_location)
-
-        # We must have a positive hour angle and non-zero
-        if ha < 0:
-            ha = Angle(ha + 360, u.deg)
-        elif ha < 0.0001:
-            ha = Angle(0.0001, u.deg)
-        else:
-            ha = Angle(ha, u.deg)
-
-        # Unit position vector RX-sat in sensor reference frame
-        rhou_sat_rx_sens_rf = np.matrix([cos(-ha.rad) * cos(delta_dec.rad),
-                                         sin(-ha.rad) * cos(delta_dec.rad),
-                                         sin(delta_dec.rad)])
-
-        # Unit position vector RX-sat in NWZ reference frame
-        alpha = -primary_az.rad
-
-        rot1 = np.matrix([[cos(alpha), sin(alpha), 0],
-                          [-sin(alpha), cos(alpha), 0],
-                          [0, 0, 1]])
-
-        phi = -primary_alt.rad
-        rot2 = np.matrix([[cos(phi), 0, -sin(phi)],
-                          [0, 1, 0],
-                          [sin(phi), 0, cos(phi)]])
-
-        rhou_sat_rx_nwz = (rot2 * rot1).T * rhou_sat_rx_sens_rf.T
-
-        beam_az = Angle(-atan2(rhou_sat_rx_nwz[1], rhou_sat_rx_nwz[0]), u.rad)
-        beam_el = Angle(asin(rhou_sat_rx_nwz[2]), u.rad)
-
-        # Save beam azimuth and elevation
-        self.beam_az_el[beam] = beam_az.deg, beam_el.deg
-
-        # Point beam to required ALT AZ
-        log.debug("LAT: {}, HA: {}, DEC: {}, EL: {}, AZ: {}".format(self._reference_location[1], ha.deg, ref_dec +
-                                                                    delta_dec, beam_el.deg, beam_az.deg))
-        self.point_array_static(beam, beam_el, beam_az)
-
-    def point_array(self, beam, ref_dec, ha, delta_dec):
-        """ Calculate the phase shift between two antennas which is given by the phase constant (2 * pi / wavelength)
-        multiplied by the projection of the baseline vector onto the plane wave arrival vector
-        :param beam: Beam to which this applies
-        :param right_ascension: Right ascension of source (astropy angle, or string that can be converted to angle)
-        :param declination: Declination of source (astropy angle, or string that can be converted to angle)
-        :param pointing_time: Time of observation (in format astropy time)
-        :return: The phaseshift in radians for each antenna
-        """
-        # Type conversions if required
-        ref_dec = Angle(ref_dec, u.deg)
-        delta_dec = Angle(delta_dec, u.deg)
-        dec = ref_dec + delta_dec
-
-        # Declination depends on DEC divide by DEC
-        ha = ha / np.cos(dec.rad)
-
-        # We must have a positive hour angle and non-zero
-        if ha < 0:
-            ha = Angle(ha + 360, u.deg)
-        elif ha < 0.0001:
-            ha = Angle(0.0001, u.deg)
-        else:
-            ha = Angle(ha, u.deg)
-
-        # Convert RA DEC to ALT AZ
-        alt, az = self._ha_dec_to_alt_az(ha, dec, self._reference_location)
-
-        # Point beam to required ALT AZ
-        log.debug("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, dec, alt.deg,
-                                                                     az.deg))
-        self.point_array_static(beam, alt, az)
-
-    @staticmethod
-    def _ha_dec_to_alt_az(hour_angle, declination, location):
-        """ Calculate the altitude and azimuth coordinates of a sky object from right ascension and declination and time
-        :param right_ascension: Right ascension of source (in astropy Angle on string which can be converted to Angle)
-        :param declination: Declination of source (in astropy Angle on string which can be converted to Angle)
-        :param time: Time of observation (as astropy Time")
-        :param location: astropy EarthLocation
-        :return: Array containing altitude and azimuth of source as astropy angle
-        """
-        lat = Angle(location[1], u.deg)
-
-        alt = Angle(np.arcsin(np.sin(declination.rad) * np.sin(lat.rad) +
-                              np.cos(declination.rad) * np.cos(lat.rad) * np.cos(hour_angle.rad)),
-                    u.rad)
-
-        # Condition where array is at zenith
-        if abs(lat.deg - declination.deg) < 0.01:
-            az = Angle(0, u.deg)
-        else:
-            temp = (np.sin(declination.rad) - np.sin(alt.rad) * np.sin(lat.rad)) / (np.cos(alt.rad) * np.cos(lat.rad))
-            if temp < 0 and (temp + 1) < 0.0001:
-                temp = -1
-            elif temp > 0 and (temp - 1) < 0.0001:
-                temp = 1
-            az = Angle(np.arccos(temp), u.rad)
-            if np.sin(hour_angle.rad) >= 0:
-                az = Angle(360 - az.deg, u.deg)
-
-        return alt, az
-
-    @staticmethod
-    def _phaseshifts_from_altitude_azimuth(altitude, azimuth, frequency, displacements):
-        """
-        Calculate the phaseshift using a target altitude Azimuth
-        :param altitude: The altitude of the target astropy angle
-        :param azimuth: The azimuth of the target astropy angle
-        :param frequency: The frequency of the observation as astropy quantity.
-        :param displacements: Numpy array: The displacement vectors between the antennae in East, North, Up
-        :return: The phaseshift angles in radians
-        """
-        scale = np.array(
-            [np.sin(azimuth) * np.cos(altitude), np.cos(azimuth) * np.cos(altitude), np.sin(altitude)])
-
-        path_length = np.dot(scale, displacements.transpose())
-
-        k = (2.0 * np.pi * frequency.to(u.Hz).value) / constants.c.value
-        return np.cos(np.multiply(k, path_length)), np.sin(np.multiply(k, path_length))
-
-    def _get_latest_calib_coeffs(self):
-        """
-        Read the calibration coefficients from file.
-        :return:
-        """
-        # If observation id is false, use current time
-        if not settings.observation.id:
-            obs_start = datetime.datetime.utcnow()
-        else:
-            obs = Observation.objects.get(id=settings.observation.id)
-            obs_start = obs.principal_created_at
-
-        # Find the calibration algorithm whose principal start time is closest to this observation's principal start time
-        calib_obs = CalibrationObservation.objects(principal_created_at__lte=obs_start, status="finished").order_by(
-            '-principal_created_at', 'created_at').first()
-
-        if len(calib_obs) < 1:
-            calib_obs = CalibrationObservation.objects(created_at__lte=obs_start, status="finished").order_by(
-                'created_at').first()
-
-        if len(calib_obs) < 1:
-            raise InvalidCalibrationCoefficientsException("No suitable calibration coefficients files were found")
-
-        log.info(
-            'Selected Calibration obs: {}. Created At: {:%d-%m-%Y %H:%M:%S}. Principal: {:%d-%m-%Y %H:%M:%S}.'.format(
-                calib_obs.name, calib_obs.created_at, calib_obs.principal_created_at))
-
-        calib_coeffs = np.array(calib_obs.real) + np.array(calib_obs.imag) * 1j
-
-        if not len(calib_coeffs) == self._nants:
-            raise InvalidCalibrationCoefficientsException(
-                "Number of calibration coefficients does not match number of antennas")
-
-        if not np.iscomplexobj(calib_coeffs):
-            raise InvalidCalibrationCoefficientsException("Calibration coefficients type is not complex")
-
-        log.info('Calibration coefficients loaded successfully')
-
-        if settings.observation.id:
-            obs.calibration_observation = calib_obs.id
-            obs.save()
-
-        return calib_coeffs
-
-
-class AntennaArray(object):
-    """ Class representing antenna array """
-
-    def __init__(self, positions, ref_lat, ref_long):
-        self._ref_lat = ref_lat
-        self._ref_lon = ref_long
-        self._ref_height = 0
-
-        self._x = None
-        self._y = None
-        self._z = None
-        self._height = None
-
-        self._n_antennas = None
-
-        # If positions is defined, initialise array
-        self.load_from_positions(positions)
-
-    def positions(self):
-        """
-        :return: Antenna positions
-        """
-        return self._x, self._y, self._z, self._height
-
-    def antenna_position(self, i):
-        """
-        :return: Position for antenna i
-        """
-        return self._x[i], self._y[i], self._z[i]
-
-    @property
-    def size(self):
-        return self._n_antennas
-
-    @property
-    def lat(self):
-        """ Return reference latitude
-        :return: reference latitude
-        """
-        return self._ref_lat
-
-    @property
-    def lon(self):
-        """ Return reference longitude
-        :return: reference longitude
-        """
-        return self._ref_lon
-
-    @property
-    def height(self):
-        """
-        Return reference height
-        :return: reference height
-        """
-        return self._ref_height
-
-    def load_from_positions(self, positions):
-        """ Create antenna array from positions
-        :param positions: Array of antenna positions
-        """
-
-        # Keep track of how many antennas are in the array
-        self._n_antennas = len(positions)
-
-        # Convert file data to astropy format, and store lat, lon and height for each antenna
-        self._x = [positions[i][0] for i in range(len(positions))]
-        self._y = [positions[i][1] for i in range(len(positions))]
-        self._z = [positions[i][2] for i in range(len(positions))]
-        self._height = [0 for i in range(len(positions))]

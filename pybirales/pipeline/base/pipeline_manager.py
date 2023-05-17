@@ -6,9 +6,6 @@ import threading
 import time
 from threading import Event
 
-# import yappi as profiler
-from matplotlib import pyplot as plt
-
 from pybirales import settings
 from pybirales.pipeline.base.definitions import NoDataReaderException
 from pybirales.repository.message_broker import broker
@@ -47,19 +44,12 @@ class PipelineManager(object):
     def __init__(self):
         # Class constructor
         self._modules = []
-        self._plotters = []
         self._module_names = []
 
         # Get own configuration
         self._config = None
-        self._enable_plotting = False
-        self._plot_update_rate = 2
         if "manager" in settings.__dict__:
             self._config = settings.manager
-            if "enable_plotting" in self._config.settings():
-                self._enable_plotting = self._config.enable_plotting
-            if "plot_update_rate" in self._config.settings():
-                self._plot_update_rate = self._config.plot_update_rate
 
         self._stop_pipeline = Event()
 
@@ -79,27 +69,6 @@ class PipelineManager(object):
         self._module_names.append(name)
         self._modules.append(module)
 
-    def add_plotter(self, name, class_name, config, input_blob):
-        """ Add a new plotter instance to the pipeline
-        :param name: Name of the plotter instance
-        :param class_name:
-        :param config:
-        :param input_blob:
-        :return:
-        """
-
-        # Add plotter if plotting is enabled
-        if self._enable_plotting:
-            # Create the plotter instance
-            plot = class_name(config, input_blob, plt.figure())
-
-            # Create plotter indexing
-            plot.index = plot.create_index()
-
-            # Initialise the plotter and add to list
-            plot.initialise_plot()
-            self._plotters.append(plot)
-
     def start_pipeline(self, duration=0, observation=DummyObservation()):
         """
         Start running the pipeline
@@ -112,18 +81,14 @@ class PipelineManager(object):
         try:
             logging.info("PyBIRALES: Starting")
 
-            # if settings.manager.profile:
-            #     profiler.start()
-
             # Start all modules
             for module in self._modules:
                 log.info('Starting module {}'.format(module.name))
-
                 module.start()
 
             self.wait_pipeline(duration=duration)
 
-        except NoDataReaderException as exception:
+        except NoDataReaderException:
             observation.model.status = 'finished'
         except KeyboardInterrupt:
             log.warning('Keyboard interrupt detected. Stopping the pipeline')
@@ -156,22 +121,14 @@ class PipelineManager(object):
             time.sleep(0.5)
 
             while not module.is_stopped:
-                if a_threads := [t.getName() for t in threading.enumerate() if t.is_alive()]:
+                if a_threads := [t.name for t in threading.enumerate() if t.is_alive()]:
                     log.warning('Running threads: %s', ', '.join(a_threads))
                 log.warning(f"Killing {module.name}")
                 time.sleep(0.2)
 
         log.info('Pipeline Manager stopped')
 
-        # if settings.manager.profile:
-        #     profiler.stop()
-        #     stats = profiler.get_func_stats()
-        #     profiling_file_path = settings.manager.profiler_file_path + '_{:%Y%m%d_%H:%M}.stats'.format(
-        #         datetime.datetime.utcnow())
-        #     log.info('Profiling stopped. Dumping profiling statistics to %s', profiling_file_path)
-        #     stats.save(profiling_file_path, type='callgrind')
-
-        # kill listener thread
+        # Kill listener thread
         log.info('trying to kill pipeline %s', PIPELINE_CTL_CHL)
         broker.publish(PIPELINE_CTL_CHL, 'KILL')
 
@@ -190,8 +147,7 @@ class PipelineManager(object):
         return all([module.is_stopped for module in self._modules])
 
     def wait_pipeline(self, duration=None):
-        """
-        Wait for modules to finish processing. If a module is stopped, the pipeline is
+        """ Wait for modules to finish processing. If a module is stopped, the pipeline is
         stopped
 
         :param duration: duration of observation in s (Run forever if no time is specified)
@@ -210,11 +166,6 @@ class PipelineManager(object):
         while not self.stopped:
             now = datetime.datetime.utcnow()
 
-            # # If one module stops without setting the stop bit (such as through a signal
-            # # handler, stop all the pipeline
-            # if self.is_module_stopped():
-            #     break
-
             # If all modules have stopped, we are ready
             if self.all_modules_stopped():
                 log.debug('All modules are stopped')
@@ -223,7 +174,6 @@ class PipelineManager(object):
             # If the observation duration has elapsed stop pipeline
             elif duration and (now - start_time).seconds > duration:
                 logging.info("Observation run for the entire duration ({}s), stopping pipeline".format(duration))
-                # self.stop_pipeline()
                 break
 
             else:
@@ -243,5 +193,3 @@ class PipelineManager(object):
 
                 # Suspend the loop for a short time
                 time.sleep(1)
-
-        # self.stop_pipeline()

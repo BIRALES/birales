@@ -2,15 +2,25 @@ import math
 from datetime import timedelta
 from multiprocessing.pool import ThreadPool
 
+import cupy
 import numba
 import numpy as np
+from numba import cuda
+from pybirales import settings
 
 from pybirales.pipeline.base.definitions import PipelineError
 from pybirales.pipeline.base.processing_module import ProcessingModule
-from pybirales.pipeline.blobs.beamformed_data import BeamformedBlob
-from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
-from pybirales.pipeline.blobs.dummy_data import DummyBlob
-from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
+from pybirales.pipeline.blobs.beamformed_data import BeamformedBlob, GPUBeamformedBlob
+from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob, GPUChannelisedBlob
+from pybirales.pipeline.blobs.dummy_data import DummyBlob, GPUDummyBlob
+from pybirales.pipeline.blobs.receiver_data import ReceiverBlob, GPUReceiverBlob
+
+cu =None
+try:
+    import cupy as cu
+    from cupyx.scipy.fft import fft, fftshift
+except ImportError:
+    pass
 
 
 @numba.jit(nopython=True, nogil=True)
@@ -18,12 +28,12 @@ def apply_fir_filter(data, fir_filter, output, ntaps, nchans):
     """
     Optimised filter function using numpy and numba
     :param data: Input data pointer
-    :param fir_filter: Filter coefficients pointerself
+    :param fir_filter: Filter coefficients pointer
     :param output: Output data pointer
     :param ntaps: Number of taps
     :param nchans: Number of channels
     """
-    nof_spectra = (len(data) - ntaps * nchans) / nchans
+    nof_spectra = (len(data) - ntaps * nchans) // nchans
     for n in range(nof_spectra):
         temp = data[n * nchans: n * nchans + nchans * ntaps] * fir_filter
         for j in range(1, ntaps):
@@ -31,17 +41,48 @@ def apply_fir_filter(data, fir_filter, output, ntaps, nchans):
         output[:, n] = temp[:nchans]
 
 
+@cuda.jit('void(complex64[:,:,:,:], complex64[:], complex64[:,:,:,:,:], int32, int32, int32)', fastmath=True)
+def apply_fir_filter_cuda(input_data, fir_filter, output_data, nof_spectra, nchans, ntaps):
+    """
+    Optimised filter function using numpy and numba
+    :param data: Input data pointer
+    :param fir_filter: Filter coefficients pointer
+    :param output: Output data pointer
+    :param ntaps: Number of taps
+    :param nchans: Number of channels
+    """
+
+    # NOTE: This assumes that npols and nsubs are 1 for the time being
+
+    spectrum = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
+    stream = cuda.blockIdx.y
+
+    input_ptr = input_data[0, stream, 0]
+    output_ptr = output_data[0, stream, 0]
+
+    if spectrum >= nof_spectra:
+        return
+
+    temp_value = 0
+    for c in range(nchans):
+        for t in range(ntaps):
+            temp_value += input_ptr[spectrum * nchans + c * ntaps + t] * fir_filter[c * ntaps + t]
+        output_ptr[c, spectrum] = temp_value
+
+
 class PFB(ProcessingModule):
     """ PPF processing module """
 
     def __init__(self, config, input_blob=None):
 
-        # This module needs an input blob of type dummy
-        if type(input_blob) not in [BeamformedBlob, DummyBlob, ReceiverBlob]:
+        # Check whether input blob type is compatible
+        if type(input_blob) not in [BeamformedBlob, GPUBeamformedBlob,
+                                    DummyBlob, GPUDummyBlob,
+                                    ReceiverBlob, GPUReceiverBlob]:
             raise PipelineError("PFB: Invalid input data type, should be BeamformedBlob, DummyBlob or ReceiverBlob")
 
         # Check if we're dealing with beamformed data or receiver data
-        self._after_beamformer = True if type(input_blob) is BeamformedBlob else False
+        self._after_beamformer = True if type(input_blob) in [GPUBeamformedBlob, BeamformedBlob] else False
 
         # Sanity checks on configuration
         if {'nchans', 'ntaps'} - set(config.settings()) != set():
@@ -49,11 +90,6 @@ class PFB(ProcessingModule):
         self._bin_width_scale = 1.0
         self._nchans = config.nchans
         self._ntaps = config.ntaps
-        self._use_numba = config.use_numba
-
-        self._nthreads = 2
-        if 'nthreads' in config.settings():
-            self._nthreads = config.nthreads
 
         # Call superclass initialiser
         super(PFB, self).__init__(config, input_blob)
@@ -61,16 +97,11 @@ class PFB(ProcessingModule):
         # Processing module name
         self.name = "Channeliser"
 
-        # Create thread pool for parallel PFB
-        self._thread_pool = None
-        if self._use_numba:
-            self._thread_pool = ThreadPool(self._nthreads)
-
         # Variable below will be populated in generate_output_blob
         self._filter = None
+        self._filter_gpu = None
         self._filtered = None
         self._temp_input = None
-        self._current_output = None
         self._nbeams = None
         self._nsubs = None
         self._nsamp = None
@@ -98,7 +129,11 @@ class PFB(ProcessingModule):
             meta_data[1] = ('nants', input_shape['nants'])
 
         # Generate output blob
-        return ChannelisedBlob(self._config, meta_data, datatype=datatype)
+        if settings.manager.use_gpu:
+            with cu.cuda.Device(settings.manager.gpu_device_id):
+                return GPUChannelisedBlob(meta_data, datatype=datatype, device=settings.manager.gpu_device_id)
+        else:
+            return ChannelisedBlob(meta_data, datatype=datatype)
 
     def _initialise(self, npols, nsamp, nbeams, nsubs):
         """ Initialise temporary arrays if not already initialised """
@@ -111,14 +146,29 @@ class PFB(ProcessingModule):
         # Generate filter
         self._generate_filter()
 
-        # Create temporary array for filtered data
-        self._filtered = np.zeros(
-            (self._npols, self._nbeams, self._nsubs, self._nchans, int(self._nsamp / self._nchans)),
-            dtype=np.complex64)
+        if settings.manager.use_gpu:
+            with cu.cuda.Device(settings.manager.gpu_device_id):
+                self._filter_gpu = cu.asarray(self._filter)
 
-        # Create temporary input array
-        self._temp_input = np.zeros((self._npols, self._nbeams, self._nsubs, self._nsamp + self._nchans * self._ntaps),
-                                    dtype=np.complex64)
+                # Create temporary array for filtered data
+                self._filtered = cu.zeros(
+                    (self._npols, self._nbeams, self._nsubs, self._nchans, int(self._nsamp / self._nchans)),
+                    dtype=np.complex64)
+
+                # Create temporary input array
+                self._temp_input = cu.zeros(
+                    (self._npols, self._nbeams, self._nsubs, self._nsamp + self._nchans * self._ntaps),
+                    dtype=np.complex64)
+        else:
+            # Create temporary array for filtered data
+            self._filtered = np.zeros(
+                (self._npols, self._nbeams, self._nsubs, self._nchans, int(self._nsamp / self._nchans)),
+                dtype=np.complex64)
+
+            # Create temporary input array
+            self._temp_input = np.zeros(
+                (self._npols, self._nbeams, self._nsubs, self._nsamp + self._nchans * self._ntaps),
+                dtype=np.complex64)
 
     def process(self, obs_info, input_data, output_data):
         """
@@ -144,20 +194,16 @@ class PFB(ProcessingModule):
         # Set current output
         self._current_output = output_data
 
-        # Update temporary input array
-        self._temp_input[:, :, :, :self._nchans * self._ntaps] = self._temp_input[:, :, :, -self._nchans * self._ntaps:]
-
-        # Format channeliser input depending on where it was placed in pipeline
-        if self._after_beamformer:
-            self._temp_input[:, :, :, self._nchans * self._ntaps:] = input_data
-        else:
-            self._temp_input[:, :, :, self._nchans * self._ntaps:] = np.transpose(input_data, (0, 3, 1, 2))
+        # Update temporary input array (works for GPU and CPU)
+        if self._ntaps != 0:
+            self._temp_input[:, :, :, :self._nchans * self._ntaps] = self._temp_input[:, :, :,
+                                                                     -self._nchans * self._ntaps:]
 
         # Channelise
-        if self._use_numba:
-            self.channelise_parallel()
+        if settings.manager.use_gpu:
+            self.channelise_gpu(input_data, output_data)
         else:
-            self.channelise_serial()
+            self.channelise_serial(input_data, output_data)
 
         # Update observation information
         obs_info['timestamp'] -= timedelta(seconds=(self._ntaps - 1) * self._nchans * obs_info['sampling_time'])
@@ -186,52 +232,56 @@ class PFB(ProcessingModule):
         self._filter = self._filter[::-1]
 
     def _tear_down(self):
-        if self._use_numba:
-            self._thread_pool.close()
+        """ Tear down channeliser """
+        del self._filter_gpu
+        del self._temp_input
 
-    def channelise_thread(self, beam):
-        """
-        Perform channelisation, to be used with ThreadPool
+    def channelise_gpu(self, input_data, output_data):
+        """ Perform channelization on a GPU """
+        with cu.cuda.device.Device(settings.manager.gpu_device_id) as d:
 
-        :param beam: Beam number associated with call
-        :return:
-        """
-        for p in range(self._npols):
-            for c in range(self._nsubs):
-                # Apply filter
-                apply_fir_filter(self._temp_input[p, beam, c, :], self._filter,
-                                 self._filtered[p, beam, c, :], self._ntaps, self._nchans)
+            # Format channeliser input depending on where it was placed in pipeline
+            # TODO: Handle case where input is not in GPU
+            if self._after_beamformer:
+                self._temp_input[:, :, :, self._nchans * self._ntaps:] = cu.asarray(input_data)
+            else:
+                self._temp_input[:, :, :, self._nchans * self._ntaps:] = cu.asarray(
+                    cu.transpose(input_data, (0, 3, 1, 2)))
 
-                # Fourier transform and save output
-                self._current_output[p, beam, c * self._nchans: (c + 1) * self._nchans] = \
-                    np.fft.fftshift(np.fft.fft(self._filtered[p, beam, c, :], axis=0), axes=0)
+            # Call filtering kernel
+            grid = (math.ceil(self._nsamp / 128), self._nbeams)
+            block_size = 128
+            apply_fir_filter_cuda[grid, block_size](self._temp_input, self._filter_gpu, self._filtered,
+                                                    input_data.shape[-1] // self._nchans, self._nchans, self._ntaps)
 
-    def channelise_parallel(self):
-        """
-       Perform channelisation, parallel version
-       :return:
-       """
-        self._thread_pool.map(self.channelise_thread, range(self._nbeams))
+            # Perform FFTs
+            output_data[:] = cupy.squeeze(fftshift(fft(self._filtered, overwrite_x=True, axis=-1), axes=-1))
 
-    def channelise_serial(self):
+            # Synchronize
+            d.synchronize()
+
+    def channelise_serial(self, input_data, output_data):
         """
         Perform channelisation, serial version
         :return:
         """
+
+        # Format channeliser input depending on where it was placed in pipeline
+        if self._after_beamformer:
+            self._temp_input[:, :, :, self._nchans * self._ntaps:] = input_data
+        else:
+            self._temp_input[:, :, :, self._nchans * self._ntaps:] = np.transpose(input_data, (0, 3, 1, 2))
+
         for p in range(self._npols):
             for b in range(self._nbeams):
                 for c in range(self._nsubs):
                     # Apply filter
-                    apply_fir_filter(self._temp_input[p, b, c, :], self._filter,
-                                     self._filtered[p, b, c, :], self._ntaps, self._nchans)
+                    if self._ntaps != 0:
+                        apply_fir_filter(self._temp_input[p, b, c, :], self._filter,
+                                         self._filtered[p, b, c, :], self._ntaps, self._nchans)
+                    else:
+                        self._filtered = np.reshape(self._temp_input, (self._npols, self._nbeams, self._nsubs,
+                                                                       self._nchans, int(self._nsamp / self._nchans)))
 
-                    # Fourier transform and save output
-                    # Changed to work with TPM
-                    self._current_output[p, b, c * self._nchans: (c + 1) * self._nchans] = \
-                        np.fft.fftshift(np.fft.fft(self._filtered[p, b, c, :], axis=0), axes=0)
+        output_data[:] = np.fft.fftshift(np.fft.fft(self._filtered, axis=-1), axes=-1)[:, :, 0, :, :]
 
-                    # self._current_output[p, b, c * self._nchans: (c + 1) * self._nchans] = np.flipud(
-                    #     np.fft.fft(self._filtered[p, b, c, :], axis=0))
-
-                    # self._current_output[p, b, c * self._nchans: (c + 1) * self._nchans] = np.flipud(
-                    # np.fft.fftshift(np.fft.fft(self._filtered[p, b, c, :], axis=0), axes=0))

@@ -10,7 +10,7 @@ from pybirales.pipeline.modules.detection.detector import Detector
 from pybirales.pipeline.modules.detection.filter import Filter
 from pybirales.pipeline.modules.detection.msds_detector import Detector as MSDSDetector
 from pybirales.pipeline.modules.detection.preprocessor import PreProcessor
-from pybirales.pipeline.modules.generator import DummyDataGenerator
+from pybirales.pipeline.modules.generators.generator import DummyDataGenerator
 from pybirales.pipeline.modules.persisters.beam_persister import BeamPersister
 from pybirales.pipeline.modules.persisters.corr_matrix_persister import CorrMatrixPersister
 from pybirales.pipeline.modules.persisters.fits_persister import RawDataFitsPersister, FilteredDataFitsPersister
