@@ -34,17 +34,13 @@ class InstallWrapperCommand(install):
 
     """
     LOCAL_DIRS = [
-      #  '/var/log/birales',
+        #  '/var/log/birales',
         os.path.join(HOME, '.birales'),
-        os.path.join(HOME, '.birales/configuration.py/templates/dev'),
-        os.path.join(HOME, '.birales/configuration.py/templates/prod'),
-        os.path.join(HOME, '.birales/configuration.py/uploads'),
+        os.path.join(HOME, '.birales/configuration/templates/dev'),
         os.path.join(HOME, '.birales/schedules'),
         os.path.join(HOME, '.birales/visualisation/fits'),
         os.path.join(HOME, '.birales/tdm/out'),
-        os.path.join(HOME, '.birales/tdm/in'),
-        os.path.join(HOME, '.birales/debug/detection'),
-        os.path.join(HOME, '.birales/tcpo/calibration_coeffs'),
+        os.path.join(HOME, '.birales/tdm/in')
     ]
 
     def run(self):
@@ -68,7 +64,7 @@ class InstallWrapperCommand(install):
 
 setup(
     name='pybirales',
-    version='2.0',
+    version='3.1',
     packages=find_packages(),
     url='https://bitbucket.org/lessju/birales',
     license='',
@@ -82,8 +78,7 @@ setup(
     install_requires=DEPENDENCIES,
     setup_requires=DEPENDENCIES,
     data_files=[
-        (os.path.join(HOME, '.birales', TEMPLATES, 'dev'), list_dir(os.path.join('pybirales', TEMPLATES, 'dev'))),
-        (os.path.join(HOME, '.birales', TEMPLATES, 'prod'), list_dir(os.path.join('pybirales', TEMPLATES, 'prod'))),
+        (os.path.join(HOME, '.birales', TEMPLATES), []),
         (os.path.join(HOME, '.birales/fits'), []),
         (os.path.join(HOME, '.birales/configuration.py/uploaded'), []),
     ],

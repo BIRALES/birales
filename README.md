@@ -1,28 +1,29 @@
-
 # BIRALES processing backend
 
 ## Dependencies
-* Python 2.7
+* Python 3+
 * MongoDB
 * NPM 3+
 * REDIS
 
 ## Installation
 
+The BIRALES space debris detection system was built in Python 3+ for the Ubuntu 16.04 operating system.
+Data is persisted to a MongoDB v3.2 database whilst a REDIS database is used as a message broker.
+The installation procedure for the system are detailed below:
 
-
-The BIRALES space debris detection system was built in Python 2.7 for the Ubuntu 16.04 operating system. Data is persisted to a MongoDB v3.2 database whilst a REDIS database is used as a message broker. The installation procedure for the system are detailed below:
-
+### Database
 The MongoDB database can be installed through:
 
 ```bash
-sudo apt-key adv —keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
-echo “deb http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
+sudo apt-key adv ï¿½keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
+echo ï¿½deb http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
 sudo apt-get update
 sudo apt-get install -y mongodb-org
 sudo mongod start 
 ```
 
+### Download Source Files
 Clone the git repository using:
 ```bash
 git clone https://bitbucket.org/lessju/birales.git
@@ -30,6 +31,7 @@ git clone https://bitbucket.org/lessju/birales.git
 
 Then, the PyBirales python application can then be installed:
 ```bash
+pip install -r requirements.txt
 python setup.py install
 ```
 
@@ -43,6 +45,7 @@ sudo  make install
 ```
 
 The front-end dependencies can be installed through NPM
+
 ```bash
 cd pybirales/app/static/
 npm install
@@ -50,7 +53,10 @@ npm install
 
 This completes the procedure needed to install the PyBirales application.
 
+---
+
 ## Usage
+
 The BIRALES system
 
 The help message for the BIRALES system can be accessed through,
@@ -73,8 +79,6 @@ When the BIRALES system is installed, a `.birales` directory is installed in the
 
 - `~/.birales/visualisation` 
   - Visualisation (e.g. FITS) files which are often useful for debugging purposes
-
-
 - `~/.birales/configuration` 
   - Template configuration files for the BIRALES system for development and production systems
 - `~/.birales/schedules` 
@@ -100,27 +104,47 @@ birales pipelines [Pipeline Name] [OPTIONS]
 ```
 
 The following options are available:
- * The `-c / --config` option specifies the BIRALES configuration file to use. If multiple configuration options are specified, they will override each other. Required.
- * The `--debug / --no-debug` option specifies whether (or not) you'd like to log debug messages.
- * The `--duration` option specifies how long the pipeline will run.
- * The `--pointing` option specifies the declination of the BEST-II.
- * The `--tx ` option specifies t;he transmission frequency in MHz.
+
+* The `-c / --config` option specifies the BIRALES configuration file to use. If multiple configuration options are
+  specified, they will override each other. Required.
+* The `--debug / --no-debug` option specifies whether (or not) you'd like to log debug messages.
+* The `--duration` option specifies how long the pipeline will run.
+* The `--pointing` option specifies the declination of the BEST-II.
+* The `--tx ` option specifies t;he transmission frequency in MHz.
+
+#### Example
+
+```bash
+birales pipelines msds-detection-pipeline -c ~/.birales/configuration/birales.ini -c ~/.birales/configuration/detection.ini
+```
+
+> **_NOTE:_**  In this case, the configuration parameters in _detection.ini_ will override those in _birales.ini_
 
 ### Running the Scheduler
+
 Run the scheduler using a specified JSON config file
+
 ```bash
 birales scheduler [OPTIONS]
 ```
 
 The following options are available:
 
-- The `-c / --config` option specifies the BIRALES configuration file to use. If multiple configuration options are specified, they will override each other. Required.
+- The `-c / --config` option specifies the BIRALES configuration file to use. If multiple configuration options are
+  specified, they will override each other. Required.
 - The `-f` option specifies the format of the schedule file (*tdm* or *json*).
 - The `-s` option specifies the schedule that the scheduler will follow.
 
+#### Example
+
+```bash
+birales scheduler -c ~/.birales/configuration/birales.ini
+```
+
 ### Running the Calibration Service
 
-Run the calibration routine 
+Run the calibration routine
+
 ```bash
 birales services calibration [OPTIONS]
 ```
