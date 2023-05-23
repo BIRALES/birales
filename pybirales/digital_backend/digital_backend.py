@@ -18,7 +18,6 @@ configuration = {'tiles': None,
                  'station': {
                      'id': 0,
                      'name': "debris",
-                     "number_of_antennas": 32,
                      'program': False,
                      'initialise': False,
                      'program_cpld': False,
@@ -42,14 +41,7 @@ configuration = {'tiles': None,
                          'lmc_mac': 0x248A078F9D38,
                          'integrated_data_ip': "10.0.0.2",
                          'integrated_data_port': 5000,
-                         'use_teng_integrated': True},
-                     'csp_ingest': {
-                         'src_ip': "10.0.10.254",
-                         'dst_mac': 0x248A078F9D38,
-                         'src_port': None,
-                         'dst_port': 4660,
-                         'dst_ip': "10.0.10.200",
-                         'src_mac': None}
+                         'use_teng_integrated': True}
                     }
                  }
 
@@ -86,7 +78,7 @@ def program_cpld(params):
     config, tile_number = params
 
     try:
-        threading.currentThread().name = config['tiles'][tile_number]
+        threading.current_thread().name = config['tiles'][tile_number]
         logging.info("Initialising Tile {}".format(config['tiles'][tile_number]))
 
         # Create station instance and program CPLD
@@ -104,7 +96,7 @@ def program_fpgas(params):
     config, tile_number = params
 
     try:
-        threading.currentThread().name = config['tiles'][tile_number]
+        threading.current_thread().name = config['tiles'][tile_number]
         logging.info("Initialising Tile {}".format(config['tiles'][tile_number]))
 
         # Create station instance and program FPGAs
@@ -122,9 +114,9 @@ def initialise_tile(params):
     config, tile_number = params
 
     try:
-        threading.currentThread().name = config['tiles'][tile_number]
+        threading.current_thread().name = config['tiles'][tile_number]
         logging.info("Initialising Tile {}".format(config['tiles'][tile_number]))
-        threading.currentThread().name = config['tiles'][tile_number]
+        threading.current_thread().name = config['tiles'][tile_number]
 
         # Create station instance and initialise
         station_tile = create_tile_instance(config, tile_number)
@@ -148,11 +140,6 @@ def initialise_tile(params):
         station_tile.set_lmc_download("1g")
         station_tile.set_lmc_integrated_download("1g")
         station_tile['board.regfile.ethernet_pause'] = 0x0400
-
-        ## Reduce ADC DDC gain
-        # for i in range(16):
-        #    station[(f"adc{i}", 0x310)]
-        #    station[(f"adc{i}", 0x330)]
 
         return True
     except Exception as e:
@@ -995,7 +982,7 @@ if __name__ == "__main__":
     log.addHandler(ch)
 
     # Set current thread name
-    threading.currentThread().name = "Station"
+    threading.current_thread().name = "Station"
 
     # Load station configuration
     configuration = load_station_configuration(conf)

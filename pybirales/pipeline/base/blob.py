@@ -8,14 +8,13 @@ from multiprocessing import Lock
 from pybirales.pipeline.base.definitions import ObservationInfo
 
 
-class DataBlob(object):
+class DataBlob:
     """ Data blob super class """
 
-    def __init__(self, config, shape, datatype, nof_blocks=3):
+    def __init__(self, shape, datatype, nof_blocks=3):
         """ Class constructor
-        :param config: Blob configuration
-        :param shape: The shape of the underlying data type
-        :param datatype: Data type of blob data
+        :param shape: The shape of the underlying datatype
+        :param datatype: Datatype of blob data
         :param nof_blocks: Number of data blocks in DataBlob
         """
 
@@ -24,10 +23,7 @@ class DataBlob(object):
         self._data_type = datatype
 
         # The data blob as a numpy array
-        data_shape = []
-        for item in self._shape:
-            data_shape.append(int(item[1]))
-        self._data = np.zeros((nof_blocks,) + tuple(data_shape), dtype=datatype)
+        self._data = self.initialise(nof_blocks, datatype)
 
         # Create observation info object for every data block
         self._obs_info = []
@@ -50,6 +46,18 @@ class DataBlob(object):
         self._writer_lock = Lock()
         self._writer_index = 0
 
+    def initialise(self, nof_blocks, datatype):
+        """ Initialise the data blob. Allows subclasses to override this to change how and where
+        the buffer are initialised
+        :param nof_blocks: Number of data blocks in DataBlob
+        :param datatype: Datatype of blob data """
+
+        # The data blob as a numpy array
+        data_shape = []
+        for item in self._shape:
+            data_shape.append(int(item[1]))
+        return np.zeros((nof_blocks,) + tuple(data_shape), dtype=datatype)
+
     def request_read(self, timeout=None):
         """ Wait while reader and writer are not pointing to the same block, then return read block
         :return: Data splice associated with current block and associated observation information
@@ -61,7 +69,7 @@ class DataBlob(object):
         self._writer_lock.acquire()
         while self._reader_index == self._writer_index and not self._block_has_data[self._reader_index]:
             self._writer_lock.release()
-            time.sleep(0.001)  # Wait for data to become available
+            time.sleep(0.1)  # Wait for data to become available
 
             # If timeout has elapsed, return None
             if timeout and time.time() - t_start >= timeout:
@@ -77,7 +85,7 @@ class DataBlob(object):
         self._block_has_data[self._reader_index] = None
 
         # Return data splice
-        return self._data[self._reader_index, :], copy.copy(self._obs_info[self._reader_index])
+        return self._data[self._reader_index], copy.copy(self._obs_info[self._reader_index])
 
     def release_read(self):
         """ Finished reading data block, increment reader index and release lock """
@@ -110,7 +118,7 @@ class DataBlob(object):
                             self._reader_index)
 
         # Return data splice
-        return self._data[self._writer_index, :]
+        return self._data[self._writer_index]
 
     def release_write(self, obs_info):
         """ Finished writing data block, increment writer and release lock

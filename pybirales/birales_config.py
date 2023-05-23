@@ -50,12 +50,11 @@ class BiralesConfig:
             # load the birales default configuration
             self._load_from_file(os.path.join(os.path.dirname(__file__), 'configuration/birales.ini'))
 
-        # Load the ROACH backend settings
-        # self._load_from_file(os.path.join(os.path.dirname(__file__), settings.receiver.backend_config_filepath))
+        # Load the instrument config file
+        self._load_from_file(os.path.join(os.path.dirname(__file__), 'configuration/instrument.ini'))
 
-        if config_options:
-            # Override the configuration with settings passed on in the config_options dictionary
-            self.update_config(config_options)
+        # Override the configuration with settings passed on in the config_options dictionary
+        self.update_config(config_options)
 
         self.db_connection = None
 

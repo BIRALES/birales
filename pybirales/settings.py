@@ -1,7 +1,6 @@
 """
-
 Settings file will be overwritten on run-time. Properties below are
-set to None so as to remove warnings in source code.
+set to None to remove warnings in source code.
 
 
 """
@@ -11,9 +10,6 @@ beamformer = None
 persister = None
 rawpersister = None
 rawdatareader = None
-channelplotter = None
-bandpassplotter = None
-antennaplotter = None
 persisters = None
 corrmatrixpersister = None
 
@@ -23,9 +19,6 @@ database = None
 logger_root = None
 fits_persister = None
 scheduler = None
-# handler_file_handler = None
-roach_config_files = None
-feng_configuration = None
 generator = None
 rso_generator = None
 tpm_receiver = None
@@ -53,7 +46,8 @@ class detection:
 
 
 class manager:
-    profile_timeit = False
+    use_gpu = False
+    gpu_device_id = 0
 
 
 class correlator:
