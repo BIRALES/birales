@@ -81,7 +81,7 @@ class FitsPersister(ProcessingModule):
         Generate the output blob
         :return:
         """
-        return ChannelisedBlob(self._config, self._input.shape, datatype=np.float64)
+        return ChannelisedBlob(self._input.shape, datatype=np.float64)
 
     def process(self, obs_info, input_data, output_data):
         """

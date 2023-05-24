@@ -150,7 +150,7 @@ class PreProcessor(ProcessingModule):
         input_shape = dict(self._input.shape)
 
         # Generate output blob
-        return ChannelisedBlob(self._config, [
+        return ChannelisedBlob([
             ('nbeams', input_shape['nbeams']),
             # ('nchans', input_shape['nchans']),
             ('nchans', self._n_channels),

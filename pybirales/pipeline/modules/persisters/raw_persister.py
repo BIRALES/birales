@@ -21,7 +21,8 @@ class RawPersister(ProcessingModule):
         super(RawPersister, self).__init__(config, input_blob)
 
         # Create directory if it doesn't exist
-        directory = os.path.join(settings.persisters.directory, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
+        dir_path = os.path.expanduser(settings.persisters.directory)
+        directory = os.path.join(dir_path, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
                                  settings.observation.name)
         filename = settings.observation.name + '_raw'
         if not os.path.exists(directory):
@@ -57,7 +58,7 @@ class RawPersister(ProcessingModule):
         Generate the output blob
         :return:
         """
-        return ReceiverBlob(self._config, self._input.shape, datatype=np.complex64)
+        return ReceiverBlob(self._input.shape, datatype=np.complex64)
 
     def process(self, obs_info, input_data, output_data):
 

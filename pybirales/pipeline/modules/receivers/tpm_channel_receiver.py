@@ -1,10 +1,10 @@
+import datetime
+import json
+import logging
+import signal
 from threading import Thread
 
 import numpy as np
-import datetime
-import logging
-import signal
-import json
 
 from pybirales import settings
 from pybirales.birales_config import BiralesConfig
@@ -60,10 +60,10 @@ class TPMReceiver(Generator):
     def generate_output_blob(self):
         """ Generate output data blob """
         # Generate blob
-        return ReceiverBlob(self._config, [('npols', self._npols),
-                                           ('nsubs', self._nsubs),
-                                           ('nsamp', self._nsamp),
-                                           ('nants', self._nants)],
+        return ReceiverBlob([('npols', self._npols),
+                             ('nsubs', self._nsubs),
+                             ('nsamp', self._nsamp),
+                             ('nants', self._nants)],
                             datatype=self._datatype)
 
     def start_generator(self):
@@ -151,11 +151,11 @@ class TPMReceiver(Generator):
 
     def publish_antenna_metrics(self, iteration, data, obs_info):
         if iteration % self._metrics_poll_freq == 0:
-            rms_voltages = self._calculate_rms(data).tolist()
+            rms_voltages = self._calculate_rms(data)
             timestamp = obs_info['timestamp'].isoformat('T')
 
             msg = json.dumps({'timestamp': timestamp,
-                              'voltages': rms_voltages})
+                              'voltages': rms_voltages.tolist()})
             broker.publish(self._metric_channel, msg)
 
             logging.debug('Published antenna metrics %s: %s', timestamp,
@@ -172,7 +172,7 @@ if __name__ == "__main__":
     receiver.start_generator()
 
     def _signal_handler(signum, frame):
-        receiver.stop_module()
+        receiver.stop()
 
     # Wait for exit or termination
     signal.signal(signal.SIGINT, _signal_handler)

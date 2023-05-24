@@ -39,7 +39,6 @@ class TDMPersister(ProcessingModule):
     def _create_out_dir(self):
         """
 
-        :param out_dir:
         :return:
         """
 
@@ -62,7 +61,7 @@ class TDMPersister(ProcessingModule):
         Generate the output blob
         :return:
         """
-        return ChannelisedBlob(self._config, self._input.shape, datatype=np.float)
+        return ChannelisedBlob(self._input.shape, datatype=np.float)
 
     def _write(self, obs_info, obs_name, target_name, sd_track, detection_num):
         """
@@ -91,10 +90,11 @@ class TDMPersister(ProcessingModule):
         )
 
         # Parse the Jinja template using the provided data
-        parsed_template = self._template.render(**data)
+        parsed_template: str = self._template.render(**data)
 
         try:
             with open(filepath, "wb") as fh:
+                # noinspection PyTypeChecker
                 fh.write(parsed_template)
                 log.info('Outputted TDM {} persisted at: {} for track {}'.format(detection_num, filepath, sd_track.id))
 

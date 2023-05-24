@@ -132,10 +132,10 @@ class RawDataReader(ProcessingModule):
 
         :return:
         """
-        return DummyBlob(self._config, [('npols', self._npols),
-                                        ('nsubs', self._nsubs),
-                                        ('nsamp', self._nsamp),
-                                        ('nants', self._nants)],
+        return DummyBlob([('npols', self._npols),
+                          ('nsubs', self._nsubs),
+                          ('nsamp', self._nsamp),
+                          ('nants', self._nants)],
                          datatype=np.complex64)
 
     def _change_raw_file(self):
@@ -231,11 +231,11 @@ class RawDataReader(ProcessingModule):
 
     def publish_antenna_metrics(self, data, obs_info):
         if self._read_count % self._metrics_poll_freq == 0:
-            rms_voltages = self._calculate_rms(data).tolist()
+            rms_voltages = self._calculate_rms(data)
             timestamp = obs_info['timestamp'].isoformat('T')
 
             msg = json.dumps({'timestamp': timestamp,
-                              'voltages': rms_voltages})
+                              'voltages': rms_voltages.tolist()})
             broker.publish(self._metric_channel, msg)
 
             log.debug('Published antenna metrics %s: %s', timestamp,

@@ -14,8 +14,7 @@ class Detector(ProcessingModule):
         # Ensure that the input blob is of the expected format
         self._validate_data_blob(input_blob, valid_blobs=[ChannelisedBlob])
 
-        if settings.detection.multi_proc:
-            self.pool = Pool(4)
+        self.pool = Pool(4)
 
         self.channels = None
 
@@ -54,12 +53,12 @@ class Detector(ProcessingModule):
         log.debug('Found {} new candidates in {} beams'.format(len(clusters), 32))
 
         # [Track Association] Create new tracks from clusters or merge clusters into existing tracks
-        candidates = aggregate_clusters(self._candidates, clusters, obs_info,
-                                        notifications=settings.observation.notifications,
-                                        save_candidates=settings.detection.save_candidates)
+        candidates = data_association(self._candidates, clusters, obs_info,
+                                      notifications=settings.observation.notifications,
+                                      save_candidates=settings.detection.save_candidates)
 
         # [Track Termination] Check each track and determine if the detection object has transitted outside FoV
-        self._candidates, self._n_rso = active_tracks(obs_info, candidates, self._n_rso, self._iter_count)
+        self._candidates = active_tracks(obs_info, candidates, self._iter_count)
 
         # Output a TDM for the tracks that have transitted outside the telescope's FoV
         obs_info['transitted_tracks'] = [c for c in candidates if c not in self._candidates]
@@ -97,4 +96,4 @@ class Detector(ProcessingModule):
         return obs_info
 
     def generate_output_blob(self):
-        return ChannelisedBlob(self._config, self._input.shape, datatype=np.float)
+        return ChannelisedBlob(self._input.shape, datatype=np.float)

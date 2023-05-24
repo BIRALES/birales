@@ -24,7 +24,8 @@ class BeamPersister(ProcessingModule):
             raise PipelineError("Persister: Missing keys on configuration. (use_timestamp)")
 
         # Create directory if it doesn't exist
-        directory = os.path.join(settings.persisters.directory, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
+        dir_path = os.path.expanduser(settings.persisters.directory)
+        directory = os.path.join(dir_path, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
                                  settings.observation.name)
         filename = settings.observation.name + '_beam'
         if not os.path.exists(directory):
@@ -73,7 +74,8 @@ class BeamPersister(ProcessingModule):
 
     def _get_filepath(self, config):
         # Create directory if it doesn't exist
-        directory = os.path.join(settings.persisters.directory, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
+        dir_path = os.path.expanduser(settings.persisters.directory)
+        directory = os.path.join(dir_path, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
                                  settings.observation.name)
         filename = settings.observation.name + '_beam'
         if not os.path.exists(directory):
@@ -90,7 +92,7 @@ class BeamPersister(ProcessingModule):
         Generate the output blob
         :return:
         """
-        return ChannelisedBlob(self._config, self._input.shape, datatype=np.complex64)
+        return ChannelisedBlob(self._input.shape, datatype=np.complex64)
 
     def process(self, obs_info, input_data, output_data):
         """
@@ -142,20 +144,4 @@ class BeamPersister(ProcessingModule):
 
         return obs_info
 
-    def _get_filepath(self, obs_info):
-        """
-        Return the file path of the persisted data
 
-        :param obs_info:
-        :return:
-        """
-
-        directory = os.path.abspath(os.path.join(settings.persisters.directory, settings.observation.name,
-                                                 '{:%Y-%m-%dT%H%M}'.format(obs_info['timestamp'])))
-        filename = settings.observation.name + '_beam'
-
-        # Create directory if it doesn't exist
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-        return os.path.join(directory, filename)

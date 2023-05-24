@@ -2,13 +2,13 @@ import datetime
 import logging
 
 import numpy as np
-from scipy.signal import chirp, resample
+from scipy.signal import chirp
 
 from pybirales import settings
+from pybirales.pipeline.base.definitions import NoDataReaderException
 from pybirales.pipeline.base.definitions import PipelineError, ObservationInfo
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.dummy_data import DummyBlob
-from pybirales.pipeline.base.definitions import NoDataReaderException
 
 
 class RSOSignature(object):
@@ -272,10 +272,10 @@ class RSOGenerator(ProcessingModule):
         Generate the output blob
         :return:
         """
-        return DummyBlob(self._config, [('npols', self._npols),
-                                        ('nsubs', self._nsubs),
-                                        ('nsamp', self._nsamp),
-                                        ('nants', self._nants)],
+        return DummyBlob([('npols', self._npols),
+                          ('nsubs', self._nsubs),
+                          ('nsamp', self._nsamp),
+                          ('nants', self._nants)],
                          datatype=self._datatype)
 
     def generate_corrdata(self):

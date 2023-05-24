@@ -1,4 +1,5 @@
 import logging
+import os
 
 from pybirales import settings
 from pybirales.birales_config import BiralesConfig
@@ -31,7 +32,8 @@ class TPMBackend(object):
         """ Start the digital backend """
 
         # Load station configuration
-        digital_backend.load_configuration_file(settings.digital_backend.configuration_file)
+        config_path = os.path.expanduser(settings.digital_backend.configuration_file)
+        digital_backend.load_configuration_file(config_path)
 
         # Update configuration to match programming and initialization
         station_config = digital_backend.Station(digital_backend.configuration).configuration
