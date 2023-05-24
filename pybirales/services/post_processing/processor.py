@@ -19,7 +19,7 @@ class PostProcessor:
 
 
         """
-        self.remove_duplicate_epoch = settings.detection.select_highest_snr
+        self.remove_duplicate_epoch = True
         self.remove_duplicate_channel = True
 
         self._tdm_writer = TDMWriter()

@@ -1,4 +1,5 @@
 import datetime
+import logging
 import logging as log
 import os
 
@@ -10,7 +11,6 @@ from pybirales import settings
 from pybirales.pipeline.base.definitions import PipelineError
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
-import logging
 
 
 class TLE_Target:
@@ -210,7 +210,8 @@ class RawDataFitsPersister(FitsPersister):
 
         # Sanity checks on configuration
         if {'visualise_raw_beams', 'visualise_fits_dir'} - set(config.settings()) != set():
-            raise PipelineError("Persister: Missing keys on configuration. (filename_suffix)")
+            raise PipelineError(
+                "Persister: Missing keys on configuration. ('visualise_raw_beams', 'visualise_fits_dir')")
 
         self._beams_to_visualise = settings.fits_persister.visualise_raw_beams
 
@@ -229,7 +230,8 @@ class FilteredDataFitsPersister(FitsPersister):
         super(FilteredDataFitsPersister, self).__init__(config, input_blob)
         # Sanity checks on configuration
         if {'visualise_filtered_beams', 'visualise_fits_dir'} - set(config.settings()) != set():
-            raise PipelineError("Persister: Missing keys on configuration. (filename_suffix)")
+            raise PipelineError(
+                "Persister: Missing keys on configuration. ('visualise_raw_beams', 'visualise_fits_dir')")
 
         self._beams_to_visualise = settings.fits_persister.visualise_filtered_beams
 

@@ -1,15 +1,16 @@
 import datetime
-# import fadvise
-import numpy as np
 import os
 import pickle
 import struct
 import time
 
+# import fadvise
+import numpy as np
+
 from pybirales import settings
 from pybirales.pipeline.base.definitions import PipelineError
-from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.base.processing_module import ProcessingModule
+from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 
 
 class BeamPersister(ProcessingModule):
@@ -19,13 +20,13 @@ class BeamPersister(ProcessingModule):
         super(BeamPersister, self).__init__(config, input_blob)
 
         # Sanity checks on configuration
-        if {'filename_suffix'} - set(config.settings()) != set():
-            raise PipelineError("Persister: Missing keys on configuration. (filename_suffix)")
+        if {'use_timestamp'} - set(config.settings()) != set():
+            raise PipelineError("Persister: Missing keys on configuration. (use_timestamp)")
 
         # Create directory if it doesn't exist
         directory = os.path.join(settings.persisters.directory, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
                                  settings.observation.name)
-        filename = settings.observation.name + self._config.filename_suffix
+        filename = settings.observation.name + '_beam'
         if not os.path.exists(directory):
             os.makedirs(directory)
 
@@ -33,8 +34,6 @@ class BeamPersister(ProcessingModule):
         if config.use_timestamp:
             file_path = os.path.join(directory, "%s_%s" % (filename, str(time.time())))
         else:
-            if 'filename_suffix' not in config.settings():
-                raise PipelineError("Beam Persister: filename_suffix required when not using timestamp")
             file_path = os.path.join(directory, filename + '.dat')
 
         # Open file (if file exists, remove first)
@@ -76,7 +75,7 @@ class BeamPersister(ProcessingModule):
         # Create directory if it doesn't exist
         directory = os.path.join(settings.persisters.directory, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
                                  settings.observation.name)
-        filename = settings.observation.name + self._config.filename_suffix
+        filename = settings.observation.name + '_beam'
         if not os.path.exists(directory):
             os.makedirs(directory)
 
@@ -84,8 +83,6 @@ class BeamPersister(ProcessingModule):
         if config.use_timestamp:
             return os.path.join(directory, "%s_%s" % (filename, str(time.time())))
         else:
-            if 'filename_suffix' not in config.settings():
-                raise PipelineError("Persister: filename_suffix required when not using timestamp")
             return os.path.join(directory, filename)
 
     def generate_output_blob(self):
@@ -155,7 +152,7 @@ class BeamPersister(ProcessingModule):
 
         directory = os.path.abspath(os.path.join(settings.persisters.directory, settings.observation.name,
                                                  '{:%Y-%m-%dT%H%M}'.format(obs_info['timestamp'])))
-        filename = settings.observation.name + self._config.filename_suffix
+        filename = settings.observation.name + '_beam'
 
         # Create directory if it doesn't exist
         if not os.path.exists(directory):

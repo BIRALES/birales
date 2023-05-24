@@ -17,7 +17,6 @@ def create_corr_matrix_filepath():
     """
     Return the file path of the persisted data
 
-    :param timestamp:
     :return:
     """
 
@@ -48,8 +47,8 @@ class CorrMatrixPersister(ProcessingModule):
         super(CorrMatrixPersister, self).__init__(config, input_blob)
 
         # Sanity checks on configuration
-        if {'filename_suffix', 'use_timestamp'} - set(config.settings()) != set():
-            raise PipelineError("Persister: Missing keys on configuration. (filename_suffix, use_timestamp)")
+        if {'use_timestamp'} - set(config.settings()) != set():
+            raise PipelineError("Persister: Missing keys on configuration. (use_timestamp)")
 
         # Get the destination file path of the persisted data
         self._filepath = None

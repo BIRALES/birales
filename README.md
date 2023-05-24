@@ -1,6 +1,7 @@
 # BIRALES processing backend
 
 ## Dependencies
+
 * Python 3+
 * MongoDB
 * NPM 3+
@@ -13,6 +14,7 @@ Data is persisted to a MongoDB v3.2 database whilst a REDIS database is used as 
 The installation procedure for the system are detailed below:
 
 ### Database
+
 The MongoDB database can be installed through:
 
 ```bash
@@ -24,18 +26,22 @@ sudo mongod start
 ```
 
 ### Download Source Files
+
 Clone the git repository using:
+
 ```bash
 git clone https://bitbucket.org/lessju/birales.git
 ```
 
 Then, the PyBirales python application can then be installed:
+
 ```bash
 pip install -r requirements.txt
 python setup.py install
 ```
 
 Once the dependencies have been installed, the beamformer module can be built.
+
 ```bash
 cd  pybirales/pipeline/modules/beamformer/src/
 mkdir build
@@ -43,6 +49,8 @@ cd build
 cmake ..
 sudo  make install
 ```
+
+#### Front-end
 
 The front-end dependencies can be installed through NPM
 
@@ -52,6 +60,17 @@ npm install
 ```
 
 This completes the procedure needed to install the PyBirales application.
+
+### Set Environment Variables
+
+The following environment variables need to be set up before running the birales system. These can be included in the
+.bashrc.
+
+```bash
+export BIRALES__DB_USERNAME="<Insert Mongo DB Username here>"
+export BIRALES__DB_PASSWORD"<Insert Moongo DB Password here>"
+export SLACK_BOT_TOKEN="<Insert slack Access token here>"
+```
 
 ---
 
@@ -71,22 +90,25 @@ The BIRALES system can be split into three main components
 2. Scheduler
 3. Services
 
-These components need to be configured accordingly using `.ini` configuration files. Configuration templates are provided in the BIRALES application data directory.
+These components need to be configured accordingly using `.ini` configuration files. Configuration templates are
+provided in the BIRALES application data directory.
 
 ##### The BIRALES application data
 
-When the BIRALES system is installed, a `.birales` directory is installed in the user's home directory. The purpose of this directory is to store the application data of the system and is not intended to be versioned. The user can find the following sub-directories:
+When the BIRALES system is installed, a `.birales` directory is installed in the user's home directory. The purpose of
+this directory is to store the application data of the system and is not intended to be versioned. The user can find the
+following sub-directories:
 
-- `~/.birales/visualisation` 
+- `~/.birales/visualisation`
   - Visualisation (e.g. FITS) files which are often useful for debugging purposes
-- `~/.birales/configuration` 
+- `~/.birales/configuration`
   - Template configuration files for the BIRALES system for development and production systems
-- `~/.birales/schedules` 
+- `~/.birales/schedules`
   - Template files for BIRALES scheduler
 
 ### Running a Pipeline
 
-Currently, the following pipelines are implemented: 
+Currently, the following pipelines are implemented:
 
 - Correlation Pipeline `correlation_pipeline`
 - Detection Pipeline `detection_pipeline`
@@ -99,6 +121,7 @@ birales pipelines [Pipeline Name] --help
 ```
 
 Whilst the pipeline can be run through
+
 ```bash
 birales pipelines [Pipeline Name] [OPTIONS]
 ```
@@ -151,7 +174,8 @@ birales services calibration [OPTIONS]
 
 The following options are available:
 
-- The `-c / --config` option specifies the BIRALES configuration file to use. If multiple configuration options are specified, they will override each other. Required.
+- The `-c / --config` option specifies the BIRALES configuration file to use. If multiple configuration options are
+  specified, they will override each other. Required.
 
 The calibration coefficients can be reset (0 for amplitude and 1 for gain) through:
 
@@ -162,6 +186,7 @@ birales services reset_coefficients -c [CONFIGURATION]
 ### Running the BIRALES Web application
 
 Start the Flask server (still in development)
+
 ```bash
 python pybirales/app/app.py 
 ```

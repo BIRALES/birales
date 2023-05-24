@@ -7,8 +7,8 @@ import os
 import re
 from logging.handlers import TimedRotatingFileHandler
 
-from mongoengine.base.datastructures import BaseList
 from mongoengine import connect
+from mongoengine.base.datastructures import BaseList
 
 from pybirales import settings
 
@@ -18,7 +18,6 @@ class BiralesConfig:
         """
         Initialise the BIRALES configuration
 
-        :param observation_name: The name of the observations
         :param config_file_path: The path to the BIRALES configuration file
         :param config_options: Configuration options to override the default config settings
         :return:
@@ -146,12 +145,18 @@ class BiralesConfig:
 
         :return:
         """
+        username = os.environ['BIRALES__DB_USERNAME']
+        password = os.environ['BIRALES__DB_PASSWORD']
+
+        if username is None or password is None:
+            raise ConnectionAbortedError(f"Could not connect to DB. BIRALES__DB_USERNAME ({username}) "
+                                         f"or BIRALES__DB_PASSWORD ({password}) environment variables not set")
 
         if settings.database.authentication:
             self.db_connection = connect(
                 db=settings.database.name,
-                username=settings.database.user,
-                password=settings.database.password,
+                username=username,
+                password=password,
                 port=settings.database.port,
                 host=settings.database.host)
         else:
