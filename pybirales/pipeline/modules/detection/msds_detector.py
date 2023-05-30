@@ -1,4 +1,5 @@
 import logging
+import os
 import pickle
 import signal
 import time
@@ -9,10 +10,11 @@ from pybirales import settings
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 from pybirales.pipeline.modules.detection.dbscan_detection import detect
-from pybirales.pipeline.modules.detection.filter import triangle_filter, sigma_clip
+from pybirales.pipeline.modules.detection.filter import triangle_filter
 from pybirales.pipeline.modules.detection.msds.msds import *
 from pybirales.pipeline.modules.detection.util import *
 from pybirales.pipeline.modules.persisters.fits_persister import TLE_Target
+
 
 # global_process_pool = Pool(8)
 
@@ -258,7 +260,7 @@ class Detector(ProcessingModule):
         return obs_info
 
     def generate_output_blob(self):
-        return ChannelisedBlob(self._config, self._input.shape, datatype=np.float)
+        return ChannelisedBlob(self._input.shape, datatype=np.float)
 
     def dump_detection_data(self, input_data, obs_info, out_dir):
 
@@ -286,8 +288,8 @@ if __name__ == '__main__':
     pool = Pool(8, maxtasksperchild=500)
     root = '/home/denis/.birales/debug/detection/'
 
-    detection = dbscan_standalone
-    filtering = sigma_clip
+    # detection = dbscan_standalone
+    # filtering = sigma_clip
 
     detection = msds_standalone
     filtering = triangle_filter
@@ -382,7 +384,4 @@ if __name__ == '__main__':
     for j, candidate in enumerate(tracks):
         i = j + 1
         log.info("%s RSO %d: %s" % (algo_name, i, candidate.state_str()))
-        plot_RSO_track(candidate, "RSO_{} ({})".format(i, id(candidate) % 1000))
 
-    plot_all_RSOs_track(tracks)
-    plt.show(block=False)

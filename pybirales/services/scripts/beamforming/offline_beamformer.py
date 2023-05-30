@@ -13,9 +13,8 @@ from numba import njit, prange
 from numpy import ctypeslib
 from scipy import io
 
+from pybirales.pipeline.modules.beamformer.pointing import Pointing
 from pybirales.services.scripts.calibration.offline_calibration import calibrate
-from pybirales.services.scripts.offline_pointing import Pointing
-from pybirales import settings
 
 log.basicConfig(level=log.NOTSET)
 
@@ -441,11 +440,6 @@ if __name__ == '__main__':
     # obs_raw_file = "/media/denis/backup/birales/2019/2019_08_14/CAS_A_FES/CAS_A_FES_raw.dat"
     obs_raw_file = '/storage/data/birales/2022_02_23/CasA/CasA_raw.dat'
 
-    # settings.database.name = 'birales'
-    # settings.database.host = 'localhost'
-    # settings.database.port = 27017
-    # settings.database.user = 'birales_rw'
-    # settings.database.password = 'rw_Sept03'
 
     run('/storage/data/birales/2022_02_23/CasA/')
 

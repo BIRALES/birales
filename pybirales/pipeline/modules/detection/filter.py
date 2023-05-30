@@ -244,4 +244,4 @@ class Filter(ProcessingModule):
 
     def generate_output_blob(self):
         # Generate output blob
-        return ChannelisedBlob(self._config, self._input.shape, datatype=self._input.datatype)
+        return ChannelisedBlob(self._input.shape, datatype=self._input.datatype)

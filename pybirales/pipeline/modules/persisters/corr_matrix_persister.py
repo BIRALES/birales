@@ -17,7 +17,6 @@ def create_corr_matrix_filepath():
     """
     Return the file path of the persisted data
 
-    :param timestamp:
     :return:
     """
 
@@ -25,7 +24,8 @@ def create_corr_matrix_filepath():
         corr_matrix_filepath = settings.corrmatrixpersister.corr_matrix_filepath
     else:
         now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
-        basedir = os.path.join(settings.persisters.directory, '{:%Y_%m_%d}'.format(now),
+        dir_path = os.path.expanduser(settings.persisters.directory)
+        basedir = os.path.join(dir_path, '{:%Y_%m_%d}'.format(now),
                                settings.observation.name)
         corr_matrix_filepath = os.path.join(basedir, settings.observation.name + '__corr.h5')
 
@@ -48,8 +48,8 @@ class CorrMatrixPersister(ProcessingModule):
         super(CorrMatrixPersister, self).__init__(config, input_blob)
 
         # Sanity checks on configuration
-        if {'filename_suffix', 'use_timestamp'} - set(config.settings()) != set():
-            raise PipelineError("Persister: Missing keys on configuration. (filename_suffix, use_timestamp)")
+        if {'use_timestamp'} - set(config.settings()) != set():
+            raise PipelineError("Persister: Missing keys on configuration. (use_timestamp)")
 
         # Get the destination file path of the persisted data
         self._filepath = None

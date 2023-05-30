@@ -1,16 +1,16 @@
 import datetime
-# import fadvise
-import numpy as np
+import logging
 import os
 import pickle
 import struct
 import time
-import logging
+
+# import fadvise
+import numpy as np
 
 from pybirales import settings
-from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
-from pybirales.pipeline.base.definitions import PipelineError
 from pybirales.pipeline.base.processing_module import ProcessingModule
+from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
 
 
 class RawPersister(ProcessingModule):
@@ -20,14 +20,11 @@ class RawPersister(ProcessingModule):
         # Call superclass initialiser
         super(RawPersister, self).__init__(config, input_blob)
 
-        # Sanity checks on configuration
-        if {'filename_suffix'} - set(config.settings()) != set():
-            raise PipelineError("Persister: Missing keys on configuration. (filename_suffix)")
-
         # Create directory if it doesn't exist
-        directory = os.path.join(settings.persisters.directory, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
+        dir_path = os.path.expanduser(settings.persisters.directory)
+        directory = os.path.join(dir_path, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
                                  settings.observation.name)
-        filename = settings.observation.name + self._config.filename_suffix
+        filename = settings.observation.name + '_raw'
         if not os.path.exists(directory):
             os.makedirs(directory)
 
@@ -35,8 +32,6 @@ class RawPersister(ProcessingModule):
         if config.use_timestamp:
             file_path = os.path.join(directory, "%s_%s" % (filename, str(time.time())))
         else:
-            if 'filename_suffix' not in config.settings():
-                raise PipelineError("Raw Persister: filename_suffix required when not using timestamp")
             file_path = os.path.join(directory, filename + '.dat')
 
         self._base_filepath = file_path.split('.')[0]
@@ -63,7 +58,7 @@ class RawPersister(ProcessingModule):
         Generate the output blob
         :return:
         """
-        return ReceiverBlob(self._config, self._input.shape, datatype=np.complex64)
+        return ReceiverBlob(self._input.shape, datatype=np.complex64)
 
     def process(self, obs_info, input_data, output_data):
 

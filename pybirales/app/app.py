@@ -1,4 +1,5 @@
 import logging as log
+import os
 import threading
 from logging.config import dictConfig
 
@@ -46,10 +47,17 @@ app.secret_key = 'secret!'
 
 app.config['DEBUG'] = DEBUG
 
+username = os.environ['BIRALES__DB_USERNAME']
+password = os.environ['BIRALES__DB_PASSWORD']
+
+if username is None or password is None:
+    raise ConnectionAbortedError(f"Could not connect to DB. BIRALES__DB_USERNAME ({username}) "
+                                 f"or BIRALES__DB_PASSWORD ({password}) environment variables not set")
+
 db_connection = connect(
     db='birales',
-    username='birales_rw',
-    password='rw_Sept03',
+    username=username,
+    password=password,
     port=27017,
     host='localhost')
 
