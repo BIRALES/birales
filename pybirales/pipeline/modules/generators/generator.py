@@ -56,7 +56,7 @@ class DummyDataGenerator(ProcessingModule):
 
         # Create data shape on GPU or CPU
         if settings.manager.use_gpu:
-            return GPUDummyBlob(data_shape,  datatype=self._datatype, device=settings.manager.gpu_device_id)
+            return GPUDummyBlob(data_shape, datatype=self._datatype, device=settings.manager.gpu_device_id)
         else:
             return DummyBlob(data_shape, datatype=self._datatype)
 
@@ -65,12 +65,16 @@ class DummyDataGenerator(ProcessingModule):
 
         time.sleep(1)
 
+        # Generate a sinusoidal signal
+        signal = np.arange(self._nsamp) * (1000.0 / settings.observation.samples_per_second) * 2 * np.pi
+        signal = 50 * (np.cos(signal) + 1j * np.sin(signal))
+
         # The generator can generate the data on either the GPU or the host
         if settings.manager.use_gpu:
             with cu.cuda.Device(settings.manager.gpu_device_id):
-                output_data[:] = cu.ones((self._nsubs, self._nsamp, self._nants), dtype=self._datatype)
+                output_data[:] = cu.asarray(signal[np.newaxis, np.newaxis, :, np.newaxis])
         else:
-            output_data[:] = np.ones((self._nsubs, self._nsamp, self._nants), dtype=self._datatype)
+            output_data[:] = signal[np.newaxis, np.newaxis, :, np.newaxis]
 
         self._counter += 1
 

@@ -1,6 +1,5 @@
 import math
 from datetime import timedelta
-from multiprocessing.pool import ThreadPool
 
 import cupy
 import numba
@@ -15,7 +14,7 @@ from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob, GPUChanne
 from pybirales.pipeline.blobs.dummy_data import DummyBlob, GPUDummyBlob
 from pybirales.pipeline.blobs.receiver_data import ReceiverBlob, GPUReceiverBlob
 
-cu =None
+cu = None
 try:
     import cupy as cu
     from cupyx.scipy.fft import fft, fftshift
@@ -41,33 +40,36 @@ def apply_fir_filter(data, fir_filter, output, ntaps, nchans):
         output[:, n] = temp[:nchans]
 
 
-@cuda.jit('void(complex64[:,:,:,:], complex64[:], complex64[:,:,:,:,:], int32, int32, int32)', fastmath=True)
+@cuda.jit('void(complex64[:,:,:,:], float64[:], complex64[:,:,:,:,:], int32, int32, int32)', fastmath=True)
 def apply_fir_filter_cuda(input_data, fir_filter, output_data, nof_spectra, nchans, ntaps):
     """
     Optimised filter function using numpy and numba
-    :param data: Input data pointer
+    :param input_data: Input data pointer
     :param fir_filter: Filter coefficients pointer
-    :param output: Output data pointer
+    :param output_data: Output data pointer
+    :param nof_spectra: Number of spectra to process
     :param ntaps: Number of taps
     :param nchans: Number of channels
     """
 
     # NOTE: This assumes that npols and nsubs are 1 for the time being
-
     spectrum = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
     stream = cuda.blockIdx.y
 
+    # Get relevant parts of input and output buffers
     input_ptr = input_data[0, stream, 0]
     output_ptr = output_data[0, stream, 0]
 
     if spectrum >= nof_spectra:
         return
 
-    temp_value = 0
-    for c in range(nchans):
-        for t in range(ntaps):
-            temp_value += input_ptr[spectrum * nchans + c * ntaps + t] * fir_filter[c * ntaps + t]
-        output_ptr[c, spectrum] = temp_value
+    # Loop across channels and each tap multiplied by the associated filter value to generate
+    # the filtered channel response
+    for channel in range(nchans):
+        temp_value = 0
+        for tap in range(ntaps):
+            temp_value += input_ptr[spectrum * nchans + tap * nchans + channel] * fir_filter[tap * nchans + channel]
+        output_ptr[channel, spectrum] = temp_value
 
 
 class PFB(ProcessingModule):
@@ -246,16 +248,17 @@ class PFB(ProcessingModule):
                 self._temp_input[:, :, :, self._nchans * self._ntaps:] = cu.asarray(input_data)
             else:
                 self._temp_input[:, :, :, self._nchans * self._ntaps:] = cu.asarray(
-                    cu.transpose(input_data, (0, 3, 1, 2)))
+                    np.transpose(input_data, (0, 3, 1, 2)))
 
             # Call filtering kernel
-            grid = (math.ceil(self._nsamp / 128), self._nbeams)
-            block_size = 128
-            apply_fir_filter_cuda[grid, block_size](self._temp_input, self._filter_gpu, self._filtered,
-                                                    input_data.shape[-1] // self._nchans, self._nchans, self._ntaps)
+            nof_spectra = input_data.shape[-2] // self._nchans
+            nof_threads = 64
+            grid = (math.ceil(nof_spectra / nof_threads), self._nbeams)
+            apply_fir_filter_cuda[grid, nof_threads](self._temp_input, self._filter_gpu, self._filtered,
+                                                     nof_spectra, self._nchans, self._ntaps)
 
             # Perform FFTs
-            output_data[:] = cupy.squeeze(fftshift(fft(self._filtered, overwrite_x=True, axis=-1), axes=-1))
+            output_data[:] = cupy.squeeze(fftshift(fft(self._filtered, overwrite_x=True, axis=-2), axes=-2))
 
             # Synchronize
             d.synchronize()
@@ -283,5 +286,4 @@ class PFB(ProcessingModule):
                         self._filtered = np.reshape(self._temp_input, (self._npols, self._nbeams, self._nsubs,
                                                                        self._nchans, int(self._nsamp / self._nchans)))
 
-        output_data[:] = np.fft.fftshift(np.fft.fft(self._filtered, axis=-1), axes=-1)[:, :, 0, :, :]
-
+        output_data[:] = np.squeeze(np.fft.fftshift(np.fft.fft(self._filtered, axis=-2), axes=-2))
