@@ -1,6 +1,5 @@
 import logging
 import math
-import time
 
 import numba
 import numpy as np
@@ -21,7 +20,7 @@ except ImportError:
     pass
 
 # Define the maximum number of antennas to generate shared memory buffer in GPU
-MAX_ANTENNAS = 128
+MAX_ANTENNAS = 256
 
 
 @njit(parallel=True, fastmath=True)
@@ -30,7 +29,7 @@ def beamformer_python(nbeams, data, weights, output):
         output[0, b, 0, :] = np.dot(data, weights[0, b, :])
 
 
-@cuda.jit('void(complex64[:,:,:,:], complex64[:,:,:,:], complex64[:, :,:])', fastmath=True)
+@cuda.jit('void(complex64[:,:,:,:], complex64[:,:,:,:], complex64[:,:,:])', fastmath=True)
 def beamformer_gpu(input_data, output_data, weights):
     # Input in pol/sub/samp/ant order
     # Output in pol/beam/sub/samp order
@@ -38,18 +37,18 @@ def beamformer_gpu(input_data, output_data, weights):
 
     # Compute sample index and check whether thread is out of bounds
     sample = cuda.blockDim.x * cuda.blockIdx.x + cuda.threadIdx.x
-
-    if sample >= input_data.shape[-2]:
-        return
-
-    nof_antennas = weights.shape[-1]
+    nof_antennas = input_data.shape[-2]
     beam = cuda.blockIdx.y
+
+    # Thread only continues if it's associated spectrum is valid
+    if sample >= input_data.shape[-1]:
+        return
 
     # Use a shared memory block to store the weights of associated beam
     shared_memory = cuda.shared.array(MAX_ANTENNAS, numba.complex64)
 
     # Cooperative load of pointing coefficient for current beam
-    for t in range(nof_antennas, cuda.blockDim.x):
+    for t in range(cuda.threadIdx.x, nof_antennas, cuda.blockDim.x):
         shared_memory[t] = weights[0, beam, t]
     cuda.syncthreads()
 
