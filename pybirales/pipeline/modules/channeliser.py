@@ -251,7 +251,7 @@ class PFB(ProcessingModule):
                     np.transpose(input_data, (0, 3, 1, 2)))
 
             # Call filtering kernel
-            nof_spectra = input_data.shape[-2] // self._nchans
+            nof_spectra = int(self._nsamp // self._nchans)
             nof_threads = 64
             grid = (math.ceil(nof_spectra / nof_threads), self._nbeams)
             apply_fir_filter_cuda[grid, nof_threads](self._temp_input, self._filter_gpu, self._filtered,
