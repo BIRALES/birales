@@ -156,7 +156,7 @@ class Correlator(ProcessingModule):
         self._nants = obs_info['nants']
         self._npols = obs_info['npols']
 
-        # Initialise variables during when processing first blob
+        # Initialise variables when processing first blob
         if self._iter_count == 1:
             self._nbaselines = int(0.5 * ((obs_info['nants'] ** 2) - obs_info['nants']))
             self._nstokes = obs_info['npols'] ** 2
