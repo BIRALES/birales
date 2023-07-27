@@ -114,42 +114,7 @@ class Pointing(object):
         satellite_el = Angle(asin(rhou_sat_rx_nwz[2]), u.rad)
 
         # Point beam to required ALT AZ
-        # print("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, ref_dec +
-        #                                                         delta_dec, satellite_el.deg, satellite_az.deg))
         self.point_array_static(beam, satellite_el, satellite_az)
-
-    # def point_array(self, beam, ref_dec, ha, delta_dec):
-    #     """ Calculate the phase shift between two antennas which is given by the phase constant (2 * pi / wavelength)
-    #     multiplied by the projection of the baseline vector onto the plane wave arrival vector
-    #     :param beam: Beam to which this applies
-    #     :param right_ascension: Right ascension of source (astropy angle, or string that can be converted to angle)
-    #     :param declination: Declination of source (astropy angle, or string that can be converted to angle)
-    #     :param pointing_time: Time of observation (in format astropy time)
-    #     :return: The phaseshift in radians for each antenna
-    #     """
-    #
-    #     # Type conversions if required
-    #     ref_dec = Angle(ref_dec, u.deg)
-    #     delta_dec = Angle(delta_dec, u.deg)
-    #     dec = ref_dec + delta_dec
-    #
-    #     # Declination depends on DEC divide by DEC
-    #     ha = ha / np.cos(dec.rad)
-    #
-    #     # We must have a positive hour angle and non-zero
-    #     if ha < 0:
-    #         ha = Angle(ha + 360, u.deg)
-    #     elif ha < 0.0001:
-    #         ha = Angle(0.0001, u.deg)
-    #     else:
-    #         ha = Angle(ha, u.deg)
-    #
-    #     # Convert RA DEC to ALT AZ
-    #     alt, az = self._ha_dec_to_alt_az(ha, dec, self._reference_location)
-    #
-    #     # Point beam to required ALT AZ
-    #     print("LAT: {}, HA: {}, DEC: {}, ALT: {}, AZ: {}".format(self._reference_location[1], ha.deg, dec, alt.deg, az.deg))
-    #     self.point_array_static(beam, alt, az)
 
     @staticmethod
     def _ha_dec_to_alt_az(hour_angle, declination, location):
@@ -268,10 +233,6 @@ class AntennaArray(object):
 
         # Convert file data to astropy format, and store lat, lon and height for each antenna
         positions = np.array(positions)
-        # self._x = [positions[str(i)][2][0] for i in range(len(positions))]
-        # self._y = [positions[str(i)][2][1] for i in range(len(positions))]
-        # self._z = [positions[str(i)][2][2] for i in range(len(positions))]
-        # self._height = [0 for i in range(self._n_antennas)]
 
         self._x = positions[:, 0].tolist()
         self._y = positions[:, 1].tolist()

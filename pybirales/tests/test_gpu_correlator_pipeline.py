@@ -44,7 +44,7 @@ if __name__ == "__main__":
                             '/home/lessju/Software/birales/pybirales/configuration/generator.ini'])
 
     # Override some settings
-    settings.beamformer.apply_calib_coeffs = False
+    settings.beamformer.calibrate_subarrays = False
 
     pipeline = DummyGpuPipeline()
     pipeline.build()

@@ -5,6 +5,7 @@ import logging as log
 import logging.config as log_config
 import os
 import re
+import glob
 from logging.handlers import TimedRotatingFileHandler
 
 from mongoengine import connect
@@ -51,6 +52,10 @@ class BiralesConfig:
 
         # Load the instrument config file
         self._load_from_file(os.path.join(os.path.dirname(__file__), 'configuration/instrument.ini'))
+
+        # Load pointing config files
+        for f in glob.glob(os.path.join(os.path.dirname(__file__), 'configuration/pointing/*.ini')):
+            self._load_from_file(f)
 
         # Override the configuration with settings passed on in the config_options dictionary
         self.update_config(config_options)
@@ -185,15 +190,14 @@ class BiralesConfig:
             for (k, v) in self._parser.items(section):
                 # If value is a string, interpret it
                 if isinstance(v, str):
-                    # Check if value is a number of boolean
-                    if re.match(re.compile("^True|False|[0-9]+(\.[0-9]*)?$"), v) is not None:
+                    # Check if value is a number, boolean, list or string
+                    if re.match(re.compile("^True|False|[0-9]+(\.[0-9]*)?$"), v) or \
+                       re.match(r"^\[.*\]$", re.sub(r'\s+', '', v)) or \
+                       re.match(r"^\{.*\}$", re.sub(r'\s+', '', v)):
+                        # Evaluate value as an AST literal
                         setattr(instance, k, ast.literal_eval(v))
 
-                    # Check if value is a list
-                    elif re.match(r"^\[.*\]$", re.sub(r'\s+', '', v)):
-                        setattr(instance, k, ast.literal_eval(v))
-
-                    # Otherwise it is a string
+                    # Otherwise use the value as is (string)
                     else:
                         setattr(instance, k, v)
                 else:

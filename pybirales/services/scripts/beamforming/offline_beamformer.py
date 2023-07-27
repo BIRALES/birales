@@ -138,7 +138,7 @@ def get_weights(config, nants_to_process=32):
     pointing = Pointing(config, 1, nants_to_process)
 
     # Generate pointings
-    weights = pointing.weights
+    weights = pointing._pointing_weights
 
     return weights
 

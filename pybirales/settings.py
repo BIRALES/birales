@@ -26,10 +26,15 @@ tpm_receiver = None
 
 class instrument:
     name_prefix = '1N'
+    reference_antenna_location = [11.6459889, 44.52357778]
+    antenna_locations = []
 
 
 class observation:
     id = -1
+    start_center_frequency = 410.0864453125
+    reference_declination = 40.8
+    channel_bandwidth = 0.08544921875
 
 
 class detection:
