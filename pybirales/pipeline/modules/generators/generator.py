@@ -25,11 +25,11 @@ class DummyDataGenerator(ProcessingModule):
         self._validate_data_blob(input_blob, valid_blobs=[type(None)])
 
         # Sanity checks on configuration
-        if {'nants', 'nsamp', 'nsubs'} - set(config.settings()) != set():
-            raise PipelineError("DummyDataGenerator: Missing keys on configuration (nants, nsamp, nsub)")
-        self._nants = config.nants
-        self._nsamp = config.nsamp
-        self._nsubs = config.nsubs
+        if {'nof_antennas', 'nof_samples', 'nof_subbands'} - set(config.settings()) != set():
+            raise PipelineError("DummyDataGenerator: Missing keys on configuration (nof_antennas, nof_samples, nsub)")
+        self._nof_antennas = config.nof_antennas
+        self._nof_samples = config.nof_samples
+        self._nof_subbands = config.nof_subbands
         self._datatype = np.complex64
 
         # If GPUs need to be used, check whether CuPy is available
@@ -52,7 +52,7 @@ class DummyDataGenerator(ProcessingModule):
         """
 
         # Define data blob shape
-        data_shape = [('npols', 1), ('nsubs', self._nsubs), ('nsamp', self._nsamp), ('nants', self._nants)]
+        data_shape = [('nof_polarisations', 1), ('nof_subbands', self._nof_subbands), ('nof_samples', self._nof_samples), ('nof_antennas', self._nof_antennas)]
 
         # Create data shape on GPU or CPU
         if settings.manager.use_gpu:
@@ -66,7 +66,7 @@ class DummyDataGenerator(ProcessingModule):
         time.sleep(1)
 
         # Generate a sinusoidal signal
-        signal = np.arange(self._nsamp) * (1000.0 / settings.observation.samples_per_second) * 2 * np.pi
+        signal = np.arange(self._nof_samples) * (1000.0 / settings.observation.samples_per_second) * 2 * np.pi
         signal = 50 * (np.cos(signal) + 1j * np.sin(signal))
 
         # The generator can generate the data on either the GPU or the host
@@ -82,10 +82,10 @@ class DummyDataGenerator(ProcessingModule):
         obs_info = ObservationInfo()
         obs_info['sampling_time'] = 1. / settings.observation.samples_per_second
         obs_info['timestamp'] = datetime.datetime.utcnow()
-        obs_info['nsubs'] = self._nsubs
-        obs_info['nsamp'] = self._nsamp
-        obs_info['nants'] = self._nants
-        obs_info['npols'] = 1
+        obs_info['nof_subbands'] = self._nof_subbands
+        obs_info['nof_samples'] = self._nof_samples
+        obs_info['nof_antennas'] = self._nof_antennas
+        obs_info['nof_polarisations'] = 1
         obs_info['start_center_frequency'] = settings.observation.start_center_frequency
         obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
 

@@ -15,7 +15,7 @@ warnings.simplefilter('ignore', category=AstropyWarning)
 class Pointing(object):
     """ Pointing class which periodically updates pointing weights """
 
-    def __init__(self, config, nsubs, nants):
+    def __init__(self, config, nof_subbands, nof_antennas):
 
         # Initialise Pointing
         array = config['antenna_locations']
@@ -24,9 +24,9 @@ class Pointing(object):
         self._reference_declination = config['reference_declination']
         self._pointings = config['pointings']
         self._bandwidth = config['channel_bandwidth']
-        self._nbeams = config['nbeams']
-        self._nants = nants
-        self._nsubs = nsubs
+        self._nof_beams = config['nof_beams']
+        self._nof_antennas = nof_antennas
+        self._nof_subbands = nof_subbands
 
         # Ignore AstropyWarning
         warnings.simplefilter('ignore', category=AstropyWarning)
@@ -37,15 +37,15 @@ class Pointing(object):
         # Calculate displacement vectors to each antenna from reference antenna
         self._reference_location = self._reference_location[0], self._reference_location[1]
 
-        self._vectors_enu = np.full([self._nants, 3], np.nan)
-        for i in range(self._nants):
+        self._vectors_enu = np.full([self._nof_antennas, 3], np.nan)
+        for i in range(self._nof_antennas):
             self._vectors_enu[i, :] = self._array.antenna_position(i)
 
         # Create initial weights
-        self.weights = np.ones((self._nsubs, self._nbeams, self._nants), dtype=np.complex64)
+        self.weights = np.ones((self._nof_subbands, self._nof_beams, self._nof_antennas), dtype=np.complex64)
 
         # Generate weights
-        for beam in range(self._nbeams):
+        for beam in range(self._nof_beams):
             self.point_array(beam, self._reference_declination, self._pointings[beam][0], self._pointings[beam][1])
 
     def point_array_static(self, beam, altitude, azimuth):
@@ -56,9 +56,9 @@ class Pointing(object):
         :return: The phase shift in radians for each antenna
         """
 
-        for i in range(self._nsubs):
+        for i in range(self._nof_subbands):
             # Calculate complex coefficients
-            frequency = Quantity(self._start_center_frequency + (i * self._bandwidth / self._nsubs), u.MHz)
+            frequency = Quantity(self._start_center_frequency + (i * self._bandwidth / self._nof_subbands), u.MHz)
             real, imag = self._phaseshifts_from_altitude_azimuth(altitude.rad, azimuth.rad, frequency,
                                                                  self._vectors_enu)
 

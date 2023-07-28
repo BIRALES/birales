@@ -108,15 +108,15 @@ class BeamPersister(ProcessingModule):
             obs_info['transmitter_frequency'] = settings.observation.transmitter_frequency
             obs_info['start_beam_in_file'] = self._beam_range.start if self._beam_range.start is not None else 0
 
-            obs_info['nof_beams_in_file'] = obs_info['nbeams'] if self._beam_range.start is None else \
+            obs_info['nof_beams_in_file'] = obs_info['nof_beams'] if self._beam_range.start is None else \
                 self._beam_range.stop_module - self._beam_range.start
 
             obs_info['start_channel_in_file'] = self._channel_range.start if self._channel_range.start is not None else 0
 
-            obs_info['nof_channels_in_file'] = obs_info['nchans'] if self._channel_range.start is None else \
+            obs_info['nof_channels_in_file'] = obs_info['nof_channels'] if self._channel_range.start is None else \
                 self._channel_range.stop_module - self._channel_range.start
 
-            del obs_info['nsubs']
+            del obs_info['nof_subbands']
 
             with open(self._head_filepath, 'wb') as f:
                 pickle.dump(obs_info.get_dict(), f)

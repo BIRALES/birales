@@ -241,12 +241,12 @@ class DummyDataPipelineMangerBuilder(PipelineManagerBuilder):
         scaling = 32
 
         # Change the number of antennas
-        settings.generator.nants = scaling
+        settings.generator.nof_antennas = scaling
 
         # Change the number of beams
-        settings.beamformer.nbeams = scaling
+        settings.beamformer.nof_beams = scaling
         settings.beamformer.pointings = []
-        for i in range(0, settings.beamformer.nbeams / 4):
+        for i in range(0, settings.beamformer.nof_beams / 4):
             for j in range(0, 4):
                 settings.beamformer.pointings.append([j, i, 0])
                 settings.beamformer.antenna_locations.append([j, i, 0])

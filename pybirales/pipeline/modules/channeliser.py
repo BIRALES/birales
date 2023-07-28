@@ -23,36 +23,36 @@ except ImportError:
 
 
 @numba.jit(nopython=True, nogil=True)
-def apply_fir_filter(data, fir_filter, output, ntaps, nchans):
+def apply_fir_filter(data, fir_filter, output, nof_taps, nof_channels):
     """
     Optimised filter function using numpy and numba
     :param data: Input data pointer
     :param fir_filter: Filter coefficients pointer
     :param output: Output data pointer
-    :param ntaps: Number of taps
-    :param nchans: Number of channels
+    :param nof_taps: Number of taps
+    :param nof_channels: Number of channels
     """
-    nof_spectra = (len(data) - ntaps * nchans) // nchans
+    nof_spectra = (len(data) - nof_taps * nof_channels) // nof_channels
     for n in range(nof_spectra):
-        temp = data[n * nchans: n * nchans + nchans * ntaps] * fir_filter
-        for j in range(1, ntaps):
-            temp[:nchans] += temp[j * nchans: (j + 1) * nchans]
-        output[:, n] = temp[:nchans]
+        temp = data[n * nof_channels: n * nof_channels + nof_channels * nof_taps] * fir_filter
+        for j in range(1, nof_taps):
+            temp[:nof_channels] += temp[j * nof_channels: (j + 1) * nof_channels]
+        output[:, n] = temp[:nof_channels]
 
 
 @cuda.jit('void(complex64[:,:,:,:], float64[:], complex64[:,:,:,:,:], int32, int32, int32)', fastmath=True)
-def apply_fir_filter_cuda(input_data, fir_filter, output_data, nof_spectra, nchans, ntaps):
+def apply_fir_filter_cuda(input_data, fir_filter, output_data, nof_spectra, nof_channels, nof_taps):
     """
     Optimised filter function using numpy and numba
     :param input_data: Input data pointer
     :param fir_filter: Filter coefficients pointer
     :param output_data: Output data pointer
     :param nof_spectra: Number of spectra to process
-    :param ntaps: Number of taps
-    :param nchans: Number of channels
+    :param nof_taps: Number of taps
+    :param nof_channels: Number of channels
     """
 
-    # NOTE: This assumes that npols and nsubs are 1 for the time being
+    # NOTE: This assumes that nof_polarisations and nof_subbands are 1 for the time being
     spectrum = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
     stream = cuda.blockIdx.y
 
@@ -65,10 +65,10 @@ def apply_fir_filter_cuda(input_data, fir_filter, output_data, nof_spectra, ncha
 
     # Loop across channels and each tap multiplied by the associated filter value to generate
     # the filtered channel response
-    for channel in range(nchans):
+    for channel in range(nof_channels):
         temp_value = 0
-        for tap in range(ntaps):
-            temp_value += input_ptr[spectrum * nchans + tap * nchans + channel] * fir_filter[tap * nchans + channel]
+        for tap in range(nof_taps):
+            temp_value += input_ptr[spectrum * nof_channels + tap * nof_channels + channel] * fir_filter[tap * nof_channels + channel]
         output_ptr[channel, spectrum] = temp_value
 
 
@@ -87,13 +87,13 @@ class PFB(ProcessingModule):
         self._after_beamformer = True if type(input_blob) in [GPUBeamformedBlob, BeamformedBlob] else False
 
         # Sanity checks on configuration
-        if {'nchans', 'ntaps'} - set(config.settings()) != set():
-            raise PipelineError("PPF: Missing keys on configuration. (nchans, ntaps, nsamp, nbeams)")
+        if {'nof_channels', 'nof_taps'} - set(config.settings()) != set():
+            raise PipelineError("PPF: Missing keys on configuration. (nof_channels, nof_taps, nof_samples, nof_beams)")
         self._bin_width_scale = 1.0
-        self._nchans = config.nchans
-        self._ntaps = config.ntaps
+        self._nof_channels = config.nof_channels
+        self._nof_taps = config.nof_taps
 
-        # Call superclass initialiser
+        # Call superclass initializer
         super(PFB, self).__init__(config, input_blob)
 
         # Processing module name
@@ -104,10 +104,10 @@ class PFB(ProcessingModule):
         self._filter_gpu = None
         self._filtered = None
         self._temp_input = None
-        self._nbeams = None
-        self._nsubs = None
-        self._nsamp = None
-        self._npols = None
+        self._nof_beams = None
+        self._nof_subbands = None
+        self._nof_samples = None
+        self._nof_polarisations = None
 
     def generate_output_blob(self):
         """ Generate output data blob """
@@ -115,20 +115,20 @@ class PFB(ProcessingModule):
         datatype = self._input.datatype
 
         # Initialise and generate output blob depending on where it is placed in pipeline
-        nstreams = input_shape['nbeams'] if self._after_beamformer else input_shape['nants']
+        nof_streams = input_shape['nof_beams'] if self._after_beamformer else input_shape['nof_antennas']
 
         # Check if number of polarizations is defined in input blob
-        npols = 1 if 'npols' not in input_shape.keys() else input_shape['npols']
+        nof_polarisations = 1 if 'nof_polarisations' not in input_shape.keys() else input_shape['nof_polarisations']
 
-        self._initialise(npols, input_shape['nsamp'], nstreams, input_shape['nsubs'])
+        self._initialise(nof_polarisations, input_shape['nof_samples'], nof_streams, input_shape['nof_subbands'])
 
-        meta_data = [('npols', self._npols),
-                     ('nbeams', nstreams),
-                     ('nchans', self._nchans * input_shape['nsubs']),
-                     ('nsamp', int(input_shape['nsamp'] / self._nchans))]
+        meta_data = [('nof_polarisations', self._nof_polarisations),
+                     ('nof_beams', nof_streams),
+                     ('nof_channels', self._nof_channels * input_shape['nof_subbands']),
+                     ('nof_samples', int(input_shape['nof_samples'] / self._nof_channels))]
 
         if not self._after_beamformer:
-            meta_data[1] = ('nants', input_shape['nants'])
+            meta_data[1] = ('nof_antennas', input_shape['nof_antennas'])
 
         # Generate output blob
         if settings.manager.use_gpu:
@@ -137,13 +137,13 @@ class PFB(ProcessingModule):
         else:
             return ChannelisedBlob(meta_data, datatype=datatype)
 
-    def _initialise(self, npols, nsamp, nbeams, nsubs):
+    def _initialise(self, nof_polarisations, nof_samples, nof_beams, nof_subbands):
         """ Initialise temporary arrays if not already initialised """
-        # Update nsamp with value in block
-        self._npols = npols
-        self._nsamp = nsamp
-        self._nbeams = nbeams
-        self._nsubs = nsubs
+        # Update nof_samples with value in block
+        self._nof_polarisations = nof_polarisations
+        self._nof_samples = nof_samples
+        self._nof_beams = nof_beams
+        self._nof_subbands = nof_subbands
 
         # Generate filter
         self._generate_filter()
@@ -154,22 +154,22 @@ class PFB(ProcessingModule):
 
                 # Create temporary array for filtered data
                 self._filtered = cu.zeros(
-                    (self._npols, self._nbeams, self._nsubs, self._nchans, int(self._nsamp / self._nchans)),
+                    (self._nof_polarisations, self._nof_beams, self._nof_subbands, self._nof_channels, int(self._nof_samples / self._nof_channels)),
                     dtype=np.complex64)
 
                 # Create temporary input array
                 self._temp_input = cu.zeros(
-                    (self._npols, self._nbeams, self._nsubs, self._nsamp + self._nchans * self._ntaps),
+                    (self._nof_polarisations, self._nof_beams, self._nof_subbands, self._nof_samples + self._nof_channels * self._nof_taps),
                     dtype=np.complex64)
         else:
             # Create temporary array for filtered data
             self._filtered = np.zeros(
-                (self._npols, self._nbeams, self._nsubs, self._nchans, int(self._nsamp / self._nchans)),
+                (self._nof_polarisations, self._nof_beams, self._nof_subbands, self._nof_channels, int(self._nof_samples / self._nof_channels)),
                 dtype=np.complex64)
 
             # Create temporary input array
             self._temp_input = np.zeros(
-                (self._npols, self._nbeams, self._nsubs, self._nsamp + self._nchans * self._ntaps),
+                (self._nof_polarisations, self._nof_beams, self._nof_subbands, self._nof_samples + self._nof_channels * self._nof_taps),
                 dtype=np.complex64)
 
     def process(self, obs_info, input_data, output_data):
@@ -183,23 +183,20 @@ class PFB(ProcessingModule):
         """
 
         # Check if initialised, if not initialise
-        nstreams = obs_info['nbeams'] if self._after_beamformer else obs_info['nants']
-        npols = 1 if 'npols' not in obs_info.keys() else obs_info['npols']
+        nof_streams = obs_info['nof_beams'] if self._after_beamformer else obs_info['nof_antennas']
+        nof_polarisations = 1 if 'nof_polarisations' not in obs_info.keys() else obs_info['nof_polarisations']
         if self._filter is None:
-            self._initialise(npols, obs_info['nsamp'], nstreams, obs_info['nsubs'])
+            self._initialise(nof_polarisations, obs_info['nof_samples'], nof_streams, obs_info['nof_subbands'])
 
         # Update parameters
-        self._nsamp = obs_info['nsamp']
-        self._nsubs = obs_info['nsubs']
-        self._nbeams = nstreams
-
-        # Set current output
-        self._current_output = output_data
+        self._nof_samples = obs_info['nof_samples']
+        self._nof_subbands = obs_info['nof_subbands']
+        self._nof_beams = nof_streams
 
         # Update temporary input array (works for GPU and CPU)
-        if self._ntaps != 0:
-            self._temp_input[:, :, :, :self._nchans * self._ntaps] = self._temp_input[:, :, :,
-                                                                     -self._nchans * self._ntaps:]
+        if self._nof_taps != 0:
+            self._temp_input[:, :, :, :self._nof_channels * self._nof_taps] = self._temp_input[:, :, :,
+                                                                     -self._nof_channels * self._nof_taps:]
 
         # Channelise
         if settings.manager.use_gpu:
@@ -208,12 +205,12 @@ class PFB(ProcessingModule):
             self.channelise_serial(input_data, output_data)
 
         # Update observation information
-        obs_info['timestamp'] -= timedelta(seconds=(self._ntaps - 1) * self._nchans * obs_info['sampling_time'])
-        obs_info['nchans'] = self._nchans * obs_info['nsubs']
-        obs_info['nsamp'] //= self._nchans
-        obs_info['sampling_time'] *= self._nchans
-        obs_info['channel_bandwidth'] /= self._nchans
-        obs_info['start_center_frequency'] -= obs_info['channel_bandwidth'] * self._nchans / 2.0
+        obs_info['timestamp'] -= timedelta(seconds=(self._nof_taps - 1) * self._nof_channels * obs_info['sampling_time'])
+        obs_info['nof_channels'] = self._nof_channels * obs_info['nof_subbands']
+        obs_info['nof_samples'] //= self._nof_channels
+        obs_info['sampling_time'] *= self._nof_channels
+        obs_info['channel_bandwidth'] /= self._nof_channels
+        obs_info['start_center_frequency'] -= obs_info['channel_bandwidth'] * self._nof_channels / 2.0
 
         # Done, return observation information
         return obs_info
@@ -226,9 +223,9 @@ class PFB(ProcessingModule):
         :return:
         """
 
-        dx = math.pi / self._nchans
-        x = np.array([n * dx - self._ntaps * math.pi / 2 for n in range(self._ntaps * self._nchans)])
-        self._filter = np.sinc(self._bin_width_scale * x / math.pi) * np.hanning(self._ntaps * self._nchans)
+        dx = math.pi / self._nof_channels
+        x = np.array([n * dx - self._nof_taps * math.pi / 2 for n in range(self._nof_taps * self._nof_channels)])
+        self._filter = np.sinc(self._bin_width_scale * x / math.pi) * np.hanning(self._nof_taps * self._nof_channels)
 
         # Reverse filter to ease fast computation
         self._filter = self._filter[::-1]
@@ -245,17 +242,17 @@ class PFB(ProcessingModule):
             # Format channeliser input depending on where it was placed in pipeline
             # TODO: Handle case where input is not in GPU
             if self._after_beamformer:
-                self._temp_input[:, :, :, self._nchans * self._ntaps:] = cu.asarray(input_data)
+                self._temp_input[:, :, :, self._nof_channels * self._nof_taps:] = cu.asarray(input_data)
             else:
-                self._temp_input[:, :, :, self._nchans * self._ntaps:] = cu.asarray(
+                self._temp_input[:, :, :, self._nof_channels * self._nof_taps:] = cu.asarray(
                     np.transpose(input_data, (0, 3, 1, 2)))
 
             # Call filtering kernel
-            nof_spectra = int(self._nsamp // self._nchans)
+            nof_spectra = int(self._nof_samples // self._nof_channels)
             nof_threads = 64
-            grid = (math.ceil(nof_spectra / nof_threads), self._nbeams)
+            grid = (math.ceil(nof_spectra / nof_threads), self._nof_beams)
             apply_fir_filter_cuda[grid, nof_threads](self._temp_input, self._filter_gpu, self._filtered,
-                                                     nof_spectra, self._nchans, self._ntaps)
+                                                     nof_spectra, self._nof_channels, self._nof_taps)
 
             # Perform FFTs
             output_data[:] = cupy.squeeze(fftshift(fft(self._filtered, overwrite_x=True, axis=-2), axes=-2))
@@ -271,19 +268,20 @@ class PFB(ProcessingModule):
 
         # Format channeliser input depending on where it was placed in pipeline
         if self._after_beamformer:
-            self._temp_input[:, :, :, self._nchans * self._ntaps:] = input_data
+            self._temp_input[:, :, :, self._nof_channels * self._nof_taps:] = input_data
         else:
-            self._temp_input[:, :, :, self._nchans * self._ntaps:] = np.transpose(input_data, (0, 3, 1, 2))
+            self._temp_input[:, :, :, self._nof_channels * self._nof_taps:] = np.transpose(input_data, (0, 3, 1, 2))
 
-        for p in range(self._npols):
-            for b in range(self._nbeams):
-                for c in range(self._nsubs):
+        for p in range(self._nof_polarisations):
+            for b in range(self._nof_beams):
+                for c in range(self._nof_subbands):
                     # Apply filter
-                    if self._ntaps != 0:
+                    if self._nof_taps != 0:
                         apply_fir_filter(self._temp_input[p, b, c, :], self._filter,
-                                         self._filtered[p, b, c, :], self._ntaps, self._nchans)
+                                         self._filtered[p, b, c, :], self._nof_taps, self._nof_channels)
                     else:
-                        self._filtered = np.reshape(self._temp_input, (self._npols, self._nbeams, self._nsubs,
-                                                                       self._nchans, int(self._nsamp / self._nchans)))
+                        self._filtered = np.reshape(self._temp_input,
+                                                    (self._nof_polarisations, self._nof_beams, self._nof_subbands,
+                                                     self._nof_channels, int(self._nof_samples / self._nof_channels)))
 
         output_data[:] = np.squeeze(np.fft.fftshift(np.fft.fft(self._filtered, axis=-2), axes=-2))

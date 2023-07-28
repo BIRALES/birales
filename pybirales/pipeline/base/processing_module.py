@@ -213,11 +213,11 @@ class ProcessingModule(Module):
                         obs_info = res
                 tt = time.time() - s
 
-                nsamp = settings.tpm_receiver.nsamp
+                nof_samples = settings.tpm_receiver.nof_samples
                 if self._is_offline:
-                    nsamp = settings.rawdatareader.nsamp
+                    nof_samples = settings.rawdatareader.nof_samples
 
-                if tt < float(nsamp) / settings.observation.samples_per_second:
+                if tt < float(nof_samples) / settings.observation.samples_per_second:
                     log.info('[Iteration {}] {} finished in {:0.3f}s'.format(self._iter_count, self.name, tt))
                 else:
                     log.warning('[Iteration {}] {} finished in {:0.3f}s'.format(self._iter_count, self.name, tt))

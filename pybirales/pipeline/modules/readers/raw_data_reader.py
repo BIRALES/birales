@@ -29,14 +29,14 @@ class RawDataReader(ProcessingModule):
         self._validate_data_blob(input_blob, valid_blobs=[type(None)])
 
         # Sanity checks on configuration
-        if {'nants', 'nsamp', 'nsubs', 'npols'} - set(config.settings()) != set():
+        if {'nof_antennas', 'nof_samples', 'nof_subbands', 'nof_polarisations'} - set(config.settings()) != set():
             raise PipelineError("DummyDataGenerator: Missing keys on configuration "
-                                "(nants, nsamp, nsub, 'npols')")
+                                "(nof_antennas, nof_samples, nsub, 'nof_polarisations')")
 
-        self._nants = config.nants
-        self._nsamp = config.nsamp
-        self._nsubs = config.nsubs
-        self._npols = config.npols
+        self._nof_antennas = config.nof_antennas
+        self._nof_samples = config.nof_samples
+        self._nof_subbands = config.nof_subbands
+        self._nof_polarisations = config.nof_polarisations
         self._filepath = config.filepath
         self._raw_file_counter = 0
 
@@ -53,10 +53,10 @@ class RawDataReader(ProcessingModule):
         if settings.rawdatareader.skip_seconds > 0:
             samples_to_skip = math.ceil(settings.observation.samples_per_second * settings.rawdatareader.skip_seconds)
             samples_to_skip -= samples_to_skip % 20
-            samples_to_skip *= settings.rawdatareader.nants
-            blob_nsamp = settings.rawdatareader.nsamp * settings.rawdatareader.nants
+            samples_to_skip *= settings.rawdatareader.nof_antennas
+            blob_nof_samples = settings.rawdatareader.nof_samples * settings.rawdatareader.nof_antennas
 
-            self._read_count = samples_to_skip / blob_nsamp
+            self._read_count = samples_to_skip / blob_nof_samples
 
             print(f'Samples to skip: {samples_to_skip}')
             print(f'Blobs to skip: {self._read_count}')
@@ -67,7 +67,7 @@ class RawDataReader(ProcessingModule):
                 log.info("Raw data reader will skip {} iterations".format(self._read_count))
 
         if settings.rawdatareader.seconds_to_process > 0:
-            self._samples_to_read = settings.observation.samples_per_second * settings.rawdatareader.nants * settings.rawdatareader.seconds_to_process
+            self._samples_to_read = settings.observation.samples_per_second * settings.rawdatareader.nof_antennas * settings.rawdatareader.seconds_to_process
             print(f'Samples to process: {self._samples_to_read}')
 
         # Call superclass initialiser
@@ -99,17 +99,17 @@ class RawDataReader(ProcessingModule):
     def _get_start_file(self, filepath, skip):
         self._f = open(filepath, 'rb')
 
-        if os.stat(filepath).st_size < self._nsamp * self._nants * 8 * skip:
+        if os.stat(filepath).st_size < self._nof_samples * self._nof_antennas * 8 * skip:
             next_file = '{}_{}.dat'.format(self._base_filepath, self._raw_file_counter + 1)
             self._raw_file_counter += 1
 
             log.info("%s was skipped. Blobs to skip: %f. Next file: %s", os.path.basename(filepath), skip, next_file)
 
-            skip -= os.stat(filepath).st_size / (self._nsamp * self._nants * 8)
+            skip -= os.stat(filepath).st_size / (self._nof_samples * self._nof_antennas * 8)
 
             return self._get_start_file(next_file, skip)
 
-        self._f.seek(int(self._nsamp * self._nants * 8 * skip))
+        self._f.seek(int(self._nof_samples * self._nof_antennas * 8 * skip))
 
         log.info("RawDataReader will use: %s and skip %f blobs from it. (read counter: %s)", filepath, skip,
                  self._read_count)
@@ -132,10 +132,10 @@ class RawDataReader(ProcessingModule):
 
         :return:
         """
-        return DummyBlob([('npols', self._npols),
-                          ('nsubs', self._nsubs),
-                          ('nsamp', self._nsamp),
-                          ('nants', self._nants)],
+        return DummyBlob([('nof_polarisations', self._nof_polarisations),
+                          ('nof_subbands', self._nof_subbands),
+                          ('nof_samples', self._nof_samples),
+                          ('nof_antennas', self._nof_antennas)],
                          datatype=np.complex64)
 
     def _change_raw_file(self):
@@ -179,10 +179,10 @@ class RawDataReader(ProcessingModule):
                 self.stop()
                 return
 
-        data = self._f.read(self._nsamp * self._nants * 8)
+        data = self._f.read(self._nof_samples * self._nof_antennas * 8)
 
         # Check if we have a complete set of data
-        if len(data) < self._nsamp * self._nants * 8:
+        if len(data) < self._nof_samples * self._nof_antennas * 8:
             # Change if there is any raw data file left
             self._f = self._change_raw_file()
 
@@ -193,11 +193,11 @@ class RawDataReader(ProcessingModule):
                 return
 
             # Read from the next set of data from new file
-            data = data + self._f.read(self._nsamp * self._nants * 8 - len(data))
+            data = data + self._f.read(self._nof_samples * self._nof_antennas * 8 - len(data))
 
         try:
             data = np.frombuffer(data, np.complex64)
-            data = data.reshape((1, 1, self._nsamp, self._nants))
+            data = data.reshape((1, 1, self._nof_samples, self._nof_antennas))
         except ValueError:
             raise BIRALESObservationException("An error has occurred whilst reading the raw data file")
 
@@ -207,10 +207,10 @@ class RawDataReader(ProcessingModule):
         # Create observation information
         obs_info = ObservationInfo()
         obs_info['sampling_time'] = 1. / settings.observation.samples_per_second
-        obs_info['nsubs'] = self._nsubs
-        obs_info['nsamp'] = self._nsamp
-        obs_info['nants'] = self._nants
-        obs_info['npols'] = self._npols
+        obs_info['nof_subbands'] = self._nof_subbands
+        obs_info['nof_samples'] = self._nof_samples
+        obs_info['nof_antennas'] = self._nof_antennas
+        obs_info['nof_polarisations'] = self._nof_polarisations
 
         obs_info['transmitter_frequency'] = self._config['settings']['observation']['transmitter_frequency']
         obs_info['start_center_frequency'] = self._config['settings']['observation']['start_center_frequency']
@@ -220,12 +220,12 @@ class RawDataReader(ProcessingModule):
         obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
 
         obs_info['timestamp'] = self._config['timestamp'] + datetime.timedelta(
-            seconds=self._nsamp * obs_info['sampling_time']) * self._read_count
+            seconds=self._nof_samples * obs_info['sampling_time']) * self._read_count
         self.publish_antenna_metrics(data, obs_info)
 
         self._read_count += 1
 
-        self._samples_read += self._nsamp * self._nants
+        self._samples_read += self._nof_samples * self._nof_antennas
 
         return obs_info
 

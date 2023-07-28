@@ -25,7 +25,7 @@ def apply_doppler_mask(doppler_mask, channels, doppler_range, obs_info):
     if doppler_mask is None:
         channels = np.arange(obs_info['start_center_frequency'],
                              obs_info['start_center_frequency'] + obs_info['channel_bandwidth'] * obs_info[
-                                 'nchans'], obs_info['channel_bandwidth'])
+                                 'nof_channels'], obs_info['channel_bandwidth'])
 
         a = obs_info['transmitter_frequency'] + doppler_range[0] * 1e-6
         b = obs_info['transmitter_frequency'] + doppler_range[1] * 1e-6
@@ -33,7 +33,7 @@ def apply_doppler_mask(doppler_mask, channels, doppler_range, obs_info):
         doppler_mask = np.bitwise_and(channels < b, channels > a)
 
         log.info(
-            f"Channel start: {a} Channel end: {b}. BW: {obs_info['channel_bandwidth']}, NChans: {obs_info['nchans']},"
+            f"Channel start: {a} Channel end: {b}. BW: {obs_info['channel_bandwidth']}, nof_channels: {obs_info['nof_channels']},"
             f" SCW: {obs_info['start_center_frequency']}")
         # print b
         print(len(channels))

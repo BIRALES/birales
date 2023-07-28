@@ -107,7 +107,7 @@ class SelfCal(object):
         config['pointings'] = [[0, 0]]
         config['antenna_locations'] = antennas
 
-        config['nbeams'] = len(config['pointings'])
+        config['nof_beams'] = len(config['pointings'])
         config['start_center_frequency'] = frequency / 1e6
         config['channel_bandwidth'] = bandwidth / 1e6
 
@@ -129,7 +129,7 @@ class SelfCal(object):
         config['pointings'] = [[0, 0]]
         config['antenna_locations'] = antennas
 
-        config['nbeams'] = len(config['pointings'])
+        config['nof_beams'] = len(config['pointings'])
         config['start_center_frequency'] = frequency / 1e6
         config['channel_bandwidth'] = bandwith / 1e6
 

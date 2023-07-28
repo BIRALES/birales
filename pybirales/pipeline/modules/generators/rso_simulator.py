@@ -23,7 +23,7 @@ class RSOSignature(object):
         self._start_freq += 35500 +133
         self._end_freq += 35500 +133
 
-        self.nsamp = settings.rso_generator.nsamp
+        self.nof_samples = settings.rso_generator.nof_samples
 
         self.ts = np.arange(start=track_start, stop=track_start + track_length, step=self.td)
 
@@ -142,18 +142,18 @@ class RSOGenerator(ProcessingModule):
         np.random.seed(100)
 
         # Sanity checks on configuration
-        if {'nants', 'nsamp', 'nsubs', 'npols', 'nbits', 'complex'} - set(config.settings()) != set():
+        if {'nof_antennas', 'nof_samples', 'nof_subbands', 'nof_polarisations', 'nof_bits', 'complex'} - set(config.settings()) != set():
             raise PipelineError("DummyDataGenerator: Missing keys on configuration "
-                                "(nants, nsamp, nsub, 'npols', 'nbits', complex")
-        self._nants = config.nants
-        self._nsamp = config.nsamp
-        self._nsubs = config.nsubs
-        self._npols = config.npols
-        self._nbits = config.nbits
+                                "(nof_antennas, nof_samples, nsub, 'nof_polarisations', 'nof_bits', complex")
+        self._nof_antennas = config.nof_antennas
+        self._nof_samples = config.nof_samples
+        self._nof_subbands = config.nof_subbands
+        self._nof_polarisations = config.nof_polarisations
+        self._nof_bits = config.nof_bits
         self._complex = config.complex
 
         # Define data type
-        if self._nbits == settings.rso_generator.nbits and self._complex:
+        if self._nof_bits == settings.rso_generator.nof_bits and self._complex:
             self._datatype = np.complex64
         else:
             raise PipelineError("DummyDataGenerator: Unsupported data type (bits, complex)")
@@ -207,11 +207,11 @@ class RSOGenerator(ProcessingModule):
         return tracks
 
     def generate_noise(self, mean_noise_power):
-        n_samples = self._npols * self._nsubs * self._nsamp * self._nants
+        n_samples = self._nof_polarisations * self._nof_subbands * self._nof_samples * self._nof_antennas
 
         noise = np.random.normal(0, mean_noise_power, n_samples) + 1j * np.random.normal(0, mean_noise_power, n_samples)
 
-        noise = noise.reshape((self._npols, self._nsubs, self._nsamp, self._nants))
+        noise = noise.reshape((self._nof_polarisations, self._nof_subbands, self._nof_samples, self._nof_antennas))
         return noise.astype(self._datatype)
 
     def process(self, obs_info, input_data, output_data):
@@ -224,8 +224,8 @@ class RSOGenerator(ProcessingModule):
         """
 
         step = 1. / 78125
-        t0 = self._counter * self._nsamp * step
-        t1 = (self._counter * self._nsamp + self._nsamp) * step
+        t0 = self._counter * self._nof_samples * step
+        t1 = (self._counter * self._nof_samples + self._nof_samples) * step
 
         if t0 > self.stop_time:
             # Stop the RSO generator if observation duration (+ a small buffer) is exceeded
@@ -234,7 +234,7 @@ class RSOGenerator(ProcessingModule):
                                                                                                       self._counter))
             raise NoDataReaderException()
 
-        data = np.zeros((self._npols, self._nsubs, self._nsamp, self._nants), dtype=self._datatype)
+        data = np.zeros((self._nof_polarisations, self._nof_subbands, self._nof_samples, self._nof_antennas), dtype=self._datatype)
 
         # add rso targets
         for rso in self.rso_targets:
@@ -253,10 +253,10 @@ class RSOGenerator(ProcessingModule):
         obs_info['sampling_time'] = 1. / 78125
         obs_info['channel_bandwidth'] = 0.078125
         obs_info['timestamp'] = datetime.datetime.utcnow()
-        obs_info['nsubs'] = self._nsubs
-        obs_info['nsamp'] = self._nsamp
-        obs_info['nants'] = self._nants
-        obs_info['npols'] = self._npols
+        obs_info['nof_subbands'] = self._nof_subbands
+        obs_info['nof_samples'] = self._nof_samples
+        obs_info['nof_antennas'] = self._nof_antennas
+        obs_info['nof_polarisations'] = self._nof_polarisations
         # obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
         obs_info['transmitter_frequency'] = settings.observation.transmitter_frequency
         obs_info['start_center_frequency'] = settings.observation.start_center_frequency
@@ -272,10 +272,10 @@ class RSOGenerator(ProcessingModule):
         Generate the output blob
         :return:
         """
-        return DummyBlob([('npols', self._npols),
-                          ('nsubs', self._nsubs),
-                          ('nsamp', self._nsamp),
-                          ('nants', self._nants)],
+        return DummyBlob([('nof_polarisations', self._nof_polarisations),
+                          ('nof_subbands', self._nof_subbands),
+                          ('nof_samples', self._nof_samples),
+                          ('nof_antennas', self._nof_antennas)],
                          datatype=self._datatype)
 
     def generate_corrdata(self):

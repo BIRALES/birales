@@ -80,15 +80,15 @@ def create_track(x, gradient, intercept, img_shape, thickness):
     return np.ravel(x.astype(int)), np.ravel(y.astype(int))
 
 
-def generate_test_image(directory, nsamples):
+def generate_test_image(directory, nof_samples):
     dir_list = [f for f in os.listdir(directory) if f.endswith('.fits')]  # get all fits files except the first one
     base_file = random.choice(dir_list)
 
     fits_file = fits.open(os.path.join(directory, base_file))
 
-    start = np.random.randint(low=0, high=np.shape(fits_file[0].data[0])[1] - nsamples + 1)
+    start = np.random.randint(low=0, high=np.shape(fits_file[0].data[0])[1] - nof_samples + 1)
 
-    test_img = fits_file[0].data[0, DOPPLER_RANGE[0]:DOPPLER_RANGE[1], start: start + nsamples]
+    test_img = fits_file[0].data[0, DOPPLER_RANGE[0]:DOPPLER_RANGE[1], start: start + nof_samples]
 
     print('Test Image of size {} was generated from Raw File {}. Noise estimate at {:0.3f}W'. \
           format(test_img.shape, base_file, np.mean(test_img)))
@@ -118,7 +118,7 @@ def get_test_tracks0(n_tracks, gradient, track_length, image_shape, thickness):
 
         print("Created track with m={:0.2f}, c={:0.1f}, of {}px at ({},{}) to ({},{})".format(m, c, (
                 max(x) - start), start, max(y), end, min(y)))
-        # beams = range(nbeams)
+        # beams = range(nof_beams)
         # reps = np.ceil(len(x) / float(len(beams)))
         #
         # b = np.repeat(beams, reps)[: len(x)]
@@ -258,7 +258,7 @@ def get_test_tracks(n_tracks, gradient, track_length, image_shape, thickness):
 
         print('Created track with m={:0.2f}, c={:0.1f}, of {}px at ({},{}) to ({},{})'.format(m, c, (
                 max(x) - start), start, max(y), end, min(y)))
-        # beams = range(nbeams)
+        # beams = range(nof_beams)
         # reps = np.ceil(len(x) / float(len(beams)))
         #
         # b = np.repeat(beams, reps)[: len(x)]
@@ -287,7 +287,7 @@ def get_test_tracks_old(n_tracks, gradient, track_length, image_shape, thickness
 
         print('Created track with m={:0.2f}, c={:0.1f}, of {}px at ({},{}) to ({},{})'.format(m, c, (
                 max(x) - start), start, max(y), end, min(y)))
-        # beams = range(nbeams)
+        # beams = range(nof_beams)
         # reps = np.ceil(len(x) / float(len(beams)))
         #
         # b = np.repeat(beams, reps)[: len(x)]

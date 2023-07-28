@@ -27,14 +27,14 @@ class TPMReceiver(Generator):
         self._validate_data_blob(input_blob, valid_blobs=[type(None)])
 
         # Sanity checks on configuration
-        if {'nsamp', 'nants', 'nsubs', 'nbits', 'npols', 'port', 'ip'} - set(config.settings()) != set():
+        if {'nof_samples', 'nof_antennas', 'nof_subbands', 'nof_bits', 'nof_polarisations', 'port', 'ip'} - set(config.settings()) != set():
             raise PipelineError("Receiver: Missing keys on configuration "
-                                "(nsamp, nants, nsubs, nbits, npols, port, ip)")
-        self._nsamp = config.nsamp
-        self._nants = config.nants
-        self._nsubs = config.nsubs
-        self._nbits = config.nbits
-        self._npols = config.npols
+                                "(nof_samples, nof_antennas, nof_subbands, nof_bits, nof_polarisations, port, ip)")
+        self._nof_samples = config.nof_samples
+        self._nof_antennas = config.nof_antennas
+        self._nof_subbands = config.nof_subbands
+        self._nof_bits = config.nof_bits
+        self._nof_polarisations = config.nof_polarisations
         self._port = config.port
         self._ip = config.ip
 
@@ -60,10 +60,10 @@ class TPMReceiver(Generator):
     def generate_output_blob(self):
         """ Generate output data blob """
         # Generate blob
-        return ReceiverBlob([('npols', self._npols),
-                             ('nsubs', self._nsubs),
-                             ('nsamp', self._nsamp),
-                             ('nants', self._nants)],
+        return ReceiverBlob([('nof_polarisations', self._nof_polarisations),
+                             ('nof_subbands', self._nof_subbands),
+                             ('nof_samples', self._nof_samples),
+                             ('nof_antennas', self._nof_antennas)],
                             datatype=self._datatype)
 
     def start_generator(self):
@@ -72,8 +72,8 @@ class TPMReceiver(Generator):
         # Start TPM data receiver process
         self._tpm_receiver = ChannelisedData(self._ip,
                                              port=self._port,
-                                             nof_signals=self._nants,
-                                             buffer_samples=self._nsamp)
+                                             nof_signals=self._nof_antennas,
+                                             buffer_samples=self._nof_samples)
         self._tpm_receiver.initialise()
         self._tpm_receiver.start()
 
@@ -105,10 +105,10 @@ class TPMReceiver(Generator):
             obs_info['start_center_frequency'] = settings.observation.start_center_frequency
             obs_info['channel_bandwidth'] = settings.observation.channel_bandwidth
             obs_info['transmitter_frequency'] = settings.observation.transmitter_frequency
-            obs_info['nsubs'] = self._nsubs
-            obs_info['nsamp'] = self._nsamp
-            obs_info['nants'] = self._nants
-            obs_info['npols'] = self._npols
+            obs_info['nof_subbands'] = self._nof_subbands
+            obs_info['nof_samples'] = self._nof_samples
+            obs_info['nof_antennas'] = self._nof_antennas
+            obs_info['nof_polarisations'] = self._nof_polarisations
 
             # Get output blob
             output_data = self.request_output_blob()
@@ -124,7 +124,7 @@ class TPMReceiver(Generator):
                 break
 
             # Set data and timestamp
-            output_data[:] = data.reshape((self._nsubs, self._nsamp, self._nants))
+            output_data[:] = data.reshape((self._nof_subbands, self._nof_samples, self._nof_antennas))
             obs_info['timestamp'] = datetime.datetime.utcfromtimestamp(timestamp)
 
             # Ready from buffer

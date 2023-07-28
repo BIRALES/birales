@@ -24,8 +24,8 @@ MAX_ANTENNAS = 256
 
 
 @njit(parallel=True, fastmath=True)
-def beamformer_python(nbeams, data, weights, output):
-    for b in prange(nbeams):
+def beamformer_python(nof_beams, data, weights, output):
+    for b in prange(nof_beams):
         output[0, b, 0, :] = np.dot(data, weights[0, b, :])
 
 
@@ -70,12 +70,12 @@ class Beamformer(ProcessingModule):
         self._validate_data_blob(input_blob, valid_blobs=[DummyBlob, GPUDummyBlob, ReceiverBlob, GPUReceiverBlob])
 
         # Sanity checks on configuration
-        if {'nbeams', 'pointings', 'reference_declination'} \
+        if {'nof_beams', 'pointings', 'reference_declination'} \
                 - set(config.settings()) != set():
             raise PipelineError("Beamformer: Missing keys on configuration "
-                                "(nbeams, nants, pointings)")
+                                "(nof_beams, nof_antennas, pointings)")
 
-        self._nbeams = config.nbeams
+        self._nof_beams = config.nof_beams
 
         # If GPUs need to be used, check whether CuPy is available
         if settings.manager.use_gpu and cu is None:
@@ -102,35 +102,35 @@ class Beamformer(ProcessingModule):
         datatype = self._input.datatype
 
         # Create output blob
-        data_shape = [('npols', input_shape['npols']), ('nbeams', self._nbeams),
-                      ('nsubs', input_shape['nsubs']), ('nsamp', input_shape['nsamp'])]
+        data_shape = [('nof_polarisations', input_shape['nof_polarisations']), ('nof_beams', self._nof_beams),
+                      ('nof_subbands', input_shape['nof_subbands']), ('nof_samples', input_shape['nof_samples'])]
 
         if settings.manager.use_gpu:
             return GPUBeamformedBlob(data_shape, datatype=datatype, device=settings.manager.gpu_device_id)
         else:
             return BeamformedBlob(data_shape, datatype=datatype)
 
-    def _initialise(self, nsubs, nants):
+    def _initialise(self, nof_subbands, nof_antennas):
         """ Initialise pointing """
 
         # Create pointing instance
         if self._pointing is None:
-            self._pointing = Pointing(self._config, nsubs, nants)
+            self._pointing = Pointing(self._config, nof_subbands, nof_antennas)
             if self._disable_antennas is not None:
                 self._pointing.disable_antennas(self._disable_antennas)
 
     def process(self, obs_info, input_data, output_data):
 
         # Get data information
-        nsamp = obs_info['nsamp']
-        nsubs = obs_info['nsubs']
-        nants = obs_info['nants']
-        npols = obs_info['npols']
+        nof_samples = obs_info['nof_samples']
+        nof_subbands = obs_info['nof_subbands']
+        nof_antennas = obs_info['nof_antennas']
+        nof_polarisations = obs_info['nof_polarisations']
 
         # If pointing is not initialised then this is the first input blob that's being processed.
         # Initialise pointing and GPU arrays
         if self._pointing is None:
-            self._initialise(nsubs, nants)
+            self._initialise(nof_subbands, nof_antennas)
 
             # If using GPU, copy weights to GPU
             if settings.manager.use_gpu:
@@ -146,16 +146,16 @@ class Beamformer(ProcessingModule):
                 input_data = cu.transpose(input_data, (0, 1, 3, 2))
 
                 # Run beamforming kernel
-                grid = (math.ceil(nsamp / 128), self._nbeams)
+                grid = (math.ceil(nof_samples / 128), self._nof_beams)
                 block_size = 128
                 beamformer_gpu[grid, block_size](input_data, output_data, self._weights_gpu)
                 d.synchronize()
         else:
             # TODO: Extract pols and sub-bands properly
-            beamformer_python(self._nbeams, input_data[0, 0], self._pointing.weights, output_data)
+            beamformer_python(self._nof_beams, input_data[0, 0], self._pointing.weights, output_data)
 
         # Update observation information
-        obs_info['nbeams'] = self._nbeams
+        obs_info['nof_beams'] = self._nof_beams
         obs_info['pointings'] = self._config.pointings
         obs_info['beam_az_el'] = self._pointing.beam_az_el
         obs_info['declination'] = self._pointing._reference_declination

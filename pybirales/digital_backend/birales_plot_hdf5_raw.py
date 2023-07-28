@@ -36,14 +36,14 @@ def calcSpectra(vett):
     return np.real(spettro)
 
 
-def calcolaspettro(dati, nsamples=32768):
-    n = int(nsamples)  # split and average number, from 128k to 16 of 8k # aavs1 federico
+def calcolaspettro(dati, nof_samples=32768):
+    n = int(nof_samples)  # split and average number, from 128k to 16 of 8k # aavs1 federico
     sp = [dati[x:x + n] for x in range(0, len(dati), n)]
     mediato = np.zeros(len(calcSpectra(sp[0])))
     for k in sp:
         singolo = calcSpectra(k)
         mediato[:] += singolo
-    mediato[:] /= (2 ** 15 / nsamples)  # federico
+    mediato[:] /= (2 ** 15 / nof_samples)  # federico
     with np.errstate(divide='ignore', invalid='ignore'):
         mediato[:] = 20 * np.log10(mediato / 127.0)
     d = np.array(dati, dtype=np.float64)
@@ -177,14 +177,14 @@ if __name__ == "__main__":
     resolutions = 2 ** np.array(range(16)) * 700000.0 / 8. / 2. / 2 ** 15
     rbw = int(closest(resolutions, opts.resolution))
     avg = 2 ** rbw
-    nsamples = int(2 ** 15 / avg)
+    nof_samples = int(2 ** 15 / avg)
     RBW = (avg * (350000.0 / 8 / 16384.0))
-    asse_x = (np.arange(nsamples / 2 + 1) * RBW + opts.ddcfreq + opts.lofreq) * 0.001 - (700.0 / 32.)
+    asse_x = (np.arange(nof_samples / 2 + 1) * RBW + opts.ddcfreq + opts.lofreq) * 0.001 - (700.0 / 32.)
     # remap = [0, 1, 2, 3, 8, 9, 10, 11, 15, 14, 13, 12, 7, 6, 5, 4]
     # remap = [0, 1, 2, 3, 12, 13, 14, 15, 7, 6, 5, 4, 11, 10, 9, 8]
     remap = range(32)
     # asse_x = range(32768)
-    # nsamples = 32768
+    # nof_samples = 32768
     xmin = closest(asse_x, int(opts.startfreq))
     xmax = closest(asse_x, int(opts.stopfreq))
     # xmax = 32768
@@ -258,7 +258,7 @@ if __name__ == "__main__":
             ax += [fig.add_subplot(gs[num])]
             allspgram += [[]]
             allspgram[num] = np.empty((10, xmax - xmin + 1,))
-            # allspgram[num] = np.empty((10, int(nsamples/2+1),))
+            # allspgram[num] = np.empty((10, int(nof_samples/2+1),))
             allspgram[num][:] = np.nan
 
             ax[num].cla()
@@ -315,7 +315,7 @@ if __name__ == "__main__":
                 ant = int(tpm_input) - 1
                 sys.stdout.write("\r[%d/%d] %s Processing Input-%02d" % (seq, len(timestamps), dtimestamp, ant))
                 sys.stdout.flush()
-                spettro, rms = calcolaspettro(birales_data[t_stamp][remap[ant]], nsamples)
+                spettro, rms = calcolaspettro(birales_data[t_stamp][remap[ant]], nof_samples)
                 # allspgram[num] = np.concatenate((allspgram[num], [spettro[xmin:xmax + 1]]), axis=0)
                 allspgram[num] = np.concatenate((allspgram[num], [spettro[xmin:xmax + 1]]), axis=0)
             elif opts.power == "":
@@ -324,13 +324,13 @@ if __name__ == "__main__":
                 print("Processing Input-%02d" % (ant))
                 for npol, pol in enumerate(["Pol-X", "Pol-Y"]):
                     if opts.average:
-                        spettro, rms = calcolaspettro(data[remap[ant], npol, :], nsamples)
+                        spettro, rms = calcolaspettro(data[remap[ant], npol, :], nof_samples)
                         if not nn:
                             meas["Input-%02d_%s" % (ant, pol)] = dB2Linear(spettro)
                         else:
                             meas["Input-%02d_%s" % (ant, pol)][:] += dB2Linear(spettro)
                     else:
-                        meas["Input-%02d_%s" % (ant, pol)], rms = calcolaspettro(data[remap[ant], npol, :], nsamples)
+                        meas["Input-%02d_%s" % (ant, pol)], rms = calcolaspettro(data[remap[ant], npol, :], nof_samples)
                         ax[num].plot(asse_x[3:], meas["Input-%02d_%s" % (ant, pol)][3:], color=COLORE[npol])
                         if (nn == (len(lista) - 1)):
                             if cols == 1:
@@ -347,7 +347,7 @@ if __name__ == "__main__":
         #     ant = int(tpm_input) - 1
         #     print("Processing Input-%02d" % (ant))
         #     for npol, pol in enumerate(["Pol-X", "Pol-Y"]):
-        #         spettro, rms = calcolaspettro(data[remap[ant], npol, :], nsamples)
+        #         spettro, rms = calcolaspettro(data[remap[ant], npol, :], nof_samples)
         #         if not nn:
         #             norm_factor += [spettro[closest(asse_x, float(opts.power))]]
         #         meas["Input-%02d_%s" % (ant, pol)] += [spettro[closest(asse_x, float(opts.power))] - norm_factor[num * 2 + npol]]

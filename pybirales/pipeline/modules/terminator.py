@@ -21,7 +21,7 @@ class Terminator(ProcessingModule):
 
     def process(self, obs_info, input_data, output_data):
         # Calculate processed seconds
-        logging.info('Processed %s samples in %1.2fs', obs_info['nsamp'], time.time() - self._prev_time)
+        logging.info('Processed %s samples in %1.2fs', obs_info['nof_samples'], time.time() - self._prev_time)
 
         self._prev_time = time.time()
         return obs_info

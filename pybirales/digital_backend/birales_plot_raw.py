@@ -23,9 +23,9 @@ if __name__ == "__main__":
     resolutions = 2 ** np.array(range(16)) * (700000.0 / 2 ** 15)
     rbw = int(closest(resolutions, conf.resolution))
     avg = 2 ** rbw
-    nsamples = int(2 ** 15 / avg)
+    nof_samples = int(2 ** 15 / avg)
     RBW = (avg * (400000.0 / 16384.0))
-    # asse_x = np.arange(nsamples/2 + 1) * RBW * 0.001
+    # asse_x = np.arange(nof_samples/2 + 1) * RBW * 0.001
     bw = 43750000
     nfreq = int((DATA_LEN / 2 / avg) + 1)
     rbw = bw / (nfreq - 1)

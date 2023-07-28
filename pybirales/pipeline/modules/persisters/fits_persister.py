@@ -154,7 +154,7 @@ class FitsPersister(ProcessingModule):
         header.set('S_FREQ', obs_info['start_center_frequency'])
         header.set('CHL_BAND', obs_info['channel_bandwidth'])
         header.set('DATE', obs_info['timestamp'].isoformat())
-        header.set('NSAMP', obs_info['nsamp'])
+        header.set('nof_samples', obs_info['nof_samples'])
         header.set('TX', obs_info['transmitter_frequency'])
 
         return header

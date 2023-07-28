@@ -76,9 +76,9 @@ class PreProcessor(ProcessingModule):
                                                                obs_info)
 
         if self.channel_noise is None:
-            self.channel_noise = np.zeros(shape=(settings.beamformer.nbeams, len(self.channels),
+            self.channel_noise = np.zeros(shape=(settings.beamformer.nof_beams, len(self.channels),
                                                  self._moving_avg_period))
-            self.channel_noise_std = np.zeros(shape=(settings.beamformer.nbeams, len(self.channels),
+            self.channel_noise_std = np.zeros(shape=(settings.beamformer.nof_beams, len(self.channels),
                                                      self._moving_avg_period))
 
         if not 'doppler_mask' in obs_info:
@@ -151,9 +151,9 @@ class PreProcessor(ProcessingModule):
 
         # Generate output blob
         return ChannelisedBlob([
-            ('nbeams', input_shape['nbeams']),
-            # ('nchans', input_shape['nchans']),
-            ('nchans', self._n_channels),
-            # ('nchans', len(self.channels)),
-            ('nsamp', input_shape['nsamp'])
+            ('nof_beams', input_shape['nof_beams']),
+            # ('nof_channels', input_shape['nof_channels']),
+            ('nof_channels', self._n_channels),
+            # ('nof_channels', len(self.channels)),
+            ('nof_samples', input_shape['nof_samples'])
         ], datatype=np.float)

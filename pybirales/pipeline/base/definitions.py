@@ -21,8 +21,8 @@ class ObservationInfo(MutableMapping):
         # Add timestamp information
         self['sampling_time'] = 0.0
         self['timestamp'] = 0.0
-        self['nchans'] = 0
-        self['nsamp'] = 0
+        self['nof_channels'] = 0
+        self['nof_samples'] = 0
         self['configuration_id'] = Time.now().unix
         self['created_at'] = Time.now().iso
 

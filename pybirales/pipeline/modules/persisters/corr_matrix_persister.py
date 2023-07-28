@@ -65,7 +65,7 @@ class CorrMatrixPersister(ProcessingModule):
 
         self._after_channeliser = True if type(input_blob) is ChannelisedBlob else False
 
-        self._nchans = None
+        self._nof_channels = None
 
         # Processing module name
         self.name = "CorrMatrixPersister"
@@ -101,24 +101,24 @@ class CorrMatrixPersister(ProcessingModule):
         :return:
         """
 
-        if not self._nchans:
-            self._nchans = self._get_nchans(obs_info, self._after_channeliser)
+        if not self._nof_channels:
+            self._nof_channels = self._get_nof_channels(obs_info, self._after_channeliser)
 
         f = h5py.File(filepath, "w")
 
-        dset = f.create_dataset("Vis", (obs_info['nsamp'], self._nchans, obs_info['nbaselines'], obs_info['nstokes']),
-                                maxshape=(None, self._nchans, obs_info['nbaselines'], obs_info['nstokes']),
+        dset = f.create_dataset("Vis", (obs_info['nof_samples'], self._nof_channels, obs_info['nof_baselines'], obs_info['nof_stokes']),
+                                maxshape=(None, self._nof_channels, obs_info['nof_baselines'], obs_info['nof_stokes']),
                                 dtype='c16')
 
-        dset[:] = np.zeros(((obs_info['nsamp'], self._nchans, obs_info['nbaselines'], obs_info['nstokes'])),
+        dset[:] = np.zeros(((obs_info['nof_samples'], self._nof_channels, obs_info['nof_baselines'], obs_info['nof_stokes'])),
                            dtype=np.complex64)
 
         # Create baselines data set
-        dset2 = f.create_dataset("Baselines", (obs_info['nbaselines'], 3))
+        dset2 = f.create_dataset("Baselines", (obs_info['nof_baselines'], 3))
 
         antenna1, antenna2, baselines, counter = [], [], [], 0
-        for i in range(obs_info['nants']):
-            for j in range(i + 1, obs_info['nants']):
+        for i in range(obs_info['nof_antennas']):
+            for j in range(i + 1, obs_info['nof_antennas']):
                 antenna1.append(i)
                 antenna2.append(j)
                 baselines.append(counter)
@@ -128,8 +128,8 @@ class CorrMatrixPersister(ProcessingModule):
 
         # Create timesample dataset
 
-        dset_time = f.create_dataset("Time", shape=(obs_info['nsamp'],), maxshape=(None,), dtype=np.float, chunks=True)
-        dset_time[:] = np.zeros((obs_info['nsamp']), dtype=np.float)
+        dset_time = f.create_dataset("Time", shape=(obs_info['nof_samples'],), maxshape=(None,), dtype=np.float, chunks=True)
+        dset_time[:] = np.zeros((obs_info['nof_samples']), dtype=np.float)
 
         # Ready file
         f.flush()
@@ -161,8 +161,8 @@ class CorrMatrixPersister(ProcessingModule):
         f = h5py.File(self._filepath, "a")
 
         # Write data to file
-        size = self._counter * obs_info['nsamp']
-        time_start, time_end = size, size + obs_info['nsamp']
+        size = self._counter * obs_info['nof_samples']
+        time_start, time_end = size, size + obs_info['nof_samples']
 
         dset = f["Vis"]
 
@@ -173,7 +173,7 @@ class CorrMatrixPersister(ProcessingModule):
 
         dset[time_start:time_end, :, :, :] = input_data[:, :, :, :]
 
-        timestamps = datetime.timedelta(seconds=obs_info['sampling_time']) * np.arange(obs_info['nsamp']) + obs_info[
+        timestamps = datetime.timedelta(seconds=obs_info['sampling_time']) * np.arange(obs_info['nof_samples']) + obs_info[
             'timestamp']
         f["Time"][time_start:time_end] = [t.timestamp() for t in timestamps]
 
@@ -185,12 +185,12 @@ class CorrMatrixPersister(ProcessingModule):
 
         return obs_info
 
-    def _get_nchans(self, obs_info, after_channeliser):
-        nchans = obs_info['nsubs']
+    def _get_nof_channels(self, obs_info, after_channeliser):
+        nof_channels = obs_info['nof_subbands']
         if after_channeliser:
-            nchans = obs_info['nchans']
+            nof_channels = obs_info['nof_channels']
 
             if hasattr(settings.correlator, 'channel_start') and hasattr(settings.correlator, 'channel_end'):
-                nchans = settings.correlator.channel_end - settings.correlator.channel_start
+                nof_channels = settings.correlator.channel_end - settings.correlator.channel_start
 
-        return nchans
+        return nof_channels
