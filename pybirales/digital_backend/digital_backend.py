@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 #from pymexart.digital_backend.tile_mexart import Tile
-from pybirales.digital_backend.tile_debris import Tile
+from pybirales.digital_backend.tile_wrapper import Tile
 from pyfabil import Device
 
 from multiprocessing import Pool
@@ -138,7 +138,7 @@ def initialise_tile(params):
         # Configure polyphase filterbank and set 1G stream
         station_tile.download_polyfilter_coeffs("hann")
         station_tile.set_lmc_download("1g")
-        station_tile.set_lmc_integrated_download("1g")
+        station_tile.set_lmc_integrated_download("1g", channel_payload_length=1024, beam_payload_length=1024)
         station_tile['board.regfile.ethernet_pause'] = 0x0400
 
         return True
@@ -354,7 +354,6 @@ class Station(object):
         # Assign station and tile id, and tweak transceivers
         for i, tile in enumerate(self.tiles):
             tile.set_station_id(self._station_id, i)
-            tile.tweak_transceivers()
 
     def _synchronise_adc_clk(self):
         sampling_frequency = self.configuration['observation']['sampling_frequency']
@@ -366,7 +365,7 @@ class Station(object):
             self.tiles[0].wait_pps_event2()
             for tile in self.tiles:
                 for fpga in tile.tpm.tpm_fpga:
-                    fpga.fpga_align_adc_clk(sampling_frequency)
+                    fpga.fpga_align_adc_clk(sampling_frequency * 2.0)  # VCO = 1400 MHz
 
     def _synchronise_ddc(self, sysref_period):
         """ Synchronise the NCO in the DDC on all ADCs of all tiles """
@@ -374,9 +373,9 @@ class Station(object):
         for tile in self.tiles:
             tile.set_fpga_sysref_gen(sysref_period)
 
-            tile['pll', 0x402] = 0x8 # 0xD0
-            tile['pll', 0x403] = 0x0 # 0xA2
-            tile['pll', 0x404] = 0x1 # 0x4
+            tile['pll', 0x402] = 0x8  # 0xD0
+            tile['pll', 0x403] = 0x0  # 0xA2
+            tile['pll', 0x404] = 0x1  # 0x4
             tile['pll', 0xF] = 0x1
             while tile['pll', 0xF] & 0x1 == 0x1:
                 time.sleep(0.1)
@@ -490,7 +489,6 @@ class Station(object):
                 # Configure integrated data streams
                 logging.info("Using 1G for integrated LMC traffic")                
                 tile.set_lmc_integrated_download("1g", 1024, 2048)
-                
 
         # Start data acquisition on all boards
         delay = 2
@@ -527,8 +525,7 @@ class Station(object):
             delay = [tile.get_pps_delay() for tile in self.tiles]
 
             for n in range(len(self.tiles)):
-                self.tiles[n].set_phase_terminal_count(self.tiles[n].calculate_delay(delay[n], current_tc[n],
-                                                                                     16, 24))
+                self.tiles[n].set_phase_terminal_count(self.tiles[n].calculate_delay(delay[n], current_tc[n], 20, 4))
 
             self.tiles[0].wait_pps_event2()
 
@@ -536,8 +533,7 @@ class Station(object):
             delay = [tile.get_pps_delay() for tile in self.tiles]
 
             for n in range(len(self.tiles)):
-                self.tiles[n].set_phase_terminal_count(self.tiles[n].calculate_delay(delay[n], current_tc[n],
-                                                                                     delay[0] - 4, delay[0] + 4))
+                self.tiles[n].set_phase_terminal_count(self.tiles[n].calculate_delay(delay[n], current_tc[n], delay[0], 4))
 
             self.tiles[0].wait_pps_event2()
 
@@ -678,26 +674,6 @@ class Station(object):
             tile['fpga2.dsp_regfile.spead_tx_enable']=0
 
     # ------------------------------------------------------------------------------------------------
-
-    def mii_test(self, pkt_num):
-        """ Perform mii test """
-
-        for i, tile in enumerate(self.tiles):
-            logging.debug("MII test setting Tile " + str(i))
-            tile.mii_prepare_test(i + 1)
-
-        for i, tile in enumerate(self.tiles):
-            logging.debug("MII test starting Tile " + str(i))
-            tile.mii_exec_test(pkt_num, wait_result=False)
-
-        while True:
-            for i, tile in enumerate(self.tiles):
-                logging.debug("Tile " + str(i) + " MII test result:")
-                tile.mii_show_result()
-                k = raw_input("Enter quit to exit. Any other key to continue.")
-                if k == "quit":
-                    return
-
     def enable_adc_trigger(self, threshold=127):
         """ Enable ADC trigger to send raw data when an RMS threshold is reached"""
 

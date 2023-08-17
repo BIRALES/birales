@@ -1,34 +1,30 @@
 # Observation-related configuration, specifying the channel region
 # for the station beamformer
 observation:
-    ddc_frequency: 139.65e6 
-    bandwidth: 12.5e6 
+  ddc_frequency: 25.77e6 # 139.65e6
+  bandwidth: 12.5e6
 
 # Station configuration parameters
 station:
   id: 0
-    channel_truncation: 6
-    channel_integration_time: -1
-    bitfile: "../../bitfiles/itpm_v1_1_tpm_debris_wrap_v004.bit"
+  channel_truncation: 7
+  channel_integration_time: -1
+  bitfile: "../../bitfiles/itpm_v1_1_tpm_debris_wrap.bit"
+  ada_gain: 16
 
 # Network configuration parameters
 network:
-    lmc:
-        lmc_mac: 0x248a07463b5e  # Oxford 100G
-        lmc_ip:  "10.0.10.40"    # Oxford 100G
-        lmc_port: 4660
-        tpm_cpld_port: 10000
-        use_teng: False
+  lmc:
+    lmc_ip: "10.0.10.41"
+    lmc_port: 4660
+    tpm_cpld_port: 10000
+    use_teng: False
 
-    csp_ingest:
-        dst_mac: 0x248a07463b5e  # Oxford 100G
-        dst_ip:  "10.0.10.40"    # Oxford 100G
-        dst_port: 4660
-        src_mac: Null
-        src_ip: Null
-        src_port: 33333
+    # Integrated data configuration
+    integrated_data_port: 5010
+    integrated_data_ip: "10.0.10.41"
+    use_teng_integrated: False
 
 # List of TPM IPs (or names) which will form station
 tiles:
-    - "10.0.10.3"
-    # - "10.0.10.4"
+  - "10.0.10.3"

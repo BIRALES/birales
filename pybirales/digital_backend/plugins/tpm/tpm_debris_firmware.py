@@ -25,15 +25,15 @@ class TpmDebrisFirmware(FirmwareBlock):
         super(TpmDebrisFirmware, self).__init__(board)
 
         # Device must be specified in kwargs
-        if kwargs.get('device', None) is None:
+        if kwargs.get("device", None) is None:
             raise PluginError("TpmDebrisFirmware requires device argument")
-        self._device = kwargs['device']
+        self._device = kwargs["device"]
 
-        if kwargs.get('fsample', None) is None:
+        if kwargs.get("fsample", None) is None:
             logging.info("TpmDebrisFirmware: Setting default sampling frequency 800 MHz.")
             self._fsample = 800e6
         else:
-            self._fsample = float(kwargs['fsample'])
+            self._fsample = float(kwargs["fsample"])
 
         if kwargs.get('fddc', None) is None:
             logging.info("TpmDebrisFirmware: Setting default DDC frequency 139.65 MHz.")
@@ -61,21 +61,11 @@ class TpmDebrisFirmware(FirmwareBlock):
             self.xg_40g_eth = False
 
         # Load required plugins
-        self._jesd1 = self.board.load_plugin("TpmJesd", device=self._device, core=0)
-        self._jesd2 = self.board.load_plugin("TpmJesd", device=self._device, core=1)
+        self._jesd1 = self.board.load_plugin("TpmJesd", device=self._device, core=0, frame_length=1024)
+        self._jesd2 = self.board.load_plugin("TpmJesd", device=self._device, core=1, frame_length=1024)
         self._fpga = self.board.load_plugin('TpmFpga', device=self._device)
-        if self.xg_eth and not self.xg_40g_eth:
-            self._teng = [self.board.load_plugin("TpmTenGCoreXg", device=self._device, core=0),
-                          self.board.load_plugin("TpmTenGCoreXg", device=self._device, core=1),
-                          self.board.load_plugin("TpmTenGCoreXg", device=self._device, core=2),
-                          self.board.load_plugin("TpmTenGCoreXg", device=self._device, core=3)]
-        elif self.xg_eth and self.xg_40g_eth:
+        if self.xg_eth and self.xg_40g_eth:
             self._fortyg = self.board.load_plugin("TpmFortyGCoreXg", device=self._device, core=0)
-        else:
-            self._teng = [self.board.load_plugin("TpmTenGCore", device=self._device, core=0),
-                          self.board.load_plugin("TpmTenGCore", device=self._device, core=1),
-                          self.board.load_plugin("TpmTenGCore", device=self._device, core=2),
-                          self.board.load_plugin("TpmTenGCore", device=self._device, core=3)]
         self._testgen = self.board.load_plugin("TpmTestGenerator", device=self._device,
                                                fsample=self._fsample / self._decimation)
         self._sysmon = self.board.load_plugin("TpmSysmon", device=self._device)
@@ -89,46 +79,6 @@ class TpmDebrisFirmware(FirmwareBlock):
 
         self._device_name = "fpga1" if self._device is Device.FPGA_1 else "fpga2"
 
-    def fpga_clk_sync(self):
-        """ FPGA synchronise clock"""
-
-        if self._device_name == 'fpga1':
-
-            fpga0_phase = self.board['fpga1.pps_manager.sync_status.cnt_hf_pps']
-
-            # restore previous counters status using PPS phase
-            self.board['fpga1.pps_manager.sync_tc.cnt_1_pulse'] = 0
-            time.sleep(1.1)
-            for n in range(5):
-                fpga0_cnt_hf_pps = self.board['fpga1.pps_manager.sync_phase.cnt_hf_pps']
-                if abs(fpga0_cnt_hf_pps - fpga0_phase) <= 3:
-                    logging.debug("FPGA1 clock synced to PPS phase!")
-                    break
-                else:
-                    rd = self.board['fpga1.pps_manager.sync_tc.cnt_1_pulse']
-                    self.board['fpga1.pps_manager.sync_tc.cnt_1_pulse'] = rd + 1
-                    time.sleep(1.1)
-
-        if self._device_name == 'fpga2':
-
-            # Synchronize FPGA2 to FPGA1 using sysref phase
-            fpga0_phase = self.board['fpga1.pps_manager.sync_phase.cnt_1_sysref']
-
-            self.board['fpga2.pps_manager.sync_tc.cnt_1_pulse'] = 0x0
-            sleep(0.1)
-            for n in range(5):
-                fpga1_phase = self.board['fpga2.pps_manager.sync_phase.cnt_1_sysref']
-                if fpga0_phase == fpga1_phase:
-                    logging.debug("FPGA2 clock synced to SYSREF phase!")
-                    break
-                else:
-                    rd = self.board['fpga2.pps_manager.sync_tc.cnt_1_pulse']
-                    self.board['fpga2.pps_manager.sync_tc.cnt_1_pulse'] = rd + 1
-                    sleep(0.1)
-
-            logging.debug("FPGA1 clock phase before adc_clk alignment: " + hex(self.board['fpga1.pps_manager.sync_phase']))
-            logging.debug("FPGA2 clock phase before adc_clk alignment: " + hex(self.board['fpga2.pps_manager.sync_phase']))
-
     def initialise_firmware(self):
         """ Initialise firmware components """
         max_retries = 4
@@ -137,7 +87,7 @@ class TpmDebrisFirmware(FirmwareBlock):
         while True:
             self._fpga.fpga_global_reset()
 
-            self._fpga.fpga_mmcm_config(self._fsample / 2)  # (self._fsample)  # generate 100 MHz ADC clock
+            self._fpga.fpga_mmcm_config(self._fsample / 2)
             self._fpga.fpga_jesd_gth_config(self._fsample / 2)  # GTH are configured for 4 Gbps
 
             self._fpga.fpga_reset()
@@ -166,6 +116,8 @@ class TpmDebrisFirmware(FirmwareBlock):
         # Initialise 10G cores
         # for teng in self._teng:
         #    teng.initialise_core()
+
+        self._patterngen.initialise()
 
     #######################################################################################
 
