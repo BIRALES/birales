@@ -246,7 +246,8 @@ class Station(object):
         try:
             for tile in self.tiles:
                 tile.connect()
-                tile.tpm_ada.initialise_adas()
+                if tile.tpm_version() == "itpm_v1_2":
+                    tile.tpm_ada.initialise_adas()
         except Exception as e:
             self.properly_formed_station = False
             raise e
@@ -280,46 +281,47 @@ class Station(object):
                         gen.channel_select(0xFFFF)
 
             # Set ADA gain if required
-            if self.configuration["station"]["ada_gain"] is not None:
-                # Check if the provided file is valid
+            if self.tiles[0].tpm_version == "itom_v1_2":
+                if self.configuration["station"]["ada_gain"] is not None:
+                    # Check if the provided file is valid
 
-                if type(self.configuration["station"]["ada_gain"]) == int:
-                    self.equalize_ada_gain(self.configuration["station"]["ada_gain"])
-                elif not os.path.isfile(self.configuration["station"]["ada_gain"]):
-                    logging.warning("Provided ada gain file is invalid ({})".format(self.configuration["station"]["ada_gain"]))
+                    if type(self.configuration["station"]["ada_gain"]) == int:
+                        self.equalize_ada_gain(self.configuration["station"]["ada_gain"])
+                    elif not os.path.isfile(self.configuration["station"]["ada_gain"]):
+                        logging.warning("Provided ada gain file is invalid ({})".format(self.configuration["station"]["ada_gain"]))
+                    else:
+                        # Try loading file
+                        with open(self.configuration["station"]["ada_gain"], 'r') as f:
+                            try:
+                                gains = yaml.load(f, yaml.FullLoader)
+                                if not ('tpm_1' in gains and 'tpm_2' in gains):
+                                    logging.warning("Ada gains file should have entries for TPM 1 and TPM 2")
+
+                                # Set gain
+                                logging.info("Setting ADA gains")
+                                for i, tile in enumerate(self.tiles):
+                                    tpm_gains = gains["tpm_{}".format(i + 1)]
+                                    tile.tpm_ada.initialise_adas()
+                                    if len(tpm_gains) == 1:
+                                        tile.tpm_ada.set_ada_gain(tpm_gains[0])
+                                    elif len(tpm_gains) == 32:
+                                        for j in range(32):
+                                            tile.tpm_ada.set_ada_gain_spi(tpm_gains[j], j)
+                                    else:
+                                        logging.warning("Invalid number of gains definde for TPM {}".format(i+1))
+
+                            except Exception as e:
+                                logging.warning("Could not apply ada gain: {}".format(e))
+
+                # Otherwise perform automatic equalization
                 else:
-                    # Try loading file
-                    with open(self.configuration["station"]["ada_gain"], 'r') as f:
-                        try:
-                            gains = yaml.load(f, yaml.FullLoader)
-                            if not ('tpm_1' in gains and 'tpm_2' in gains):
-                                logging.warning("Ada gains file should have entries for TPM 1 and TPM 2")
-
-                            # Set gain
-                            logging.info("Setting ADA gains")
-                            for i, tile in enumerate(self.tiles):
-                                tpm_gains = gains["tpm_{}".format(i + 1)]
-                                tile.tpm_ada.initialise_adas()
-                                if len(tpm_gains) == 1:
-                                    tile.tpm_ada.set_ada_gain(tpm_gains[0])
-                                elif len(tpm_gains) == 32:
-                                    for j in range(32):
-                                        tile.tpm_ada.set_ada_gain_spi(tpm_gains[j], j)
-                                else:
-                                    logging.warning("Invalid number of gains definde for TPM {}".format(i+1))
-
-                        except Exception as e:
-                            logging.warning("Could not apply ada gain: {}".format(e))
-
-            # Otherwise perform automatic equalization
-            else:
-                self.equalize_ada_gain(16)
+                    self.equalize_ada_gain(16)
 
             # If initialising, synchronise all tiles in station
             logging.info("Synchronising station")
             self._station_post_synchronisation()
             self._synchronise_adc_clk()
-            self._synchronise_ddc(sysref_period=1280)  # 1280 works for all supported frequencies
+            #self._synchronise_ddc(sysref_period=1280)  # 1280 works for all supported frequencies
             self._synchronise_tiles(self.configuration['network']['lmc']['use_teng'])
 
         elif not self.properly_formed_station:
@@ -970,8 +972,9 @@ if __name__ == "__main__":
     station.connect()
 
     # Equalize signals if required
-    if conf.equalize_signals:
-        station.equalize_ada_gain(16)
+    if station.tiles[0].tpm_version == "itpm_v1_2":
+        if conf.equalize_signals:
+            station.equalize_ada_gain(16)
 
     for tile in station.tiles:
         tile.set_channeliser_truncation(configuration['station']['channel_truncation'])

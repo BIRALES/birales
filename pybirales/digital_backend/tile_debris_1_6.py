@@ -11,8 +11,6 @@ from pyfabil.base.utils import ip2long
 from pyfabil.boards.tpm_1_6 import TPM_1_6
 from pybirales.digital_backend.tile_debris import Tile
 
-self._sampling_rate = sampling_rate
-
 # Helper to disallow certain function calls on unconnected tiles
 def connected(f):
     @functools.wraps(f)
@@ -31,14 +29,14 @@ class Tile_1_6(Tile):
                  sampling_rate=800e6, ddc_frequency=139.65e6):
 
         super(Tile_1_6, self).__init__(
-            ip, port, lmc_ip, lmc_port, sampling_rate, logger
+            ip, port, lmc_ip, lmc_port, sampling_rate, ddc_frequency
         )
 
         self._decimation_ratio = 8
         self._sampling_rate = sampling_rate
 
-        nco_freq = int(ddc_frequency / sampling_rate * 4096.0)
-        self._ddc_frequency = float(nco_freq) / 4096.0 * sampling_rate
+        nco_freq = int(ddc_frequency / sampling_rate * 2**48)
+        self._ddc_frequency = float(nco_freq) / 2**48 * sampling_rate
 
         self.daq_modes_with_timestamp_flag = ["raw_adc_mode", "channelized_mode", "beamformed_mode"]
 
@@ -54,21 +52,27 @@ class Tile_1_6(Tile):
     def connect(self, initialise=False, simulation=False, enable_ada=False):
 
         # Try to connect to board, if it fails then set tpm to None
-        self.tpm = TPM()
+        self.tpm = TPM_1_6()
 
         # Add plugin directory (load module locally)
         tf = __import__("pybirales.digital_backend.plugins.tpm_1_6.tpm_debris_firmware", fromlist=[None])
         self.tpm.add_plugin_directory(os.path.dirname(tf.__file__))
 
-        self.tpm.connect(ip=self._ip, port=self._port, initialise=initialise,
-                         simulator=simulation, enable_ada=enable_ada, fsample=self._sampling_rate,
-                         ddc=True, fddc=self._ddc_frequency, adc_low_bitrate=True)
+        self.tpm.connect(ip=self._ip,
+                         port=self._port,
+                         initialise=initialise,
+                         simulator=simulation,
+                         enable_ada=enable_ada,
+                         fsample=self._sampling_rate,
+                         ddc=True,
+                         fddc=self._ddc_frequency,
+                         adc_low_bitrate=0x1)
 
         # Load tpm debris firmware for both FPGAs (no need to load in simulation)
         if not simulation and self.tpm.is_programmed():
-            self.tpm.load_plugin("TpmDebrisFirmware", device=Device.FPGA_1, fsample=self._sampling_rate,
+            self.tpm.load_plugin("Tpm_1_6_DebrisFirmware", device=Device.FPGA_1, fsample=self._sampling_rate,
                                  fddc=self._ddc_frequency, decimation=self._decimation_ratio)
-            self.tpm.load_plugin("TpmDebrisFirmware", device=Device.FPGA_2, fsample=self._sampling_rate,
+            self.tpm.load_plugin("Tpm_1_6_DebrisFirmware", device=Device.FPGA_2, fsample=self._sampling_rate,
                                  fddc=self._ddc_frequency, decimation=self._decimation_ratio)
         elif not self.tpm.is_programmed():
             self.logger.warn("TPM is not programmed! No plugins loaded")
@@ -101,15 +105,15 @@ class Tile_1_6(Tile):
         self.tpm.set_lmc_ip(self._lmc_ip, self._lmc_port)
 
         # Enable C2C streaming
-        self.tpm["board.regfile.c2c_stream_enable"] = 0x0
-        self.tpm["board.regfile.c2c_stream_enable"] = 0x1
+        self.tpm["board.regfile.ena_stream"] = 0x0
+        self.tpm["board.regfile.ena_stream"] = 0x1
         self.set_c2c_burst()
 
         # Synchronise FPGAs
         self.sync_fpga_time()
 
         # Initialise ADAs
-        self.tpm.tpm_ada.initialise_adas()
+        # self.tpm.tpm_ada.initialise_adas()
 
         # Reset test pattern generator
         self.tpm.test_generator[0].channel_select(0x0000)

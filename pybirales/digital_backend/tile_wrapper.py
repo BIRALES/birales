@@ -23,7 +23,7 @@ from pyfabil.base.definitions import LibraryError
 from pyfabil.boards.tpm_generic import TPMGeneric
 
 from pybirales.digital_backend.tile_debris import Tile as Tile_1_2
-#from pybirales.digital_backend.tile_1_6 import Tile_1_6
+from pybirales.digital_backend.tile_debris_1_6 import Tile_1_6
 
 
 class Tile(object):

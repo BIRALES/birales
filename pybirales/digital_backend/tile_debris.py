@@ -61,9 +61,15 @@ class Tile(object):
         tf = __import__("pybirales.digital_backend.plugins.tpm.tpm_debris_firmware", fromlist=[None])
         self.tpm.add_plugin_directory(os.path.dirname(tf.__file__))
 
-        self.tpm.connect(ip=self._ip, port=self._port, initialise=initialise,
-                         simulator=simulation, enable_ada=enable_ada, fsample=self._sampling_rate,
-                         ddc=True, fddc=self._ddc_frequency, adc_low_bitrate=True)
+        self.tpm.connect(ip=self._ip,
+                         port=self._port,
+                         initialise=initialise,
+                         simulator=simulation,
+                         enable_ada=enable_ada,
+                         fsample=self._sampling_rate,
+                         ddc=True,
+                         fddc=self._ddc_frequency,
+                         adc_low_bitrate=True)
 
         # Load tpm debris firmware for both FPGAs (no need to load in simulation)
         if not simulation and self.tpm.is_programmed():
