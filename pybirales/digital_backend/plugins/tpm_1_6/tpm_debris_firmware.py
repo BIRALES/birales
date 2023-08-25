@@ -47,7 +47,13 @@ class Tpm_1_6_DebrisFirmware(TpmDebrisFirmware):
         else:
             self._decimation = float(kwargs['decimation'])
 
-        try:
+        if kwargs.get('frame_length', None) is None:
+            logging.info("TpmDebrisFirmware: Setting default frame_length 1024.")
+            self._frame_length = 1024
+        else:
+            self._frame_length = int(kwargs['frame_length'])
+
+        if self.board.has_register('fpga1.regfile.feature.xg_eth_implemented'):
             if self.board['fpga1.regfile.feature.xg_eth_implemented'] == 1:
                 self.xg_eth = True
             else:
@@ -56,13 +62,15 @@ class Tpm_1_6_DebrisFirmware(TpmDebrisFirmware):
                 self.xg_40g_eth = True
             else:
                 self.xg_40g_eth = False
-        except:
+        else:
             self.xg_eth = False
             self.xg_40g_eth = False
 
+        self._nof_frequency_channels = self._frame_length // 2
+
         # Load required plugins
-        self._jesd1 = self.board.load_plugin("TpmJesd", device=self._device, core=0, frame_length=1024)
-        self._jesd2 = self.board.load_plugin("TpmJesd", device=self._device, core=1, frame_length=1024)
+        self._jesd1 = self.board.load_plugin("TpmJesd", device=self._device, core=0, frame_length=self._frame_length)
+        self._jesd2 = self.board.load_plugin("TpmJesd", device=self._device, core=1, frame_length=self._frame_length)
         self._fpga = self.board.load_plugin('TpmFpga', device=self._device)
         if self.xg_eth and self.xg_40g_eth:
             self._fortyg = self.board.load_plugin("TpmFortyGCoreXg", device=self._device, core=0)
@@ -70,10 +78,13 @@ class Tpm_1_6_DebrisFirmware(TpmDebrisFirmware):
                                                fsample=self._fsample / self._decimation)
         self._sysmon = self.board.load_plugin("TpmSysmon", device=self._device)
         self._patterngen = self.board.load_plugin("TpmPatternGenerator", device=self._device)
-        self._power_meter = self.board.load_plugin("AdcPowerMeterSimple", device=self._device,
-                                                   fsample=self._fsample / (self._decimation), samples_per_frame=1024)
+        self._power_meter = self.board.load_plugin("AdcPowerMeterSimple",
+                                                   device=self._device,
+                                                   fsample=self._fsample / self._decimation,
+                                                   samples_per_frame=self._frame_length)
         self._integrator = self.board.load_plugin("TpmIntegrator", device=self._device,
-                                                  fsample=self._fsample / self._decimation, nof_frequency_channels=512,
+                                                  fsample=self._fsample / self._decimation,
+                                                  nof_frequency_channels=self._nof_frequency_channels,
                                                   oversampling_factor=1.0)
         self._polyfilter = self.board.load_plugin("PolyFilter", device=self._device)
 
@@ -87,8 +98,36 @@ class Tpm_1_6_DebrisFirmware(TpmDebrisFirmware):
         while True:
             self._fpga.fpga_global_reset()
 
-            self._fpga.fpga_mmcm_config(self._fsample / 2)
-            self._fpga.fpga_jesd_gth_config(self._fsample / 2)  # GTH are configured for 4 Gbps
+            # with decimation = 20 we need to push a custom configuration to the MMCM
+            gth_custom_config = None
+            if self._decimation == 20:
+                gth_custom_config = [
+                                        0xFFFF,
+                                        0x138e,
+                                        0x0000,
+                                        0x138e,
+                                        0x0100,
+                                        0x11c7,
+                                        0x0000,
+                                        0x1104,
+                                        0x0000,
+                                        0x1e38,
+                                        0x0100,
+                                        0x1041,
+                                        0x00c0,
+                                        0x1041,
+                                        0x00c0,
+                                        0x1041,
+                                        0x11c7,
+                                        0x0000,
+                                        0x02bc,
+                                        0x7c01,
+                                        0x7fe9,
+                                        0x0900,
+                                        0x8890,
+                ]
+            self._fpga.fpga_mmcm_config(self._fsample / 2, gth_custom_config)
+            self._fpga.fpga_jesd_gth_config(self._fsample / 2)  # GTH are configured for 2 Gbps
 
             self._fpga.fpga_reset()
 

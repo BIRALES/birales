@@ -37,9 +37,12 @@ class Tile(object):
 
         self._sampling_rate = sampling_rate
         self._decimation_ratio = 8
+        self._frame_length = 1024
 
         nco_freq = int(ddc_frequency / sampling_rate * 4096.0)
         self._ddc_frequency = float(nco_freq) / 4096.0 * sampling_rate
+
+        self.frame_time = 1.0 / (self._sampling_rate / self._decimation_ratio) * self._frame_length
 
         self.daq_modes_with_timestamp_flag = ["raw_adc_mode", "channelized_mode", "beamformed_mode"]
 
@@ -867,27 +870,31 @@ class Tile(object):
             raise LibraryError("Invalid device specified")
 
     @connected
-    def get_phase_terminal_count(self):
+    def get_phase_terminal_count(self, fpga_id):
         """
         Get PPS phase terminal count.
 
         :return: PPS phase terminal count
         :rtype: int
         """
-        return self["fpga1.pps_manager.sync_tc.cnt_1_pulse"]
+        return self[fpga_id + ".pps_manager.sync_tc.cnt_1_pulse"]
 
     @connected
-    def set_phase_terminal_count(self, value):
+    def set_phase_terminal_count(self, fpga_id, value):
         """
         Set PPS phase terminal count.
 
         :param value: PPS phase terminal count
         """
-        self["fpga1.pps_manager.sync_tc.cnt_1_pulse"] = value
-        self["fpga2.pps_manager.sync_tc.cnt_1_pulse"] = value
+        if fpga_id == "all":
+            self["fpga1.pps_manager.sync_tc.cnt_1_pulse"] = value
+            self["fpga2.pps_manager.sync_tc.cnt_1_pulse"] = value
+        else:
+            self[fpga_id + ".pps_manager.sync_tc.cnt_1_pulse"] = value
+
 
     @connected
-    def get_pps_delay(self, enable_correction=False):
+    def get_pps_delay(self, fpga_id, enable_correction=False):
         """
         Get delay between PPS and 10 MHz clock.
         :param: enable_correction, enable PPS delay correction using value configured in the FPGA1
@@ -902,31 +909,41 @@ class Tile(object):
                 pps_correction -= 256
         else:
             pps_correction = 0
-        return self["fpga1.pps_manager.sync_phase.cnt_hf_pps"] + pps_correction
+        return self[fpga_id + ".pps_manager.sync_phase.cnt_hf_pps"] + pps_correction
 
     @connected
-    def wait_pps_event(self):
+    def wait_pps_event(self, fpga_id=0):
         """
-        Wait for a PPS edge. Added timeout feture to avoid method to stuck.
+        Wait for a PPS edge. Added timeout feature to avoid method to stuck.
 
         :raises BoardError: Hardware PPS stuck
         """
+        if fpga_id == 0:
+            fpga_device = Device.FPGA_1
+        else:
+            fpga_device = Device.FPGA_2
+
         timeout = 1100
-        t0 = self.get_fpga_time(Device.FPGA_1)
-        while t0 == self.get_fpga_time(Device.FPGA_1):
+        t0 = self.get_fpga_time(fpga_device)
+        while t0 == self.get_fpga_time(fpga_device):
             if timeout > 0:
                 time.sleep(0.001)
                 timeout = timeout - 1
-                pass
             else:
                 raise BoardError("TPM PPS counter does not advance")
+        return time.time()
 
     @connected
-    def wait_pps_event2(self):
+    def wait_pps_event2(self, fpga_id=0):
         """ Wait for a PPS edge """
-        self['fpga1.pps_manager.pps_edge.req'] = 1
-        while self['fpga1.pps_manager.pps_edge.req'] == 1:
-            time.sleep(0.01)
+        if fpga_id == 0:
+            fpga_used = "fpga1"
+        else:
+            fpga_used = "fpga2"
+        self[fpga_used + '.pps_manager.pps_edge.req'] = 1
+        while self[fpga_used + '.pps_manager.pps_edge.req'] == 1:
+            time.sleep(0.001)
+        return time.time()
 
     @connected
     def check_pending_data_requests(self):
@@ -975,23 +992,6 @@ class Tile(object):
         except:
             pass
 
-    # ---------------------------- Synchronisation routines ------------------------------------
-    @connected
-    def post_synchronisation(self):
-        """ Post tile configuration synchronization """
-
-        self.wait_pps_event()
-
-        current_tc = self.get_phase_terminal_count()
-        delay = self.get_pps_delay()
-
-        self.set_phase_terminal_count(self.calculate_delay(delay, current_tc, 20, 4))
-
-        self.wait_pps_event()
-
-        delay = self.get_pps_delay()
-        self.logger.info("Finished tile post synchronisation ({})".format(delay))
-
     # ------------------------------------
     # Synchronisation routines
     # ------------------------------------
@@ -1031,29 +1031,31 @@ class Tile(object):
             self.logger.warning("Using Internal PPS generator!")
             self.logger.info("Internal PPS generator synchronised.")
 
-        # Setting UTC time
-        max_attempts = 5
-        for _n in range(max_attempts):
-            self.logger.info("Synchronising FPGA UTC time.")
-            self.wait_pps_event2()
-            time.sleep(0.5)
+        # Don't do this here, do it in digital_backend with all the tiles
+        # # Setting UTC time
+        # max_attempts = 5
+        # for _n in range(max_attempts):
+        #     self.logger.info("Synchronising FPGA UTC time.")
+        #     self.wait_pps_event2()
+        #     time.sleep(0.5)
+        #
+        #     t = int(time.time())
+        #     print(time.time())
+        #     self.set_fpga_time(Device.FPGA_1, t)
+        #     self.set_fpga_time(Device.FPGA_2, t)
+        #
+        #     # configure the PPS sampler
+        #     self.set_pps_sampling(20, 4)
+        #
+        #     self.wait_pps_event2()
+        #     time.sleep(0.1)
+        #     t0 = self.tpm["fpga1.pps_manager.curr_time_read_val"]
+        #     t1 = self.tpm["fpga2.pps_manager.curr_time_read_val"]
+        #
+        #     if t0 == t1:
+        #         return
 
-            t = int(time.time())
-            self.set_fpga_time(Device.FPGA_1, t)
-            self.set_fpga_time(Device.FPGA_2, t)
-
-            # configure the PPS sampler
-            self.set_pps_sampling(20, 4)
-
-            self.wait_pps_event2()
-            time.sleep(0.1)
-            t0 = self.tpm["fpga1.pps_manager.curr_time_read_val"]
-            t1 = self.tpm["fpga2.pps_manager.curr_time_read_val"]
-
-            if t0 == t1:
-                return
-
-        self.logger.error("Not possible to synchronise FPGA UTC time after " + str(max_attempts) + " attempts!")
+        # self.logger.error("Not possible to synchronise FPGA UTC time after " + str(max_attempts) + " attempts!")
 
     @connected
     def set_pps_sampling(self, target, margin):
@@ -1065,14 +1067,16 @@ class Tile(object):
         :param margin: margin, target +- margin
         :type margin: int
         """
+        for fpga_id in ["fpga1", "fpga2"]:
+            current_tc = self.get_phase_terminal_count(fpga_id)
 
-        current_tc = self.get_phase_terminal_count()
-        current_delay = self.get_pps_delay()
-        self.set_phase_terminal_count(self.calculate_delay(current_delay,
-                                                           current_tc,
-                                                           target,
-                                                           margin))
+            current_delay = self.get_pps_delay(fpga_id)
 
+            calculated_delay = self.calculate_delay(current_delay,
+                                                    current_tc,
+                                                    target,
+                                                    margin)
+            self.set_phase_terminal_count(fpga_id, calculated_delay)
 
     @connected
     def check_server_time(self):
@@ -1219,13 +1223,34 @@ class Tile(object):
 
         # Set arm timestamp
         # delay = number of frames to delay * frame time (shift by 8)
-        frame_time = 1.0 / (700e6 / 8.0) * 1024
-        delay = seconds * (1 / frame_time) / 256
+        delay = seconds * (1 / self.frame_time) / 256
         t1 = t0 + int(delay)
         for fpga in self.tpm.tpm_fpga:
             fpga.fpga_apply_sync_delay(t1)
         return t1
 
+    @connected
+    def clear_timestamp_invalid_flag_register(
+            self, daq_mode=None, fpga_id=None
+    ):
+        """
+        Clear invalid timestamp request register for selected fpga and for
+        selected LMC request mode . Default clears all registers for all modes
+
+        :param daq_mode: string used to select which Flag register of the LMC to read
+        :param fpga_id: FPGA_ID, 0 or 1. Default None will select both FPGAs
+        """
+        daq_modes_list = self.daq_modes_with_timestamp_flag if daq_mode is None else [daq_mode];
+        fpga_list = range(len(self.tpm.tpm_debris_firmware)) if fpga_id is None else [fpga_id]
+
+        if daq_mode is not None and daq_mode not in self.daq_modes_with_timestamp_flag:
+            raise LibraryError(f"Invalid daq_mode specified: {daq_mode} not supported")
+
+        for selected_daq in daq_modes_list:
+            for fpga in fpga_list:
+                self[f"fpga{fpga + 1}.lmc_gen.timestamp_req_invalid.{selected_daq}"] = 0
+                self.logger.info(
+                    f"Register fpga{fpga + 1}.lmc_gen.timestamp_req_invalid.{selected_daq} has been cleared!")
 
     @connected
     def check_valid_timestamp_request(
@@ -1286,6 +1311,13 @@ class Tile(object):
             self.clear_timestamp_invalid_flag_register(daq_mode, fpga_id)
         self.logger.info("LMC Data request has been cleared")
         return
+
+    def clear_lmc_data_request(self):
+        """ Clear LMC data request register. This would be normally self-cleared by the firmware, however in case
+        of failed synchronisation, the firmware will not clear the register. In that case the request register can
+        be cleared by software to allow the next data request to be executed successfully."""
+        for i in range(len(self.tpm.tpm_debris_firmware)):
+            self.tpm.tpm_debris_firmware[i].clear_lmc_data_request()
 
     @connected
     def check_synchronised_data_operation(self, requested_timestamp=None):
@@ -1391,7 +1423,7 @@ class Tile(object):
         :type current_tc: int
         :param target: target delay
         :type target: int
-        :param margin: marging, target +-margin
+        :param margin: margin, target +-margin
         :type margin: int
         :return: Modified phase register terminal count
         :rtype: int

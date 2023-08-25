@@ -26,17 +26,27 @@ def connected(f):
 
 class Tile_1_6(Tile):
     def __init__(self, ip="10.0.10.2", port=10000, lmc_ip="10.0.10.1", lmc_port=4660,
-                 sampling_rate=800e6, ddc_frequency=139.65e6):
+                 sampling_rate=800e6, ddc_frequency=139.65e6, version=2):
 
         super(Tile_1_6, self).__init__(
             ip, port, lmc_ip, lmc_port, sampling_rate, ddc_frequency
         )
 
-        self._decimation_ratio = 8
+        if version == 1:
+            self._decimation_ratio = 8
+            self._adc_low_bitrate = 0x1  # This value is written into ADC register 0x56E: Lane rate = 3.375 Gbps to 6.75 Gbps.
+            self._frame_length = 1024
+        else:
+            self._decimation_ratio = 20
+            self._adc_low_bitrate = 0x5  # This value is written into ADC register 0x56E: Lane rate = 1.6875 Gbps to 3.375 Gbps.
+            self._frame_length = 8192
+
         self._sampling_rate = sampling_rate
 
         nco_freq = int(ddc_frequency / sampling_rate * 2**48)
         self._ddc_frequency = float(nco_freq) / 2**48 * sampling_rate
+
+        self.frame_time = 1.0 / (self._sampling_rate / self._decimation_ratio) * self._frame_length
 
         self.daq_modes_with_timestamp_flag = ["raw_adc_mode", "channelized_mode", "beamformed_mode"]
 
@@ -66,14 +76,18 @@ class Tile_1_6(Tile):
                          fsample=self._sampling_rate,
                          ddc=True,
                          fddc=self._ddc_frequency,
-                         adc_low_bitrate=0x1)
+                         adc_low_bitrate=self._adc_low_bitrate)
 
         # Load tpm debris firmware for both FPGAs (no need to load in simulation)
         if not simulation and self.tpm.is_programmed():
-            self.tpm.load_plugin("Tpm_1_6_DebrisFirmware", device=Device.FPGA_1, fsample=self._sampling_rate,
-                                 fddc=self._ddc_frequency, decimation=self._decimation_ratio)
-            self.tpm.load_plugin("Tpm_1_6_DebrisFirmware", device=Device.FPGA_2, fsample=self._sampling_rate,
-                                 fddc=self._ddc_frequency, decimation=self._decimation_ratio)
+            for fpga_device in [Device.FPGA_1, Device.FPGA_2]:
+                self.tpm.load_plugin("Tpm_1_6_DebrisFirmware",
+                                     device=fpga_device,
+                                     fsample=self._sampling_rate,
+                                     fddc=self._ddc_frequency,
+                                     decimation=self._decimation_ratio,
+                                     frame_length=self._frame_length)
+
         elif not self.tpm.is_programmed():
             self.logger.warn("TPM is not programmed! No plugins loaded")
 

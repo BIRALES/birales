@@ -131,6 +131,10 @@ class TpmDebrisFirmware(FirmwareBlock):
         self.board["%s.lmc_gen.raw_all_channel_mode_enable" % self._device_name] = 0x1
         self.board["%s.lmc_gen.request.raw_data" % self._device_name] = 0x1
 
+    def clear_lmc_data_request(self):
+        """Stop transmission of all LMC data."""
+        self.board[self._device_name + ".lmc_gen.request"] = 0
+
     def stop_integrated_channel_data(self):
         """ Stop receiving integrated beam data from the board """
         self._integrator.stop_integrated_channel_data()

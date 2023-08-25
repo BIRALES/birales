@@ -358,16 +358,14 @@ class Station(object):
             tile.set_station_id(self._station_id, i)
 
     def _synchronise_adc_clk(self):
-        sampling_frequency = self.configuration['observation']['sampling_frequency']
-        if sampling_frequency == 700e6:
-            logging.info("Synchronising FPGA ADC Clock...")
-            for tile in self.tiles:
-                tile['fpga1.pps_manager.sync_tc_adc_clk'] = 0x7
-                tile['fpga2.pps_manager.sync_tc_adc_clk'] = 0x7
-            self.tiles[0].wait_pps_event2()
-            for tile in self.tiles:
-                for fpga in tile.tpm.tpm_fpga:
-                    fpga.fpga_align_adc_clk(sampling_frequency * 2.0)  # VCO = 1400 MHz
+        logging.info("Synchronising FPGA ADC Clock...")
+        for tile in self.tiles:
+            tile['fpga1.pps_manager.sync_tc_adc_clk'] = 0x7
+            tile['fpga2.pps_manager.sync_tc_adc_clk'] = 0x7
+        self.tiles[0].wait_pps_event2()
+        for tile in self.tiles:
+            for fpga in tile.tpm.tpm_fpga:
+                fpga.fpga_align_adc_clk(1400e6)  # VCO = 1400 MHz
 
     def _synchronise_ddc(self, sysref_period):
         """ Synchronise the NCO in the DDC on all ADCs of all tiles """
@@ -432,10 +430,19 @@ class Station(object):
     def _synchronise_tiles(self, use_teng=False):
         """ Synchronise time on all tiles """
 
+        logging.info("Synchronising UTC time")
+
         pps_detect = self['fpga1.pps_manager.pps_detected']
         logging.debug("FPGA1 PPS detection register is ({})".format(pps_detect))
         pps_detect = self['fpga2.pps_manager.pps_detected']
         logging.debug("FPGA2 PPS detection register is ({})".format(pps_detect))
+
+        self.tiles[0].wait_pps_event()
+        time.sleep(0.1)
+        t = int(time.time())
+        for tile in self.tiles:
+            tile.set_fpga_time(Device.FPGA_1, t)
+            tile.set_fpga_time(Device.FPGA_2, t)
 
         # Repeat operation until Tiles are synchronised
         while True:
@@ -523,23 +530,23 @@ class Station(object):
         while sync_loop < max_sync_loop:
             self.tiles[0].wait_pps_event2()
 
-            current_tc = [tile.get_phase_terminal_count() for tile in self.tiles]
-            delay = [tile.get_pps_delay() for tile in self.tiles]
+            current_tc = [tile.get_phase_terminal_count("fpga1") for tile in self.tiles]
+            delay = [tile.get_pps_delay("fpga1") for tile in self.tiles]
 
             for n in range(len(self.tiles)):
-                self.tiles[n].set_phase_terminal_count(self.tiles[n].calculate_delay(delay[n], current_tc[n], 20, 4))
+                self.tiles[n].set_phase_terminal_count("all", self.tiles[n].calculate_delay(delay[n], current_tc[n], 20, 4))
 
             self.tiles[0].wait_pps_event2()
 
-            current_tc = [tile.get_phase_terminal_count() for tile in self.tiles]
-            delay = [tile.get_pps_delay() for tile in self.tiles]
+            current_tc = [tile.get_phase_terminal_count("fpga1") for tile in self.tiles]
+            delay = [tile.get_pps_delay("fpga1") for tile in self.tiles]
 
             for n in range(len(self.tiles)):
-                self.tiles[n].set_phase_terminal_count(self.tiles[n].calculate_delay(delay[n], current_tc[n], delay[0], 4))
+                self.tiles[n].set_phase_terminal_count("all", self.tiles[n].calculate_delay(delay[n], current_tc[n], delay[0], 4))
 
             self.tiles[0].wait_pps_event2()
 
-            delay = [tile.get_pps_delay() for tile in self.tiles]
+            delay = [tile.get_pps_delay("fpga1") for tile in self.tiles]
 
             synced = 1
             for n in range(len(self.tiles) - 1):
@@ -672,8 +679,8 @@ class Station(object):
 
     def spead_tx_disable(self):
         for tile in self.tiles:
-            tile['fpga1.dsp_regfile.spead_tx_enable']=0
-            tile['fpga2.dsp_regfile.spead_tx_enable']=0
+            tile['fpga1.dsp_regfile.spead_tx_enable'] = 0
+            tile['fpga2.dsp_regfile.spead_tx_enable'] = 0
 
     # ------------------------------------------------------------------------------------------------
     def enable_adc_trigger(self, threshold=127):
