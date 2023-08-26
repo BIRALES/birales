@@ -46,6 +46,39 @@ class Tile(object):
 
         self.daq_modes_with_timestamp_flag = ["raw_adc_mode", "channelized_mode", "beamformed_mode"]
 
+        self.preadu_signal_map = {0: {'preadu_id': 1, 'channel': 14},
+                                  1: {'preadu_id': 1, 'channel': 15},
+                                  2: {'preadu_id': 1, 'channel': 12},
+                                  3: {'preadu_id': 1, 'channel': 13},
+                                  4: {'preadu_id': 1, 'channel': 10},
+                                  5: {'preadu_id': 1, 'channel': 11},
+                                  6: {'preadu_id': 1, 'channel': 8},
+                                  7: {'preadu_id': 1, 'channel': 9},
+                                  8: {'preadu_id': 0, 'channel': 0},
+                                  9: {'preadu_id': 0, 'channel': 1},
+                                  10: {'preadu_id': 0, 'channel': 2},
+                                  11: {'preadu_id': 0, 'channel': 3},
+                                  12: {'preadu_id': 0, 'channel': 4},
+                                  13: {'preadu_id': 0, 'channel': 5},
+                                  14: {'preadu_id': 0, 'channel': 6},
+                                  15: {'preadu_id': 0, 'channel': 7},
+                                  16: {'preadu_id': 1, 'channel': 6},
+                                  17: {'preadu_id': 1, 'channel': 7},
+                                  18: {'preadu_id': 1, 'channel': 4},
+                                  19: {'preadu_id': 1, 'channel': 5},
+                                  20: {'preadu_id': 1, 'channel': 2},
+                                  21: {'preadu_id': 1, 'channel': 3},
+                                  22: {'preadu_id': 1, 'channel': 0},
+                                  23: {'preadu_id': 1, 'channel': 1},
+                                  24: {'preadu_id': 0, 'channel': 8},
+                                  25: {'preadu_id': 0, 'channel': 9},
+                                  26: {'preadu_id': 0, 'channel': 10},
+                                  27: {'preadu_id': 0, 'channel': 11},
+                                  28: {'preadu_id': 0, 'channel': 12},
+                                  29: {'preadu_id': 0, 'channel': 13},
+                                  30: {'preadu_id': 0, 'channel': 14},
+                                  31: {'preadu_id': 0, 'channel': 15}}
+
     # ---------------------------- Main functions ------------------------------------
     def tpm_version(self):
         """
@@ -119,6 +152,17 @@ class Tile(object):
         self.tpm["board.regfile.c2c_stream_enable"] = 0x0
         self.tpm["board.regfile.c2c_stream_enable"] = 0x1
         self.set_c2c_burst()
+
+        # Switch off both PREADUs
+        for preadu in self.tpm.tpm_preadu:
+            preadu.switch_off()
+
+        # Switch on preadu
+        for preadu in self.tpm.tpm_preadu:
+            preadu.switch_on()
+            time.sleep(1)
+            preadu.select_low_passband()
+            preadu.read_configuration()
 
         # Synchronise FPGAs
         self.sync_fpga_time()
@@ -1498,6 +1542,71 @@ class Tile(object):
         # self.stop_channelised_data_continuous()
         return
 
+    # ----------------------------
+    # Wrapper for preadu methods
+    # ----------------------------
+
+    def has_preadu(self):
+        """
+        Check if tile has preADUs fitted.
+
+        Gets preadu attribute "is_present" for each preADU.
+        Returns True if both are present, else False.
+        """
+        fpgas = range(len(self.tpm.tpm_test_firmware))
+        detected = []
+        for fpga in fpgas:
+            preadu_is_present = self.tpm.tpm_preadu[fpga].is_present
+            detected.append(preadu_is_present)
+            if preadu_is_present:
+                self.logger.info(f"preADU {fpga} Detected")
+            else:
+                self.logger.info(f"preADU {fpga} Not Detected")
+        return all(detected)
+
+    def equalize_preadu_gain(self, required_rms=20):
+        """ Equalize the preadu gain to get target RMS"""
+
+        # Get current preadu settings
+        for preadu in self.tpm.tpm_preadu:
+            if self.tpm_version == "tpm_v1_2":
+                preadu.select_low_passband()
+            preadu.read_configuration()
+
+        # Get current RMS
+        rms = self.get_adc_rms()
+
+        # Loop over all signals
+        for channel in list(self.preadu_signal_map.keys()):
+            # Calculate required attenuation difference
+            if rms[channel] / required_rms > 0:
+                attenuation = 20 * math.log10(rms[channel] / required_rms)
+            else:
+                attenuation = 0
+
+            # Apply attenuation
+            pid = self.preadu_signal_map[channel]['preadu_id']
+            channel = self.preadu_signal_map[channel]['channel']
+
+            attenuation = self.tpm.tpm_preadu[pid].get_attenuation()[channel] + attenuation
+            self.tpm.tpm_preadu[pid].set_attenuation(attenuation, [channel])
+
+        for preadu in self.tpm.tpm_preadu:
+            preadu.write_configuration()
+
+
+    def set_preadu_attenuation(self, attenuation):
+        """ Set same preadu attenuation in all preadus """
+
+        # Get current preadu settings
+        for preadu in self.tpm.tpm_preadu:
+            if self.tpm_version == "tpm_v1_2":
+                preadu.select_low_passband()
+            preadu.read_configuration()
+            preadu.set_attenuation(attenuation, list(range(16)))
+            preadu.write_configuration()
+
+
     # ---------------------------- Wrapper for test generator ----------------------------
 
     def test_generator_set_tone(self, dds, frequency=100e6, ampl=0.0, phase=0.0, delay=128):
@@ -1606,6 +1715,26 @@ class Tile(object):
     def write_adc_broadcast(self, add, data, wait_sync=0):
         cmd = 1 + 0x8 * wait_sync
         self['board.spi'] = [add, data << 8, 0, 0xF, 0xF, cmd]
+
+    def fast_detect_statistic_config(self, upper_threshold, lower_threshold, dwell_samples, integration_time):
+        for adc in self.tpm.tpm_adc:
+            adc.adc_set_fast_detect(upper_threshold, lower_threshold, dwell_samples)
+        nof_frames = int(integration_time / self.frame_time)
+        self['fpga1.fast_detect_statistics.nof_frames'] = nof_frames - 1
+        self['fpga2.fast_detect_statistics.nof_frames'] = nof_frames - 1
+
+        return nof_frames * self._frame_length
+
+    def fast_detect_statistic_read(self):
+        rd = self['fpga1.fast_detect_statistics.toggle']
+        while rd == self['fpga2.fast_detect_statistics.toggle']:
+            time.sleep(0.01)
+        rd_level_fpga1 = self['fpga1.fast_detect_statistics.level_counters']
+        rd_level_fpga2 = self['fpga2.fast_detect_statistics.level_counters']
+        rd_event_fpga1 = self['fpga1.fast_detect_statistics.event_counters']
+        rd_event_fpga2 = self['fpga2.fast_detect_statistics.event_counters']
+        return {'level': [rd_level_fpga1 + rd_level_fpga2],
+                'event': [rd_event_fpga1 + rd_event_fpga2]}
 
     def __str__(self):
         return str(self.tpm)

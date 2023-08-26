@@ -615,7 +615,7 @@ class Station(object):
                     tile.tpm.tpm_ada.set_ada_gain_spi(-6 + int(gain), channel)
 
     def set_ada_gain(self, attenuation):
-        """ Set same preadu attenuation in all preadus """
+        """ Set same ADA gain in all ADAs """
         # Loop over all tiles
         for tile in self.tiles:
             tile.tpm.tpm_ada.set_ada_gain(attenuation)
