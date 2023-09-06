@@ -157,6 +157,10 @@ class Tile_1_6(Tile):
         self.tpm["board.regfile.ena_stream"] = 0x1
         self.set_c2c_burst()
 
+        # Switch off both PREADUs
+        for preadu in self.tpm.tpm_preadu:
+            preadu.switch_off()
+
         # Switch on preadu
         for preadu in self.tpm.tpm_preadu:
             preadu.switch_on()

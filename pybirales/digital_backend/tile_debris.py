@@ -1716,23 +1716,21 @@ class Tile(object):
         cmd = 1 + 0x8 * wait_sync
         self['board.spi'] = [add, data << 8, 0, 0xF, 0xF, cmd]
 
-    def fast_detect_statistic_config(self, upper_threshold, lower_threshold, dwell_samples, integration_time):
-        for adc in self.tpm.tpm_adc:
-            adc.adc_set_fast_detect(upper_threshold, lower_threshold, dwell_samples)
-        nof_frames = int(integration_time / self.frame_time)
-        self['fpga1.fast_detect_statistics.nof_frames'] = nof_frames - 1
-        self['fpga2.fast_detect_statistics.nof_frames'] = nof_frames - 1
+    def fast_detect_statistic_set_threshold(self, upper_threshold, lower_threshold, dwell_samples):
+        for fd in self.tpm.fast_detect_statistics:
+            fd.set_thresholds(upper_threshold, lower_threshold, dwell_samples)
 
-        return nof_frames * self._frame_length
+    def fast_detect_statistic_set_integration_time(self, integration_time):
+        self.tpm.fast_detect_statistics[0].wait()
+        for fd in self.tpm.fast_detect_statistics:
+            fd.set_integration_time(integration_time)
 
     def fast_detect_statistic_read(self):
-        rd = self['fpga1.fast_detect_statistics.toggle']
-        while rd == self['fpga2.fast_detect_statistics.toggle']:
-            time.sleep(0.01)
-        rd_level_fpga1 = self['fpga1.fast_detect_statistics.level_counters']
-        rd_level_fpga2 = self['fpga2.fast_detect_statistics.level_counters']
-        rd_event_fpga1 = self['fpga1.fast_detect_statistics.event_counters']
-        rd_event_fpga2 = self['fpga2.fast_detect_statistics.event_counters']
+        self.tpm.fast_detect_statistics[0].wait()
+        rd_level_fpga1 = self.tpm.fast_detect_statistics[0].get_level()
+        rd_level_fpga2 = self.tpm.fast_detect_statistics[1].get_level()
+        rd_event_fpga1 = self.tpm.fast_detect_statistics[0].get_event()
+        rd_event_fpga2 = self.tpm.fast_detect_statistics[1].get_event()
         return {'level': [rd_level_fpga1 + rd_level_fpga2],
                 'event': [rd_event_fpga1 + rd_event_fpga2]}
 

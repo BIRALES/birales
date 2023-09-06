@@ -70,8 +70,14 @@ class TpmDebrisFirmware(FirmwareBlock):
                                                fsample=self._fsample / self._decimation)
         self._sysmon = self.board.load_plugin("TpmSysmon", device=self._device)
         self._patterngen = self.board.load_plugin("TpmPatternGenerator", device=self._device)
-        self._power_meter = self.board.load_plugin("AdcPowerMeterSimple", device=self._device,
-                                                   fsample=self._fsample / (self._decimation), samples_per_frame=1024)
+        self._power_meter = self.board.load_plugin("AdcPowerMeterSimple",
+                                                   device=self._device,
+                                                   fsample=self._fsample / self._decimation,
+                                                   samples_per_frame=1024)
+        self._fast_detect_statistics = self.board.load_plugin("FastDetectStatistics",
+                                                              device=self._device,
+                                                              fsample=self._fsample / self._decimation,
+                                                              samples_per_frame=1024)
         self._integrator = self.board.load_plugin("TpmIntegrator", device=self._device,
                                                   fsample=self._fsample / self._decimation, nof_frequency_channels=512,
                                                   oversampling_factor=1.0)
@@ -112,6 +118,7 @@ class TpmDebrisFirmware(FirmwareBlock):
 
         # Initialise power meter
         self._power_meter.initialise()
+        self._fast_detect_statistics.set_integration_time(1.0)
 
         # Initialise 10G cores
         # for teng in self._teng:

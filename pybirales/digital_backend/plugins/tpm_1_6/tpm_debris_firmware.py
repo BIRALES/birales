@@ -82,6 +82,10 @@ class Tpm_1_6_DebrisFirmware(TpmDebrisFirmware):
                                                    device=self._device,
                                                    fsample=self._fsample / self._decimation,
                                                    samples_per_frame=self._frame_length)
+        self._fast_detect_statistics = self.board.load_plugin("FastDetectStatistics",
+                                                              device=self._device,
+                                                              fsample=self._fsample / self._decimation,
+                                                              samples_per_frame=self._frame_length)
         self._integrator = self.board.load_plugin("TpmIntegrator", device=self._device,
                                                   fsample=self._fsample / self._decimation,
                                                   nof_frequency_channels=self._nof_frequency_channels,
@@ -151,6 +155,7 @@ class Tpm_1_6_DebrisFirmware(TpmDebrisFirmware):
 
         # Initialise power meter
         self._power_meter.initialise()
+        self._fast_detect_statistics.set_integration_time(1.0)
 
         # Initialise 10G cores
         # for teng in self._teng:
