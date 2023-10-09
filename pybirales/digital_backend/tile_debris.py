@@ -1705,12 +1705,16 @@ class Tile(object):
                 self['fpga2.poly.coeff'] = coeff_ram_arc.tolist()
 
     def set_fpga_sysref_gen(self, sysref_period):
-        self['fpga1.pps_manager.sysref_gen_period'] = sysref_period - 1
-        self['fpga1.pps_manager.sysref_gen_duty'] = sysref_period // 2 - 1
-        self['fpga1.pps_manager.sysref_gen.enable'] = 1
-        self['fpga1.pps_manager.sysref_gen.spi_sync_enable'] = 1
-        self['fpga1.pps_manager.sysref_gen.sysref_pol_invert'] = 0
-        self['fpga1.regfile.sysref_fpga_out_enable'] = 1
+        if self.tpm_version() == "itpm_v1_2":
+            fpga_sysref = "fpga1"
+        else:
+            fpga_sysref = "fpga2"
+        self['%s.pps_manager.sysref_gen_period' % fpga_sysref] = sysref_period - 1
+        self['%s.pps_manager.sysref_gen_duty' % fpga_sysref] = sysref_period // 2 - 1
+        self['%s.pps_manager.sysref_gen.enable' % fpga_sysref] = 1
+        self['%s.pps_manager.sysref_gen.spi_sync_enable' % fpga_sysref] = 1
+        self['%s.pps_manager.sysref_gen.sysref_pol_invert' % fpga_sysref] = 0
+        self['%s.regfile.sysref_fpga_out_enable' % fpga_sysref] = 1
 
     def write_adc_broadcast(self, add, data, wait_sync=0):
         cmd = 1 + 0x8 * wait_sync

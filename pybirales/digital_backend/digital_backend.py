@@ -321,7 +321,7 @@ class Station(object):
             logging.info("Synchronising station")
             self._station_post_synchronisation()
             self._synchronise_adc_clk()
-            #self._synchronise_ddc(sysref_period=1280)  # 1280 works for all supported frequencies
+            self._synchronise_ddc(sysref_period=1280)  # 1280 works for all supported frequencies
             self._synchronise_tiles(self.configuration['network']['lmc']['use_teng'])
 
         elif not self.properly_formed_station:
@@ -380,19 +380,26 @@ class Station(object):
             while tile['pll', 0xF] & 0x1 == 0x1:
                 time.sleep(0.1)
 
-        ddc_frequency = self.configuration['observation']['ddc_frequency']
-        sampling_frequency = self.configuration['observation']['sampling_frequency']
         for tile in self.tiles:
             for n in range(16):
-                tile.tpm.tpm_adc[n].adc_single_start_dual_14_ddc(sampling_frequency=sampling_frequency,
-                                                                 ddc_frequency=ddc_frequency,
-                                                                 low_bitrate=True)
+                if tile.tpm_version == "itpm_v1_2":
+                    tile.tpm.tpm_adc[n].adc_single_start_dual_14_ddc(sampling_frequency=tile._sampling_rate,
+                                                                     ddc_frequency=tile._ddc_frequency,
+                                                                     low_bitrate=True)
+                else:
+                    tile.tpm.tpm_adc[n].adc_single_start_dual_14_ddc(sampling_frequency=tile._sampling_rate,
+                                                                     ddc_frequency=tile._ddc_frequency,
+                                                                     decimation_factor=20,
+                                                                     low_bitrate=tile._adc_low_bitrate)
 
             for n in range(16):
-                if n < 8:
-                    tile['adc' + str(n), 0x120] = 0xA
+                if station.tiles[0].tpm_version == "itpm_v1_2":
+                    if n < 8:
+                        tile['adc' + str(n), 0x120] = 0xA
+                    else:
+                        tile['adc' + str(n), 0x120] = 0x1A # TPM 1.2, ADC 8-15 have inverted sysref connections
                 else:
-                    tile['adc' + str(n), 0x120] = 0x1A
+                    tile['adc' + str(n), 0x120] = 0xA
 
         self.tiles[0].wait_pps_event()
 
@@ -408,6 +415,9 @@ class Station(object):
     def reset_ddc(self, tiles="all"):
         if tiles == "all":
             tiles = self.tiles
+        for tile in tiles:
+            tile['fpga1.regfile.spi_sync_function'] = 0
+            tile['fpga1.pps_manager.sysref_gen.spi_sync_enable'] = 1
         for tile in tiles:
             tile.write_adc_broadcast(0x300, 0x1, 0)
 
@@ -425,7 +435,9 @@ class Station(object):
                 if s & 0x1 == 1:
                     done = 0
             if done == 1:
-                break 
+                break
+
+        self['fpga1.pps_manager.sysref_gen.spi_sync_enable'] = 0
 
     def _synchronise_tiles(self, use_teng=False):
         """ Synchronise time on all tiles """
