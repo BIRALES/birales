@@ -4,8 +4,6 @@ import os
 from setuptools import setup, find_packages
 from setuptools.command.install import install
 
-# distutils.log.set_verbosity(distutils.log.info)
-
 HOME = os.environ['HOME']
 CONFIG_PATH = 'configuration'
 TEMPLATES = os.path.join(CONFIG_PATH, 'templates')
