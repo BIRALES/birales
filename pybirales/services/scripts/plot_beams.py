@@ -23,8 +23,8 @@ if __name__ == "__main__":
 
     opts, args = p.parse_args(sys.argv[1:])
 
-    filepath = ('/home/lessju/casa_observation/output/2024_01_15/uncalibrated/'
-                'Observation_2024-01-15T0911_beam.dat')
+    filepath = ('/home/lessju/casa_observation/output/2024_01_15/Observation_2024-01-15T1501/'
+                'Observation_2024-01-15T1501_beam.dat')
 
     nof_samples = file_size = os.path.getsize(filepath) / 4
     int_samples = 262144
@@ -38,7 +38,6 @@ if __name__ == "__main__":
 
     plt.plot(to_plot)
     plt.show()
-
 
     # for k, v in files.items():
     #     with

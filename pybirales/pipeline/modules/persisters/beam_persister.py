@@ -12,6 +12,11 @@ from pybirales.pipeline.base.definitions import PipelineError
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 
+cu = None
+try:
+    import cupy as cu
+except ImportError:
+    pass
 
 class BeamPersister(ProcessingModule):
 
@@ -122,8 +127,11 @@ class BeamPersister(ProcessingModule):
                 pickle.dump(obs_info.get_dict(), f)
             self._head_written = True
 
-        # Save data to output
-        output_data[:] = input_data[:].copy()
+        # Save data to output.
+        if settings.manager.use_gpu:
+            output_data[:] = cu.asnumpy(input_data)
+        else:
+            output_data[:] = input_data[:].copy()
 
         # Ignore first 2 buffers (because of channeliser)
         self._counter += 1
@@ -131,12 +139,12 @@ class BeamPersister(ProcessingModule):
             return obs_info
 
         # Transpose data and write to file
-        if input_data.dtype == float:
-            temp_array = input_data[self._beam_range, self._channel_range, :].T.ravel()
+        if output_data.dtype == float:
+            temp_array = output_data[self._beam_range, self._channel_range, :].T.ravel()
         elif 'compute_power' in settings.persister.__dict__.keys() and settings.persister.compute_power:
-            temp_array = np.power(np.abs(input_data[self._beam_range, self._channel_range, :].T), 2).ravel()
+            temp_array = np.power(np.abs(output_data[self._beam_range, self._channel_range, :].T), 2).ravel()
         else:
-            temp_array = input_data[self._beam_range, self._channel_range, :].T.ravel()
+            temp_array = output_data[self._beam_range, self._channel_range, :].T.ravel()
             temp_array = np.stack((temp_array.real, temp_array.imag), axis=1).ravel()
 
         self._file.write(struct.pack('f' * len(temp_array), *temp_array))
