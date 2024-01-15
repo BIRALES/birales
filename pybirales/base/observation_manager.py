@@ -86,15 +86,17 @@ class ObservationManager:
             log.exception("A fatal error has occurred whilst trying to run %s", observation.name)
             publish(ObservationFailedEvent(observation, "A scheduler exception has occurred"))
 
-            observation.model.status = 'failed'
             if settings.database.load_database:
+                observation.model.status = 'failed'
                 observation.save()
+
         except PipelineError:
-            log.exception("An fatal error has occurred whilst trying to run %s", observation.name)
+            log.exception("A fatal error has occurred whilst trying to run %s", observation.name)
             publish(ObservationFailedEvent(observation, "A pipeline error has occurred"))
 
-            observation.model.status = 'failed'
-            observation.save()
+            if settings.database.load_database:
+                observation.model.status = 'failed'
+                observation.save()
         else:
             if settings.database.load_database:
                 publish(ObservationFinishedEvent(observation.name, observation.pipeline_name))

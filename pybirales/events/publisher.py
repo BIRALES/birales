@@ -4,6 +4,7 @@ import logging as log
 from pybirales.repository.message_broker import RedisManager
 from pybirales.repository.models import Event
 from pybirales.utilities.singleton import Singleton
+from pybirales import settings
 
 
 def publish(event):
@@ -45,6 +46,9 @@ class EventsPublisher:
         :param event:
         :return:
         """
+
+        if not settings.database.load_database:
+            return
 
         event_model = Event(
             name=event.name,

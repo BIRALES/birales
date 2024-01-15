@@ -6,6 +6,7 @@ import numpy as np
 from numba import cuda
 
 from pybirales import settings
+from pybirales.pipeline.base.cuda_wrapper import try_cuda_jit
 from pybirales.pipeline.base.definitions import PipelineError
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob, GPUChannelisedBlob
@@ -21,7 +22,7 @@ except ImportError:
     pass
 
 
-@cuda.jit('void(complex64[:,:,:,:], complex64[:,:,:,:], int64[:,:], int32, int32, int32, int32, int32)')
+@try_cuda_jit('void(complex64[:,:,:,:], complex64[:,:,:,:], int64[:,:], int32, int32, int32, int32, int32)')
 def correlate_gpu(input_data, output_data, baseline_mapping, channel_start, channel_end, nof_antennas, integrations, nof_samples):
     """ GPU correlation kernel """
 

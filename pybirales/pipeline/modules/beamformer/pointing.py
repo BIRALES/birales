@@ -81,8 +81,24 @@ class Pointing:
         log.info("Generated beam pointings")
 
     @property
+    def number_of_pointings(self):
+        return self._nof_beams
+
+    @property
     def pointing_weights(self):
         return self._pointing_weights
+
+    @property
+    def pointings(self):
+        return self._pointings
+
+    @property
+    def beam_azimuth_elevation(self):
+        return self._beam_azimuth_elevation
+
+    @property
+    def reference_declinations(self):
+        return self._reference_declinations
 
     def load_antenna_locations(self):
         """ Load and interpret antenna locations from config """
@@ -173,7 +189,7 @@ class Pointing:
             else:
                 log.warning('No calibration coefficients applied to this observation')
         except InvalidCalibrationCoefficientsException as e:
-            log.warning("Could not load coefficients from TCPO directory. Reason: {}".format(e))
+            log.error("Could not load coefficients. Reason: {}".format(e))
 
         return calibration_coefficients
 
@@ -364,6 +380,11 @@ class Pointing:
         Read the calibration coefficients from file.
         :return:
         """
+
+        if not settings.database.load_database:
+            raise InvalidCalibrationCoefficientsException("Load database is false, cannot get calibration "
+                                                          "coefficients from database")
+
         # If observation id is false, use current time
         if not settings.observation.id:
             observation_start = datetime.datetime.utcnow()

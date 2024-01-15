@@ -73,7 +73,7 @@ class DebugCandidatesWriter(Writer):
         """
         Writer.__init__(self)
 
-        self._filename_mask = settings.instrument.name_prefix + '_BIRALES_OUT_{:%Y%m%dT%H%M%S}.csv'
+        self._filename_mask = 'BIRALES_OUT_{:%Y%m%dT%H%M%S}.csv'
         self._out_dir = os.path.join(os.environ['HOME'], '.birales/debug/detection', self._created_date_str)
 
         self._create_out_dir()
@@ -105,7 +105,7 @@ class TDMWriter(Writer):
         """
         Writer.__init__(self)
 
-        self._filename_mask = settings.instrument.name_prefix + '_BIRALES_OUT_{:%Y%m%dT%H%M%S}.tdm'
+        self._filename_mask = 'BIRALES_OUT_{:%Y%m%dT%H%M%S}.tdm'
         self._out_dir = os.path.join(os.environ['HOME'], '.birales/tdm/out', self._created_date_str)
         self._template_filepath = 'input_template.tdm'
         self._template = Environment(loader=FileSystemLoader(self._template_dir)).get_template(self._template_filepath)

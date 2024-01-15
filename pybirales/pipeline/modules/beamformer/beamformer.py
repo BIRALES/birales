@@ -4,8 +4,9 @@ import math
 import numba
 import numpy as np
 from numba import njit, prange, cuda
-from pybirales import settings
 
+from pybirales import settings
+from pybirales.pipeline.base.cuda_wrapper import try_cuda_jit
 from pybirales.pipeline.base.definitions import PipelineError
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.beamformed_data import BeamformedBlob, GPUBeamformedBlob
@@ -29,7 +30,7 @@ def beamformer_python(nof_beams, data, weights, output):
         output[0, b, 0, :] = np.dot(data, weights[0, b, :])
 
 
-@cuda.jit('void(complex64[:,:,:,:], complex64[:,:,:,:], complex64[:,:,:])', fastmath=True)
+@try_cuda_jit('void(complex64[:,:,:,:], complex64[:,:,:,:], complex64[:,:,:])', fastmath=True)
 def beamformer_gpu(input_data, output_data, weights):
     # Input in pol/sub/samp/ant order
     # Output in pol/beam/sub/samp order
@@ -70,12 +71,13 @@ class Beamformer(ProcessingModule):
         self._validate_data_blob(input_blob, valid_blobs=[DummyBlob, GPUDummyBlob, ReceiverBlob, GPUReceiverBlob])
 
         # Sanity checks on configuration
-        if {'nof_beams', 'pointings', 'reference_declination'} \
+        if {'nof_subarrays', 'nof_beams_per_subarray'} \
                 - set(config.settings()) != set():
             raise PipelineError("Beamformer: Missing keys on configuration "
-                                "(nof_beams, nof_antennas, pointings)")
+                                "(nof_subarrays, nof_beams_per_subarray)")
 
-        self._nof_beams = config.nof_beams
+        # This must be populated
+        self._nof_beams = config.nof_subarrays * config.nof_beams_per_subarray
 
         # If GPUs need to be used, check whether CuPy is available
         if settings.manager.use_gpu and cu is None:
@@ -118,6 +120,7 @@ class Beamformer(ProcessingModule):
             self._pointing = Pointing(self._config, nof_subbands, nof_antennas)
             if self._disable_antennas is not None:
                 self._pointing.disable_antennas(self._disable_antennas)
+            self._nof_beams = self._pointing.number_of_pointings
 
     def process(self, obs_info, input_data, output_data):
 
@@ -125,7 +128,6 @@ class Beamformer(ProcessingModule):
         nof_samples = obs_info['nof_samples']
         nof_subbands = obs_info['nof_subbands']
         nof_antennas = obs_info['nof_antennas']
-        nof_polarisations = obs_info['nof_polarisations']
 
         # If pointing is not initialised then this is the first input blob that's being processed.
         # Initialise pointing and GPU arrays
@@ -135,7 +137,7 @@ class Beamformer(ProcessingModule):
             # If using GPU, copy weights to GPU
             if settings.manager.use_gpu:
                 with cu.cuda.Device(settings.manager.gpu_device_id):
-                    self._weights_gpu = cu.asarray(self._pointing.weights)
+                    self._weights_gpu = cu.asarray(self._pointing.pointing_weights)
 
         if settings.manager.use_gpu:
             with cu.cuda.Device(settings.manager.gpu_device_id) as d:
@@ -152,12 +154,12 @@ class Beamformer(ProcessingModule):
                 d.synchronize()
         else:
             # TODO: Extract pols and sub-bands properly
-            beamformer_python(self._nof_beams, input_data[0, 0], self._pointing.weights, output_data)
+            beamformer_python(self._nof_beams, input_data[0, 0], self._pointing.pointing_weights, output_data)
 
         # Update observation information
         obs_info['nof_beams'] = self._nof_beams
-        obs_info['pointings'] = self._config.pointings
-        obs_info['beam_az_el'] = self._pointing.beam_az_el
-        obs_info['declination'] = self._pointing._reference_declination
+        obs_info['pointings'] = self._pointing.pointings
+        obs_info['beam_az_el'] = self._pointing.beam_azimuth_elevation
+        obs_info['declinations'] = self._pointing.reference_declinations
 
         return obs_info

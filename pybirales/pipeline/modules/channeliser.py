@@ -6,6 +6,7 @@ import numba
 import numpy as np
 from numba import cuda
 from pybirales import settings
+from pybirales.pipeline.base.cuda_wrapper import try_cuda_jit
 
 from pybirales.pipeline.base.definitions import PipelineError
 from pybirales.pipeline.base.processing_module import ProcessingModule
@@ -40,7 +41,7 @@ def apply_fir_filter(data, fir_filter, output, nof_taps, nof_channels):
         output[:, n] = temp[:nof_channels]
 
 
-@cuda.jit('void(complex64[:,:,:,:], float64[:], complex64[:,:,:,:,:], int32, int32, int32)', fastmath=True)
+@try_cuda_jit('void(complex64[:,:,:,:], float64[:], complex64[:,:,:,:,:], int32, int32, int32)', fastmath=True)
 def apply_fir_filter_cuda(input_data, fir_filter, output_data, nof_spectra, nof_channels, nof_taps):
     """
     Optimised filter function using numpy and numba
