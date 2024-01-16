@@ -35,6 +35,7 @@ class observation:
     start_center_frequency = 410.0864453125
     reference_declination = 40.8
     channel_bandwidth = 0.08544921875
+    name = "Observation"
 
 
 class detection:

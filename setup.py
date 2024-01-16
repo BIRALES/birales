@@ -4,12 +4,11 @@ import os
 from setuptools import setup, find_packages
 from setuptools.command.install import install
 
-# distutils.log.set_verbosity(distutils.log.info)
-
 HOME = os.environ['HOME']
 CONFIG_PATH = 'configuration'
 TEMPLATES = os.path.join(CONFIG_PATH, 'templates')
 DEPENDENCIES = []
+
 
 def list_dir(root_path):
     """
@@ -30,7 +29,7 @@ def list_dir(root_path):
 class InstallWrapperCommand(install):
     """
     A wrapper function for the standard setuptools installation command
-    in order to add Custom Pre and Post processing commands
+    in order to add Custom Pre- and Post-processing commands
 
     """
     LOCAL_DIRS = [

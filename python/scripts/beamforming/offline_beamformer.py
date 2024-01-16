@@ -14,7 +14,7 @@ from numpy import ctypeslib
 from scipy import io
 
 from pybirales.pipeline.modules.beamformer.pointing import Pointing
-from pybirales.services.scripts.calibration.offline_calibration import calibrate
+from ..calibration.offline_calibration import calibrate
 
 log.basicConfig(level=log.NOTSET)
 

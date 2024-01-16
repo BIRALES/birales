@@ -4,7 +4,7 @@ data/
 *.dat
 build
 dist
-pybirales.egg-info
+python/pybirales.egg-info
 venv/
 .eggs
 *.log
