@@ -69,6 +69,10 @@ class BeamPlotter:
         # Load timestamps
         self._timestamps = self.load_timestamps()
 
+        # Beam pointing
+        self._pointing = self._metadata['pointings'][self._beam]
+        self._pointing[1] += self._metadata['reference_declinations'][0]
+
     def load_metadata(self):
         """ Load file metadata """
         with h5py.File(self._filepath, 'r') as f:
@@ -110,7 +114,7 @@ class BeamPlotter:
 
             # Plot data
             plt.plot(self._timestamps, data)
-            plt.title(f"Beam {self._beam}")
+            plt.title(f"Beam {self._beam} (HA: {self._pointing[0]}, DEC: {self._pointing[1]})")
             plt.xlabel("Time since start (s)")
             plt.ylabel("Arbitrary power" + " (log)" if self._log else "")
             plt.show()
@@ -136,7 +140,7 @@ class BeamPlotter:
             # Plot data
             plt.imshow(data, aspect='auto', extent=[self._frequencies[0], self._frequencies[-1],
                                                     self._timestamps[0], self._timestamps[-1]])
-            plt.title(f"Beam {self._beam}")
+            plt.title(f"Beam {self._beam} (HA: {self._pointing[0]}, DEC: {self._pointing[1]})")
             plt.xlabel("Frequency (MHz)")
             plt.ylabel("Time since start (s)")
             cbar = plt.colorbar()
