@@ -1,14 +1,10 @@
 import datetime
 import os
-import pickle
-import struct
-import time
 import h5py
 
 import numpy as np
 
 from pybirales import settings
-from pybirales.pipeline.base.definitions import PipelineError
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
 
@@ -85,7 +81,6 @@ class BeamPersister(ProcessingModule):
                 dset.create_dataset(dataset_name,
                                     (0, obs_info['nof_beams'], obs_info['nof_channels']),
                                     maxshape=(None, obs_info['nof_beams'], obs_info['nof_channels']),
-                              #      compression='gzip',
                                     chunks=(1, obs_info['nof_beams'], obs_info['nof_channels']),
                                     dtype='f4')
 
@@ -97,9 +92,10 @@ class BeamPersister(ProcessingModule):
             dset[-obs_info['nof_samples']:, :] = beam_data
 
             # Add timestamp to file
-            # dset = f[f"observation_data/{timestamp_name}"]
-            # dset.resize(dset.shape + 1)
-            # dset[-1] = obs_info['timestamp']
+            dset = f[f"observation_data/{timestamp_name}"]
+            dset.resize((dset.shape[0] + obs_info['nof_samples'],))
+            timestamp = datetime.datetime.timestamp(obs_info['timestamp'])
+            dset[-obs_info['nof_samples']:] = timestamp + np.arange(obs_info['nof_samples']) * obs_info['sampling_time']
 
     def generate_output_blob(self):
         """
