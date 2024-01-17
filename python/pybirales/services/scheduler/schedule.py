@@ -81,7 +81,7 @@ class Schedule:
         :param obs:
         :return:
         """
-        observation = Observation.objects(class_check=False).get(id=obs.id)
+        observation = Observation.objects().clear_cls_query().get(id=obs.id)
         observation.delete()
 
     def pending_observations(self):

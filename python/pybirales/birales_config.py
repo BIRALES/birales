@@ -163,7 +163,8 @@ class BiralesConfig:
                 username=username,
                 password=password,
                 port=settings.database.port,
-                host=settings.database.host)
+                host=settings.database.host,
+                authentication_source="birales")
         else:
             self.db_connection = connect(settings.database.host)
 

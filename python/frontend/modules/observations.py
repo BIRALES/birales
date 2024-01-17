@@ -8,10 +8,10 @@ from flask import Blueprint, flash
 from flask import render_template, request, abort, redirect, url_for
 from flask_paginate import Pagination, get_page_parameter
 
-from pybirales.app.modules.forms import DetectionModeForm, CalibrationModeForm
+from frontend.modules.forms import DetectionModeForm, CalibrationModeForm
 from pybirales.repository.message_broker import broker
 from pybirales.repository.models import Configuration as ConfigurationModel
-from pybirales.repository.models import Observation, BIRALESObservation
+from pybirales.repository.models import Observation
 from pybirales.repository.models import SpaceDebrisTrack
 
 observations_page = Blueprint('observations_page', __name__, template_folder='templates')
@@ -31,7 +31,7 @@ def index():
     page = int(request.args.get(get_page_parameter(), default=1))
     per_page = 10
 
-    observations = Observation.objects(class_check=False).order_by('-date_time_start').skip(
+    observations = Observation.objects().clear_cls_query().order_by('-date_time_start').skip(
         (page - 1) * per_page).limit(per_page)
 
     pagination = Pagination(page=page, total=observations.count(),
@@ -61,7 +61,7 @@ def _observation_from_form(form_data, mode):
     obs_type = 'observation'
     config_parameters = {
         "beamformer": {
-            "reference_declination": float(form_data['declination'])
+            "reference_declination": float(form_data['declinations'][0])
         },
         "observation": {
             "name": obs_name,
@@ -147,7 +147,7 @@ def view(observation_id):
 @observations_page.route('/observations/<observation_id>/logs')
 def observation_logs(observation_id):
     try:
-        observation = Observation.objects(class_check=False).get(id=observation_id)
+        observation = Observation.objects().clear_cls_query().get(id=observation_id)
         return json.dumps({'log_files': observation.log_files})
     except mongoengine.DoesNotExist:
         log.exception('Database error')

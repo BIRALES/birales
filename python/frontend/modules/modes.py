@@ -4,8 +4,7 @@ import configparser
 import logging as log
 from flask import Blueprint, render_template, Response, json, request, flash, redirect, url_for
 from werkzeug.utils import secure_filename
-from pybirales.birales_config import BiralesConfig
-from pybirales.app.modules.forms import ConfigurationForm
+from frontend.modules.forms import ConfigurationForm
 from pybirales.repository.models import Configuration as ConfigurationModel
 
 import re

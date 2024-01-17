@@ -11,7 +11,7 @@ from pybirales.repository.models import Observation as ObservationModel, \
 from pybirales.services.scheduler.exceptions import ObservationScheduledInPastException, IncorrectObservationParameters
 
 
-class ScheduledObservation(object):
+class ScheduledObservation:
     """
     Represents any observation created and scheduled by the user
     """

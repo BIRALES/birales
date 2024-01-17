@@ -57,7 +57,7 @@
                                         {% if 'beamformer' in observation.config_parameters.keys() %}
                                             {{ "%.2f"|format(observation.config_parameters['beamformer']['reference_declination']|float) }}
                                         {% else %}
-                                            {{ "%.2f"|format(observation.settings.beamformer.reference_declination|float) }}
+                                            {{ "%.2f"|format(observation.settings.beamformer.reference_declinations[0]|float) }}
                                         {% endif %}
                                     </td>
                                     <td>

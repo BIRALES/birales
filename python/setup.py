@@ -71,7 +71,7 @@ setup(
     author_email='alessio.magro@um.edu.mt',
     description='',
     scripts=['pybirales/cli/cli.py',
-             'pybirales/app/app.py'],
+             'frontend/app.py'],
     include_package_data=True,
     zip_safe=False,
     install_requires=DEPENDENCIES,
@@ -84,7 +84,7 @@ setup(
     entry_points={
         'console_scripts': [
             'birales = pybirales.cli.cli:cli',
-            'birales-frontend = pybirales.app.app:main'
+            'birales-frontend = frontend.app:main'
         ]
     },
     cmdclass={

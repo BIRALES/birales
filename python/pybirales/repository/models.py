@@ -4,8 +4,7 @@ import os
 from bson.objectid import ObjectId
 from mongoengine import *
 
-# with warnings.catch_warnings():
-#     warnings.simplefilter("ignore")
+
 STATUS_MAP = {
     'pending': 'Scheduled',
     'running': 'Running',
@@ -17,7 +16,6 @@ STATUS_MAP = {
 class BIRALESObservation(Document):
     meta = {'allow_inheritance': True, 'abstract': True, 'collection': 'observation', }
 
-    # _id = ObjectIdField(required=True, default=ObjectId, primary_key=True)
     name = StringField(required=True, max_length=200)
     date_time_start = DateTimeField(required=True)
     date_time_end = DateTimeField()  # Updated when the observation ends
@@ -113,7 +111,7 @@ class Observation(BIRALESObservation):
             'duration': self.config_parameters['duration'],
             'start': self.date_time_start,
             'end': self.date_time_end,
-            'declination': self.settings['beamformer']['reference_declination'],
+            'declination': self.settings['beamformer']['reference_declinations'][0],
             'config': config_files
         }
 
@@ -168,8 +166,6 @@ class SpaceDebrisTrack(DynamicDocument):
 
         if to_time:
             query &= Q(created_at__lte=to_time)
-
-        # query &= Q(terminated=True)
 
         return query_set.filter(query)
 

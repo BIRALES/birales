@@ -4,11 +4,7 @@ function TrackDopplerProfilePlotter(selector) {
     this.name = 'Doppler Profile';
     this.y_label = 'Doppler Shift (Hz)';
     this.x_label = 'Timestamp (UTC)';
-    //this.x_label = 'Timestamp (LOCAL TIME)';
     this.api_entry = '/api/live/data';
-    this.color_map = colorbrewer['Set3'][12];
-
-    this.n_points = 0;
 
     this.options = {
         responsive: true,
@@ -25,9 +21,6 @@ function TrackDopplerProfilePlotter(selector) {
         tooltips: {
             callbacks: {
                 label: function (tooltip) {
-                    // let d = moment(tooltip.xLabel).toDate();
-                    // let date_string = d.getUTCHours() + ':' + d.getUTCMinutes() + ':' + d.getUTCSeconds();
-
                     return Math.round(tooltip.yLabel) + ' Hz on ' + tooltip.xLabel;
                 }
             }
@@ -46,17 +39,17 @@ function TrackDopplerProfilePlotter(selector) {
                     displayFormats: {
                         second: 'H:mm:ss'
                     },
-                      parser: function (utcMoment) {
-                                return utcMoment.utcOffset('+0000');
-                            }
+                      // parser: function (utcMoment) {
+                      //           return utcMoment.utcOffset('+0000');
+                      //       }
                 },
                 scaleLabel: {
                     display: true,
                     labelString: this.x_label
                 },
-                parser: function (utcMoment) {
-                    return utcMoment.utcOffset('+0000');
-                }
+                // parser: function (utcMoment) {
+                //     return utcMoment.utcOffset('+0000');
+                // }
 
             }]
         }
@@ -64,7 +57,6 @@ function TrackDopplerProfilePlotter(selector) {
 
     this.plot = undefined;
 }
-
 
 TrackDopplerProfilePlotter.prototype = {
     constructor: TrackDopplerProfilePlotter,

@@ -182,6 +182,9 @@ class PFB(ProcessingModule):
         :return:
         """
 
+        if obs_info['stop_pipeline_at'] != -1:
+            return
+
         # Check if initialised, if not initialise
         nof_streams = obs_info['nof_beams'] if self._after_beamformer else obs_info['nof_antennas']
         nof_polarisations = 1 if 'nof_polarisations' not in obs_info.keys() else obs_info['nof_polarisations']

@@ -64,7 +64,7 @@ def obs_listener_worker(scheduler):
             log.debug('Delete observation %s message received.', data)
 
             try:
-                observations = Observation.objects(class_check=False, id=data['obs_id'])
+                observations = Observation.objects(id=data['obs_id']).clear_cls_query()
                 for observation in observations:
                     observation.delete()
                     publish(ObservationDeletedEvent(observation))
