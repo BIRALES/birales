@@ -4,9 +4,13 @@ import logging as log
 import os
 import threading
 
-from slack import WebClient
-
 from pybirales.repository.message_broker import RedisManager
+
+WebClient = None
+try:
+    from slack import WebClient
+except ImportError:
+    pass
 
 
 class Listener(threading.Thread):
@@ -77,6 +81,12 @@ class NotificationsListener(Listener):
         self.api_end_point = 'chat.postMessage'
         self.api_end_point_upload = 'files.upload'
         self.channel = '#birales'
+        self._name = 'Notifications'
+
+        self.slack_client = None
+        if WebClient is None:
+            log.warning("Slack package not installed, cannot notify on Slack")
+            return
 
         try:
             self.token = os.environ["SLACK_BOT_TOKEN"]
@@ -86,9 +96,11 @@ class NotificationsListener(Listener):
         else:
             self.slack_client = WebClient(self.token)
 
-        self._name = 'Notifications'
-
     def handle(self, data):
+
+        if self.slack_client is None:
+            return
+
         if data['type'] == 'message':
             # Send notifications to Slack
             log.debug('{} listener received a message on #{}'.format(self.name, data['channel']))
@@ -96,8 +108,8 @@ class NotificationsListener(Listener):
                 log.warning('Received on %s', data['channel'])
             msg = self._get_message(data['data'])
 
-            request_body = dict(channel=self.channel, text=self._format_msg(msg))
-
+            # request_body = dict(channel=self.channel, text=self._format_msg(msg))
+            #
             # response = self.slack_client.api_call(
             #     self.api_end_point,
             #     **request_body

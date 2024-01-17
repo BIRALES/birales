@@ -96,4 +96,4 @@ class Detector(ProcessingModule):
         return obs_info
 
     def generate_output_blob(self):
-        return ChannelisedBlob(self._input.shape, datatype=np.float)
+        return ChannelisedBlob(self._input.shape, datatype=float)

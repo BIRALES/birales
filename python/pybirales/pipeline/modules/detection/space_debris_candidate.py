@@ -309,9 +309,6 @@ class SpaceDebrisTrack:
         thres = settings.detection.similarity_thold
         is_parent = slope_diff < thres and i_diff < thres and m_thold[1] <= m2 <= m_thold[0]
 
-        # log.debug(
-        #     "Track {}: {:2.3f}. {:2.3f} {:2.3f} Result: {}".format(id(self) % 1000, slope_diff, i_diff, e, is_parent))
-
         return is_parent
 
     def _to_dict(self):
@@ -358,6 +355,9 @@ class SpaceDebrisTrack:
         :return:
         """
 
+        if not settings.database.load_database:
+            return
+
         try:
             if self._id:
                 # Already saved to the database, hence we just update
@@ -383,8 +383,6 @@ class SpaceDebrisTrack:
                 _db_model.objects.get(pk=self._id).delete()
             except OperationError:
                 log.exception("Track could not be deleted from DB")
-            # else:
-            #     log.info('Track {:03d} deleted'.format(id(self) % 1000))
 
     def reduce_data(self, remove_duplicate_epoch=True, remove_duplicate_channel=True):
         """

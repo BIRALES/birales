@@ -128,8 +128,8 @@ class CorrMatrixPersister(ProcessingModule):
 
         # Create timesample dataset
 
-        dset_time = f.create_dataset("Time", shape=(obs_info['nof_samples'],), maxshape=(None,), dtype=np.float, chunks=True)
-        dset_time[:] = np.zeros((obs_info['nof_samples']), dtype=np.float)
+        dset_time = f.create_dataset("Time", shape=(obs_info['nof_samples'],), maxshape=(None,), dtype=float, chunks=True)
+        dset_time[:] = np.zeros((obs_info['nof_samples']), dtype=float)
 
         # Ready file
         f.flush()

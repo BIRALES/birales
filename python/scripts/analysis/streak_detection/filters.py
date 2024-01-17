@@ -193,8 +193,8 @@ def morph_opening(data, test_img, mask):
 
 def kittler(test_img):
     h, g = np.histogram(test_img.ravel(), bins=1024)
-    h = h.astype(np.float)
-    g = g.astype(np.float)
+    h = h.astype(float)
+    g = g.astype(float)
 
     g = g[:-1]
     c = np.cumsum(h)

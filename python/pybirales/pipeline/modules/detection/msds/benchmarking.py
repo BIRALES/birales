@@ -12,9 +12,7 @@ def compute_dm(X):
     l = X.shape[0]
     m = X.shape[1]
 
-    # dm = np.full((405, (m * (m - 1)) // 2), 10000, dtype=np.float)
-
-    dm = np.zeros((l, (m * (m - 1)) // 2), dtype=np.float) + 10000
+    dm = np.zeros((l, (m * (m - 1)) // 2), dtype=float) + 10000
 
     for row in range(l):
         k = 0

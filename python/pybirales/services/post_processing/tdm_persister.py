@@ -110,7 +110,7 @@ class TDMPersister:
             pointings={
                 'ra_dec': obs_info['pointings'],
                 'az_el': obs_info['beam_az_el'].tolist(),
-                'declination': obs_info['declination']
+                'declination': obs_info['declinations'][0]
             },
             integration_interval=obs_info['sampling_time']
         )

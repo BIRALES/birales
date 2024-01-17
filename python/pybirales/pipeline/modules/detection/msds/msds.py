@@ -86,7 +86,7 @@ def dm_grad(X, m, dm):
 # @profile
 def fclusterdata(X, threshold, criterion, min_r=-1e9, check_grad=False, cluster_id=0):
     m = X.shape[0]
-    empty_dm = np.full((m * (m - 1)) // 2, 10000, dtype=np.float)
+    empty_dm = np.full((m * (m - 1)) // 2, 10000, dtype=float)
 
     if check_grad:
         # Compute the distance matrix
@@ -235,20 +235,13 @@ def linear_cluster(leave_pair):
 
 
 def process_leaves(leaves, debug=False):
-    leaves = np.array(leaves)
+    leaves = np.array(leaves, dtype=object)
 
-    # pos = sum([linear_cluster(leave_pair=(leaves[i], i)) for i in range(len(leaves))])
     pos = []
     for i in range(len(leaves)):
         pos += linear_cluster(leave_pair=(leaves[i], i))
 
     return pos
-
-    # pos = []
-    # for i in range(len(leaves)):
-    #     pos += linear_cluster(leave_pair=(leaves[i], i))
-    #
-    # return pos
 
 
 # @timeit

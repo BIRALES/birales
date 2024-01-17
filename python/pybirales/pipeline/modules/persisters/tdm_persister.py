@@ -61,7 +61,7 @@ class TDMPersister(ProcessingModule):
         Generate the output blob
         :return:
         """
-        return ChannelisedBlob(self._input.shape, datatype=np.float)
+        return ChannelisedBlob(self._input.shape, datatype=float)
 
     def _write(self, obs_info, obs_name, target_name, sd_track, detection_num):
         """

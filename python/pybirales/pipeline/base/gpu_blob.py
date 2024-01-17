@@ -1,6 +1,10 @@
-import cupy as cu
-
 from pybirales.pipeline.base.blob import DataBlob
+
+cu = None
+try:
+    import cupy as cu
+except ImportError:
+    pass
 
 
 class GPUDataBlob(DataBlob):

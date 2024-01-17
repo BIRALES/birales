@@ -94,7 +94,6 @@ def get_limits(image, tracks):
     y_start = 0
     y_end = image.shape[0]
 
-    # return x_start, x_end, y_start, y_end
     if tracks:
         m_track = tracks[0]
         for t in tracks:
@@ -112,9 +111,6 @@ def get_limits(image, tracks):
         y_start = np.amax([y_m - y_range, 0])
         y_end = np.amin([y_m + y_range, y_end])
 
-    # print x_start, x_end, y_start, y_end
-
-    # return 800, 875, 4190, 4268
     return round_down(x_start), round_up(x_end), round_down(y_start), round_up(y_end)
 
 
@@ -204,8 +200,6 @@ def visualise_detector(data, candidates, tracks, d_name, snr, visualise=False):
 
 
 def visualise_ir2(data, org_data, group, ratio2):
-    # if len(data) >= 10:
-    #     return 0., 0., data
 
     ms, mc = np.mean(data[:, 1]), np.mean(data[:, 0])
     coords = np.flip(np.swapaxes(data[:, :2] - np.mean(data[:, :2], axis=0), 0, -1), 0)
@@ -234,17 +228,10 @@ def visualise_ir2(data, org_data, group, ratio2):
             horizontalalignment='left',
             verticalalignment='center', transform=ax.transAxes)
 
-    # line_1 = (x1, y1), (x2, y2)
-    # line_2 = (x12, y12), (x22, y22)
-
-    # print data[membership(line_1, line_2, data, membership_ratio=0.7), :].shape
-
     plt.show()
 
 
 def visualise_ir2_pub(data, org_data, group, ratio2):
-    # if len(data) >= 10:
-    #     return 0., 0., data
 
     ms, mc = np.mean(data[:, 1]), np.mean(data[:, 0])
     coords = np.flip(np.swapaxes(data[:, :2] - np.mean(data[:, :2], axis=0), 0, -1), 0)
@@ -264,16 +251,9 @@ def visualise_ir2_pub(data, org_data, group, ratio2):
     ax.plot([x_v2 * -scale_2 + ms, x_v2 * scale_2 + ms],
             [y_v2 * -scale_2 + mc, y_v2 * scale_2 + mc], color='gray')
 
-    # plt.plot(org_data[:, 1], org_data[:, 0], '.', color='red', markersize=15, zorder=1)
     ax.plot(data[:, 1], data[:, 0], '.', color='k', markersize=12, zorder=2)
     ratio, _, _ = __ir2(data, min_n=15)
 
-    # ax.text(0.05, 0.95,
-    #         'Ratio: {:0.3f}'.format(ratio), color='k',
-    #         weight='bold',
-    #         fontsize=15,
-    #         horizontalalignment='right',
-    #         verticalalignment='center', transform=ax.transAxes)
     ax.xaxis.labelpad = 20
     ax.yaxis.labelpad = 20
     ax.set(xlabel='Sample', ylabel='Channel')
@@ -286,23 +266,9 @@ def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negative
     color = 'r'
     zorder = 1
     lw = 2
-    figure_limits = (70, 4010)
-    # if not False:
+
     if not positive:
         ax.text(x1 + 0.95 * (x2 - x1), y1 + 0.95 * (y2 - y1), i, color='k', fontsize=8, ha='right', va='top', zorder=10)
-
-    # if i == 343 and positive:
-    #     visualise_ir2_pub(positives, positives, i, -1)
-    #     m = positives.shape[0]
-    #     empty_dm = np.full((m * (m - 1)) // 2, 10000, dtype=np.float)
-    #     distances = dm(positives, m, empty_dm, -3.51929755, i)
-    #
-    #     # Perform single linkage clustering
-    #     Z = linkage(distances, 'single')
-    #
-    #     # Determine to which cluster each initial point would belong given a distance threshold
-    #     labels = fcluster(Z, 4, criterion='distance')
-    #     viz_den(positives, Z, 4, labels)
 
     if positive:
         color = 'g'
@@ -342,15 +308,6 @@ def __plot_leaf(ax, x1, y1, x2, y2, i, score, positive, positives=None, negative
                                                                                            ms,
                                                                                            np.shape(c)))
 
-            # colors = ['pink', 'b', 'k', 'c', 'm', 'y']
-            # for j, g in enumerate(sorted_groups):
-            #     c = negatives[np.where(labels == g)]
-            #     ratio, _, _ = __ir2(c, i=i)
-            #     ax.plot(c[:, 1], c[:, 0], '.', color=colors[j], zorder=2)
-            #
-            #     print 'Cluster: {}, group: {}. ratio:{}. length:{}: bbox:{}'.format(i, g, ratio, np.shape(c),
-            #                                                                         (x1, x2, y1, y2))
-    # print (x1, y1), x2 - x1, y2 - y1
     rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=lw, edgecolor=color, facecolor='none',
                              zorder=zorder)
 

@@ -8,11 +8,10 @@ warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 from astropy.time import Time, TimeDelta
 
-from flask import Blueprint, render_template, Response, json
-from pybirales.repository.models import BeamCandidate
+from flask import Blueprint, render_template, Response
 from webargs import fields
 from webargs.flaskparser import use_args
-from pandas.io.json import json_normalize
+from pandas import json_normalize
 
 from itertools import chain
 

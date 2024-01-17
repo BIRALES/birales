@@ -40,9 +40,7 @@ def compute_dm(X):
     l = X.shape[0]
     m = X.shape[1]
 
-    # dm = np.full((405, (m * (m - 1)) // 2), 10000, dtype=np.float)
-
-    dm = np.zeros((l, (m * (m - 1)) // 2), dtype=np.float) + 10000
+    dm = np.zeros((l, (m * (m - 1)) // 2), dtype=float) + 10000
 
     for row in range(l):
         k = 0
@@ -93,7 +91,7 @@ def dm_grad(X, m, dm):
 # @profile
 def fclusterdata(X, threshold, criterion, min_r=-1e9, check_grad=False, cluster_id=0):
     m = X.shape[0]
-    empty_dm = np.full((m * (m - 1)) // 2, 10000, dtype=np.float)
+    empty_dm = np.full((m * (m - 1)) // 2, 10000, dtype=float)
 
     if check_grad:
         # Compute the distance matrix

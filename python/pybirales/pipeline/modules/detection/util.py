@@ -35,21 +35,8 @@ def apply_doppler_mask(doppler_mask, channels, doppler_range, obs_info):
         log.info(
             f"Channel start: {a} Channel end: {b}. BW: {obs_info['channel_bandwidth']}, nof_channels: {obs_info['nof_channels']},"
             f" SCW: {obs_info['start_center_frequency']}")
-        # print b
-        print(len(channels))
-        # print np.argmin(channels < b)
-        # print np.argmax(channels > a)
-        # print doppler_range
-        # print channels[2392], channels[6502]
-
-        print("tx is at:", np.argmin(channels <= obs_info['transmitter_frequency']))
-        print("tx is at:", np.argmax(channels <= obs_info['transmitter_frequency']))
-        print("tx is at:", np.argmin(channels >= obs_info['transmitter_frequency']))
-        print("tx is at:", np.argmax(channels >= obs_info['transmitter_frequency']))
 
         channels = channels[doppler_mask]
-
-        print(min(channels), max(channels), len(channels))
 
     return channels, doppler_mask
 
@@ -85,23 +72,22 @@ def data_association(tracks, tentative_tracks, obs_info, notifications=False, sa
             # print "Comparing track {} with tentative {}".format(__id(track), __id(tentative_track))
             # do not compare with cancelled or terminated tracks
             if track.cancelled or track.terminated:
-                # print "track {} was terminated or cancelled {} {}".format(__id(track), track.cancelled, track.cancelled)
+                log.debug(f"track {__id(track)} was terminated or cancelled {track.cancelled}")
                 continue
 
             if track.is_parent_of(tentative_track):
 
                 associated = track.associate(tentative_track)
 
-                # print "track {} associated with cluster {}".format(__id(track), __id(tentative_track))
+                log.debug(f"track {__id(track)} associated with cluster {__id(tentative_track)}")
 
                 if associated:
                     # td = (track.data['time_sample'].max() - tentative_track['time_sample'].min()) * 0.1048576
                     # ms = missing_score(track.data['time_sample'])
-                    # log.debug("track {} associated with cluster {}, td={:2.3f}, ms={:2.3f}".format(
-                    #     __id(track), __id(tentative_track), td, ms))
+                    # log.debug(f"track {__id(track)} associated with cluster {__id(tentative_track)}, td={td:2.3f}, ms={ms:2.3f}")
                     break
             # else:
-            #     print "Track {} and tentative {} do not match".format(__id(track), __id(tentative_track))
+            #     log.debug(f"Track {__id(track)} and tentative {__id(tentative_track)} do not match")
 
         else:
             # Beam cluster does not match any candidate. Create a new candidate track from it.
@@ -110,7 +96,6 @@ def data_association(tracks, tentative_tracks, obs_info, notifications=False, sa
             except DetectionClusterIsNotValid:
                 continue
 
-            # print "Created new track {} m={} from {}".format(__id(new_track), new_track.m, __id(tentative_track))
             # log.info('New track initiated {}'.format(__id(new_track)))
 
             # Add the space debris track to the candidates list

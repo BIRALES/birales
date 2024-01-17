@@ -1,7 +1,6 @@
 import math
 from datetime import timedelta
 
-import cupy
 import numba
 import numpy as np
 from numba import cuda
@@ -256,7 +255,7 @@ class PFB(ProcessingModule):
                                                      nof_spectra, self._nof_channels, self._nof_taps)
 
             # Perform FFTs
-            output_data[:] = cupy.squeeze(fftshift(fft(self._filtered, overwrite_x=True, axis=-2), axes=-2))
+            output_data[:] = cu.squeeze(fftshift(fft(self._filtered, overwrite_x=True, axis=-2), axes=-2))
 
             # Synchronize
             d.synchronize()

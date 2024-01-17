@@ -4,17 +4,26 @@ import numpy as np
 
 from pybirales import settings
 from pybirales.pipeline.base.processing_module import ProcessingModule
-from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob
+from pybirales.pipeline.blobs.channelised_data import ChannelisedBlob, GPUChannelisedBlob
 from pybirales.pipeline.modules.detection.util import apply_doppler_mask
 from pybirales.repository.models import Observation
 
+cu = None
+try:
+    import cupy as cu
+except ImportError:
+    pass
+
 
 class PreProcessor(ProcessingModule):
-    _valid_input_blobs = [ChannelisedBlob]
 
     def __init__(self, config, input_blob=None):
         # Ensure that the input blob is of the expected format
-        self._validate_data_blob(input_blob, valid_blobs=[ChannelisedBlob])
+        self._validate_data_blob(input_blob, valid_blobs=[ChannelisedBlob, GPUChannelisedBlob])
+
+        self._copy_from_gpu = False
+        if isinstance(input_blob, GPUChannelisedBlob):
+            self._copy_from_gpu = True
 
         self.counter = 0
 
@@ -76,16 +85,20 @@ class PreProcessor(ProcessingModule):
                                                                obs_info)
 
         if self.channel_noise is None:
-            self.channel_noise = np.zeros(shape=(settings.beamformer.nof_beams, len(self.channels),
+            self.channel_noise = np.zeros(shape=(obs_info['nof_beams'], len(self.channels),
                                                  self._moving_avg_period))
-            self.channel_noise_std = np.zeros(shape=(settings.beamformer.nof_beams, len(self.channels),
+            self.channel_noise_std = np.zeros(shape=(obs_info['nof_beams'], len(self.channels),
                                                      self._moving_avg_period))
 
         if not 'doppler_mask' in obs_info:
             obs_info['doppler_mask'] = self._doppler_mask
             obs_info['channels'] = self.channels
 
-        data = input_data[0][:, self._doppler_mask, :]
+        # If the data is coming from a GPU blob, then copy to host first
+        if self._copy_from_gpu:
+            data = cu.asnumpy(input_data[0][:, self._doppler_mask, :])
+        else:
+            data = input_data[0][:, self._doppler_mask, :]
 
         power_data = self._power(data)
 
@@ -152,8 +165,6 @@ class PreProcessor(ProcessingModule):
         # Generate output blob
         return ChannelisedBlob([
             ('nof_beams', input_shape['nof_beams']),
-            # ('nof_channels', input_shape['nof_channels']),
             ('nof_channels', self._n_channels),
-            # ('nof_channels', len(self.channels)),
             ('nof_samples', input_shape['nof_samples'])
-        ], datatype=np.float)
+        ], datatype=float)

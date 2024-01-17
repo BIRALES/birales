@@ -16,26 +16,12 @@ from pybirales.pipeline.modules.detection.util import *
 from pybirales.pipeline.modules.persisters.fits_persister import TLE_Target
 
 
-# global_process_pool = Pool(8)
-
-
 def serial_msds(data):
     t1 = time.time()
     beam_data, b, iter, noise_est = data
-
-    debug = b == 15 and iter == 7  # tiangong
-    limits = (80, 160, 1750, 1850)  # 41182
-    limits = (0, 150, 1500, 1650)  # tiangong
     debug = False
-    limits = None
-
-    true_tracks = None
-
-    ext = '__{}_{}.png'.format(iter, b)
 
     ndx = pre_process_data(beam_data)
-
-    # print np.shape(ndx), iter, b
 
     if np.shape(ndx)[0] < 1:
         return []
@@ -78,8 +64,6 @@ def serial_msds(data):
                                                                                             len(cluster_data),
                                                                                             len(valid_tracks),
                                                                                             time.time() - t1))
-    # if debug:
-    #     plt.show()
     return valid_tracks
 
 
@@ -91,10 +75,6 @@ def msds_standalone(_iter_count, input_data, obs_info, channels, pool=None):
 
     beam_clusters = []
     # [Feature Extraction] Process the input data and identify the detection clusters
-
-    # for b in [15]:
-    # for b in range(0, 29):
-    # beam_clusters += serial_msds((input_data[b, ...], b, _iter_count, np.mean(obs_info['channel_noise'][b])))
 
     size = input_data.shape[0]
     chunks = [(input_data[b, ...], b, _iter_count, np.mean(obs_info['channel_noise'][b])) for b in range(0, size)]
@@ -260,7 +240,7 @@ class Detector(ProcessingModule):
         return obs_info
 
     def generate_output_blob(self):
-        return ChannelisedBlob(self._input.shape, datatype=np.float)
+        return ChannelisedBlob(self._input.shape, datatype=float)
 
     def dump_detection_data(self, input_data, obs_info, out_dir):
 

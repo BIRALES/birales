@@ -29,7 +29,7 @@ class BeamPersister(ProcessingModule):
             os.makedirs(directory)
 
         # Create file
-        self._beam_file = os.path.join(directory, f"{settings.observation.name}_beams.dat")
+        self._beam_file = os.path.join(directory, f"{settings.observation.name}_beams.h5")
 
         # Open file (if file exists, remove first)
         if os.path.exists(self._beam_file):
