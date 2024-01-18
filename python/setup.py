@@ -3,6 +3,17 @@ import os
 
 from setuptools import setup, find_packages
 from setuptools.command.install import install
+# Set configuration files root
+if "BIRALES_CONFIG_DIRECTORY" not in os.environ:
+    print("BIRALES_CONFIG_DIRECTORY not defined, cannot install")
+    exit()
+
+CONFIG_ROOT = os.environ['BIRALES_CONFIG_DIRECTORY']
+
+# Check if file path is valid
+if not os.path.exists(CONFIG_ROOT) or not os.path.isdir(CONFIG_ROOT):
+    print(f"BIRALES_CONFIG_DIRECTORY is invalid ({CONFIG_ROOT}), path does not exist")
+    exit()
 
 HOME = os.environ['HOME']
 CONFIG_PATH = 'configuration'
@@ -33,7 +44,6 @@ class InstallWrapperCommand(install):
 
     """
     LOCAL_DIRS = [
-        #  '/var/log/birales',
         os.path.join(HOME, '.birales'),
         os.path.join(HOME, '.birales/configuration/templates/dev'),
         os.path.join(HOME, '.birales/schedules'),
@@ -44,6 +54,7 @@ class InstallWrapperCommand(install):
 
     def run(self):
         # Run the (custom) initialisation functions
+        print("OLE")
         self._init()
         # Run the standard PyPi copy
         install.run(self)
@@ -56,17 +67,13 @@ class InstallWrapperCommand(install):
                 log.info('Created directory in {}'.format(d))
                 os.makedirs(d)
 
-    def _check(self):
-        # todo - add sanity checks here (check that all the dependencies are installed)
-        pass
-
 
 setup(
     name='pybirales',
     version='3.1',
     packages=find_packages(),
-    url='https://bitbucket.org/lessju/birales',
-    license='',
+    url='https://github.com/BIRALES/birales',
+    license='The BIRALES software package',
     author='Alessio Magro',
     author_email='alessio.magro@um.edu.mt',
     description='',
@@ -74,8 +81,6 @@ setup(
              'frontend/app.py'],
     include_package_data=True,
     zip_safe=False,
-    install_requires=DEPENDENCIES,
-    setup_requires=DEPENDENCIES,
     data_files=[
         (os.path.join(HOME, '.birales', TEMPLATES), []),
         (os.path.join(HOME, '.birales/fits'), []),

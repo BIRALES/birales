@@ -11,6 +11,9 @@ sudo apt install redis
 virtualenv -p python3 venv
 source venv/bin/activate
 
+# Define BIRALES Configuration directory
+export REACH_CONFIG_DIRECTORY=...
+
 # Go to Python directory
 cd birales/python
 
@@ -20,9 +23,6 @@ pip install git+https://gitlab.com/ska-telescope/pyfabil.git
 # Install BIRALES python package and requirements
 pip install .
 pip install -r requirements_birales.txt
-
-# Define BIRALES Configuration directory
-export REACH_CONFIG_DIRECTORY=...
 
 # For the frontend, install the required packages and define environmental variables
 sudo apt install npm
