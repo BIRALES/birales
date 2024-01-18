@@ -47,7 +47,7 @@ def __detection_pipeline(ctx, config_file_path, tx, pointing, pipeline_name):
 
 
 @pipelines.command(short_help='Run the Detection Pipeline')
-@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+@click.option('--config', '-c', 'config_file_path', type=str, required=True,
               help='The BIRALES configuration file', multiple=True)
 @click.option('--tx', 'tx', type=float, help='The transmission frequency in MHz')
 @click.option('--pointing', 'pointing', type=float, help='Reference Declination of the Beam Former')
@@ -69,7 +69,7 @@ def detection_pipeline(ctx, config_file_path, tx, pointing):
 
 
 @pipelines.command(short_help='Run the Detection Pipeline')
-@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+@click.option('--config', '-c', 'config_file_path', type=str, required=True,
               help='The BIRALES configuration file', multiple=True)
 @click.option('--tx', 'tx', type=float, help='The transmission frequency in MHz')
 @click.option('--pointing', 'pointing', type=float, help='Reference Declination of the Beam Former')
@@ -91,7 +91,7 @@ def msds_detection_pipeline(ctx, config_file_path, tx, pointing):
 
 
 @pipelines.command(short_help='Run the DBSCAN Detection Pipeline')
-@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+@click.option('--config', '-c', 'config_file_path', type=str, required=True,
               help='The BIRALES configuration file', multiple=True)
 @click.option('--tx', 'tx', type=float, help='The transmission frequency in MHz')
 @click.option('--pointing', 'pointing', type=float, help='Reference Declination of the Beam Former')
@@ -112,7 +112,7 @@ def dbscan_detection_pipeline(ctx, config_file_path, tx, pointing):
 
 
 @pipelines.command(short_help='Run the Correlation Pipeline')
-@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+@click.option('--config', '-c', 'config_file_path', type=str, required=True,
               help='The BIRALES configuration file', multiple=True)
 @click.option('--pointing', 'pointing', help='Reference Declination of the Beam Former')
 @click.pass_context
@@ -140,7 +140,7 @@ def correlation_pipeline(ctx, config_file_path, pointing):
 
 
 @pipelines.command(short_help='Run the stand alone Pipeline')
-@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+@click.option('--config', '-c', 'config_file_path', type=str, required=True,
               help='The BIRALES configuration file', multiple=True)
 @click.pass_context
 def standalone_pipeline(ctx, config_file_path):
@@ -161,7 +161,7 @@ def standalone_pipeline(ctx, config_file_path):
 
 
 @pipelines.command(short_help='Run the stand alone Pipeline')
-@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+@click.option('--config', '-c', 'config_file_path', type=str, required=True,
               help='The BIRALES configuration file', multiple=True)
 @click.pass_context
 def test_receiver_pipeline(ctx, config_file_path):
@@ -182,7 +182,7 @@ def test_receiver_pipeline(ctx, config_file_path):
 
 
 @pipelines.command(short_help='Run the dummy data Pipeline')
-@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+@click.option('--config', '-c', 'config_file_path', type=str, required=True,
               help='The BIRALES configuration file', multiple=True)
 @click.pass_context
 def dummy_data_pipeline(ctx, config_file_path):
@@ -203,7 +203,7 @@ def dummy_data_pipeline(ctx, config_file_path):
 
 
 @pipelines.command(short_help='Run the RSO generator Pipeline')
-@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+@click.option('--config', '-c', 'config_file_path', type=str, required=True,
               help='The BIRALES configuration file', multiple=True)
 @click.pass_context
 def rso_generator_pipeline(ctx, config_file_path):
@@ -224,7 +224,7 @@ def rso_generator_pipeline(ctx, config_file_path):
 
 
 @pipelines.command(short_help='Run the Data truncator Pipeline')
-@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+@click.option('--config', '-c', 'config_file_path', type=str, required=True,
               help='The BIRALES configuration file', multiple=True)
 @click.pass_context
 def data_truncator_pipeline(ctx, config_file_path):
@@ -245,7 +245,7 @@ def data_truncator_pipeline(ctx, config_file_path):
 
 
 @pipelines.command(short_help='Run the Correlation Pipeline')
-@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+@click.option('--config', '-c', 'config_file_path', type=str, required=True,
               help='The BIRALES configuration file', multiple=True)
 @click.option('--pointing', 'pointing', help='Reference Declination of the Beam Former')
 @click.pass_context

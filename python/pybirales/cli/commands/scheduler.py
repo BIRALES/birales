@@ -9,7 +9,7 @@ from pybirales.cli.helpers import enable_notifications
 @click.option('--schedule', '-s', 'schedule_file_path', type=click.Path(exists=True), required=False,
               help='The scheduler json file')
 @click.option('--format', '-f', 'file_format', default='json', help='The format of the schedule file [tdm/json]')
-@click.option('--config', '-c', 'config_file_path', type=click.Path(exists=True), required=True,
+@click.option('--config', '-c', 'config_file_path', type=str, required=True,
               help='The BIRALES configuration file', multiple=True)
 @enable_notifications
 def scheduler(schedule_file_path, config_file_path, file_format):

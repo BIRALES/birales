@@ -12,7 +12,7 @@ def services(ctx):
 
 
 @services.command()
-@click.option('--config', '-c', 'config_filepath', type=click.Path(exists=True), required=True,
+@click.option('--config', '-c', 'config_filepath', type=str, required=True,
               help='The BIRALES configuration file', multiple=True)
 @click.option('--name', '-n', 'name', help='The name of the observation')
 @click.option('--debug/--no-debug', default=False)

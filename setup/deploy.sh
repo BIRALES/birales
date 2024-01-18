@@ -4,8 +4,8 @@
 # Install system requirements
 sudo apt update
 sudo apt install python3-pip
+sudo apt install python3-virtualenv
 sudo apt install redis
-sudo apt install python3-pip
 
 # Create and load virtualenv
 virtualenv -p python3 venv
@@ -20,6 +20,9 @@ pip install git+https://gitlab.com/ska-telescope/pyfabil.git
 # Install BIRALES python package and requirements
 pip install .
 pip install -r requirements_birales.txt
+
+# Define BIRALES Configuration directory
+export REACH_CONFIG_DIRECTORY=...
 
 # For the frontend, install the required packages and define environmental variables
 sudo apt install npm

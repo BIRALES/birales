@@ -1,6 +1,7 @@
 import ast
 import configparser
 import datetime
+import logging
 import logging as log
 import logging.config as log_config
 import os
@@ -23,8 +24,22 @@ class BiralesConfig:
         :param config_options: Configuration options to override the default config settings
         :return:
         """
-        # Specify whether the configuration settings were loaded in the settings.py package
-        self._loaded = False
+
+        # Set configuration files root
+        if "BIRALES_CONFIG_DIRECTORY" not in os.environ:
+            logging.error("BIRALES_CONFIG_DIRECTORY not defined, cannot configure")
+            return
+
+        # Set configuration root directory
+        self._config_root = os.path.expanduser(os.environ['BIRALES_CONFIG_DIRECTORY'])
+
+        # Check if file path is valid
+        if not os.path.exists(self._config_root) or not os.path.isdir(self._config_root):
+            logging.error("BIRALES_CONFIG_DIRECTORY is invalid ({}), path does not exist".format(self._config_root))
+            return
+
+        # Temporary settings directory
+        self._loaded_settings = {}
 
         # The configuration parser of the BIRALES system
         self._parser = configparser.RawConfigParser()
@@ -39,6 +54,13 @@ class BiralesConfig:
             self.log_filepath = self._set_logging_config(
                 'BIRALES_observation_' + datetime.datetime.utcnow().isoformat('T'))
 
+        # Load the instrument config file
+        self._load_from_file(os.path.join(self._config_root, 'instrument.ini'))
+
+        # Load pointing config files
+        for f in glob.glob(os.path.join(self._config_root, 'pointing/*.ini')):
+            self._load_from_file(f)
+
         if config_file_path:
             # Set the configurations from file (can be multiple files)
             if type(config_file_path) in [list, tuple, BaseList]:
@@ -48,26 +70,18 @@ class BiralesConfig:
                 self._load_from_file(config_file_path)
         else:
             # load the birales default configuration
-            self._load_from_file(os.path.join(os.path.dirname(__file__), 'configuration/birales.ini'))
-
-        # Load the instrument config file
-        self._load_from_file(os.path.join(os.path.dirname(__file__), 'configuration/instrument.ini'))
-
-        # Load pointing config files
-        for f in glob.glob(os.path.join(os.path.dirname(__file__), 'configuration/pointing/*.ini')):
-            self._load_from_file(f)
+            self._load_from_file(os.path.join(self._config_root, 'birales.ini'))
 
         # Override the configuration with settings passed on in the config_options dictionary
         self.update_config(config_options)
 
-        self.db_connection = None
+        # Connect to database if enabled
+        if settings.database.load_database:
+            self._db_connect()
 
-    def is_loaded(self):
-        """
-
-        :return:
-        """
-        return self._loaded
+    def get_root_path(self):
+        """ Return configuration root path """
+        return self._config_root
 
     def _load_from_file(self, config_filepath):
         """
@@ -76,6 +90,11 @@ class BiralesConfig:
         :param config_filepath: The path to the configuration file
         :return: None
         """
+
+        # If an absolute path was provided, use config_filepath directly,
+        # Otherwise assume that the file is in the birales config directory
+        if not os.path.isabs(config_filepath):
+            config_filepath = os.path.join(self._config_root, config_filepath)
 
         # Load the configuration file requested by the user
         try:
@@ -87,6 +106,9 @@ class BiralesConfig:
             log.warning('Config file at {} was not found'.format(config_filepath))
         except configparser.Error:
             log.exception('An error has occurred whilst parsing configuration file at: %s', config_filepath)
+
+        # Once config file is read, reload configuration
+        self.load()
 
     def update_config(self, config_options):
         """
@@ -120,7 +142,7 @@ class BiralesConfig:
         """
 
         # Load the logging configuration file
-        config_filepath = os.path.join(os.path.dirname(__file__), 'configuration/logging.ini')
+        config_filepath = os.path.join(self._config_root, 'logging.ini')
         self._load_from_file(config_filepath)
         log_config.fileConfig(config_filepath, disable_existing_loggers=False)
 
@@ -209,21 +231,16 @@ class BiralesConfig:
 
         log.info('Configurations successfully loaded.')
 
-        if not self.is_loaded() and settings.database is not None and "load_database" in settings.database.__dict__ \
-                and settings.database.load_database:
-            # Connect to the database
-            self._db_connect()
-
-        self._loaded = True
-        # todo - Validate the loaded configuration file
-
     @staticmethod
     def to_dict():
-        """
-        Return the dictionary representation of the Birales configuration
-
+        """ Return the dictionary representation of the Birales configuration
         :return:
         """
 
         return {section: settings.__dict__[section].__dict__ for section in settings.__dict__.keys() if
                 not section.startswith('__') and settings.__dict__[section] is not None}
+
+
+if __name__ == "__main__":
+    BiralesConfig(config_file_path=['birales.ini', 'test_overload.ini'])
+    logging.info("All done")
