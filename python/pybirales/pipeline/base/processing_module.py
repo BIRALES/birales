@@ -23,6 +23,9 @@ class Module(Thread):
         # Call superclass
         super(Module, self).__init__()
 
+        # Generate a unique identifier for the module instance
+        self._unique_id = id(self)
+
         # Set module configuration
         self._config = config
 
@@ -31,8 +34,11 @@ class Module(Thread):
         if self._config is not None and "no_output" in config.settings():
             self._no_output = config.no_output
 
-        # Set module input and output blobs
+        # Set module input and associate blob with module
         self._input = input_blob
+        if self._input is not None:
+            self._input.add_reader(self._unique_id)
+
 
         if self._no_output:
             self._output = None
@@ -181,9 +187,9 @@ class ProcessingModule(Module):
             input_data, obs_info = None, {}
             obs_info['stop_pipeline_at'] = -1
             if self._input is not None:
-                # This can be released immediately since, data has already been deep copied
+                # This can be released immediately since data has already been deep copied
                 while input_data is None and not self._stop_module.is_set():
-                    input_data, obs_info = self._input.request_read(timeout=0.2)
+                    input_data, obs_info = self._input.request_read(self._unique_id, timeout=0.2)
 
                 if self._stop_module.is_set():
                     break
@@ -205,7 +211,7 @@ class ProcessingModule(Module):
                 s = time.time()
 
                 if obs_info['stop_pipeline_at'] == self._iter_count:
-                    log.info('Stop pipeline message broadcasted to the %s module', self.name)
+                    log.info('Stop pipeline message broadcast to the %s module', self.name)
                     self.stop()
                 else:
                     res = self.process(obs_info, input_data, output_data)
@@ -238,7 +244,7 @@ class ProcessingModule(Module):
 
             # Release reader lock
             if self._input is not None:
-                self._input.release_read()
+                self._input.release_read(self._unique_id)
 
             # A short sleep to force a context switch (since locks do not force one)
             time.sleep(0.001)
@@ -252,7 +258,8 @@ class ProcessingModule(Module):
 
         log.info('%s killed [Active threads: %s]', self.name, self._get_active_threads())
 
-    def _get_active_threads(self):
+    @staticmethod
+    def _get_active_threads():
         """
         Return the threads that are still active
 
@@ -263,5 +270,5 @@ class ProcessingModule(Module):
         for t in threading.enumerate():
             if t is main_thread:
                 continue
-            active_threads.append(t.getName())
+            active_threads.append(t.name)
         return ",".join(map(str, active_threads))

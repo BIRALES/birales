@@ -39,7 +39,7 @@ class BeamPersister(ProcessingModule):
         self._counter = 0
 
         # Processing module name
-        self.name = "Persister"
+        self.name = "BeamPersister"
 
     def _create_output_file(self, obs_info):
         """ Create the HDF5 output file, including metadata """

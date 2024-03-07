@@ -5,7 +5,7 @@ import pickle
 import struct
 import time
 
-# import fadvise
+import h5py
 import numpy as np
 
 from pybirales import settings
@@ -24,34 +24,41 @@ class RawPersister(ProcessingModule):
         dir_path = os.path.expanduser(settings.persisters.directory)
         directory = os.path.join(dir_path, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
                                  settings.observation.name)
-        filename = settings.observation.name + '_raw'
         if not os.path.exists(directory):
             os.makedirs(directory)
 
         # Create file
-        if config.use_timestamp:
-            file_path = os.path.join(directory, "%s_%s" % (filename, str(time.time())))
-        else:
-            file_path = os.path.join(directory, filename + '.dat')
-
-        self._base_filepath = file_path.split('.')[0]
-        self._current_filepath = file_path
-        self._chunk_size = 4  # number of data blobs to save in a raw file
-        self._raw_file_counter = 1
+        self._raw_file = os.path.join(directory, f"{settings.observation.name}_raw.h5")
 
         # Open file (if file exists, remove first)
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        if os.path.exists(self._raw_file):
+            os.remove(self._raw_file)
 
-        self._file = open(file_path, "wb+")
-        # fadvise.set_advice(self._file, fadvise.POSIX_FADV_SEQUENTIAL)
-
-        # Variable to check whether meta file has been written
-        self._head_filepath = file_path + '.pkl'
-        self._head_written = False
+        # Iteration counter
+        self._counter = 0
 
         # Processing module name
         self.name = "RawPersister"
+
+    def _create_output_file(self, obs_info):
+        """ Create the HDF5 output file, including metadata """
+        with h5py.File(self._raw_file, 'w') as f:
+            # Create group that will contain observation information
+            info = f.create_group('observation_information')
+
+            # ADd attributes to group
+            info.attrs['observation_name'] = settings.observation.name
+            info.attrs['transmitter_frequency'] = obs_info['transmitter_frequency']
+            info.attrs['sampling_time'] = obs_info['sampling_time']
+            info.attrs['start_center_frequency'] = obs_info['start_center_frequency']
+            info.attrs['channel_bandwidth'] = obs_info['channel_bandwidth']
+            info.attrs['reference_declinations'] = obs_info['declinations']
+            info.attrs['observation_settings'] = str(obs_info['settings'])
+
+            # TODO: Add number of antennas
+            info.attrs['nof_antennas'] = 0
+
+            # TODO: Add calibration coefficients
 
     def generate_output_blob(self):
         """
@@ -98,7 +105,6 @@ class RawPersister(ProcessingModule):
             self._current_filepath = '{}_{}.dat'.format(self._base_filepath, self._raw_file_counter)
 
             self._file = open(self._current_filepath, "wb+")
-            # fadvise.set_advice(self._file, fadvise.POSIX_FADV_SEQUENTIAL)
 
             logging.info("Opened a new raw file at {}".format(self._current_filepath))
 
