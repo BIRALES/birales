@@ -3,7 +3,6 @@ import logging
 import numpy as np
 import threading
 import time
-from multiprocessing import Lock
 
 from pybirales.pipeline.base.definitions import ObservationInfo
 
@@ -22,22 +21,19 @@ class DataBlob:
         self._shape = shape
         self._data_type = datatype
 
+        # The number of blocks in the data blob
+        self._nof_blocks = nof_blocks
+
         # The data blob as a numpy array
         self._data = self.initialise(nof_blocks, datatype)
-
-        # Create observation info object for every data block
-        self._obs_info = []
 
         # Counter to determine whether a block in the blob is written or not. When a blob is written to,
         # the value of the counter set to the number of readers. When each reader processes the blob, it
         # decrements it
-        self._remaining_readers = [0 for _ in range(nof_blocks)]
+        self._remaining_readers = [[] for _ in range(self._nof_blocks)]
 
         # Generate a default observation information object per block
-        self._obs_info = [ObservationInfo() for _ in range(nof_blocks)]
-
-        # The number of blocks in the data blob
-        self._nof_blocks = nof_blocks
+        self._obs_info = [ObservationInfo() for _ in range(self._nof_blocks)]
 
         # Empty dictionary that will contain reader information
         self._nof_readers = 0
@@ -47,7 +43,7 @@ class DataBlob:
         self._writer_index = 0
 
         # Lock for data structures shared between readers and writers
-        self._shared_lock = Lock()
+        self._shared_lock = threading.Lock()
 
     def initialise(self, nof_blocks, datatype):
         """ Initialise the data blob. Allows subclasses to override this to change how and where
@@ -83,10 +79,12 @@ class DataBlob:
         # Start timing
         t_start = time.time()
 
+        # Acquire shared lock
+        self._shared_lock.acquire()
+
         # The reader must wait for the writer to insert data into the blob. When the reader and writer have the
         # same index it means that the reader is waiting for data to be available (the writer must be ahead of reader)
-        self._shared_lock.acquire()
-        while reader_index == self._writer_index and self._remaining_readers[reader_index] == 0:
+        while reader_index == self._writer_index and identifier not in self._remaining_readers[reader_index]:
             self._shared_lock.release()
             time.sleep(0.05)  # Wait for data to become available
 
@@ -119,7 +117,7 @@ class DataBlob:
 
         # Acquire shared lock and update reader metadata
         self._shared_lock.acquire()
-        self._remaining_readers[reader_index] -= 1
+        self._remaining_readers[reader_index].remove(identifier)
         self._readers[identifier]['reading'] = False
         self._readers[identifier]['index'] = (reader_index + 1) % self._nof_blocks
         self._shared_lock.release()
@@ -133,24 +131,26 @@ class DataBlob:
         # Acquire shared lock
         self._shared_lock.acquire()
 
-        # Check if current block is being read
-        while self._remaining_readers[self._writer_index] != 0 and \
-                any([reader['reading'] for reader in self._readers.values() if reader['index'] == self._writer_index]):
+        # If current block has been read, proceed, otherwise wait for timeout to run out
+        while len(self._remaining_readers[self._writer_index]) > 0 and (timeout and time.time() - t_start <= timeout):
             self._shared_lock.release()
-            time.sleep(0.01)
+            time.sleep(0.05)
+            self._shared_lock.acquire()
 
-            if timeout and time.time() - t_start >= timeout:
-                return None
-
+        # Regardless of whether we've reached this point because blob is empty or timeout expired, wait
+        # for any readers currently reading the blob to finish
+        while any([reader['reading'] for reader in self._readers.values() if reader['index'] == self._writer_index]):
+            self._shared_lock.release()
+            time.sleep(0.05)
             self._shared_lock.acquire()
 
         # Flag determining whether blob is being overwritten
-        overwriting = self._remaining_readers[self._writer_index] > 0
+        overwriting = len(self._remaining_readers[self._writer_index]) > 0
 
-        # Set remaining reader to 0, "clearing" the blob
-        self._remaining_readers[self._writer_index] = 0
+        # Clear the readers from the current blob
+        self._remaining_readers[self._writer_index].clear()
 
-        # Release shared lock
+        # Release lock
         self._shared_lock.release()
 
         # Test to see whether data is being overwritten
@@ -172,10 +172,12 @@ class DataBlob:
         self._shared_lock.acquire()
 
         # Set block as written
-        self._remaining_readers[self._writer_index] = self._nof_readers
+        self._remaining_readers[self._writer_index] = list(self._readers.keys())
 
         # Update writer index and release lock
         self._writer_index = (self._writer_index + 1) % self._nof_blocks
+
+        # Release lock
         self._shared_lock.release()
 
     @property

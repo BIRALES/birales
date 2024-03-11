@@ -70,13 +70,13 @@ class BeamPersister(ProcessingModule):
 
         with h5py.File(self._beam_file, mode='a') as f:
             # Create data set name
-            dataset_name = f"beam_data"
-            timestamp_name = f"beam_timestamp"
+            dataset_name = "beam_data"
+            timestamp_name = "beam_timestamp"
 
             # Load observation data group
             dset = f['observation_data']
 
-            # If data sets do not exist, add them
+            # If datasets do not exist, add them
             if dataset_name not in dset.keys():
                 dset.create_dataset(dataset_name,
                                     (0, obs_info['nof_beams'], obs_info['nof_channels']),
@@ -105,15 +105,9 @@ class BeamPersister(ProcessingModule):
         return ChannelisedBlob(self._input.shape, datatype=np.complex64)
 
     def process(self, obs_info, input_data, output_data):
-        """
+        """ Write received raw data to output file """
 
-        :param obs_info:
-        :param input_data:
-        :param output_data:
-        :return:
-        """
-
-        # If head file not written, write it now
+        # If this is the first iteration, create the output file
         if self._counter == 0:
             self._create_output_file(obs_info)
 

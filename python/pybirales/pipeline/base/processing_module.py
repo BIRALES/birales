@@ -39,7 +39,6 @@ class Module(Thread):
         if self._input is not None:
             self._input.add_reader(self._unique_id)
 
-
         if self._no_output:
             self._output = None
         else:
@@ -92,6 +91,21 @@ class Module(Thread):
         """ Return output blob generate by module """
         return self._output
 
+    @staticmethod
+    def _get_active_threads():
+        """
+        Return the threads that are still active
+
+        :return:
+        """
+        main_thread = threading.current_thread()
+        active_threads = []
+        for t in threading.enumerate():
+            if t is main_thread:
+                continue
+            active_threads.append(t.name)
+        return ",".join(map(str, active_threads))
+
 
 class Generator(Module):
     @abstractmethod
@@ -125,8 +139,6 @@ class Generator(Module):
         while not self._stop_module.is_set():
             time.sleep(1)
 
-        # self._module_stopped = True
-
         self._stop_module.set()
 
     def request_output_blob(self):
@@ -156,6 +168,10 @@ class ProcessingModule(Module):
         self._is_offline = settings.manager.offline
         logging.info('Initialised the %s module', self.__class__.__name__)
 
+    def set_name(self, module_name):
+        """ Set the name of the module to the thread"""
+        self.name = module_name
+
     @abstractmethod
     def generate_output_blob(self):
         """
@@ -184,12 +200,12 @@ class ProcessingModule(Module):
         while not self._stop_module.is_set():
 
             # Get pointer to input data if required
-            input_data, obs_info = None, {}
-            obs_info['stop_pipeline_at'] = -1
+            input_data, obs_info = None, {'stop_pipeline_at': -1}
+
             if self._input is not None:
                 # This can be released immediately since data has already been deep copied
                 while input_data is None and not self._stop_module.is_set():
-                    input_data, obs_info = self._input.request_read(self._unique_id, timeout=0.2)
+                    input_data, obs_info = self._input.request_read(self._unique_id, timeout=0.1)
 
                 if self._stop_module.is_set():
                     break
@@ -201,7 +217,7 @@ class ProcessingModule(Module):
             output_data = None
             if self._output is not None:
                 while output_data is None and not self._stop_module.is_set():
-                    output_data = self._output.request_write(timeout=0.2)
+                    output_data = self._output.request_write(timeout=10)
 
                 if self._stop_module.is_set():
                     break
@@ -219,14 +235,7 @@ class ProcessingModule(Module):
                         obs_info = res
                 tt = time.time() - s
 
-                nof_samples = settings.tpm_receiver.nof_samples
-                if self._is_offline:
-                    nof_samples = settings.rawdatareader.nof_samples
-
-                if tt < float(nof_samples) / settings.observation.samples_per_second:
-                    log.info('[Iteration {}] {} finished in {:0.3f}s'.format(self._iter_count, self.name, tt))
-                else:
-                    log.warning('[Iteration {}] {} finished in {:0.3f}s'.format(self._iter_count, self.name, tt))
+                log.info('[Iteration {}] {} finished in {:0.3f}s'.format(self._iter_count, self.name, tt))
 
             except BIRALESObservationException:
                 log.exception("A Birales exception has occurred. Stopping the pipeline")
@@ -238,11 +247,11 @@ class ProcessingModule(Module):
                 log.exception("An OS exception has occurred. Stopping the pipeline")
                 self.stop()
 
-            # Release writer lock and update observation info if required
+            # Release writer
             if self._output is not None:
                 self._output.release_write(obs_info)
 
-            # Release reader lock
+            # Release reader
             if self._input is not None:
                 self._input.release_read(self._unique_id)
 
@@ -257,18 +266,3 @@ class ProcessingModule(Module):
         self._stop_module.set()
 
         log.info('%s killed [Active threads: %s]', self.name, self._get_active_threads())
-
-    @staticmethod
-    def _get_active_threads():
-        """
-        Return the threads that are still active
-
-        :return:
-        """
-        main_thread = threading.current_thread()
-        active_threads = []
-        for t in threading.enumerate():
-            if t is main_thread:
-                continue
-            active_threads.append(t.name)
-        return ",".join(map(str, active_threads))
