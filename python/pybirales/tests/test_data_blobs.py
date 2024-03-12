@@ -21,7 +21,7 @@ class TestProducer(ProcessingModule):
     def process(self, obs_info, input_data, output_data):
         # If the maximum counter is reached, trigger to stop pipeline
         if self._running_counter >= nof_iterations:
-            obs_info['stop_pipeline_at'] = self._iter_count
+            obs_info['stop_pipeline_at'] = self._iteration_counter
             self.stop()
             return obs_info
 

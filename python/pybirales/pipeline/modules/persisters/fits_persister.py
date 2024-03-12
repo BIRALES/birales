@@ -93,12 +93,12 @@ class FitsPersister(ProcessingModule):
         """
 
         # Skip the first blob
-        if self._iter_count < 2:
+        if self._iteration_counter < 2:
             return
 
         # print obs_info['start_center_frequency'], obs_info['start_center_frequency'] + obs_info['channel_bandwidth'] * 8192
 
-        self._fits_filepath = self._get_filepath(int(np.floor(self._iter_count / self._chuck_size)))
+        self._fits_filepath = self._get_filepath(int(np.floor(self._iteration_counter / self._chuck_size)))
 
         # Append data to the body of the fits file
         if self._beams_to_visualise:
@@ -169,7 +169,7 @@ class FitsPersister(ProcessingModule):
 
         print('Current time is', obs_info['timestamp'])
         print('TLE is between {} and {}'.format(start_window, end_window))
-        print('Persister Within window', end_window >= obs_info['timestamp'] >= start_window, self._iter_count)
+        print('Persister Within window', end_window >= obs_info['timestamp'] >= start_window, self._iteration_counter)
 
         if end_window >= obs_info['timestamp'] >= start_window:
             expected_channel = (obs_info['transmitter_frequency'] * 1e6 + expected_doppler) - obs_info[
@@ -180,7 +180,7 @@ class FitsPersister(ProcessingModule):
 
             channel_window = expected_channel - 500, expected_channel + 500
 
-            filename = '{}_TLE_prediction_{}'.format(target_name, self._iter_count)
+            filename = '{}_TLE_prediction_{}'.format(target_name, self._iteration_counter)
 
             time = [obs_info['timestamp'], datetime.timedelta(seconds=obs_info['sampling_time'] * 160) + obs_info[
                 'timestamp']]

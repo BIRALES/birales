@@ -228,7 +228,7 @@ class Filter(ProcessingModule):
         """
 
         # Skip the first blob
-        if self._iter_count < 0:
+        if self._iteration_counter < 0:
             return
 
         # print '\nbefore filter', self._iter_count, input_data[input_data > 0].shape

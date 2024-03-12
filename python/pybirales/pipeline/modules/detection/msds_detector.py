@@ -174,10 +174,10 @@ class Detector(ProcessingModule):
 
         """
 
-        obs_info['iter_count'] = self._iter_count
+        obs_info['iter_count'] = self._iteration_counter
 
         # Skip the first few blobs (to allow for an accurate noise estimation to be determined)
-        if self._iter_count < 2:
+        if self._iteration_counter < 2:
             return obs_info
 
         if not self.data_dump:
@@ -186,17 +186,17 @@ class Detector(ProcessingModule):
             # plot_TLE(obs_info, input_data, tle_target)
 
             t0 = time.time()
-            new_tracks = self.detection_algorithm(self._iter_count, input_data, obs_info, obs_info['channels'],
+            new_tracks = self.detection_algorithm(self._iteration_counter, input_data, obs_info, obs_info['channels'],
                                                   self.pool)
 
-            log.info(f'[Iter {self._iter_count}]. Found {len(new_tracks)} beam candidates in {time.time() - t0:.2f}s')
+            log.info(f'[Iter {self._iteration_counter}]. Found {len(new_tracks)} beam candidates in {time.time() - t0:.2f}s')
 
             # [Track Association] Create new tracks from clusters or merge clusters into existing
             tracks = data_association(self.pending_tracks, new_tracks, obs_info, notifications=False,
                                       save_candidates=settings.detection.save_candidates)
 
             # [Track Termination] Check each track and determine if the detection object has transitted outside FoV
-            tracks = active_tracks(obs_info, tracks, self._iter_count)
+            tracks = active_tracks(obs_info, tracks, self._iteration_counter)
 
             # reset pending tracks
             pending_tracks = []
@@ -214,7 +214,7 @@ class Detector(ProcessingModule):
             total = len(pending_tracks) + len(terminated_tracks) + len(cancelled_tracks)
 
             log.info('[Iteration {:d}]. Pending {:d}, Terminated: {:d}, Cancelled: {:d}. Total: {:d}' \
-                     .format(self._iter_count, len(pending_tracks), len(terminated_tracks), len(cancelled_tracks),
+                     .format(self._iteration_counter, len(pending_tracks), len(terminated_tracks), len(cancelled_tracks),
                              total))
 
             self.pending_tracks = pending_tracks
@@ -244,15 +244,15 @@ class Detector(ProcessingModule):
 
     def dump_detection_data(self, input_data, obs_info, out_dir):
 
-        if self._iter_count < 3:
+        if self._iteration_counter < 3:
             if not os.path.exists(out_dir):
                 os.makedirs(out_dir)
 
-            pickle.dump(obs_info['channels'], open('{}/channels.pkl'.format(out_dir, self._iter_count), "wb"))
+            pickle.dump(obs_info['channels'], open('{}/channels.pkl'.format(out_dir, self._iteration_counter), "wb"))
 
-        pickle.dump(obs_info, open('{}/obs_info_{}.pkl'.format(out_dir, self._iter_count), "wb"))
+        pickle.dump(obs_info, open('{}/obs_info_{}.pkl'.format(out_dir, self._iteration_counter), "wb"))
 
-        np.save('{}/{}_{}.pkl'.format(out_dir, 'input_data', self._iter_count), input_data)
+        np.save('{}/{}_{}.pkl'.format(out_dir, 'input_data', self._iteration_counter), input_data)
 
         return obs_info
 

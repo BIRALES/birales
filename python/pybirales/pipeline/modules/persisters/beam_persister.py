@@ -35,9 +35,6 @@ class BeamPersister(ProcessingModule):
         if os.path.exists(self._beam_file):
             os.remove(self._beam_file)
 
-        # Iteration counter
-        self._counter = 0
-
         # Processing module name
         self.name = "BeamPersister"
 
@@ -108,7 +105,7 @@ class BeamPersister(ProcessingModule):
         """ Write received raw data to output file """
 
         # If this is the first iteration, create the output file
-        if self._counter == 0:
+        if self._iteration_counter == 0:
             self._create_output_file(obs_info)
 
         # Save data to output
@@ -116,11 +113,6 @@ class BeamPersister(ProcessingModule):
             output_data[:] = cu.asnumpy(input_data)
         else:
             output_data[:] = input_data[:].copy()
-
-        # Ignore first 2 buffers (because of channeliser)
-        self._counter += 1
-        if self._counter <= 2:
-            return obs_info
 
         # Perform pre-processing on beam if required
         if 'compute_power' in settings.persister.settings() and settings.persister.compute_power:

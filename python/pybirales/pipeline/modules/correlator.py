@@ -158,7 +158,7 @@ class Correlator(ProcessingModule):
         self._nof_polarisations = obs_info['nof_polarisations']
 
         # Initialise variables when processing first blob
-        if self._iter_count == 1:
+        if self._iteration_counter == 1:
             self._nof_baselines = int(0.5 * ((obs_info['nof_antennas'] ** 2) - obs_info['nof_antennas']))
             self._nof_stokes = obs_info['nof_polarisations'] ** 2
             if hasattr(settings.correlator, 'channel_start') and hasattr(settings.correlator, 'channel_end'):

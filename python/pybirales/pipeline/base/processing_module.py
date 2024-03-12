@@ -164,7 +164,7 @@ class ProcessingModule(Module):
 
     def __init__(self, config, input_blob):
         super(ProcessingModule, self).__init__(config, input_blob)
-        self._iter_count = 1
+        self._iteration_counter = 1
         self._is_offline = settings.manager.offline
         logging.info('Initialised the %s module', self.__class__.__name__)
 
@@ -226,7 +226,7 @@ class ProcessingModule(Module):
             try:
                 s = time.time()
 
-                if obs_info['stop_pipeline_at'] == self._iter_count:
+                if obs_info['stop_pipeline_at'] == self._iteration_counter:
                     log.info('Stop pipeline message broadcast to the %s module', self.name)
                     self.stop()
                 else:
@@ -235,7 +235,7 @@ class ProcessingModule(Module):
                         obs_info = res
                 tt = time.time() - s
 
-                log.info('[Iteration {}] {} finished in {:0.3f}s'.format(self._iter_count, self.name, tt))
+                log.info('[Iteration {}] {} finished in {:0.3f}s'.format(self._iteration_counter, self.name, tt))
 
             except BIRALESObservationException:
                 log.exception("A Birales exception has occurred. Stopping the pipeline")
@@ -258,7 +258,7 @@ class ProcessingModule(Module):
             # A short sleep to force a context switch (since locks do not force one)
             time.sleep(0.001)
 
-            self._iter_count += 1
+            self._iteration_counter += 1
 
         # Clean
         self._tear_down()

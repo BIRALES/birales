@@ -65,20 +65,18 @@ class PipelineError(Exception):
 
 
 class NoDataReaderException(Exception):
-    """
-    Pipeline has reached the end of the data file
-    """
+    """ Pipeline has reached the end of the data file """
     pass
 
 
 class InputDataNotValidException(PipelineError):
-    """
-    Input data passed to a module is not the type that the module is expecting
-    """
+    """ Input data passed to a module is not the type that the module is expecting """
     pass
 
 
 class PipelineBuilderIsNotAvailableException(Exception):
+    """ Requested pipeline is not available """
+
     def __init__(self, builder_id, available_builders):
         available_pipelines = ', '.join(available_builders)
         Exception.__init__(self, "The '{}' pipeline is not available. Please choose one from the following: {}"
@@ -88,32 +86,27 @@ class PipelineBuilderIsNotAvailableException(Exception):
 
 
 class InvalidCalibrationCoefficientsException(PipelineError):
-    """
-    The calibration coefficients are not valid and can't be used
-
-    """
+    """ The calibration coefficients are not valid and can't be used """
     pass
 
 
 class BIRALESObservationException(PipelineError):
-    """
-    Something went wrong whilst starting the observation
-    """
+    """ Something went wrong whilst starting the observation """
 
     pass
 
 
-class TPMBackendException(PipelineError):
-    """
-    Something went wrong whilst trying to load the TPM backend
-    """
+class TPMBackendException(Exception):
+    """ Something went wrong whilst trying to load the TPM backend """
 
     pass
 
 
 class CalibrationFailedException(PipelineError):
-    """
-    Something went wrong whilst trying to calibrate
-    """
+    """ Something went wrong whilst trying to calibrate """
+    pass
 
+
+class TriggerException(Exception):
+    """ An error occurred during the triggering mechanism """
     pass

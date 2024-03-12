@@ -161,7 +161,7 @@ if __name__ == "__main__":
     parser.add_option("-e", "--stop-channel", dest="stop_channel", default=-1, type=int,
                       help="Stop channel to plot (default: -1, last channel")
     parser.add_option("-i", "--integrate", dest="integrate", default=1, type=int,
-                      help="Samples to integrate (default: 1")
+                      help="Samples to integrate (default: 1)")
     parser.add_option("--log", dest="log", default=False, action="store_true",
                       help="Plot logarithmic (default: False)")
     parser.add_option("-s", "--start-sample", dest="start_sample", default=0, type=int,

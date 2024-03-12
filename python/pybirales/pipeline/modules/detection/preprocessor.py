@@ -77,7 +77,7 @@ class PreProcessor(ProcessingModule):
         """
 
         # Skip the first blob
-        if self._iter_count < 0:
+        if self._iteration_counter < 0:
             return
 
         self.channels, self._doppler_mask = apply_doppler_mask(self._doppler_mask, self.channels,

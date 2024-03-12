@@ -137,7 +137,7 @@ class TDMPersister(ProcessingModule):
         """
 
         # Skip the first blob
-        if self._iter_count < 1:
+        if self._iteration_counter < 1:
             return
 
 

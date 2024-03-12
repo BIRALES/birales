@@ -1,3 +1,4 @@
+import copy
 import math
 from collections import deque
 import datetime
@@ -7,6 +8,7 @@ import h5py
 import numpy as np
 
 from pybirales import settings
+from pybirales.pipeline.base.definitions import TriggerException
 from pybirales.pipeline.base.processing_module import ProcessingModule
 from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
 
@@ -20,39 +22,46 @@ class RawPersister(ProcessingModule):
 
         # Create directory if it doesn't exist
         dir_path = os.path.expanduser(settings.persisters.directory)
-        directory = os.path.join(dir_path, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
-                                 settings.observation.name)
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+        self._output_directory = os.path.join(dir_path, '{:%Y_%m_%d}'.format(datetime.datetime.now()),
+                                              settings.observation.name)
+        if not os.path.exists(self._output_directory):
+            os.makedirs(self._output_directory)
 
-        # Create file
-        self._raw_file = os.path.join(directory, f"{settings.observation.name}_raw.h5")
-
-        # Open file (if file exists, remove first)
-        if os.path.exists(self._raw_file):
-            os.remove(self._raw_file)
-
-        # Iteration counter
-        self._counter = 0
+        # Output file handle
+        self._output_filename = None
 
         # If triggering is enabled, create the queue that will act as the buffer to store
         # historical data
         self._trigger_buffer = None
         self._trigger_timestamps = None
+        self._trigger_block_duration = None
+
+        # Latest obs_info
+        self._latest_obs_info = None
 
         # Processing module name
         self.name = "RawPersister"
 
-    def _initialise_trigger_buffer(self, obs_info):
-        """ Initialise the trigger buffer for storing historical data """
-        buffer_length = settings.manager.trigger_buffer_length + settings.manager.trigger_time_delta * 2
-        buffer_length = math.ceil(buffer_length * settings.observation.samples_per_second / obs_info['nof_samples'])
-        self._trigger_buffer = deque(maxlen=buffer_length)
-        self._trigger_timestamps = deque(maxlen=buffer_length)
+    def generate_output_blob(self):
+        """
+        Generate the output blob
+        :return:
+        """
+        return None
 
-    def _create_output_file(self, obs_info):
+    def _create_output_file(self, obs_info, filename=None):
         """ Create the HDF5 output file, including metadata """
-        with h5py.File(self._raw_file, 'w') as f:
+
+        # If the filename is None, generate one using the observation name
+        if filename is None:
+            self._output_filename = os.path.join(self._output_directory, f"{settings.observation.name}_raw.h5")
+
+        # If the file already exists, remove it
+        if os.path.exists(self._output_filename):
+            os.remove(self._output_filename)
+
+        # Create H5 output file with required metadata
+        with h5py.File(self._output_filename, 'w') as f:
             # Create group that will contain observation information
             info = f.create_group('observation_information')
 
@@ -65,17 +74,23 @@ class RawPersister(ProcessingModule):
             info.attrs['channel_bandwidth'] = obs_info['channel_bandwidth']
             info.attrs['reference_declinations'] = obs_info['declinations']
             info.attrs['observation_settings'] = str(obs_info['settings'])
-
             # TODO: Add calibration coefficients
 
-    def _add_blob_to_trigger_buffer(self, obs_info, input_data):
-        """ Add the current input_data to the trigger buffer"""
-        self._trigger_buffer.append_left(input_data.copy())
-        self._trigger_timestamps.append_left(input_data['timestamp'])
+            # Create group that will contain all observation data
+            f.create_group('observation_data')
 
-    def _add_raw_data_to_file(self, obs_info, raw_data):
+    def _add_raw_data_to_file(self, obs_info, raw_data, nof_samples=0, timestamp=None):
         """ Add raw data to output file """
-        with h5py.File(self._raw_file, 'a') as f:
+
+        # If the provided number of samples is 0, then use the shape of the raw data
+        if nof_samples == 0:
+            nof_samples = raw_data.shape[0]
+
+        # If the provided timestamp is None, then use the timestamp specified in obs_info
+        if timestamp is None:
+            timestamp = obs_info['timestamp']
+
+        with h5py.File(self._output_filename, 'a') as f:
             # Create data set name
             dataset_name = "raw_data"
             timestamp_name = "raw_timestamp"
@@ -88,42 +103,103 @@ class RawPersister(ProcessingModule):
                 dset.create_dataset(dataset_name,
                                     (0, obs_info['nof_antennas']),
                                     maxshape=(None, obs_info['nof_antennas']),
-                                    chunks=(obs_info['nof_samples'], obs_info['nof_antennas']),
+                                    chunks=(2 ** 14 / (obs_info['nof_antennas'] * np.dtype(np.complex64).itemsize),
+                                            obs_info['nof_antennas']),
                                     dtype=np.complex64)
 
                 dset.create_dataset(timestamp_name, 0, maxshape=(None,), dtype='f8')
 
             # Add data to file
             dset = f[f'observation_data/{dataset_name}']
-            dset.resize((dset.shape[0] + obs_info['nof_samples'], dset.shape[1]))
-            dset[-obs_info['nof_samples']:, :] = raw_data
+            dset.resize((dset.shape[0] + nof_samples, dset.shape[1]))
+            dset[-nof_samples:, :] = raw_data
 
             # Add timestamp to file
             dset = f[f"observation_data/{timestamp_name}"]
-            dset.resize((dset.shape[0] + obs_info['nof_samples'], ))
-            timestamp = datetime.datetime.timestamp(obs_info['timestamp'])
-            dset[-obs_info['nof_samples']:] = timestamp + np.arange(obs_info['nof_samples']) * obs_info['sampling_time']
+            dset.resize((dset.shape[0] + nof_samples,))
+            timestamp = datetime.datetime.timestamp(timestamp)
+            dset[-nof_samples:] = timestamp + np.arange(nof_samples) * obs_info['sampling_time']
 
-    def generate_output_blob(self):
-        """
-        Generate the output blob
-        :return:
-        """
-        return ReceiverBlob(self._input.shape, datatype=np.complex64)
+    def _initialise_trigger_buffer(self, obs_info):
+        """ Initialise the trigger buffer for storing historical data """
+        block_duration = settings.observation.samples_per_second / obs_info['nof_samples']
+        buffer_length = settings.manager.trigger_buffer_length + settings.manager.trigger_time_delta * 2
+        buffer_length = math.ceil(buffer_length * block_duration)
+        self._trigger_buffer = deque(maxlen=buffer_length)
+        self._trigger_timestamps = deque(maxlen=buffer_length)
+        self._trigger_block_duration = block_duration
+
+    def _add_blob_to_trigger_buffer(self, obs_info, input_data):
+        """ Add the current input_data to the trigger buffer, as well as additional metadata"""
+        self._trigger_buffer.appendleft(input_data.copy())
+        self._trigger_timestamps.appendleft(obs_info['timestamp'])
+        self._latest_obs_info = copy.copy(obs_info)
+
+    def trigger_to_file(self, start_time, duration, identifier="trigger"):
+        """ A trigger was generated to write parts of the trigger buffer to file. Find the corresponding
+            segment in the buffer and write it to file """
+
+        # TODO: Define error handling mechanism
+
+        # Determine whether required trigger start and duration falls within current buffer
+        if len(self._trigger_buffer) == 0:
+            raise TriggerException("Trigger buffer is empty")
+
+        if (self._trigger_timestamps[-1] < start_time or
+                self._trigger_timestamps[0] - self._trigger_buffer[-1] < duration):
+            raise TriggerException("Requested trigger time window is not wholly available in trigger buffer")
+
+        # Requested trigger window is in file. Creat trigger file
+        self._create_output_file(self._latest_obs_info, filename=f"{identifier}_raw.h5")
+
+        # Some pre-computations
+        stop_time = start_time + duration
+        block_duration = settings.observation.samples_per_second / self._latest_obs_info['nof_samples']
+
+        # Find the start and end blobs within the trigger, as well as the bounds within each blob
+        first_blob = np.argwhere((np.array(self._trigger_timestamps) + block_duration) - start_time > 0)[0]
+        first_blob_shift = math.floor((start_time - self._trigger_timestamps[first_blob]) *
+                                      settings.observation.samples_per_second)
+
+        last_blob = np.argwhere((np.array(self._trigger_timestamps) + block_duration) - stop_time > 0)[0]
+        last_blob_shift = math.ceil((stop_time - self._trigger_timestamps[last_blob]) *
+                                    settings.observation.samples_per_second)
+
+        # Write first blob
+        self._add_raw_data_to_file(self._latest_obs_info,
+                                   self._trigger_buffer[first_blob][first_blob_shift:],
+                                   self._latest_obs_info['nof_samples'] - first_blob_shift,
+                                   self._trigger_timestamps[first_blob] + first_blob_shift *
+                                   self._latest_obs_info['sampling_time'])
+
+        # Write all intermediary blobs
+        for blob_number in range(first_blob + 1, last_blob):
+            self._add_raw_data_to_file(self._latest_obs_info,
+                                       self._trigger_buffer[blob_number])
+
+        # Write last blob
+        self._add_blob_to_trigger_buffer(self._latest_obs_info, self._trigger_buffer[last_blob][:last_blob_shift])
+
+        # Remove file handle
+        self._output_filename = None
 
     def process(self, obs_info, input_data, output_data):
         """ Write received raw data to output file """
 
         # If triggering is enabled, do not write directly to file but simply add to the trigger buffer
-        if self._trigger_buffer is not None:
-            self._add_blob_to_trigger_buffer(obs_info, input_data)
+        if settings.manager.detection_trigger_enabled:
+            if self._trigger_buffer is None:
+                self._initialise_trigger_buffer(obs_info)
+            else:
+                self._add_blob_to_trigger_buffer(obs_info, input_data)
             return obs_info
 
         # If this is the first iteration, create the output file
-        if self._counter == 0:
+        if self._output_filename is None:
             self._create_output_file(obs_info)
 
-        # ADd raw data to output file (ignore polarizations and subbands for now
+        # ADd raw data to output file (ignore polarizations and sub-bands for now
         self._add_raw_data_to_file(obs_info, input_data[0, 0, :])
 
         return obs_info
+
