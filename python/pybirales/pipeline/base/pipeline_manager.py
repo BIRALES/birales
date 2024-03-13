@@ -69,12 +69,13 @@ class PipelineManager(object):
         self._module_names.append(name)
         self._modules.append(module)
 
-    def start_pipeline(self, duration=0, observation=DummyObservation()):
+    def start_pipeline(self, duration=0, observation=DummyObservation(), standalone=False):
         """
         Start running the pipeline
 
         :param duration: duration of observation in s (0 means run forever)
         :param observation: Database observation object
+        :param standalone: Work in standalone mode, do not attempt to use database
         :return:
         """
 
@@ -102,7 +103,7 @@ class PipelineManager(object):
         finally:
             observation.model.date_time_end = datetime.datetime.utcnow()
 
-            if settings.database.load_database:
+            if not standalone and settings.database.load_database:
                 observation.save()
 
             self.stop_pipeline()

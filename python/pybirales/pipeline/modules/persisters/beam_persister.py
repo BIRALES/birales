@@ -35,11 +35,8 @@ class BeamPersister(ProcessingModule):
         if os.path.exists(self._beam_file):
             os.remove(self._beam_file)
 
-        # Iteration counter
-        self._counter = 0
-
         # Processing module name
-        self.name = "Persister"
+        self.name = "BeamPersister"
 
     def _create_output_file(self, obs_info):
         """ Create the HDF5 output file, including metadata """
@@ -70,13 +67,13 @@ class BeamPersister(ProcessingModule):
 
         with h5py.File(self._beam_file, mode='a') as f:
             # Create data set name
-            dataset_name = f"beam_data"
-            timestamp_name = f"beam_timestamp"
+            dataset_name = "beam_data"
+            timestamp_name = "beam_timestamp"
 
             # Load observation data group
             dset = f['observation_data']
 
-            # If data sets do not exist, add them
+            # If datasets do not exist, add them
             if dataset_name not in dset.keys():
                 dset.create_dataset(dataset_name,
                                     (0, obs_info['nof_beams'], obs_info['nof_channels']),
@@ -105,16 +102,10 @@ class BeamPersister(ProcessingModule):
         return ChannelisedBlob(self._input.shape, datatype=np.complex64)
 
     def process(self, obs_info, input_data, output_data):
-        """
+        """ Write received raw data to output file """
 
-        :param obs_info:
-        :param input_data:
-        :param output_data:
-        :return:
-        """
-
-        # If head file not written, write it now
-        if self._counter == 0:
+        # If this is the first iteration, create the output file
+        if self._iteration_counter == 0:
             self._create_output_file(obs_info)
 
         # Save data to output
@@ -122,11 +113,6 @@ class BeamPersister(ProcessingModule):
             output_data[:] = cu.asnumpy(input_data)
         else:
             output_data[:] = input_data[:].copy()
-
-        # Ignore first 2 buffers (because of channeliser)
-        self._counter += 1
-        if self._counter <= 2:
-            return obs_info
 
         # Perform pre-processing on beam if required
         if 'compute_power' in settings.persister.settings() and settings.persister.compute_power:

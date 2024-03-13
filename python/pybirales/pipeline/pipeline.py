@@ -193,6 +193,7 @@ class StandAlonePipelineMangerBuilder(PipelineManagerBuilder):
         self.manager.add_module("persister", persister)
         self.manager.add_module("terminator", terminator)
 
+
 class CorrelatorPipelineManagerBuilder(PipelineManagerBuilder):
     def __init__(self):
         PipelineManagerBuilder.__init__(self)
@@ -362,11 +363,6 @@ class MSDSDetectionPipelineManagerBuilder(PipelineManagerBuilder):
         self.manager.add_module("detector", detector)
         terminator = Terminator(None, detector.output_blob)
         self.manager.add_module("terminator", terminator)
-
-        # filtered_fits_persister = FilteredDataFitsPersister(settings.fits_persister, filtering.output_blob)
-        # self.manager.add_module("filtered_fits_persister", filtered_fits_persister)
-        # terminator = Terminator(None, filtered_fits_persister.output_blob)
-        # self.manager.add_module("terminator", terminator)
 
 
 class ChanneliserCorrelatorPipelineManagerBuilder(PipelineManagerBuilder):

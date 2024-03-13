@@ -19,10 +19,7 @@ class DummyGpuPipeline(PipelineManagerBuilder):
         self._id = 'dummy_pipeline_builder'
 
     def build(self):
-        """
-        This script runs the test receiver pipeline,
-        using the specified CONFIGURATION.
-        """
+        """ Build the pipeline """
 
         # Initialise the modules
         receiver = DummyDataGenerator(settings.generator)
@@ -40,8 +37,8 @@ class DummyGpuPipeline(PipelineManagerBuilder):
 
 
 if __name__ == "__main__":
-    config = BiralesConfig(['/home/lessju/Software/birales/pybirales/configuration/birales.ini',
-                            '/home/lessju/Software/birales/pybirales/configuration/generator.ini'])
+    config = BiralesConfig(['/home/lessju/Software/birales/configuration/birales.ini',
+                            '/home/lessju/Software/birales/configuration/generator.ini'])
 
     # Override some settings
     settings.beamformer.calibrate_subarrays = False

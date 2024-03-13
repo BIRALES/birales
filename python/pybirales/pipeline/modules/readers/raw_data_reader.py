@@ -169,13 +169,13 @@ class RawDataReader(ProcessingModule):
             if self._samples_read >= self._samples_to_read:
                 log.warning(f"Read {self._samples_read} / {self._samples_to_read} "
                             f"samples as specified in the configuration file. Pipeline will terminate.")
-                obs_info['stop_pipeline_at'] = self._iter_count
+                obs_info['stop_pipeline_at'] = self._iteration_counter
                 self.stop()
                 return
 
         if self._read_count_end:
             if self._read_count > self._read_count_end:
-                obs_info['stop_pipeline_at'] = self._iter_count
+                obs_info['stop_pipeline_at'] = self._iteration_counter
                 self.stop()
                 return
 
@@ -187,8 +187,8 @@ class RawDataReader(ProcessingModule):
             self._f = self._change_raw_file()
 
             if not self._f:
-                log.info("Data finished successfully. Stopping modules at iteration %d", self._iter_count)
-                obs_info['stop_pipeline_at'] = self._iter_count
+                log.info("Data finished successfully. Stopping modules at iteration %d", self._iteration_counter)
+                obs_info['stop_pipeline_at'] = self._iteration_counter
                 self.stop()
                 return
 

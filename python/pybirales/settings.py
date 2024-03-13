@@ -52,6 +52,8 @@ class detection:
 
 
 class manager:
+    offline = True
+    save_raw = False
     use_gpu = False
     gpu_device_id = 0
 
