@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 #from pymexart.digital_backend.tile_mexart import Tile
-from pybirales.digital_backend.tile_debris import Tile
+from pybirales.digital_backend.tile_wrapper import Tile
 from pyfabil import Device
 
 from multiprocessing import Pool
@@ -138,7 +138,7 @@ def initialise_tile(params):
         # Configure polyphase filterbank and set 1G stream
         station_tile.download_polyfilter_coeffs("hann")
         station_tile.set_lmc_download("1g")
-        station_tile.set_lmc_integrated_download("1g")
+        station_tile.set_lmc_integrated_download("1g", channel_payload_length=1024, beam_payload_length=1024)
         station_tile['board.regfile.ethernet_pause'] = 0x0400
 
         return True
@@ -246,7 +246,8 @@ class Station(object):
         try:
             for tile in self.tiles:
                 tile.connect()
-                tile.tpm_ada.initialise_adas()
+                if tile.tpm_version() == "itpm_v1_2":
+                    tile.tpm_ada.initialise_adas()
         except Exception as e:
             self.properly_formed_station = False
             raise e
@@ -280,40 +281,41 @@ class Station(object):
                         gen.channel_select(0xFFFF)
 
             # Set ADA gain if required
-            if self.configuration["station"]["ada_gain"] is not None:
-                # Check if the provided file is valid
+            if self.tiles[0].tpm_version == "itom_v1_2":
+                if self.configuration["station"]["ada_gain"] is not None:
+                    # Check if the provided file is valid
 
-                if type(self.configuration["station"]["ada_gain"]) == int:
-                    self.equalize_ada_gain(self.configuration["station"]["ada_gain"])
-                elif not os.path.isfile(self.configuration["station"]["ada_gain"]):
-                    logging.warning("Provided ada gain file is invalid ({})".format(self.configuration["station"]["ada_gain"]))
+                    if type(self.configuration["station"]["ada_gain"]) == int:
+                        self.equalize_ada_gain(self.configuration["station"]["ada_gain"])
+                    elif not os.path.isfile(self.configuration["station"]["ada_gain"]):
+                        logging.warning("Provided ada gain file is invalid ({})".format(self.configuration["station"]["ada_gain"]))
+                    else:
+                        # Try loading file
+                        with open(self.configuration["station"]["ada_gain"], 'r') as f:
+                            try:
+                                gains = yaml.load(f, yaml.FullLoader)
+                                if not ('tpm_1' in gains and 'tpm_2' in gains):
+                                    logging.warning("Ada gains file should have entries for TPM 1 and TPM 2")
+
+                                # Set gain
+                                logging.info("Setting ADA gains")
+                                for i, tile in enumerate(self.tiles):
+                                    tpm_gains = gains["tpm_{}".format(i + 1)]
+                                    tile.tpm_ada.initialise_adas()
+                                    if len(tpm_gains) == 1:
+                                        tile.tpm_ada.set_ada_gain(tpm_gains[0])
+                                    elif len(tpm_gains) == 32:
+                                        for j in range(32):
+                                            tile.tpm_ada.set_ada_gain_spi(tpm_gains[j], j)
+                                    else:
+                                        logging.warning("Invalid number of gains definde for TPM {}".format(i+1))
+
+                            except Exception as e:
+                                logging.warning("Could not apply ada gain: {}".format(e))
+
+                # Otherwise perform automatic equalization
                 else:
-                    # Try loading file
-                    with open(self.configuration["station"]["ada_gain"], 'r') as f:
-                        try:
-                            gains = yaml.load(f, yaml.FullLoader)
-                            if not ('tpm_1' in gains and 'tpm_2' in gains):
-                                logging.warning("Ada gains file should have entries for TPM 1 and TPM 2")
-
-                            # Set gain
-                            logging.info("Setting ADA gains")
-                            for i, tile in enumerate(self.tiles):
-                                tpm_gains = gains["tpm_{}".format(i + 1)]
-                                tile.tpm_ada.initialise_adas()
-                                if len(tpm_gains) == 1:
-                                    tile.tpm_ada.set_ada_gain(tpm_gains[0])
-                                elif len(tpm_gains) == 32:
-                                    for j in range(32):
-                                        tile.tpm_ada.set_ada_gain_spi(tpm_gains[j], j)
-                                else:
-                                    logging.warning("Invalid number of gains definde for TPM {}".format(i+1))
-
-                        except Exception as e:
-                            logging.warning("Could not apply ada gain: {}".format(e))
-
-            # Otherwise perform automatic equalization
-            else:
-                self.equalize_ada_gain(16)
+                    self.equalize_ada_gain(16)
 
             # If initialising, synchronise all tiles in station
             logging.info("Synchronising station")
@@ -354,19 +356,16 @@ class Station(object):
         # Assign station and tile id, and tweak transceivers
         for i, tile in enumerate(self.tiles):
             tile.set_station_id(self._station_id, i)
-            tile.tweak_transceivers()
 
     def _synchronise_adc_clk(self):
-        sampling_frequency = self.configuration['observation']['sampling_frequency']
-        if sampling_frequency == 700e6:
-            logging.info("Synchronising FPGA ADC Clock...")
-            for tile in self.tiles:
-                tile['fpga1.pps_manager.sync_tc_adc_clk'] = 0x7
-                tile['fpga2.pps_manager.sync_tc_adc_clk'] = 0x7
-            self.tiles[0].wait_pps_event2()
-            for tile in self.tiles:
-                for fpga in tile.tpm.tpm_fpga:
-                    fpga.fpga_align_adc_clk(sampling_frequency)
+        logging.info("Synchronising FPGA ADC Clock...")
+        for tile in self.tiles:
+            tile['fpga1.pps_manager.sync_tc_adc_clk'] = 0x7
+            tile['fpga2.pps_manager.sync_tc_adc_clk'] = 0x7
+        self.tiles[0].wait_pps_event2()
+        for tile in self.tiles:
+            for fpga in tile.tpm.tpm_fpga:
+                fpga.fpga_align_adc_clk(1400e6)  # VCO = 1400 MHz
 
     def _synchronise_ddc(self, sysref_period):
         """ Synchronise the NCO in the DDC on all ADCs of all tiles """
@@ -374,26 +373,33 @@ class Station(object):
         for tile in self.tiles:
             tile.set_fpga_sysref_gen(sysref_period)
 
-            tile['pll', 0x402] = 0x8 # 0xD0
-            tile['pll', 0x403] = 0x0 # 0xA2
-            tile['pll', 0x404] = 0x1 # 0x4
+            tile['pll', 0x402] = 0x8  # 0xD0
+            tile['pll', 0x403] = 0x0  # 0xA2
+            tile['pll', 0x404] = 0x1  # 0x4
             tile['pll', 0xF] = 0x1
             while tile['pll', 0xF] & 0x1 == 0x1:
                 time.sleep(0.1)
 
-        ddc_frequency = self.configuration['observation']['ddc_frequency']
-        sampling_frequency = self.configuration['observation']['sampling_frequency']
         for tile in self.tiles:
             for n in range(16):
-                tile.tpm.tpm_adc[n].adc_single_start_dual_14_ddc(sampling_frequency=sampling_frequency,
-                                                                 ddc_frequency=ddc_frequency,
-                                                                 low_bitrate=True)
+                if tile.tpm_version == "itpm_v1_2":
+                    tile.tpm.tpm_adc[n].adc_single_start_dual_14_ddc(sampling_frequency=tile._sampling_rate,
+                                                                     ddc_frequency=tile._ddc_frequency,
+                                                                     low_bitrate=True)
+                else:
+                    tile.tpm.tpm_adc[n].adc_single_start_dual_14_ddc(sampling_frequency=tile._sampling_rate,
+                                                                     ddc_frequency=tile._ddc_frequency,
+                                                                     decimation_factor=20,
+                                                                     low_bitrate=tile._adc_low_bitrate)
 
             for n in range(16):
-                if n < 8:
-                    tile['adc' + str(n), 0x120] = 0xA
+                if station.tiles[0].tpm_version == "itpm_v1_2":
+                    if n < 8:
+                        tile['adc' + str(n), 0x120] = 0xA
+                    else:
+                        tile['adc' + str(n), 0x120] = 0x1A # TPM 1.2, ADC 8-15 have inverted sysref connections
                 else:
-                    tile['adc' + str(n), 0x120] = 0x1A
+                    tile['adc' + str(n), 0x120] = 0xA
 
         self.tiles[0].wait_pps_event()
 
@@ -409,6 +415,9 @@ class Station(object):
     def reset_ddc(self, tiles="all"):
         if tiles == "all":
             tiles = self.tiles
+        for tile in tiles:
+            tile['fpga1.regfile.spi_sync_function'] = 0
+            tile['fpga1.pps_manager.sysref_gen.spi_sync_enable'] = 1
         for tile in tiles:
             tile.write_adc_broadcast(0x300, 0x1, 0)
 
@@ -426,15 +435,26 @@ class Station(object):
                 if s & 0x1 == 1:
                     done = 0
             if done == 1:
-                break 
+                break
+
+        self['fpga1.pps_manager.sysref_gen.spi_sync_enable'] = 0
 
     def _synchronise_tiles(self, use_teng=False):
         """ Synchronise time on all tiles """
+
+        logging.info("Synchronising UTC time")
 
         pps_detect = self['fpga1.pps_manager.pps_detected']
         logging.debug("FPGA1 PPS detection register is ({})".format(pps_detect))
         pps_detect = self['fpga2.pps_manager.pps_detected']
         logging.debug("FPGA2 PPS detection register is ({})".format(pps_detect))
+
+        self.tiles[0].wait_pps_event()
+        time.sleep(0.1)
+        t = int(time.time())
+        for tile in self.tiles:
+            tile.set_fpga_time(Device.FPGA_1, t)
+            tile.set_fpga_time(Device.FPGA_2, t)
 
         # Repeat operation until Tiles are synchronised
         while True:
@@ -490,7 +510,6 @@ class Station(object):
                 # Configure integrated data streams
                 logging.info("Using 1G for integrated LMC traffic")                
                 tile.set_lmc_integrated_download("1g", 1024, 2048)
-                
 
         # Start data acquisition on all boards
         delay = 2
@@ -523,25 +542,23 @@ class Station(object):
         while sync_loop < max_sync_loop:
             self.tiles[0].wait_pps_event2()
 
-            current_tc = [tile.get_phase_terminal_count() for tile in self.tiles]
-            delay = [tile.get_pps_delay() for tile in self.tiles]
+            current_tc = [tile.get_phase_terminal_count("fpga1") for tile in self.tiles]
+            delay = [tile.get_pps_delay("fpga1") for tile in self.tiles]
 
             for n in range(len(self.tiles)):
-                self.tiles[n].set_phase_terminal_count(self.tiles[n].calculate_delay(delay[n], current_tc[n],
-                                                                                     16, 24))
+                self.tiles[n].set_phase_terminal_count("all", self.tiles[n].calculate_delay(delay[n], current_tc[n], 20, 4))
 
             self.tiles[0].wait_pps_event2()
 
-            current_tc = [tile.get_phase_terminal_count() for tile in self.tiles]
-            delay = [tile.get_pps_delay() for tile in self.tiles]
+            current_tc = [tile.get_phase_terminal_count("fpga1") for tile in self.tiles]
+            delay = [tile.get_pps_delay("fpga1") for tile in self.tiles]
 
             for n in range(len(self.tiles)):
-                self.tiles[n].set_phase_terminal_count(self.tiles[n].calculate_delay(delay[n], current_tc[n],
-                                                                                     delay[0] - 4, delay[0] + 4))
+                self.tiles[n].set_phase_terminal_count("all", self.tiles[n].calculate_delay(delay[n], current_tc[n], delay[0], 4))
 
             self.tiles[0].wait_pps_event2()
 
-            delay = [tile.get_pps_delay() for tile in self.tiles]
+            delay = [tile.get_pps_delay("fpga1") for tile in self.tiles]
 
             synced = 1
             for n in range(len(self.tiles) - 1):
@@ -610,7 +627,7 @@ class Station(object):
                     tile.tpm.tpm_ada.set_ada_gain_spi(-6 + int(gain), channel)
 
     def set_ada_gain(self, attenuation):
-        """ Set same preadu attenuation in all preadus """
+        """ Set same ADA gain in all ADAs """
         # Loop over all tiles
         for tile in self.tiles:
             tile.tpm.tpm_ada.set_ada_gain(attenuation)
@@ -674,30 +691,10 @@ class Station(object):
 
     def spead_tx_disable(self):
         for tile in self.tiles:
-            tile['fpga1.dsp_regfile.spead_tx_enable']=0
-            tile['fpga2.dsp_regfile.spead_tx_enable']=0
+            tile['fpga1.dsp_regfile.spead_tx_enable'] = 0
+            tile['fpga2.dsp_regfile.spead_tx_enable'] = 0
 
     # ------------------------------------------------------------------------------------------------
-
-    def mii_test(self, pkt_num):
-        """ Perform mii test """
-
-        for i, tile in enumerate(self.tiles):
-            logging.debug("MII test setting Tile " + str(i))
-            tile.mii_prepare_test(i + 1)
-
-        for i, tile in enumerate(self.tiles):
-            logging.debug("MII test starting Tile " + str(i))
-            tile.mii_exec_test(pkt_num, wait_result=False)
-
-        while True:
-            for i, tile in enumerate(self.tiles):
-                logging.debug("Tile " + str(i) + " MII test result:")
-                tile.mii_show_result()
-                k = raw_input("Enter quit to exit. Any other key to continue.")
-                if k == "quit":
-                    return
-
     def enable_adc_trigger(self, threshold=127):
         """ Enable ADC trigger to send raw data when an RMS threshold is reached"""
 
@@ -994,8 +991,9 @@ if __name__ == "__main__":
     station.connect()
 
     # Equalize signals if required
-    if conf.equalize_signals:
-        station.equalize_ada_gain(16)
+    if station.tiles[0].tpm_version == "itpm_v1_2":
+        if conf.equalize_signals:
+            station.equalize_ada_gain(16)
 
     for tile in station.tiles:
         tile.set_channeliser_truncation(configuration['station']['channel_truncation'])
