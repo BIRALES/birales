@@ -10,7 +10,6 @@ import numpy as np
 from pybirales import settings
 from pybirales.pipeline.base.definitions import TriggerException
 from pybirales.pipeline.base.processing_module import ProcessingModule
-from pybirales.pipeline.blobs.receiver_data import ReceiverBlob
 
 
 class RawPersister(ProcessingModule):
@@ -35,6 +34,9 @@ class RawPersister(ProcessingModule):
         self._trigger_buffer = None
         self._trigger_timestamps = None
         self._trigger_block_duration = None
+
+        # If triggering is enabled, use a separate thread to listen for request to process triggers
+        self._trigger_thread = None
 
         # Latest obs_info
         self._latest_obs_info = None
@@ -182,6 +184,10 @@ class RawPersister(ProcessingModule):
 
         # Remove file handle
         self._output_filename = None
+
+    def wait_for_trigger(self):
+        """ Runs in a separate thread to wait for trigger requests """
+        pass
 
     def process(self, obs_info, input_data, output_data):
         """ Write received raw data to output file """
