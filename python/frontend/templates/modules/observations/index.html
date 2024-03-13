@@ -1,0 +1,105 @@
+{% extends "common/layout.html" %}
+{% block title %}Observations{% endblock %}
+{% block page_title %}Observations{% endblock %}
+{% set active_page = "observations" %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="btn-header">
+                        <div class="btn-container">
+                            <a class="btn btn-info btn-fill"
+                               href="{{ url_for('observations_page.create', mode='calibration') }}">
+                                <i class="fa fa-plus" aria-hidden="true"></i>
+                                Calibration</a>
+                            <a class="btn btn-info btn-fill" href="{{ url_for('observations_page.create', mode='detection') }}">
+                                <i class="fa fa-plus" aria-hidden="true"></i>
+                                Detection</a>
+                        </div>
+                    </div>
+
+                    <div class="content table-responsive table-full-width">
+                        <table class="table table-hover table-striped">
+                            <thead>
+                            <tr>
+                                <th>Observation</th>
+                                <th>Type</th>
+                                <th>Date (UTC)</th>
+                                <th>Declination</th>
+                                <th>Status</th>
+                                <th>Tracks</th>
+                                <th>Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for observation in observations %}
+                                <tr>
+                                    <td>
+                                        {{ observation.name }}
+                                    </td>
+                                    <td>
+                                        <span class="label label-default">{{ observation.type }}</span>
+                                    </td>
+                                    {% if observation.date_time_start.date() != observation.date_time_end.date() %}
+                                        <td>{{ observation.date_time_start.strftime('%d/%m/%y at %H:%M') }}
+                                            to
+                                            {{ observation.date_time_end.strftime('%d/%m/%y at %H:%M') }}
+                                        </td>
+                                    {% else %}
+                                        <td>{{ observation.date_time_start.strftime('%d/%m/%y at %H:%M') }}
+                                            to
+                                            {{ observation.date_time_end.strftime('%H:%M') }}
+                                        </td>
+                                    {% endif %}
+                                    <td>
+                                        {% if 'beamformer' in observation.config_parameters.keys() %}
+                                            {{ "%.2f"|format(observation.config_parameters['beamformer']['reference_declination']|float) }}
+                                        {% else %}
+                                            {{ "%.2f"|format(observation.settings.beamformer.reference_declinations[0]|float) }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if observation.status == 'finished' %}
+                                            <span class="label label-success">{{ observation.status }}</span>
+                                        {% elif observation.status == 'pending' %}
+                                            <span class="label label-primary">{{ observation.status }}</span>
+                                        {% elif observation.status == 'running' %}
+                                            <span class="label label-default">{{ observation.status }}</span>
+                                        {% elif observation.status == 'stopped' %}
+                                            <span class="label label-warning">{{ observation.status }}</span>
+                                        {% else %}
+                                            <span class="label label-danger">{{ observation.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if observation.type == 'observation' %}
+                                            <span class="badge badge-secondary">{{ observation.n_tracks() }}</span>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if observation.type == 'observation' %}
+                                            <a href="{{ url_for('observations_page.view', observation_id=observation.id) }}"
+                                               class="btn btn-sm btn-info" role="button">
+                                                <i class="fa fa-play" aria-hidden="true"></i>
+                                            </a>
+                                        {% endif %}
+                                        <a href="{{ url_for('observations_page.delete', observation_id=observation.id) }}"
+                                           class="btn btn-sm btn-danger" role="button">
+                                            <i class="fa fa-trash" aria-hidden="true"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                        {{ pagination.links }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
